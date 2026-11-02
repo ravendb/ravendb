@@ -60,7 +60,6 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         private static IComparer<TKey> GetOrderingComparer<TKey>(IComparer<TKey> comparer)
         {
             // Match released object-key string ordering without allocating a culture comparer per sort.
-            // Keep other key types and explicit comparers unchanged.
             if (comparer == null && typeof(TKey) == typeof(string))
                 return (IComparer<TKey>)(object)Comparer<object>.Default;
 

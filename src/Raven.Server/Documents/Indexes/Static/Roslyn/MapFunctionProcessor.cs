@@ -11,10 +11,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         private readonly ReferencedCollectionsRetriever _refCollectionsRetriever;
         private readonly CompareExchangeReferenceDetectorRewriter _compareExchangeReferenceDetector;
         private readonly SelectManyRewriter _selectManyRewriter;
+        private readonly string _dynamicEnumerable;
 
-        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter)
+        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter, string dynamicEnumerable)
         {
             _selectManyRewriter = selectManyRewriter;
+            _dynamicEnumerable = dynamicEnumerable;
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
             _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
@@ -26,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
         public override SyntaxNode Visit(SyntaxNode node)
         {
+            var rangeSourceParameters = new HashSet<string>();
             foreach (var rewriter in new CSharpSyntaxRewriter[]
             {
                 CollectionRetriever,
@@ -35,9 +38,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 SelectManyRewriter.SelectMethodOnProperties,
                 new ThrowOnInvalidMethodCalls(),
                 WhereRewriter.Instance,
-                DynamicInvocationExpressionsRewriter.Instance,
+                new DynamicInvocationExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable),
                 DynamicExtensionMethodsRewriter.Instance,
-                DynamicLambdaExpressionsRewriter.Instance,
+                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable),
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
                 ConditionalAccessExpressionRewriter.Instance,

@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         internal const string IndexNamePrefix = "Index_";
 
+        private const string HelperAlias = "ravenServer";
+
         private static readonly Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>> AdditionalAssemblies = new Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>>(DiscoverAdditionalAssemblies);
 
         private static readonly Assembly LuceneAssembly = typeof(Lucene.Net.Documents.Document).Assembly;
@@ -137,12 +139,14 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
 
+        private static readonly MetadataReference ServerReference = CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly);
+
         public static readonly MetadataReference[] References =
         {
             CreateMetadataReferenceFromAssembly(typeof(object).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(ExpressionType).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(Enumerable).Assembly),
-            CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly),
+            ServerReference,
             CreateMetadataReferenceFromAssembly(typeof(BoostedValue).Assembly),
             CreateMetadataReferenceFromAssembly(LuceneAssembly),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Runtime"))),
@@ -167,10 +171,11 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
+            var helperAlias = GetHelperAlias(definition);
 
-            var @class = CreateClass(cSharpSafeName, definition, indexVersion);
+            var @class = CreateClass(cSharpSafeName, definition, indexVersion, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias));
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition, helperAlias);
             var type = compilationResult.Type;
 
             var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
@@ -179,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition, string helperAlias)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
@@ -188,7 +193,16 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
 
+            // The index code uses the reference without an alias; the aliased reference serves the generated helper calls only.
+            var externs = new SyntaxList<ExternAliasDirectiveSyntax>();
+            if (@class.DescendantNodes().OfType<AliasQualifiedNameSyntax>().Any(x => x.Alias.Identifier.ValueText == helperAlias))
+            {
+                externs = externs.Add(SyntaxFactory.ExternAliasDirective(helperAlias));
+                res.References = res.References.Append(ServerReference.WithAliases(new[] { helperAlias })).ToArray();
+            }
+
             var compilationUnit = SyntaxFactory.CompilationUnit()
+                .WithExterns(externs)
                 .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
@@ -197,6 +211,9 @@ namespace Raven.Server.Documents.Indexes.Static
             using (var workspace = new AdhocWorkspace())
             {
                 formattedCompilationUnit = Formatter.Format(compilationUnit, workspace);
+
+                if (GeneratedSourceSelector.TrySelect(formattedCompilationUnit, res.SyntaxTrees, res.References, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias), out var selected))
+                    formattedCompilationUnit = Formatter.Format(selected, workspace);
             }
 
             string sourceFile = null;
@@ -532,7 +549,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
         
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion, string dynamicEnumerable)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
@@ -545,7 +562,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, ref members));
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.StackSize);
                 stackDepthRetriever.Clear();
@@ -553,7 +570,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
@@ -637,7 +654,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
-            ref SyntaxList<MemberDeclarationSyntax> members)
+            string dynamicEnumerable, ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
             {
@@ -657,13 +674,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -676,13 +693,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -701,7 +718,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, string dynamicEnumerable, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -722,7 +739,8 @@ namespace Raven.Server.Documents.Indexes.Static
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
-                                SelectManyRewriter.QuerySyntax),
+                                SelectManyRewriter.QuerySyntax,
+                                dynamicEnumerable),
                             MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
                         break;
@@ -732,7 +750,8 @@ namespace Raven.Server.Documents.Indexes.Static
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
-                                SelectManyRewriter.MethodSyntax),
+                                SelectManyRewriter.MethodSyntax,
+                                dynamicEnumerable),
                             MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                         break;
@@ -975,6 +994,50 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string GetCSharpSafeName(string name)
         {
             return $"{IndexNamePrefix}{Regex.Replace(name, @"[^\w\d]", "_")}";
+        }
+
+        // An extern alias hides the types and namespaces of the same name, so it must not be an identifier written in the index.
+        private static string GetHelperAlias(IndexDefinition definition)
+        {
+            var names = new HashSet<string>();
+            foreach (var map in definition.Maps)
+                AddNames(SyntaxFactory.ParseExpression(map ?? string.Empty));
+
+            if (definition.Reduce != null)
+                AddNames(SyntaxFactory.ParseExpression(definition.Reduce));
+
+            if (definition.AdditionalSources != null)
+            {
+                foreach (var source in definition.AdditionalSources.Values)
+                    AddNames(SyntaxFactory.ParseCompilationUnit(source ?? string.Empty));
+            }
+
+            if (definition.AdditionalAssemblies != null)
+            {
+                foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                {
+                    if (additionalAssembly?.Usings == null)
+                        continue;
+
+                    foreach (var @using in additionalAssembly.Usings)
+                        AddNames(SyntaxFactory.ParseName(@using ?? string.Empty));
+                }
+            }
+
+            var alias = HelperAlias;
+            for (var suffix = 1; names.Contains(alias); suffix++)
+                alias = HelperAlias + "_" + suffix;
+
+            return alias;
+
+            void AddNames(SyntaxNode node)
+            {
+                foreach (var token in node.DescendantTokens())
+                {
+                    if (token.IsKind(SyntaxKind.IdentifierToken))
+                        names.Add(token.ValueText);
+                }
+            }
         }
 
         private static string NormalizeFunction(string function)

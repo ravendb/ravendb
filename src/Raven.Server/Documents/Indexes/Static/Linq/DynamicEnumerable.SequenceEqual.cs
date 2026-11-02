@@ -17,23 +17,21 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             ArgumentNullException.ThrowIfNull(first);
             ArgumentNullException.ThrowIfNull(second);
 
-            // TSource is object here, but the compiler does not narrow the generic type after the guard.
-            // The intermediate object cast enables the array cast without copying or boxing elements.
             return ArraysSequenceEqual((object[])(object)first, (object[])(object)second);
         }
 
         public static bool SequenceEqual<TSource>(IEnumerable<TSource> first, IEnumerable<TSource> second)
         {
+            if (typeof(TSource) != typeof(object))
+                return Enumerable.SequenceEqual(first, second);
+
             if (first is DynamicArray array)
-                return array.SequenceEqual(second);
+                return array.SequenceEqual((IEnumerable<object>)second);
 
             if (second is DynamicArray otherArray)
-                return DynamicArray.SequencesEqual(first?.Cast<object>(), otherArray);
+                return DynamicArray.SequencesEqual((IEnumerable<object>)first, otherArray);
 
-            if (typeof(TSource) == typeof(object))
-                return Enumerable.SequenceEqual((IEnumerable<object>)first, (IEnumerable<object>)second, BlittableTextEqualityComparer.Instance);
-
-            return Enumerable.SequenceEqual(first, second);
+            return Enumerable.SequenceEqual((IEnumerable<object>)first, (IEnumerable<object>)second, BlittableTextEqualityComparer.Instance);
         }
 
         public static bool SequenceEqual(object first, object second)
@@ -68,7 +66,6 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         {
             public static readonly BlittableTextEqualityComparer Instance = new();
 
-            // Implements comparer equality; hiding object.Equals is intentional.
             // ReSharper disable once MemberHidesStaticFromOuterClass
             public new bool Equals(object x, object y)
             {

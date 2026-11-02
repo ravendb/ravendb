@@ -9,10 +9,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public sealed class DynamicLambdaExpressionsRewriter : CSharpSyntaxRewriter
     {
-        public static readonly DynamicLambdaExpressionsRewriter Instance = new DynamicLambdaExpressionsRewriter();
+        private readonly HashSet<string> _rangeSourceParameters;
 
-        private DynamicLambdaExpressionsRewriter()
+        private readonly string _dynamicEnumerable;
+
+        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable)
         {
+            _rangeSourceParameters = rangeSourceParameters;
+            _dynamicEnumerable = dynamicEnumerable;
         }
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -26,7 +30,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             var isDynamicSelector = UsesDefaultOrderingArguments(node) &&
                                     node.ArgumentList.Arguments.Any(argument => argument.Expression is LambdaExpressionSyntax lambda && HasUntypedParameter(lambda));
 
-            // The base rewriter updates the invocation and never returns null.
             var visited = (InvocationExpressionSyntax)base.VisitInvocationExpression(node)!;
             var visitedMember = (MemberAccessExpressionSyntax)visited.Expression;
             var arguments = visited.ArgumentList.Arguments;
@@ -38,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             if (isDynamicSelector)
             {
-                // Preserve string elements for typed ThenBy while allowing legacy dynamic key access.
+                // Preserve string elements for typed ThenBy while keeping the released dynamic key access.
                 TypeSyntax[] typeArguments =
                 [
                     SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)),
@@ -50,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     .WithTypeArgumentList(SyntaxFactory.TypeArgumentList(SyntaxFactory.SeparatedList(typeArguments)));
             }
 
-            var target = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expression: SyntaxFactory.IdentifierName("DynamicEnumerable"), targetName);
+            var target = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expression: SyntaxFactory.ParseExpression(_dynamicEnumerable), targetName);
             return visited.WithExpression(target).WithArgumentList(visited.ArgumentList.WithArguments(arguments));
         }
 
@@ -140,8 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                             : ((ParenthesizedLambdaExpressionSyntax)node).WithBody(body);
                     }
 
-                    // A CLR array lets the compiler infer the selector types. A dynamic
-                    // delegate prevents binding value-type arrays and typed comparers.
+                    // Over a CLR array the lambda stays typed: a dynamic delegate would not bind value-type arrays and typed comparers.
                     return node is SimpleLambdaExpressionSyntax simple
                         ? base.VisitSimpleLambdaExpression(simple)
                         : base.VisitParenthesizedLambdaExpression((ParenthesizedLambdaExpressionSyntax)node);
@@ -184,6 +186,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "TakeWhile":
                 case "SkipWhile":
                     return Visit(ModifyLambdaForTakeSkipWhile(node));
+                case "ChooseRangeSource":
+                    // The generated lambda wraps a call written in the index, whose lambdas are rewritten as usual.
+                    if (node is SimpleLambdaExpressionSyntax rangeSource &&
+                        _rangeSourceParameters.Contains(rangeSource.Parameter.Identifier.ValueText) &&
+                        GeneratedSourceSelector.IsRangeSourceChoice(invocation))
+                        return base.VisitSimpleLambdaExpression(rangeSource);
+                    break;
             }
 
             return node;
@@ -242,7 +251,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             while (source is ParenthesizedExpressionSyntax parenthesized)
                 source = parenthesized.Expression;
 
-            // Object/dynamic elements still need the existing dynamic member binding.
             if (source is ArrayCreationExpressionSyntax { Type.ElementType: PredefinedTypeSyntax elementType })
             {
                 stringArray = elementType.Keyword.IsKind(SyntaxKind.StringKeyword);

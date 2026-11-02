@@ -925,16 +925,19 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
             AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "a", null, "b" } });
         }
 
-        private void AssertPrimitiveArrayExpression(Options options, string expression, PrimitiveArrayItem item)
+        private void AssertPrimitiveArrayExpression(Options options, string expression, PrimitiveArrayItem item, Dictionary<string, string> additionalSources = null, string lets = null)
         {
             using var store = GetDocumentStore(options);
             const string indexName = "PrimitiveArrays/Expression";
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var definition = new IndexDefinition
             {
                 Name = indexName,
-                Maps = { "from item in docs.PrimitiveArrayItems select new { Found = " + expression + " }" },
+                Maps = { "from item in docs.PrimitiveArrayItems " + (string.IsNullOrEmpty(lets) ? "" : lets + " ") + "select new { Found = " + expression + " }" },
                 Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
-            }));
+            };
+            if (additionalSources != null)
+                definition.AdditionalSources = additionalSources;
+            store.Maintenance.Send(new PutIndexesOperation(definition));
             using (var session = store.OpenSession())
             {
                 session.Store(item);
@@ -943,7 +946,7 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
 
             Indexes.WaitForIndexing(store, allowErrors: true);
             var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
-            Assert.Empty(errors);
+            Assert.False(errors.Any(), expression + Environment.NewLine + string.Join(Environment.NewLine, errors.Select(x => x.Error)));
             using (var session = store.OpenSession())
             {
                 var result = session.Advanced.RawQuery<ClrContainsResult>($"from index '{indexName}' select Found").Single();
@@ -1018,6 +1021,1682 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         {
             AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Values = new[] { 1L, 2L } });
         }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Strings and value sequences are counted by their own element type.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(tag) > 3) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Where(item.Tags, tag => Enumerable.Count(tag) > 3)) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(\"abc\") == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(new[] { 1, 2 }) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Range(0, 2)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Object sequences, documents and object-typed values are counted through IEnumerable<object>.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(item.Tags) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(item.MissingTags) == 0) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(item) > 0) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count((object)Enumerable.Concat(item.Tags, new object[] { tag })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(ExplicitSequence.Create()) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A dynamic object with an IEnumerable<object> view is counted through it, without its custom conversion.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(ConvertibleSequence.Create()) == 3 && ConvertibleSequence.TryConvertCalls == 0) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Dictionaries are counted through their object view when dynamic and through their pair view when typed.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count((dynamic)((IEnumerable<object>)item.Tags).ToDictionary(t => t, t => t)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(((IEnumerable<object>)item.Tags).ToDictionary(t => t, t => t)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A derived array with an additional typed view is counted through its object view.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(new TypedSequenceValues(new object[] { 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The source is evaluated once, also when it is converted.
+        [RavenData("Enumerable.Count(item.Tags, tag => CountProbe.Reset() && Enumerable.Count(CountProbe.Next()) == 3 && CountProbe.Calls == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CountProbe.Reset() && Enumerable.Count(CountProbe.NextExplicit()) == 2 && CountProbe.Calls == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Null sources fail as in Enumerable.Count; an implicit-only conversion is not used by the explicit conversion.
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ParamName((Func<bool>)(() => Enumerable.Count((IEnumerable<int>)null) == 0)) == \"source\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ParamName((Func<bool>)(() => Enumerable.Count(null) == 0)) == \"source\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count(ImplicitSequence.Create()) == 2)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CountInsideRewrittenCallsKeepsSourceElementType(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CharacterCountInsideCountPredicateExecutes(Options options, bool filtered)
+        {
+            using var store = GetDocumentStore(options);
+            var index = new CharacterCountPredicateIndex(filtered);
+            store.ExecuteIndex(index);
+            Assert.Contains("Enumerable.Count(tag)", Assert.Single(index.CreateIndexDefinition().Maps));
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "abcd", "abcde" } });
+                session.Store(new PrimitiveArrayItem { Tags = new string[0] });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { index.IndexName })).Single().Errors;
+            Assert.False(errors.Any(), string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var counts = session.Advanced.RawQuery<PrimitiveArrayCountPredicateIndex.Result>($"from index '{index.IndexName}' select Count").ToList();
+                Assert.Equal(new[] { 0, 1, 2 }, counts.Select(x => x.Count).OrderBy(x => x));
+            }
+        }
+
+        private sealed class CharacterCountPredicateIndex : AbstractIndexCreationTask<PrimitiveArrayItem, PrimitiveArrayCountPredicateIndex.Result>
+        {
+            public CharacterCountPredicateIndex(bool filtered)
+            {
+                if (filtered)
+                    Map = items => from item in items
+                                   select new PrimitiveArrayCountPredicateIndex.Result { Count = item.Tags.Where(tag => tag.Count() > 3).Count() };
+                else
+                    Map = items => from item in items
+                                   select new PrimitiveArrayCountPredicateIndex.Result { Count = item.Tags.Count(tag => tag.Count() > 3) };
+
+                Store(x => x.Count, FieldStorage.Yes);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Typed selectors bind to the int elements of Range.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(-2, 3).Select(Math.Abs).Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Range(-2, 3).Select(Math.Abs)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select(RangeSelectors.Twice).Sum() == 6) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select((Func<int, int>)(x => x + 1)).Sum() == 6) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select((Func<int, int, int>)((x, i) => x + i)).Sum() == 6) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 2).SelectMany((Func<int, IEnumerable<int>>)(x => new[] { x, x })).Sum() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Select(Enumerable.Range(-2, 3), Math.Abs).Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(-1, 2).Select<int, int>(Math.Abs).Sum() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Method groups with int and object overloads keep their int overload.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 1).Select(OverloadedSelectors.Label), \"int\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 1).Select(OverloadedSelectors.LabelIndexed), \"int\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Select(Enumerable.Range(0, 1), OverloadedSelectors.Label), \"int\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A dynamic SelectMany lambda binds to the object extension as written, which converts date strings like other dynamic arrays.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).SelectMany(x => new object[] { \"2024-01-01T00:00:00.0000000Z\" }).First() is DateTime) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).SelectMany((Func<int, IEnumerable<string>>)(x => new[] { \"2024-01-01T00:00:00.0000000Z\" })).First() is string) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Dynamic lambdas and object selectors bind to object elements.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 3).Select(x => (long)x), 2L)) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select((x, i) => x + i).Count() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 2).SelectMany(x => new[] { x, x }).Count() == 4) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 3).Select(Convert.ToString), \"2\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select(RangeSelectors.Box).Count() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 3).Select((Func<object, object>)(x => x)).Count() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Select(Enumerable.Range(0, 3), x => (long)x), 2L)) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Select(Enumerable.Range(0, 3), Convert.ToString).Contains(\"2\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Select<object, object>(Enumerable.Range(0, 2), (Func<object, object>)(x => x)).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 2).Select<object, object>((Func<object, object>)(x => x)).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.SelectMany(Enumerable.Range(0, 1), (Func<dynamic, IEnumerable<dynamic>>)(x => new object[] { \"2024-01-01T00:00:00.0000000Z\" })).First() is string) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A nested Select keeps int elements inside a dynamic lambda that reads objects.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 2).Select(x => Enumerable.Range(-2, 3).Select(Math.Abs).Sum() + x), 4)) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangeInsideRewrittenCallsKeepsSelectorElementType(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Static calls keep the written argument order, also when the Range source is chosen.
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Select(selector: ArgumentProbe.Selector, source: Enumerable.Range(ArgumentProbe.Start, 2)).Count()) == \"selector,start:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.SelectMany(selector: ArgumentProbe.ManySelector, source: Enumerable.Range(ArgumentProbe.Start, 2)).Count()) == \"selector,start:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Select(selector: ArgumentProbe.IntSelector, source: Enumerable.Range(ArgumentProbe.Start, 2)).Sum()) == \"selector,start:1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Range(ArgumentProbe.Start, 2).Select(ArgumentProbe.Selector).Count()) == \"start,selector:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Distinct keeps the written order of its source and comparer, also when the first one throws.
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Distinct(comparer: ArgumentProbe.Comparer, source: ArgumentProbe.Values).Count()) == \"comparer,source:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Distinct(source: ArgumentProbe.Values, comparer: ArgumentProbe.Comparer).Count()) == \"source,comparer:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Distinct(comparer: ArgumentProbe.ThrowingComparer, source: ArgumentProbe.Values).Count()) == \"comparer:InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Distinct(source: ArgumentProbe.ThrowingValues, comparer: ArgumentProbe.Comparer).Count()) == \"source:InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Run(() => Enumerable.Distinct(comparer: ArgumentProbe.Comparer, source: (dynamic)ArgumentProbe.Values).Count()) == \"comparer,source:2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void CallsInsideRewrittenCallsEvaluateArgumentsInWrittenOrder(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A Range returned by a selector keeps its int elements for typed consumers and gives objects to object delegates.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2)))) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Where((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))), (Func<dynamic, bool>)(x => x > 1))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))), (Func<dynamic, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Where((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))), (Func<dynamic, int, bool>)((x, i) => i == 1))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Where((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))), (Func<int, bool>)(x => x > 1))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same value seen through one alias by both kinds of consumers, and after materialization.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(new object[] { Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))) }, r => Enumerable.Sum((dynamic)r) == 3 && Enumerable.Count(Enumerable.Where((dynamic)r, (Func<dynamic, bool>)(x => x > 1))) == 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Where((dynamic)Enumerable.First(Enumerable.ToArray(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2)))), (Func<dynamic, bool>)(x => x > 1))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum((dynamic)Enumerable.First(Enumerable.ToList(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))))) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Reference sequences, dynamic objects and nulls bind as before (an object delegate binds reference elements as objects);
+        // the source is evaluated once.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct(Enumerable.Where((dynamic)new[] { new IdentityTuple(1), new IdentityTuple(1) }, (Func<dynamic, bool>)(x => true)))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count(Enumerable.Where(ExplicitSequence.Create(), (Func<dynamic, bool>)(x => true))) == 0)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count(Enumerable.Where((dynamic)null, (Func<dynamic, bool>)(x => true))) == 0)) == \"ArgumentNullException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CountProbe.Reset() && Enumerable.Count(Enumerable.Where(CountProbe.Next(), (Func<dynamic, bool>)(x => true))) == 3 && CountProbe.Calls == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ValuesInsideRewrittenCallsServeTypedAndObjectDelegates(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Index code may use the names of the generated source choices: a range variable named DynamicEnumerable keeps its method,
+        // a method named ChooseRangeSource keeps its typed lambdas, and a range variable with the name the generated Range source
+        // parameter would get (rangeSource and the position of the Select call in this map) is not hidden by it. A call of the Range
+        // source helper with a lambda that does not pass a source stays a call.
+        [RavenData("let DynamicEnumerable = new GeneratedNameProjection()", "DynamicEnumerable.ObjectDelegateSource(1) == 11 && DynamicEnumerable.Calls == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("", "GeneratedNameProbe.ChooseRangeSource(x => new[] { 1, 2 }.Select(y => y + 1).Count()) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("", "DynamicEnumerable.RangeSource.Instance.ChooseRangeSource(x => 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("let rangeSource128 = (Func<int, int>)(v => v + 1)", "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => rangeSource128(0))).First() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GeneratedSourceChoicesKeepNamesWrittenInIndex(Options options, string lets, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["GeneratedNames.cs"] = GeneratedNameSources }, lets);
+        }
+
+        private const string GeneratedNameSources = """
+            using System;
+            public sealed class GeneratedNameProjection
+            {
+                internal int Calls;
+                internal int ObjectDelegateSource(int value)
+                {
+                    Calls++;
+                    return value + 10;
+                }
+            }
+            public static class GeneratedNameProbe
+            {
+                internal static int ChooseRangeSource(Func<int, int> callback) => callback(0);
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Index sources may declare types with the name of the helper type. A type with its full name keeps the calls of its methods.
+        // A type with its name in the namespace of the index keeps the lambdas of its calls, also of a call with the shape of the
+        // generated Range source choice. Neither type captures the generated Range source choice nor the object delegate source,
+        // also next to a call of the index type.
+        [RavenData(true, "DynamicEnumerable.ObjectDelegateSource(1) == 11", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "DynamicEnumerable.RangeSource.Instance.ChooseRangeSource(x => new[] { 1, 2 }.Select(y => y + 1).Count()) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "DynamicEnumerable.RangeSource.Instance.ChooseRangeSource(callback: x => new[] { 1, 2 }.Select(y => y + 1).Count()) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "DynamicEnumerable.RangeSource.Instance.ChooseRangeSource((x) => new[] { 1, 2 }.Select(y => y + 1).Count()) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => x)).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => x)).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Count((dynamic)new[] { 1, 2 }, (Func<dynamic, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Count((dynamic)new[] { 1, 2 }, (Func<dynamic, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "DynamicEnumerable.ObjectDelegateSource(1) == 11 && Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => x)).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GeneratedSourceChoicesIgnoreIndexTypesWithHelperNames(Options options, bool fullName, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["HelperNames.cs"] = fullName ? HelperFullNameSources : HelperIndexNamespaceSources });
+        }
+
+        private const string HelperFullNameSources = """
+            namespace Raven.Server.Documents.Indexes.Static.Linq
+            {
+                public static class DynamicEnumerable
+                {
+                    internal static int ObjectDelegateSource(int value) => value + 10;
+                }
+            }
+            """;
+
+        private const string HelperIndexNamespaceSources = """
+            namespace Raven.Server.Documents.Indexes.Static.Generated
+            {
+                public static class DynamicEnumerable
+                {
+                    public static class RangeSource
+                    {
+                        public static readonly Picker Instance = new Picker();
+                    }
+                }
+
+                public sealed class Picker
+                {
+                    internal int ChooseRangeSource(System.Func<int, int> callback) => callback(0);
+                }
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Static sources keep their element type.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(new[] { -1, 1, 1 }).Select(Math.Abs).Sum() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct(new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(new[] { 1, 1, 2 }, EqualityComparer<int>.Default).Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(comparer: EqualityComparer<int>.Default, source: new[] { 1, 1, 2 }).Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(new[] { \"a\", \"A\" }, StringComparer.OrdinalIgnoreCase).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Stored values keep the object view, including characters of a stored string.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct(tag)) == 4) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Distinct(item.Tags).Select(Convert.ToString), \"alpha\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(item.Tags).Select(x => x).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => (from x in Enumerable.Distinct(item.Tags) select x).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(item.Tags, EqualityComparer<object>.Default).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Reference elements keep their own equality: the element type is chosen before the result is exposed as objects.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { new IdentityTuple(1), new IdentityTuple(1) })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { new TracedTuple(1), new TracedTuple(1) })) == 1 && TracedTuple.TypedEqualsCalls > 0) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { new IdentityTuple(1), new IdentityTuple(1) }, EqualityComparer<object>.Default)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctInsideRewrittenCallsKeepsSourceElementType(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A consumer of a specific sequence type gets the Distinct result of a dynamic source with the element type of the source,
+        // through an explicit type argument, a cast or the parameter of an internal method, with the comparer in either position.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }, (dynamic)new ParityComparer())) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(comparer: (dynamic)new ParityComparer(), source: (dynamic)new[] { 1, 3, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Order(() => Enumerable.Count<int>(Enumerable.Distinct(comparer: (dynamic)ArgumentProbe.IntComparer, source: (dynamic)ArgumentProbe.IntValues))) == \"comparer,source\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.MostEvaluations(() => Enumerable.Count<int>(Enumerable.Distinct(comparer: (dynamic)ArgumentProbe.IntComparer, source: (dynamic)ArgumentProbe.IntValues))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum((IEnumerable<int>)Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TypedConsumers.Sum(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<IdentityTuple>(Enumerable.Distinct((dynamic)new[] { new IdentityTuple(1), new IdentityTuple(1) })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The result stays deferred, and null sources and enumeration errors surface as before.
+        [RavenData("Enumerable.Count(item.Tags, tag => DeferredProbe.Run((Func<IEnumerable<int>>)(() => (IEnumerable<int>)Enumerable.Distinct((dynamic)DeferredProbe.Values()))) == \"source,returned,enumerated,2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count<int>(Enumerable.Distinct((dynamic)null)) == 0)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count<int>(Enumerable.Distinct((dynamic)DeferredProbe.Throwing())) == 0)) == \"InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same sources keep the object view for extension methods, method groups and query syntax, and a typed comparer
+        // keeps the typed overload.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }).Select(Convert.ToString), \"2\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => (from x in Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) select x).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }, (dynamic)new ParityComparer()).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Order(() => Enumerable.Distinct(comparer: (dynamic)ArgumentProbe.IntComparer, source: (dynamic)ArgumentProbe.IntValues).Count()) == \"comparer,source\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.MostEvaluations(() => Enumerable.Distinct(comparer: (dynamic)ArgumentProbe.IntComparer, source: (dynamic)ArgumentProbe.IntValues).Count()) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }, (IEqualityComparer<int>)new ParityComparer())) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DeferredProbe.RunObjects((Func<IEnumerable<object>>)(() => Enumerable.Distinct((dynamic)DeferredProbe.Values()))) == \"source,returned,enumerated,2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count(Enumerable.Distinct((dynamic)null)) == 0)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Count(Enumerable.Distinct((dynamic)DeferredProbe.Throwing())) == 0)) == \"InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctInsideRewrittenCallsKeepsDynamicResultForTypedConsumers(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A constructor parameter, a declared local, field or property, or the return type of a typed delegate takes the Distinct
+        // result of a dynamic source with the element type of the source.
+        [RavenData("Enumerable.Count(item.Tags, tag => new List<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })).Count == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new List<int>((Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }))).Count == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]        [RavenData("Enumerable.Count(item.Tags, tag => TypedConsumers.SumAll(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), new[] { 4 }) == 7) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { IEnumerable<int> values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return values.Sum(); }))() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { IEnumerable<int> values = null; values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return values.Sum(); }))() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new Holder { Values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) }.Values.Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new Holder { Items = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) }.Items.Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum(((Func<IEnumerable<int>>)(() => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })))()) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum(((Func<IEnumerable<int>>)(() => { return Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); }))()) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // An implicitly typed local keeps the object result for extension methods.
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { var values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return values.Count(); }))() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The overload is chosen at runtime by the element type of the source, as the call written in the index did,
+        // also when an overload taking objects binds at compile time.
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { \"a\", \"a\" })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.PickElement(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A call that cannot be dispatched dynamically, e.g. with a lambda argument, keeps the object result.
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.PickWith(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), x => x) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A nested Distinct gets the element type of its source for the comparer or the consumer of the outer call,
+        // with the arguments evaluated once in the order they were written.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (IEqualityComparer<int>)EqualityComparer<int>.Default)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(comparer: (IEqualityComparer<int>)new ParityComparer(), source: Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }))) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }), (IEqualityComparer<int>)new ParityComparer()).Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 3, 2 }), (dynamic)new ParityComparer())) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }))) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.Order(() => Enumerable.Count<int>(Enumerable.Distinct(comparer: ArgumentProbe.IntComparer, source: Enumerable.Distinct((dynamic)ArgumentProbe.IntValues)))) == \"comparer,source\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.MostEvaluations(() => Enumerable.Count<int>(Enumerable.Distinct(comparer: ArgumentProbe.IntComparer, source: Enumerable.Distinct((dynamic)ArgumentProbe.IntValues)))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The source of an Enumerable call with a typed delegate gets the dynamic result, while a delegate reading objects keeps
+        // the object result.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<int, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<dynamic, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctInsideRewrittenCallsKeepsDynamicResultForTypedContexts(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new List<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })).Count == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (IEqualityComparer<int>)EqualityComparer<int>.Default)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<int, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctTypedContextsExecuteInReduce(Options options, string expression)
+        {
+            AssertReduceExpression(options, expression, new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // A consumer that cannot bind the dynamic result keeps the object result without changing the result of another consumer.
+        public void DistinctConsumersInOneIndexAreSelectedSeparately(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/Consumers";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps =
+                {
+                    "from item in docs.PrimitiveArrayItems select new { " +
+                    "Typed = Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2, " +
+                    "Facade = Enumerable.Count(item.Tags, tag => Overloads.PickWith(Enumerable.Distinct((dynamic)new[] { \"a\", \"a\" }), x => x) == 2) == 2 }"
+                },
+                Fields =
+                {
+                    ["Typed"] = new IndexFieldOptions { Storage = FieldStorage.Yes },
+                    ["Facade"] = new IndexFieldOptions { Storage = FieldStorage.Yes }
+                },
+                AdditionalSources = new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var result = session.Advanced.RawQuery<ConsumersResult>($"from index '{indexName}' select Typed, Facade").Single();
+                Assert.True(result.Facade, "Facade");
+                Assert.True(result.Typed, "Typed");
+            }
+        }
+
+        private sealed class ConsumersResult
+        {
+            public bool Typed { get; set; }
+            public bool Facade { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The element type of the source selects the overload, as the call written in the index did, while a source that fits
+        // incomparable overloads gets the overload the object result binds to, as before.
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick((IEnumerable<object>)Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new AmbiguousHolder(Enumerable.Distinct((dynamic)new[] { new Both() })).Overload == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new AmbiguousHolder(Enumerable.Distinct((dynamic)new[] { new LeftOnly() })).Overload == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The receiver and the arguments are evaluated once, in the order they were written, and the source is not enumerated
+        // before the consumer.
+        [RavenData("Enumerable.Count(item.Tags, tag => TracedConsumer.Run(() => TracedConsumer.Create().Pick(TracedConsumer.Step(\"before\"), Enumerable.Distinct((dynamic)TracedConsumer.BothValues()), TracedConsumer.Step(\"after\"))) == \"receiver,before,source,after,consumer3\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TracedConsumer.Run(() => TracedConsumer.Create().Pick(TracedConsumer.Step(\"before\"), Enumerable.Distinct((dynamic)TracedConsumer.LeftOnlyValues()), TracedConsumer.Step(\"after\"))) == \"receiver,before,source,after,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A consumer without a result keeps the dynamic call.
+        [RavenData("Enumerable.Count(item.Tags, tag => TracedConsumer.RunAction(() => TracedConsumer.Create().Record(Enumerable.Distinct((dynamic)TracedConsumer.LeftOnlyValues()))) == \"receiver,source,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerOverloadsOfIncomparableSequences(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerOverloadsOfIncomparableSequencesExecuteInReduce(Options options, string expression)
+        {
+            AssertReduceExpression(options, expression, new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A delegate of a covariant result converts to the delegates of the views of its result, so a source of delegates selects the
+        // overload by its element type as well, while a source that fits incomparable overloads gets the overload the object result binds to.
+        [RavenData("Enumerable.Count(item.Tags, tag => DelegateConsumers.Pick(Enumerable.Distinct((dynamic)DelegateConsumers.BothValues())) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DelegateConsumers.Pick(Enumerable.Distinct((dynamic)DelegateConsumers.LeftOnlyValues())) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DelegateConsumers.Pick(Enumerable.Distinct((dynamic)DelegateConsumers.RightOnlyValues())) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DelegateConsumers.Pick((IEnumerable<object>)System.Linq.Enumerable.Distinct((dynamic)DelegateConsumers.BothValues())) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The framework Distinct keeps the dynamic call, which fails as ambiguous.
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => DelegateConsumers.Pick(System.Linq.Enumerable.Distinct((dynamic)DelegateConsumers.BothValues())) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerOverloadsOfIncomparableDelegateSequences(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string>
+                {
+                    ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["BetterConsumers.cs"] = BetterConsumerSources, ["DelegateConsumers.cs"] = DelegateConsumerSources
+                });
+        }
+
+        // The delegates are created by a typed factory in the sources, so no lambda or dynamic argument of the index creates them; the
+        // methods are internal, so their signatures are kept as declared.
+        private const string DelegateConsumerSources = """
+            using System;
+            using System.Collections.Generic;
+            public static class DelegateConsumers
+            {
+                internal static Func<Both>[] BothValues() => new Func<Both>[] { () => new Both() };
+                internal static Func<LeftOnly>[] LeftOnlyValues() => new Func<LeftOnly>[] { () => new LeftOnly() };
+                internal static Func<RightOnly>[] RightOnlyValues() => new Func<RightOnly>[] { () => new RightOnly() };
+                internal static int Pick(IEnumerable<Func<ILeft>> values) => 1;
+                internal static int Pick(IEnumerable<Func<IRight>> values) => 2;
+                internal static int Pick(IEnumerable<object> values) => 3;
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The results passed to one consumer select its overload together, as the call written in the index did, while results
+        // that fit incomparable overloads get the overload the object results bind to, as before.
+        [RavenData("Enumerable.Count(item.Tags, tag => PairConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => PairConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), Enumerable.Distinct((dynamic)new[] { new RightOnly() })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => PairConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => PairConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => new PairHolder(Enumerable.Distinct((dynamic)new[] { new Both() }), Enumerable.Distinct((dynamic)new[] { new LeftOnly() })).Overload == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The receiver, the arguments, the sources and the comparer are evaluated once, in the order they were written, and no
+        // source is enumerated before the consumer.
+        [RavenData("Enumerable.Count(item.Tags, tag => TracedPairs.Run(() => TracedPairs.Create().Pick(TracedPairs.Step(\"before\"), Enumerable.Distinct((dynamic)TracedPairs.BothValues(), (dynamic)TracedPairs.Comparer()), TracedPairs.Step(\"middle\"), Enumerable.Distinct((dynamic)TracedPairs.LeftOnlyValues()), TracedPairs.Step(\"after\"))) == \"receiver,before,source,comparer,middle,source,after,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctResultsOfOneConsumerSelectItsOverloadTogether(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["ConsumerPlans.cs"] = ConsumerPlanSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Only the overloads that take all the arguments of the call are choices: the other arguments select among the overloads
+        // a result fits, and members that do not take the arguments change nothing.
+        [RavenData("Enumerable.Count(item.Tags, tag => DiscriminatedConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DiscriminatedConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), \"kind\") == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A number cast to dynamic is a value of its type, so it selects among the overloads as in the call written in the index,
+        // with the sources themselves, and the object results bind their overload.
+        [RavenData("Enumerable.Count(item.Tags, tag => DiscriminatedConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("System.Linq.Enumerable.Count(item.Tags, tag => DiscriminatedConsumers.Pick(System.Linq.Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => DiscriminatedConsumers.Pick((IEnumerable<object>)System.Linq.Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => VoidMemberConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => VoidMemberConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => GenericMemberConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => GenericMemberConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerOverloadsAreChosenForTheWholeCall(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["ConsumerPlans.cs"] = ConsumerPlanSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The selected code does not depend on the names written in the index or in its sources.
+        [RavenData("Enumerable.Count(item.Tags, tag => PrefixConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new PrefixLeft() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, __distinctView0 => AmbiguousConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, __distinctCapture0_0 => TracedConsumer.Create().Pick(TracedConsumer.Step(\"before\"), Enumerable.Distinct((dynamic)TracedConsumer.LeftOnlyValues()), TracedConsumer.Step(\"after\")) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, __distinctCapture0_0 => TracedConsumer.Run(() => TracedConsumer.Create().Pick(TracedConsumer.Step(\"before\"), Enumerable.Distinct((dynamic)TracedConsumer.LeftOnlyValues()), TracedConsumer.Step(\"after\"))) == \"receiver,before,source,after,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerSelectionKeepsIndexNames(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["ConsumerPlans.cs"] = ConsumerPlanSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A result of a sealed class that matches the views of the object overload only binds it before the source is evaluated,
+        // so the other arguments convert in the order they were written.
+        [RavenData("ConversionConsumers.Pick(1, Enumerable.Distinct((dynamic)ConversionProbe.BothValues()))", "convert,source,consumer3", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A result that may match a typed overload selects it once the source is evaluated.
+        [RavenData("ConversionConsumers.Pick(1, Enumerable.Distinct((dynamic)ConversionProbe.LeftOnlyValues()))", "source,convert,consumer1", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The dynamic call infers an element class the helper cannot access as its accessible base class, without the interfaces
+        // of the element, so a result of a declared interface may match a typed overload only.
+        [RavenData("ConversionConsumers.Pick(1, Enumerable.Distinct((dynamic)Factory.BothValues()))", "source,convert,consumer1", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerConvertsArgumentsAsTheResultsBind(Options options, string call, string trace)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/ConversionOrder";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.PrimitiveArrayItems select new { Found = Enumerable.Count(item.Tags, tag => ConversionProbe.Run(() => " + call + ") == \"" + trace + "\") == 2, Trace = ConversionProbe.Observed() }" },
+                AdditionalSources = new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["ConversionConsumers.cs"] = ConversionConsumerSources },
+                Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes }, ["Trace"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var index = (MapIndex)Databases.GetDocumentDatabaseInstanceFor(store).GetAwaiter().GetResult().IndexStore.GetIndex(indexName);
+            Output.WriteLine(index._compiled.Source);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), call + Environment.NewLine + string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var result = session.Advanced.RawQuery<TracedResult>($"from index '{indexName}' select Found, Trace").Single();
+                Assert.True(result.Found, call + " traced " + result.Trace);
+            }
+        }
+
+        private sealed class TracedResult
+        {
+            public bool Found { get; set; }
+
+            public string Trace { get; set; }
+        }
+
+        // Consumers of the element types of AmbiguousConsumerSources whose first argument converts with a trace.
+        private const string ConversionConsumerSources = """
+            using System;
+            using System.Collections.Generic;
+            public interface IBoth : ILeft, IRight { }
+            public class PublicLeft : ILeft { }
+            public static class Factory
+            {
+                private sealed class HiddenBoth : PublicLeft, IBoth { }
+                internal static IEnumerable<IBoth> BothValues()
+                {
+                    ConversionProbe.Mark("source");
+                    return new HiddenBoth[] { new HiddenBoth() };
+                }
+            }
+            public sealed class BeforeToken
+            {
+                public static implicit operator BeforeToken(int value)
+                {
+                    ConversionProbe.Mark("convert");
+                    return new BeforeToken();
+                }
+            }
+            public static class ConversionProbe
+            {
+                [ThreadStatic]
+                private static List<string> _trace;
+                [ThreadStatic]
+                private static List<string> _observed;
+                public static void Mark(string step)
+                {
+                    if (_trace == null)
+                        _trace = new List<string>();
+                    _trace.Add(step);
+                }
+                public static string Run(Func<int> consume)
+                {
+                    _trace = new List<string>();
+                    consume();
+                    var result = string.Join(",", _trace);
+                    _trace = null;
+                    if (_observed == null)
+                        _observed = new List<string>();
+                    _observed.Add(result);
+                    return result;
+                }
+                public static string Observed()
+                {
+                    var result = _observed == null ? string.Empty : string.Join("|", _observed);
+                    _observed = null;
+                    return result;
+                }
+                internal static IEnumerable<Both> BothValues() => Values(new Both());
+                internal static IEnumerable<LeftOnly> LeftOnlyValues() => Values(new LeftOnly());
+                private static IEnumerable<T> Values<T>(T value)
+                {
+                    Mark("source");
+                    return Enumerate(value);
+                }
+                private static IEnumerable<T> Enumerate<T>(T value)
+                {
+                    Mark("enumerated");
+                    yield return value;
+                }
+                internal static int Consume(int overload)
+                {
+                    Mark("consumer" + overload);
+                    return overload;
+                }
+            }
+            public static class ConversionConsumers
+            {
+                internal static int Pick(BeforeToken before, IEnumerable<ILeft> values) => ConversionProbe.Consume(1);
+                internal static int Pick(BeforeToken before, IEnumerable<IRight> values) => ConversionProbe.Consume(2);
+                internal static int Pick(BeforeToken before, IEnumerable<object> values) => ConversionProbe.Consume(3);
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The overload is the best one for the whole call, as for the call written in the index: the other arguments make one of
+        // the overloads a result fits better, and results that fit overloads better at different positions get the overload the
+        // object results bind to, as before.
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), 1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), 1L) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => SplitConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), 1, 1) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => SplitConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), 1, 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => SplitConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), 1, 1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => EqualConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), 1) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => EqualConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CrossConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CrossConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), Enumerable.Distinct((dynamic)new[] { new object() })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CrossConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new object() }), Enumerable.Distinct((dynamic)new[] { new LeftOnly() })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same calls with the sources themselves, which no result is selected for: the dynamic call binds the better overload or
+        // fails as ambiguous, and the object results bind their overload.
+        [RavenData("Enumerable.Count(item.Tags, tag => BetterConsumers.Pick((dynamic)new[] { new Both() }, 1) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => SplitConsumers.Pick((dynamic)new[] { new Both() }, 1, 1) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => CrossConsumers.Pick((dynamic)new[] { new LeftOnly() }, (dynamic)new[] { new LeftOnly() }) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => EqualConsumers.Pick((dynamic)new[] { new Both() }, (dynamic)1) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => CrossConsumers.Pick((IEnumerable<object>)new[] { new LeftOnly() }, (IEnumerable<object>)new[] { new LeftOnly() }) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerSelectsTheBestOverloadOfTheWholeCall(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["BetterConsumers.cs"] = BetterConsumerSources });
+        }
+
+        // Consumers of the element types of AmbiguousConsumerSources whose overloads differ in other arguments or at several positions;
+        // the methods are internal, so their signatures are kept as declared.
+        private const string BetterConsumerSources = """
+            using System;
+            using System.Collections.Generic;
+            public static class BetterConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, int kind) => 1;
+                internal static int Pick(IEnumerable<IRight> values, long kind) => 2;
+                internal static int Pick(IEnumerable<object> values, object kind) => 3;
+            }
+            public static class SplitConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, int first, long second) => 1;
+                internal static int Pick(IEnumerable<IRight> values, long first, int second) => 2;
+                internal static int Pick(IEnumerable<object> values, object first, object second) => 3;
+            }
+            public static class EqualConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, int kind) => 1;
+                internal static int Pick(IEnumerable<IRight> values, int kind) => 2;
+                internal static int Pick(IEnumerable<object> values, object kind) => 3;
+            }
+            public static class CrossConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> first, IEnumerable<object> second) => 1;
+                internal static int Pick(IEnumerable<object> first, IEnumerable<ILeft> second) => 2;
+                internal static int Pick(IEnumerable<object> first, IEnumerable<object> second) => 3;
+            }
+            public static class BaseProbe
+            {
+                internal static string ExceptionType(Func<bool> call)
+                {
+                    try
+                    {
+                        call();
+                        return null;
+                    }
+                    catch (Exception e)
+                    {
+                        return e.GetType().Name;
+                    }
+                }
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The other arguments are values of their own types, as for the call written in the index: an interpolated string is a
+        // string, which converts to a handler as a string does, and a tuple literal is a tuple of its element types, while constants
+        // convert as they are written. Each argument is evaluated once, after the results written before it.
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{1}\") == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), $\"{1}\") == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), $\"{1}\") == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (string)$\"{1}\") == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), HandlerTrace.Text) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => LeadingHandlerConsumers.Pick($\"{1}\", Enumerable.Distinct((dynamic)new[] { new Both() })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1)}\")) == \"step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => HandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), $\"{HandlerTrace.Step(1)}\")) == \"step,implicit,handler,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => AmbiguousHandlerConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{1}\") == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), (1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (1L, (long)\"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ArmDropConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), 1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A number cast to dynamic is a value of its type also when it is written as a constant, so it takes no overload by a constant
+        // conversion, and it is evaluated once, after the results written before it.
+        [RavenData("Enumerable.Count(item.Tags, tag => KindConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (dynamic)1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => KindConsumers.Pick(Enumerable.Distinct((dynamic)new TracedSource<Both>()), (dynamic)HandlerTrace.Step(1))) == \"source,step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => HandlerTrace.Consume(BetterConsumers.Pick(Enumerable.Distinct((dynamic)new TracedSource<Both>()), (dynamic)HandlerTrace.Step(1)))) == \"source,step,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same calls with the sources themselves, which no result is selected for: the dynamic call binds the better overload or
+        // fails as ambiguous.
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerConsumers.Pick((dynamic)new[] { new Both() }, $\"{1}\") == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => HandlerConsumers.Pick((dynamic)new[] { new Both() }, $\"{HandlerTrace.Step(1)}\")) == \"step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => HandlerConsumers.Pick((dynamic)new[] { new LeftOnly() }, $\"{HandlerTrace.Step(1)}\")) == \"step,implicit,handler,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => LeadingHandlerConsumers.Pick($\"{1}\", (dynamic)new[] { new Both() }) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => AmbiguousHandlerConsumers.Pick((dynamic)new[] { new Both() }, $\"{1}\") == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The runtime binder converts a tuple to another tuple type by no conversion.
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick((dynamic)new[] { new Both() }, (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, (1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => TupleConsumers.Pick((dynamic)new[] { new Both() }, (1L, (long)\"ab\".Length)) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => ArmDropConsumers.Pick((dynamic)new[] { new LeftOnly() }, 1) == 2)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => KindConsumers.Pick((dynamic)new[] { new Both() }, (dynamic)1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => KindConsumers.Pick((dynamic)new[] { new LeftOnly() }, (dynamic)1) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => KindConsumers.Pick((dynamic)new TracedSource<Both>(), (dynamic)HandlerTrace.Step(1))) == \"source,step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerTakesOtherArgumentsAsValuesOfTheirTypes(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string>
+                {
+                    ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["BetterConsumers.cs"] = BetterConsumerSources, ["HandlerConsumers.cs"] = HandlerConsumerSources
+                });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A value converts to a nullable type by its conversion to the underlying type, so a tuple value of other element types takes
+        // no nullable tuple parameter, while the other conversions to a nullable type apply as for the call written in the index.
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), ((int, int)?)(1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), (1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), (1L, (long)\"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), ((long, long)?)(1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), null) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), new LongPair()) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableNumberConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), \"ab\".Length) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same calls with the sources themselves, which no result is selected for.
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new RightOnly() }, (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new Both() }, (1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, ((int, int)?)(1, \"ab\".Length)) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, (1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => BaseProbe.ExceptionType((Func<bool>)(() => NullableTupleConsumers.Pick((dynamic)new[] { new Both() }, (1L, (long)\"ab\".Length)) == 3)) == \"RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, ((long, long)?)(1L, (long)\"ab\".Length)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, null) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableTupleConsumers.Pick((dynamic)new[] { new LeftOnly() }, new LongPair()) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => NullableNumberConsumers.Pick((dynamic)new[] { new LeftOnly() }, \"ab\".Length) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerTakesNullableArgumentsAsTheBinderDoes(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string>
+                {
+                    ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["BetterConsumers.cs"] = BetterConsumerSources, ["HandlerConsumers.cs"] = HandlerConsumerSources
+                });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The arguments after the last result are evaluated once the view is selected: for a typed view as values of their types, as
+        // for the dynamic call, and for the object results as written, so an interpolated string converts to a handler constructed
+        // before its holes, as in the call written in the index. The source, each argument and the consumer run once, in written order.
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1)}\")) == \"handler,step,consumer3\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), $\"{HandlerTrace.Step(1)}\")) == \"step,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new RightOnly() }), $\"{HandlerTrace.Step(1)}\")) == \"step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new TracedSource<Both>()), $\"{HandlerTrace.Step(1)}\")) == \"source,handler,step,consumer3\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new TracedSource<LeftOnly>()), $\"{HandlerTrace.Step(1)}\")) == \"source,step,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1) / HandlerTrace.Step(0)}\")) == \"handler,step,step,DivideByZeroException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => FacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), $\"{HandlerTrace.Step(1) / HandlerTrace.Step(0)}\")) == \"step,step,DivideByZeroException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => ThrowingFacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1)}\")) == \"handler,step,consumer3,InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => ThrowingFacadeConsumers.Pick(Enumerable.Distinct((dynamic)new[] { new LeftOnly() }), $\"{HandlerTrace.Step(1)}\")) == \"step,consumer1,InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same calls with the object results written in the index.
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick((IEnumerable<object>)Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1)}\")) == \"handler,step,consumer3\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick((IEnumerable<object>)Enumerable.Distinct((dynamic)new TracedSource<Both>()), $\"{HandlerTrace.Step(1)}\")) == \"source,handler,step,consumer3\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => FacadeConsumers.Pick((IEnumerable<object>)Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1) / HandlerTrace.Step(0)}\")) == \"handler,step,step,DivideByZeroException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => ThrowingFacadeConsumers.Pick((IEnumerable<object>)Enumerable.Distinct((dynamic)new[] { new Both() }), $\"{HandlerTrace.Step(1)}\")) == \"handler,step,consumer3,InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The same calls with the sources themselves, which no result is selected for.
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => FacadeConsumers.Pick((dynamic)new[] { new Both() }, $\"{HandlerTrace.Step(1)}\")) == \"step,RuntimeBinderException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick((dynamic)new[] { new LeftOnly() }, $\"{HandlerTrace.Step(1)}\")) == \"step,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick((dynamic)new[] { new RightOnly() }, $\"{HandlerTrace.Step(1)}\")) == \"step,consumer2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => HandlerTrace.Run(() => FacadeConsumers.Pick((dynamic)new TracedSource<LeftOnly>(), $\"{HandlerTrace.Step(1)}\")) == \"source,step,consumer1\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => FacadeConsumers.Pick((dynamic)new[] { new LeftOnly() }, $\"{HandlerTrace.Step(1) / HandlerTrace.Step(0)}\")) == \"step,step,DivideByZeroException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => FacadeTrace.Run(() => ThrowingFacadeConsumers.Pick((dynamic)new[] { new LeftOnly() }, $\"{HandlerTrace.Step(1)}\")) == \"step,consumer1,InvalidOperationException\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctConsumerConvertsArgumentsAfterTheResultsForTheSelectedView(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string>
+                {
+                    ["AmbiguousConsumers.cs"] = AmbiguousConsumerSources, ["BetterConsumers.cs"] = BetterConsumerSources, ["HandlerConsumers.cs"] = HandlerConsumerSources
+                });
+        }
+
+        // Consumers of the element types of AmbiguousConsumerSources whose other arguments are target-typed expressions; the methods
+        // and the handler constructor are internal, so their signatures are kept as declared.
+        private const string HandlerConsumerSources = """
+            using System;
+            using System.Collections.Generic;
+            [System.Runtime.CompilerServices.InterpolatedStringHandler]
+            internal struct TextHandler
+            {
+                internal TextHandler(int literalLength, int formattedCount) => HandlerTrace.Add("handler");
+                internal void AppendLiteral(string value) { }
+                internal void AppendFormatted(int value) { }
+                public static implicit operator TextHandler(string value)
+                {
+                    HandlerTrace.Add("implicit");
+                    return new TextHandler(0, 0);
+                }
+            }
+            public static class HandlerTrace
+            {
+                private static readonly List<string> Trace = new List<string>();
+                internal static string Text = "1";
+                internal static string Run(Func<int> consume)
+                {
+                    Trace.Clear();
+                    consume();
+                    return string.Join(",", Trace);
+                }
+                internal static int Step(int value)
+                {
+                    Trace.Add("step");
+                    return value;
+                }
+                internal static void Add(string name) => Trace.Add(name);
+                internal static int Consume(int overload)
+                {
+                    Trace.Add("consumer" + overload);
+                    return overload;
+                }
+            }
+            public static class HandlerConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, TextHandler text) => HandlerTrace.Consume(1);
+                internal static int Pick(IEnumerable<IRight> values, string text) => HandlerTrace.Consume(2);
+                internal static int Pick(IEnumerable<object> values, object text) => HandlerTrace.Consume(3);
+            }
+            public static class LeadingHandlerConsumers
+            {
+                internal static int Pick(TextHandler text, IEnumerable<ILeft> values) => 1;
+                internal static int Pick(string text, IEnumerable<IRight> values) => 2;
+                internal static int Pick(object text, IEnumerable<object> values) => 3;
+            }
+            public static class AmbiguousHandlerConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, TextHandler text) => 1;
+                internal static int Pick(IEnumerable<IRight> values, TextHandler text) => 2;
+                internal static int Pick(IEnumerable<object> values, object text) => 3;
+            }
+            public static class TupleConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, (long, long) pair) => 1;
+                internal static int Pick(IEnumerable<IRight> values, (long, long) pair) => 2;
+                internal static int Pick(IEnumerable<object> values, object pair) => 3;
+                internal static int Pick(IEnumerable<ILeft> values, (byte, int) pair) => 4;
+            }
+            public static class ArmDropConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, long kind) => 1;
+                internal static int Pick(IEnumerable<object> values, int kind) => 2;
+            }
+            public static class NullableTupleConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, (long, long)? pair) => 1;
+                internal static int Pick(IEnumerable<IRight> values, (long, long)? pair) => 2;
+                internal static int Pick(IEnumerable<object> values, object pair) => 3;
+            }
+            public static class NullableNumberConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, long? number) => 1;
+                internal static int Pick(IEnumerable<IRight> values, long? number) => 2;
+                internal static int Pick(IEnumerable<object> values, object number) => 3;
+            }
+            public static class KindConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, byte kind) => HandlerTrace.Consume(1);
+                internal static int Pick(IEnumerable<IRight> values, int kind) => HandlerTrace.Consume(2);
+                internal static int Pick(IEnumerable<object> values, object kind) => HandlerTrace.Consume(3);
+            }
+            public readonly struct LongPair
+            {
+                public static implicit operator (long, long)(LongPair pair) => (1, 2);
+            }
+            public static class FacadeConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, string text) => HandlerTrace.Consume(1);
+                internal static int Pick(IEnumerable<IRight> values, string text) => HandlerTrace.Consume(2);
+                internal static int Pick(IEnumerable<object> values, TextHandler text) => HandlerTrace.Consume(3);
+                internal static int Pick(IEnumerable<object> values, string text) => HandlerTrace.Consume(4);
+            }
+            public static class ThrowingFacadeConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, string text) => HandlerTrace.Consume(1) + Throw();
+                internal static int Pick(IEnumerable<IRight> values, string text) => HandlerTrace.Consume(2) + Throw();
+                internal static int Pick(IEnumerable<object> values, TextHandler text) => HandlerTrace.Consume(3) + Throw();
+                internal static int Pick(IEnumerable<object> values, string text) => HandlerTrace.Consume(4) + Throw();
+                private static int Throw() => throw new InvalidOperationException();
+            }
+            public sealed class TracedSource<T> : IEnumerable<T> where T : new()
+            {
+                public TracedSource() => HandlerTrace.Add("source");
+                public IEnumerator<T> GetEnumerator()
+                {
+                    HandlerTrace.Add("enumerate");
+                    return ((IEnumerable<T>)new[] { new T() }).GetEnumerator();
+                }
+                System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+            }
+            public static class FacadeTrace
+            {
+                internal static string Run(Func<int> consume) => HandlerTrace.Run(() =>
+                {
+                    try
+                    {
+                        return consume();
+                    }
+                    catch (Exception e)
+                    {
+                        HandlerTrace.Add(e.GetType().Name);
+                        return 0;
+                    }
+                });
+            }
+            """;
+
+        // The methods are internal, so their signatures are kept as declared.
+        private const string AmbiguousConsumerSources = """
+            using System;
+            using System.Collections.Generic;
+            public interface ILeft { }
+            public interface IRight { }
+            public sealed class Both : ILeft, IRight { }
+            public sealed class LeftOnly : ILeft { }
+            public sealed class RightOnly : IRight { }
+            public static class AmbiguousConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values) => 1;
+                internal static int Pick(IEnumerable<IRight> values) => 2;
+                internal static int Pick(IEnumerable<object> values) => 3;
+            }
+            public sealed class AmbiguousHolder
+            {
+                public readonly int Overload;
+                internal AmbiguousHolder(IEnumerable<ILeft> values) => Overload = 1;
+                internal AmbiguousHolder(IEnumerable<IRight> values) => Overload = 2;
+                internal AmbiguousHolder(IEnumerable<object> values) => Overload = 3;
+            }
+            public sealed class TracedConsumer
+            {
+                private static readonly List<string> Trace = new List<string>();
+                internal static string Run(Func<int> consume)
+                {
+                    Trace.Clear();
+                    consume();
+                    return string.Join(",", Trace);
+                }
+                internal static TracedConsumer Create()
+                {
+                    Trace.Add("receiver");
+                    return new TracedConsumer();
+                }
+                internal static string Step(string name)
+                {
+                    Trace.Add(name);
+                    return name;
+                }
+                internal static IEnumerable<Both> BothValues() => Values(new Both());
+                internal static IEnumerable<LeftOnly> LeftOnlyValues() => Values(new LeftOnly());
+                private static IEnumerable<T> Values<T>(T value)
+                {
+                    Trace.Add("source");
+                    return Enumerate(value);
+                }
+                private static IEnumerable<T> Enumerate<T>(T value)
+                {
+                    Trace.Add("enumerated");
+                    yield return value;
+                }
+                internal int Pick(string before, IEnumerable<ILeft> values, string after) => Consume(1);
+                internal int Pick(string before, IEnumerable<IRight> values, string after) => Consume(2);
+                internal int Pick(string before, IEnumerable<object> values, string after) => Consume(3);
+                internal static string RunAction(Action consume)
+                {
+                    Trace.Clear();
+                    consume();
+                    return string.Join(",", Trace);
+                }
+                internal void Record(IEnumerable<ILeft> values) => Consume(1);
+                internal void Record(IEnumerable<IRight> values) => Consume(2);
+                internal void Record(IEnumerable<object> values) => Consume(3);
+                private static int Consume(int overload)
+                {
+                    Trace.Add("consumer" + overload);
+                    return overload;
+                }
+            }
+            """;
+
+        // Consumers of the element types of AmbiguousConsumerSources; the methods are internal, so their signatures are kept as declared.
+        private const string ConsumerPlanSources = """
+            using System;
+            using System.Collections.Generic;
+            public static class PairConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> first, IEnumerable<ILeft> second) => 1;
+                internal static int Pick(IEnumerable<IRight> first, IEnumerable<IRight> second) => 2;
+                internal static int Pick(IEnumerable<object> first, IEnumerable<object> second) => 3;
+            }
+            public sealed class PairHolder
+            {
+                public readonly int Overload;
+                internal PairHolder(IEnumerable<ILeft> first, IEnumerable<ILeft> second) => Overload = 1;
+                internal PairHolder(IEnumerable<IRight> first, IEnumerable<IRight> second) => Overload = 2;
+                internal PairHolder(IEnumerable<object> first, IEnumerable<object> second) => Overload = 3;
+            }
+            public static class DiscriminatedConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values, int kind) => 1;
+                internal static int Pick(IEnumerable<IRight> values, string kind) => 2;
+                internal static int Pick(IEnumerable<object> values, object kind) => 3;
+            }
+            public static class VoidMemberConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values) => 1;
+                internal static int Pick(IEnumerable<IRight> values) => 2;
+                internal static int Pick(IEnumerable<object> values) => 3;
+                internal static void Pick() { }
+            }
+            public static class GenericMemberConsumers
+            {
+                internal static int Pick(IEnumerable<ILeft> values) => 1;
+                internal static int Pick(IEnumerable<IRight> values) => 2;
+                internal static int Pick(IEnumerable<object> values) => 3;
+                internal static int Pick<T>() => 0;
+            }
+            public interface __distinctCallX { }
+            public sealed class PrefixLeft : __distinctCallX { }
+            public static class PrefixConsumers
+            {
+                internal static int Pick(IEnumerable<__distinctCallX> values) => 1;
+                internal static int Pick(IEnumerable<IRight> values) => 2;
+                internal static int Pick(IEnumerable<object> values) => 3;
+            }
+            public sealed class TracedPairs
+            {
+                private static readonly List<string> Trace = new List<string>();
+                internal static string Run(Func<int> consume)
+                {
+                    Trace.Clear();
+                    consume();
+                    return string.Join(",", Trace);
+                }
+                internal static TracedPairs Create()
+                {
+                    Trace.Add("receiver");
+                    return new TracedPairs();
+                }
+                internal static string Step(string name)
+                {
+                    Trace.Add(name);
+                    return name;
+                }
+                internal static IEqualityComparer<Both> Comparer()
+                {
+                    Trace.Add("comparer");
+                    return EqualityComparer<Both>.Default;
+                }
+                internal static IEnumerable<Both> BothValues() => Values(new Both());
+                internal static IEnumerable<LeftOnly> LeftOnlyValues() => Values(new LeftOnly());
+                private static IEnumerable<T> Values<T>(T value)
+                {
+                    Trace.Add("source");
+                    return Enumerate(value);
+                }
+                private static IEnumerable<T> Enumerate<T>(T value)
+                {
+                    Trace.Add("enumerated");
+                    yield return value;
+                }
+                internal int Pick(string before, IEnumerable<ILeft> first, string middle, IEnumerable<ILeft> second, string after) => Consume(1);
+                internal int Pick(string before, IEnumerable<IRight> first, string middle, IEnumerable<IRight> second, string after) => Consume(2);
+                internal int Pick(string before, IEnumerable<object> first, string middle, IEnumerable<object> second, string after) => Consume(3);
+                private static int Consume(int overload)
+                {
+                    Trace.Add("consumer" + overload);
+                    return overload;
+                }
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        // A type of the index sources with the name of the framework comparer interface does not change how the comparer of
+        // a nested Distinct call is recognized.
+        public void NestedDistinctRecognizesFrameworkComparer(Options options, bool comparerInterfaceSource)
+        {
+            AssertPrimitiveArrayExpression(options,
+                "Enumerable.Count(item.Tags, tag => Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), EqualityComparer<int>.Default).Count() == 2) == 2",
+                new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                comparerInterfaceSource ? new Dictionary<string, string> { ["Comparer.cs"] = ComparerInterfaceSource } : null);
+        }
+
+        private const string ComparerInterfaceSource = """
+            namespace System.Collections.Generic
+            {
+                public interface IEqualityComparer<T> { }
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(tag) > 3) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct(tag)) == 4) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Range(-2, 3).Select(Math.Abs).Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Contains(Enumerable.Range(0, 3).Select(x => (long)x), 2L)) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Select(Enumerable.Range(0, 3), Convert.ToString).Contains(\"2\")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Where((dynamic)Enumerable.First(Enumerable.Select(new object[] { 1 }, x => Enumerable.Range(1, 2))), (Func<dynamic, bool>)(x => x > 1))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RewrittenCallsInsideCountExecuteInReduce(Options options, string expression)
+        {
+            AssertReduceExpression(options, expression);
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The generated Range source choice of a reduce rewrites the lambdas of the call written in the index,
+        // and a type of the index sources with the name or the full name of the helper type does not capture it.
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).SelectMany(x => new object[] { \"2024-01-01T00:00:00.0000000Z\" }).First() is DateTime) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).SelectMany(x => new object[] { \"2024-01-01T00:00:00.0000000Z\" }).First() is DateTime) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => x)).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Range(0, 1).Select((Func<dynamic, dynamic>)(x => x)).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void GeneratedSourceChoicesInReduceIgnoreIndexTypesWithHelperNames(Options options, bool fullName, string expression)
+        {
+            AssertReduceExpression(options, expression, new Dictionary<string, string> { ["HelperNames.cs"] = fullName ? HelperFullNameSources : HelperIndexNamespaceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // The helpers that replace Enumerable calls are not captured by a type of the index sources with the name or the full name
+        // of the helper type, so calls with reference elements keep working as Enumerable calls did.
+        [RavenData(false, "Enumerable.Count(new[] { \"a\", \"b\" }) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(new[] { \"a\", \"b\" }) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Contains(new[] { \"a\" }, \"a\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Contains(new[] { \"a\" }, \"a\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.SequenceEqual(new[] { \"a\" }, new[] { \"a\" })", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.SequenceEqual(new[] { \"a\" }, new[] { \"a\" })", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Concat(new[] { \"a\" }, new[] { \"b\" }).Last() == \"b\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Concat(new[] { \"a\" }, new[] { \"b\" }).Last() == \"b\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.ToArray(new[] { \"a\", \"b\" }).Length == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.ToArray(new[] { \"a\", \"b\" }).Length == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.ToList(new[] { \"a\", \"b\" }).Count == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.ToList(new[] { \"a\", \"b\" }).Count == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Distinct gets the helpers only inside rewritten calls; at the top level it stays an Enumerable call.
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Distinct(new[] { \"a\", \"a\" }).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Distinct(new[] { \"a\", \"a\" }).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Distinct(comparer: StringComparer.Ordinal, source: new[] { \"a\", \"a\" }).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Distinct(comparer: StringComparer.Ordinal, source: new[] { \"a\", \"a\" }).Count() == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "Enumerable.Distinct(new[] { \"a\", \"a\" }).Count() == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Distinct(new[] { \"a\", \"a\" }).Count() == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Ordering of string arrays with the default comparer, with a dynamic key selector and with a comparer.
+        [RavenData(false, "new string[] { \"b\", \"a\" }.OrderBy(x => x).First() == \"a\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "new string[] { \"b\", \"a\" }.OrderBy(x => x).First() == \"a\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, "new string[] { \"B\", \"a\" }.OrderBy(x => x, StringComparer.InvariantCulture).First() == \"a\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "new string[] { \"B\", \"a\" }.OrderBy(x => x, StringComparer.InvariantCulture).First() == \"a\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HelperCallsIgnoreIndexTypesWithHelperNames(Options options, bool fullName, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["HelperNames.cs"] = fullName ? HelperFullNameSources : HelperIndexNamespaceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(false, "Enumerable.Count(new[] { \"a\", \"b\" }) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, "Enumerable.Count(new[] { \"a\", \"b\" }) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HelperCallsInReduceIgnoreIndexTypesWithHelperNames(Options options, bool fullName, string expression)
+        {
+            AssertReduceExpression(options, expression, new Dictionary<string, string> { ["HelperNames.cs"] = fullName ? HelperFullNameSources : HelperIndexNamespaceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // The helper references of each index use a name that its code does not use, so a type of the index sources imported
+        // through its namespace keeps its name, also when it is the name the helper references get in another index.
+        public void HelperCallsKeepNamesOfIndexTypes(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+                session.SaveChanges();
+            }
+
+            var results = new List<string>();
+            foreach (var typeName in new[] { "ravenServer_1", "ravenServer" })
+            {
+                var indexName = "HelperNames/" + typeName;
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+                {
+                    Name = indexName,
+                    Maps = { "from item in docs.PrimitiveArrayItems select new { Found = " + typeName + ".Eleven() == 11 && Enumerable.Count(new[] { \"a\", \"b\" }) == 2 }" },
+                    AdditionalSources = new Dictionary<string, string>
+                    {
+                        ["IndexNames.cs"] = "namespace IndexNames { public static class " + typeName + " { public static int Eleven() => 11; } }"
+                    },
+                    Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+                }));
+
+                Indexes.WaitForIndexing(store, allowErrors: true);
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+                using var session = store.OpenSession();
+                var found = session.Advanced.RawQuery<ClrContainsResult>($"from index '{indexName}' select Found").Single().Found;
+                results.Add(typeName + ":" + found + string.Concat(errors.Select(x => Environment.NewLine + x.Error)));
+            }
+
+            Assert.Equal(new[] { "ravenServer_1:True", "ravenServer:True" }, results);
+        }
+
+        private void AssertReduceExpression(Options options, string expression, Dictionary<string, string> additionalSources = null)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/NestedCallsReduce";
+            var definition = new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.PrimitiveArrayItems select new { item.Group, item.Tags, Found = false }" },
+                Reduce = "from result in results group result by result.Group into grouped let item = grouped.First() select new { Group = grouped.Key, item.Tags, Found = " + expression + " }",
+                Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            };
+            if (additionalSources != null)
+                definition.AdditionalSources = additionalSources;
+            store.Maintenance.Send(new PutIndexesOperation(definition));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Group = "tags", Tags = new[] { "alpha", "b" } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), expression + Environment.NewLine + string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var result = session.Advanced.RawQuery<ClrContainsResult>($"from index '{indexName}' select Found").Single();
+                Assert.True(result.Found, expression);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Results of internal BCL iterators keep their public interfaces for dynamic binding.
+        [RavenData("Enumerable.First(Enumerable.Where(item.Tags, tag => tag == \"b\")) == \"b\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.First(Enumerable.Reverse(tag)) == 'a') == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The calls are fully qualified so no rewrite applies: Count binds to the char elements of a dynamic Distinct result.
+        [RavenData("Enumerable.Count(item.Tags, tag => System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct(tag)) == 4) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => System.Linq.Enumerable.Count(System.Linq.Enumerable.Distinct((IEnumerable<char>)tag)) == 4) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DynamicBindingOfIteratorResultsExecutes(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SequenceEqualUsesTypedEnumeratorOfDerivedArray(Options options, bool valuesFirst)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/TypedSequenceEqual";
+            string expression = valuesFirst
+                ? "Enumerable.SequenceEqual((IEnumerable<short>)values, new short[] { 5, 6 })"
+                : "Enumerable.SequenceEqual(new short[] { 5, 6 }, (IEnumerable<short>)values)";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.ContainsOriginItems let values = new TypedSequenceValues(item.Values) select new { item.Key, Found = " + expression + ", Trace = values.Trace.ToArray() }" },
+                AdditionalSources = new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources },
+                Fields =
+                {
+                    ["Key"] = new IndexFieldOptions { Storage = FieldStorage.Yes },
+                    ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes },
+                    ["Trace"] = new IndexFieldOptions { Storage = FieldStorage.Yes }
+                }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ContainsOriginItem { Key = "equal", Values = new[] { 5L, 6L } });
+                session.Store(new ContainsOriginItem { Key = "longer", Values = new[] { 5L, 6L, 7L } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                ContainsOriginResult[] rows = session.Advanced.RawQuery<ContainsOriginResult>($"from index '{indexName}' select Key, Found, Trace").ToList().OrderBy(row => row.Key).ToArray();
+                Assert.Equal(new[] { ("equal", true), ("longer", false) }, rows.Select(row => (row.Key, row.Found)).ToArray());
+                // Both argument orders read the derived array through its typed enumerator, which is disposed.
+                Assert.Equal(new[]
+                {
+                    ("equal", "short.GetEnumerator|short.MoveNext:5|short.MoveNext:6|short.Dispose"),
+                    ("longer", "short.GetEnumerator|short.MoveNext:5|short.MoveNext:6|short.MoveNext:7|short.Dispose")
+                }, rows.Select(row => (row.Key, string.Join("|", row.Trace ?? Array.Empty<string>()))).ToArray());
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("ErrorProbe.ParamName((Func<bool>)(() => Enumerable.SequenceEqual((IEnumerable<object>)item.Values, (IEnumerable<object>)null))) == \"second\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("ErrorProbe.ParamName((Func<bool>)(() => Enumerable.SequenceEqual((IEnumerable<object>)null, (IEnumerable<object>)item.Values))) == \"first\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SequenceEqualOfStoredArrayReportsNullArgument(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Values = new[] { 1L } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        // Additional sources are rewritten: public methods get dynamic object/numeric parameters and returns, so
+        // RangeSelectors.Box takes object elements, while internal methods, properties, constructors and explicit
+        // interface implementations keep their signatures.
+        private const string NestedSequenceSources = """
+            using System;
+            using System.Collections;
+            using System.Collections.Generic;
+            using System.Dynamic;
+            using System.Linq;
+            using Raven.Server.Documents.Indexes.Static;
+            public static class RangeSelectors
+            {
+                public static object Box(int value)
+                {
+                    return value;
+                }
+                internal static int Twice(int value) => value * 2;
+            }
+            public static class OverloadedSelectors
+            {
+                internal static string Label(int value) => "int";
+                internal static string Label(object value) => "object";
+                internal static string LabelIndexed(int value, int index) => "int";
+                internal static string LabelIndexed(object value, int index) => "object";
+            }
+            public sealed class IdentityTuple : Tuple<int>, IEquatable<IdentityTuple>
+            {
+                public IdentityTuple(int value) : base(value)
+                {
+                }
+                bool IEquatable<IdentityTuple>.Equals(IdentityTuple other) => ReferenceEquals(this, other);
+            }
+            public sealed class TracedTuple : Tuple<int>, IEquatable<TracedTuple>
+            {
+                public static int TypedEqualsCalls;
+                public TracedTuple(int value) : base(value)
+                {
+                }
+                bool IEquatable<TracedTuple>.Equals(TracedTuple other)
+                {
+                    TypedEqualsCalls++;
+                    return other != null && Item1 == other.Item1;
+                }
+            }
+            public static class ArgumentProbe
+            {
+                private static readonly List<string> Trace = new List<string>();
+                public static IEqualityComparer<object> Comparer
+                {
+                    get
+                    {
+                        Trace.Add("comparer");
+                        return EqualityComparer<object>.Default;
+                    }
+                }
+                public static IEqualityComparer<object> ThrowingComparer
+                {
+                    get
+                    {
+                        Trace.Add("comparer");
+                        throw new InvalidOperationException();
+                    }
+                }
+                public static object[] Values
+                {
+                    get
+                    {
+                        Trace.Add("source");
+                        return new object[] { 1L, 1L, 2L };
+                    }
+                }
+                public static object[] ThrowingValues
+                {
+                    get
+                    {
+                        Trace.Add("source");
+                        throw new InvalidOperationException();
+                    }
+                }
+                public static Func<dynamic, dynamic> Selector
+                {
+                    get
+                    {
+                        Trace.Add("selector");
+                        return value => value;
+                    }
+                }
+                public static Func<dynamic, IEnumerable<dynamic>> ManySelector
+                {
+                    get
+                    {
+                        Trace.Add("selector");
+                        return value => new object[] { value };
+                    }
+                }
+                public static Func<int, int> IntSelector
+                {
+                    get
+                    {
+                        Trace.Add("selector");
+                        return value => value;
+                    }
+                }
+                public static int Start
+                {
+                    get
+                    {
+                        Trace.Add("start");
+                        return 0;
+                    }
+                }
+                public static IEqualityComparer<int> IntComparer
+                {
+                    get
+                    {
+                        Trace.Add("comparer");
+                        return EqualityComparer<int>.Default;
+                    }
+                }
+                public static int[] IntValues
+                {
+                    get
+                    {
+                        Trace.Add("source");
+                        return new[] { 1, 1, 2 };
+                    }
+                }
+                public static string Run(Func<int> action)
+                {
+                    Trace.Clear();
+                    string result;
+                    try
+                    {
+                        result = action().ToString();
+                    }
+                    catch (Exception e)
+                    {
+                        result = e.GetType().Name;
+                    }
+                    return string.Join(",", Trace) + ":" + result;
+                }
+                internal static string Order(Func<int> action)
+                {
+                    Run(action);
+                    return string.Join(",", Trace.Distinct());
+                }
+                internal static int MostEvaluations(Func<int> action)
+                {
+                    Run(action);
+                    return Trace.GroupBy(name => name).Max(names => names.Count());
+                }
+            }
+            public sealed class ParityComparer : IEqualityComparer<int>
+            {
+                bool IEqualityComparer<int>.Equals(int x, int y) => x % 2 == y % 2;
+                int IEqualityComparer<int>.GetHashCode(int value) => value % 2;
+            }
+            public static class TypedConsumers
+            {
+                internal static int Sum(IEnumerable<int> values) => values.Sum();
+                internal static int SumAll(params IEnumerable<int>[] values) => values.Sum(x => x.Sum());
+            }
+            public sealed class Holder
+            {
+                public IEnumerable<int> Values;
+                public IEnumerable<int> Items { get; set; }
+            }
+            public static class Overloads
+            {
+                internal static int Pick(IEnumerable<int> values) => 1;
+                internal static int Pick(IEnumerable<object> values) => 2;
+                internal static int PickElement(IEnumerable<int> values) => 1;
+                internal static int PickElement(IEnumerable<string> values) => 2;
+                internal static int PickWith(IEnumerable<int> values, Func<int, int> selector) => 1;
+                internal static int PickWith(IEnumerable<object> values, Func<object, object> selector) => 2;
+            }
+            public static class DeferredProbe
+            {
+                private static readonly List<string> Trace = new List<string>();
+                internal static IEnumerable<int> Values()
+                {
+                    Trace.Add("source");
+                    return Enumerate(throws: false);
+                }
+                internal static IEnumerable<int> Throwing() => Enumerate(throws: true);
+                private static IEnumerable<int> Enumerate(bool throws)
+                {
+                    Trace.Add("enumerated");
+                    if (throws)
+                        throw new InvalidOperationException();
+                    yield return 1;
+                    yield return 1;
+                    yield return 2;
+                }
+                internal static string Run(Func<IEnumerable<int>> distinct) => Observe(distinct);
+                internal static string RunObjects(Func<IEnumerable<object>> distinct) => Observe(distinct);
+                private static string Observe<T>(Func<IEnumerable<T>> distinct)
+                {
+                    Trace.Clear();
+                    var result = distinct();
+                    Trace.Add("returned");
+                    Trace.Add(result.Count().ToString());
+                    return string.Join(",", Trace);
+                }
+            }
+            public sealed class ConvertibleSequence : DynamicObject, IEnumerable<object>
+            {
+                public static int TryConvertCalls;
+                private readonly object[] _values = new object[3];
+                public static object Create()
+                {
+                    return new ConvertibleSequence();
+                }
+                public IEnumerator<object> GetEnumerator()
+                {
+                    return ((IEnumerable<object>)_values).GetEnumerator();
+                }
+                IEnumerator IEnumerable.GetEnumerator() => _values.GetEnumerator();
+                public override bool TryConvert(ConvertBinder binder, out dynamic result)
+                {
+                    TryConvertCalls++;
+                    result = null;
+                    return false;
+                }
+            }
+            public sealed class ImplicitSequence : DynamicObject
+            {
+                public static object Create()
+                {
+                    return new ImplicitSequence();
+                }
+                public override bool TryConvert(ConvertBinder binder, out dynamic result)
+                {
+                    if (binder.Explicit == false && binder.Type == typeof(IEnumerable<object>))
+                    {
+                        result = new object[2];
+                        return true;
+                    }
+                    result = null;
+                    return false;
+                }
+            }
+            public static class CountProbe
+            {
+                public static int Calls;
+                public static bool Reset()
+                {
+                    Calls = 0;
+                    return true;
+                }
+                public static object Next()
+                {
+                    Calls++;
+                    return new object[3];
+                }
+                public static object NextExplicit()
+                {
+                    Calls++;
+                    return ExplicitSequence.Create();
+                }
+            }
+            public sealed class ExplicitSequence : DynamicObject
+            {
+                private readonly object[] _values;
+                private ExplicitSequence(object[] values)
+                {
+                    _values = values;
+                }
+                public static object Create()
+                {
+                    return new ExplicitSequence(new object[2]);
+                }
+                public override bool TryConvert(ConvertBinder binder, out dynamic result)
+                {
+                    if (binder.Explicit && binder.Type == typeof(IEnumerable<object>))
+                    {
+                        result = _values;
+                        return true;
+                    }
+                    result = null;
+                    return false;
+                }
+            }
+            public static class ErrorProbe
+            {
+                public static string ParamName(Func<bool> action)
+                {
+                    try
+                    {
+                        action();
+                        return null;
+                    }
+                    catch (ArgumentNullException e)
+                    {
+                        return e.ParamName;
+                    }
+                }
+                public static string ExceptionType(Func<bool> action)
+                {
+                    try
+                    {
+                        action();
+                        return null;
+                    }
+                    catch (Exception e)
+                    {
+                        return e.GetType().Name;
+                    }
+                }
+            }
+            public sealed class TypedSequenceValues : DynamicArray, IEnumerable<short>
+            {
+                private readonly short[] _values;
+                public readonly List<string> Trace = new List<string>();
+                public TypedSequenceValues(IEnumerable values) : this(values.Cast<object>().Select(value => (short)Convert.ToInt32(value)).ToArray())
+                {
+                }
+                private TypedSequenceValues(short[] values) : base(values.Cast<object>().ToArray())
+                {
+                    _values = values;
+                }
+                IEnumerator<short> IEnumerable<short>.GetEnumerator()
+                {
+                    Trace.Add("short.GetEnumerator");
+                    return EnumerateShorts().GetEnumerator();
+                }
+                private IEnumerable<short> EnumerateShorts()
+                {
+                    try
+                    {
+                        foreach (short value in _values)
+                        {
+                            Trace.Add("short.MoveNext:" + value);
+                            yield return value;
+                        }
+                    }
+                    finally
+                    {
+                        Trace.Add("short.Dispose");
+                    }
+                }
+            }
+            """;
 
         [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData("Enumerable.Concat(new[] { \"2024-01-01T00:00:00.0000000Z\" }, new[] { \"tail\" }).First() is string", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -2234,6 +3913,8 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         [RavenData("Enumerable.Count(source: Enumerable.Concat(item.Tags, new ConcatCountOnlyCollection(2))) == 4", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(Enumerable.Concat(new ConcatCountOnlyCollection(1), Enumerable.Concat(item.MissingTags, new ConcatCountOnlyCollection(2)))) == 3", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(Enumerable.Concat(Enumerable.Concat(item.Tags, new ConcatCountOnlyCollection(1)), item.Tags)) == 5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Concat(item.Tags, new ConcatCountOnlyCollection(2))) == 4) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count((object)Enumerable.Concat(new ConcatCountOnlyCollection(1), new ConcatCountOnlyCollection(2))) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         public void EnumerableCountOfConcatDoesNotEnumerateCountableOperands(Options options, string expression)
         {
             using var store = GetDocumentStore(options);

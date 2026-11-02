@@ -335,7 +335,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 object item = enumerator.Current;
                 if (item is LazyStringValue { HasStringValue: false, IsDisposed: false } text)
                 {
-                    // Reuse the encoded character while preserving cached-string and disposed-value handling below.
                     if (byteCount < 0)
                         byteCount = Sparrow.Encodings.Utf8.GetBytes(MemoryMarshal.CreateReadOnlySpan(ref character, length: 1), utf8Character);
 
@@ -817,7 +816,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static bool EqualsTextOrNull(object first, object second)
         {
-            // Preserve ordinary equality, including numeric equality, before adapting JSON text and null values.
             return (first, second) switch
             {
                 (first: null or DynamicNullObject, second: null or DynamicNullObject) => true,

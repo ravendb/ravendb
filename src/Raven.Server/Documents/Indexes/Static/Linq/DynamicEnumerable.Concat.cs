@@ -13,8 +13,6 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return new DynamicArray(AsEnumerable(source).Cast<object>().Concat(AsEnumerable(other).Cast<object>()));
         }
 
-        // Enumerable.Concat calls in index code are rewritten here.
-        // The generic overload preserves TSource; IDynamicSequence overloads return IEnumerable<dynamic> for further index expressions.
         public static IEnumerable<TSource> ConcatFromEnumerable<TSource>(IEnumerable<TSource> first, IEnumerable<TSource> second)
         {
             return Enumerable.Concat(first, second);
@@ -36,15 +34,13 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             return ConcatDynamicArray(first, second);
         }
 
-        // Keep the existing dynamic route for operands without a common generic element type.
         [UsedImplicitly(Reason = "The return value is consumed by generated index code.")]
         public static IEnumerable<dynamic> ConcatFromEnumerable(object first, object second)
         {
             return Concat(first, second);
         }
 
-        // Count/ToArray/ToList rewrite targets pass the underlying Concat iterator, so Enumerable can use
-        // collection operands' counts and CopyTo instead of enumerating them through the wrapper.
+        // Unwrapping lets Enumerable use the counts and CopyTo of collection operands instead of enumerating them through the wrapper.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CountFromEnumerable(IEnumerable<object> source)
         {
@@ -52,10 +48,23 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CountFromEnumerable<TSource>(IEnumerable<TSource> source)
+        {
+            return Enumerable.Count(source);
+        }
+
+        public static int CountFromEnumerable(object source)
+        {
+            // ReSharper disable once PossibleInvalidCastException
+            return CountFromEnumerable(source as IEnumerable<object> ?? (IEnumerable<object>)(dynamic)source);
+        }
+
+        // Reassigning the parameter would lose its exact type after inlining, and the JIT would no longer fold the collection checks.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static TSource[] ToArrayFromEnumerable<TSource>(IEnumerable<TSource> source)
         {
-            if (typeof(TSource) == typeof(object) && source is ConcatenatedArray concatenated)
-                source = (IEnumerable<TSource>)ConcatenatedArray.Unwrap(concatenated);
+            if (source is ConcatenatedArray concatenated)
+                return Enumerable.ToArray((IEnumerable<TSource>)ConcatenatedArray.Unwrap(concatenated));
 
             return Enumerable.ToArray(source);
         }
@@ -63,20 +72,18 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static List<TSource> ToListFromEnumerable<TSource>(IEnumerable<TSource> source)
         {
-            if (typeof(TSource) == typeof(object) && source is ConcatenatedArray concatenated)
-                source = (IEnumerable<TSource>)ConcatenatedArray.Unwrap(concatenated);
+            if (source is ConcatenatedArray concatenated)
+                return Enumerable.ToList((IEnumerable<TSource>)ConcatenatedArray.Unwrap(concatenated));
 
             return Enumerable.ToList(source);
         }
 
         private static IEnumerable<dynamic> ConcatDynamicArray(IEnumerable<object> first, IEnumerable<object> second)
         {
-            // Unwrap nested results so Enumerable.Concat can flatten the chain.
             return new ConcatenatedArray(Enumerable.Concat(ConcatenatedArray.Unwrap(first), ConcatenatedArray.Unwrap(second)));
         }
 
-        // Common marker for DynamicArray and DynamicNullObject avoids competing overloads
-        // for literal null. DynamicNullObject enumerates as empty; CLR null still throws.
+        // A common marker for DynamicArray and DynamicNullObject keeps the overloads unambiguous for a literal null.
         public interface IDynamicSequence : IEnumerable<object>
         {
         }
