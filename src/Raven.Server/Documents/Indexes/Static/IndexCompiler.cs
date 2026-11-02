@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -195,10 +195,11 @@ namespace Raven.Server.Documents.Indexes.Static
             
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
             var helperAlias = GetHelperAlias(definition);
+            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
 
-            var @class = CreateClass(cSharpSafeName, definition, indexVersion, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias));
+            var @class = CreateClass(cSharpSafeName, definition, indexVersion, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias), res.UsesLinqEnumerable);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition, helperAlias);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition, helperAlias, res);
             var type = compilationResult.Type;
 
             var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
@@ -207,14 +208,13 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition, string helperAlias)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition, string helperAlias,
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable) res)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
-
-            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
 
             // The index code uses the reference without an alias; the aliased reference serves the generated helper calls only.
             var externs = new SyntaxList<ExternAliasDirectiveSyntax>();
@@ -306,14 +306,14 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
         {
             if (definition.AdditionalSources == null && definition.AdditionalAssemblies == null)
             {
-                return (Usings, new List<SyntaxTree>(), References);
+                return (Usings, new List<SyntaxTree>(), References, UsesLinqEnumerable: true);
             }
 
-            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) result;
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable) result;
             var syntaxTrees = new Dictionary<string, SyntaxTree>();
             var usings = new HashSet<string>();
 
@@ -369,6 +369,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
             );
 
+            result.UsesLinqEnumerable = UsesLinqEnumerable(tempCompilation, result.UsingDirectiveSyntaxes);
+
             var rewriter = new MethodDynamicParametersRewriter();
             var recursionGuard = new RecursionGuardRewriter();
             result.SyntaxTrees = new List<SyntaxTree>();
@@ -408,6 +410,26 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string AddUsingIndexStatic(string ext)
         {
             return $"using {IndexesStaticNamespace};{Environment.NewLine}{ext}";
+        }
+
+        private static readonly AssemblyIdentity LinqAssembly = AssemblyIdentity.FromAssemblyDefinition(typeof(Enumerable).Assembly);
+
+        private static bool UsesLinqEnumerable(CSharpCompilation compilation, UsingDirectiveSyntax[] usings)
+        {
+            var probe = SyntaxFactory.CompilationUnit()
+                .WithUsings(RoslynHelper.CreateUsings(usings))
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(RoslynHelper.CreateNamespace(IndexNamespace)))
+                .NormalizeWhitespace();
+
+            var tree = SyntaxFactory.ParseSyntaxTree(probe.ToFullString());
+            var semanticModel = compilation.AddSyntaxTrees(tree).GetSemanticModel(tree);
+            var @namespace = tree.GetRoot().DescendantNodes().OfType<NamespaceDeclarationSyntax>().First();
+            var symbolInfo = semanticModel.GetSpeculativeSymbolInfo(@namespace.OpenBraceToken.Span.End, SyntaxFactory.IdentifierName("Enumerable"), SpeculativeBindingOption.BindAsTypeOrNamespace);
+
+            return symbolInfo.Symbol is INamedTypeSymbol type &&
+                   type.ContainingAssembly != null &&
+                   type.ContainingAssembly.Identity.Equals(LinqAssembly) &&
+                   type.ToDisplayString() == typeof(Enumerable).FullName;
         }
 
         private static MetadataReference[] GetReferences(IndexDefinition definition)
@@ -572,7 +594,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
         
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion, string dynamicEnumerable)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion, string dynamicEnumerable, bool usesLinqEnumerable)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
@@ -585,7 +607,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, usesLinqEnumerable, ref members));
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
                 stackDepthRetriever.Clear();
@@ -593,7 +615,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, usesLinqEnumerable, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
@@ -677,7 +699,7 @@ namespace Raven.Server.Documents.Indexes.Static
         }
 
         private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
-            string dynamicEnumerable, ref SyntaxList<MemberDeclarationSyntax> members)
+            string dynamicEnumerable, bool usesLinqEnumerable, ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
             {
@@ -704,13 +726,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable), queryExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable), queryExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable), queryExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable), queryExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -723,13 +745,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable), invocationExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable), invocationExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable), invocationExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable), invocationExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -834,7 +856,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 "Split the expression into shorter parts.");
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, string dynamicEnumerable, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, string dynamicEnumerable, bool usesLinqEnumerable, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -862,7 +884,8 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
                                 SelectManyRewriter.QuerySyntax,
-                                dynamicEnumerable),
+                                dynamicEnumerable,
+                                usesLinqEnumerable),
                             MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
                         break;
@@ -873,7 +896,8 @@ namespace Raven.Server.Documents.Indexes.Static
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
                                 SelectManyRewriter.MethodSyntax,
-                                dynamicEnumerable),
+                                dynamicEnumerable,
+                                usesLinqEnumerable),
                             MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                         break;

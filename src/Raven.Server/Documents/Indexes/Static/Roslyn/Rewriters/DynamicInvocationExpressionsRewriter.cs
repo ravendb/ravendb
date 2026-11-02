@@ -33,10 +33,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private readonly string _dynamicEnumerable;
 
-        public DynamicInvocationExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable)
+        private readonly bool _usesLinqEnumerable;
+
+        public DynamicInvocationExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable, bool usesLinqEnumerable)
         {
             _rangeSourceParameters = rangeSourceParameters;
             _dynamicEnumerable = dynamicEnumerable;
+            _usesLinqEnumerable = usesLinqEnumerable;
         }
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -75,7 +78,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 maximumArgumentCount = minimumArgumentCount;
 
             var argumentCount = node.ArgumentList.Arguments.Count;
-            if (argumentCount < minimumArgumentCount ||
+            if (_usesLinqEnumerable == false ||
+                argumentCount < minimumArgumentCount ||
                 argumentCount > maximumArgumentCount ||
                 node.Expression is not MemberAccessExpressionSyntax)
                 return base.VisitInvocationExpression(node);
@@ -116,6 +120,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 var cast = SyntaxFactory.CastExpression(EnumerableOfDynamic, SyntaxFactory.ParenthesizedExpression(argument.Expression));
                 visited = visited.WithArgumentList(visited.ArgumentList.WithArguments(visited.ArgumentList.Arguments.Replace(argument, argument.WithExpression(cast))));
             }
+
+            if (_usesLinqEnumerable == false)
+                return visited;
 
             var identifier = SyntaxFactory.Identifier(memberAccess.Name.Identifier.LeadingTrivia, "CountFromEnumerable", memberAccess.Name.Identifier.TrailingTrivia);
             return visited.WithExpression(memberAccess
@@ -252,8 +259,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return false;
         }
 
-        private static bool IsInsideCastRewrittenCall(SyntaxNode node)
+        private bool IsInsideCastRewrittenCall(SyntaxNode node)
         {
+            if (_usesLinqEnumerable == false)
+                return false;
+
             for (var parent = node.Parent; parent != null; parent = parent.Parent)
             {
                 if (parent is not InvocationExpressionSyntax invocation)

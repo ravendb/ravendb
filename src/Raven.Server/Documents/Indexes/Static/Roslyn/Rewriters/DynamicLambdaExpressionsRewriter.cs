@@ -13,10 +13,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private readonly string _dynamicEnumerable;
 
-        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable)
+        private readonly bool _usesLinqEnumerable;
+
+        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable, bool usesLinqEnumerable)
         {
             _rangeSourceParameters = rangeSourceParameters;
             _dynamicEnumerable = dynamicEnumerable;
+            _usesLinqEnumerable = usesLinqEnumerable;
         }
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -233,7 +236,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             };
         }
 
-        private static bool HasArrayOrderingSource(InvocationExpressionSyntax invocation, out bool stringArray)
+        private bool HasArrayOrderingSource(InvocationExpressionSyntax invocation, out bool stringArray)
         {
             stringArray = false;
             if (invocation.Expression is not MemberAccessExpressionSyntax { Name: IdentifierNameSyntax } member)
@@ -242,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             var source = member.Expression;
             if (source is IdentifierNameSyntax { Identifier.ValueText: "Enumerable" })
             {
-                if (invocation.ArgumentList.Arguments.Count == 0)
+                if (_usesLinqEnumerable == false || invocation.ArgumentList.Arguments.Count == 0)
                     return false;
 
                 source = invocation.ArgumentList.Arguments[0].Expression;

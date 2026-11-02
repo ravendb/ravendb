@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
@@ -12,11 +12,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         private readonly CompareExchangeReferenceDetectorRewriter _compareExchangeReferenceDetector;
         private readonly SelectManyRewriter _selectManyRewriter;
         private readonly string _dynamicEnumerable;
+        private readonly bool _usesLinqEnumerable;
 
-        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter, string dynamicEnumerable)
+        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter, string dynamicEnumerable, bool usesLinqEnumerable)
         {
             _selectManyRewriter = selectManyRewriter;
             _dynamicEnumerable = dynamicEnumerable;
+            _usesLinqEnumerable = usesLinqEnumerable;
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
             _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
@@ -38,9 +40,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 SelectManyRewriter.SelectMethodOnProperties,
                 new ThrowOnInvalidMethodCalls(),
                 WhereRewriter.Instance,
-                new DynamicInvocationExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable),
+                new DynamicInvocationExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
                 DynamicExtensionMethodsRewriter.Instance,
-                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable),
+                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
                 ConditionalAccessExpressionRewriter.Instance,

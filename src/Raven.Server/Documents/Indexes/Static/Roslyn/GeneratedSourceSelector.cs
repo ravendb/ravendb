@@ -64,7 +64,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             {
                 if (IsDistinct(invocation) == false)
                 {
-                    choices.Add(invocation);
+                    if (IsRangeSourceChoice(invocation) || generated.Contains(invocation))
+                        choices.Add(invocation);
+
                     continue;
                 }
 

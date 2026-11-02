@@ -2258,6 +2258,168 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
             Assert.Equal(new[] { "ravenServer_1:True", "ravenServer:True" }, results);
         }
 
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // A type named Enumerable declared in the namespace of the index hides System.Linq.Enumerable for the index code, so a call
+        // written as Enumerable.Contains binds to the method of the index sources and keeps its result.
+        public void ContainsOfEnumerableTypeDeclaredInIndexNamespaceKeepsUserMethod(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/IndexNamespaceEnumerableContains";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.PrimitiveArrayItems select new { Found = Enumerable.Contains(new[] { \"a\" }, \"a\") }" },
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    ["IndexNamespaceEnumerable.cs"] = """
+                        namespace Raven.Server.Documents.Indexes.Static.Generated
+                        {
+                            public static class Enumerable
+                            {
+                                public static bool Contains(object source, object value) => false;
+                            }
+                        }
+                        """
+                },
+                Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "a" } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var result = session.Advanced.RawQuery<ClrContainsResult>($"from index '{indexName}' select Found").Single();
+                Assert.False(result.Found, "Enumerable.Contains must bind to the Enumerable type of the index sources, which returns false.");
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // The index may call the object delegate source helper itself, without additional sources or assemblies. Such a call stays an
+        // ordinary call of the identity helper and is not lowered like a generated marker, so it compiles without the extern alias
+        // that only the generated markers use.
+        public void ExplicitObjectDelegateSourceCompilesWithoutAdditionalSources(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/ExplicitObjectDelegateSource";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.PrimitiveArrayItems select new { Values = Enumerable.Where(DynamicEnumerable.ObjectDelegateSource(item.Tags), tag => tag != null) }" },
+                Fields = { ["Values"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            Assert.False(errors.Any(), string.Join(Environment.NewLine, errors.Select(x => x.Error)));
+            using (var session = store.OpenSession())
+            {
+                var result = session.Advanced.RawQuery<StoredTagsResult>($"from index '{indexName}' select Values").Single();
+                Assert.Equal(new[] { "alpha", "b" }, result.Values);
+            }
+        }
+
+        private sealed class StoredTagsResult
+        {
+            public string[] Values { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // Every static call the index rewrites binds to the Enumerable type of the index sources when that type hides System.Linq.Enumerable,
+        // in the map and in the reduce. The static ordering of a literal array keeps the user method too.
+        [RavenData("!Enumerable.Contains(new[] { \"a\" }, \"a\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.Contains(new[] { \"a\" }, \"a\", null)", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.SequenceEqual(new[] { \"a\" }, new[] { \"a\" })", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("\"index\".Equals(Enumerable.Concat(new[] { \"a\" }, new[] { \"b\" }))", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("\"index\".Equals(Enumerable.ToArray(new[] { \"a\" }))", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("\"index\".Equals(Enumerable.ToList(new[] { \"a\" }))", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("\"index\".Equals(Enumerable.Count(new[] { \"a\" }))", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("\"index\".Equals(Enumerable.OrderBy(new[] { \"b\", \"a\" }, x => x).First())", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StaticCallsOfEnumerableTypeDeclaredInIndexNamespaceKeepUserMethods(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "a" } },
+                new Dictionary<string, string> { ["IndexNamespaceEnumerable.cs"] = IndexNamespaceEnumerableSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ContainsOfEnumerableTypeDeclaredInIndexNamespaceKeepsUserMethodInReduce(Options options)
+        {
+            AssertReduceExpression(options, "!Enumerable.Contains(new[] { \"a\" }, \"a\")",
+                new Dictionary<string, string> { ["IndexNamespaceEnumerable.cs"] = IndexNamespaceEnumerableSources });
+        }
+
+        private const string IndexNamespaceEnumerableSources = """
+            using System;
+            using System.Collections.Generic;
+
+            namespace Raven.Server.Documents.Indexes.Static.Generated
+            {
+                public static class Enumerable
+                {
+                    public static bool Contains(object source, object value) => false;
+                    public static bool Contains(object source, object value, object comparer) => false;
+                    public static bool SequenceEqual(object first, object second) => false;
+                    public static string Concat(object first, object second) => "index";
+                    public static string ToArray(object source) => "index";
+                    public static string ToList(object source) => "index";
+                    public static string Count(object source) => "index";
+
+                    // A block body: the server rewrites the public methods of the index sources and does not accept an expression-bodied
+                    // method with a sequence result.
+                    public static IEnumerable<object> OrderBy(object source, Func<object, object> keySelector)
+                    {
+                        return new object[] { "index" };
+                    }
+                }
+            }
+            """;
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // A nested type of the index sources named Enumerable does not hide System.Linq.Enumerable, so the rewritten calls keep the server's
+        // handling of stored nulls.
+        public void HelperCallsKeepServerBindingNextToNestedEnumerableType(Options options)
+        {
+            AssertPrimitiveArrayExpression(options, "Enumerable.Contains(item.Tags, null)", new PrimitiveArrayItem { Tags = new[] { "a", null, "b" } },
+                new Dictionary<string, string>
+                {
+                    ["NestedEnumerable.cs"] = """
+                        namespace IndexHelpers
+                        {
+                            public static class Holder
+                            {
+                                public static class Enumerable
+                                {
+                                    public static bool Contains(object source, object value) => false;
+                                }
+                            }
+                        }
+                        """
+                });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        // A generated object delegate marker keeps its lowering next to a call of the helper written in the index.
+        public void GeneratedObjectDelegateMarkerNextToExplicitHelperCallKeepsLowering(Options options)
+        {
+            AssertPrimitiveArrayExpression(options, "Enumerable.Count(Enumerable.Where(DynamicEnumerable.ObjectDelegateSource(item.Tags), x => x != null)) == 2",
+                new PrimitiveArrayItem { Tags = new[] { "a", null, "b" } });
+        }
+
         private void AssertReduceExpression(Options options, string expression, Dictionary<string, string> additionalSources = null)
         {
             using var store = GetDocumentStore(options);
