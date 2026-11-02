@@ -260,7 +260,8 @@ internal sealed class PlanEmitter
 
     private void EmitGroupInto(ClauseExecution exec, List<ClauseExecution> subExecs, MergeKind merge, bool suppressEarlyExit, int destSlot)
     {
-        if (merge == MergeKind.Fill)
+        bool isScoringGroup = _hasBoost && exec.Clause.ScoringGroupIndex >= 0;
+        if (merge == MergeKind.Fill && isScoringGroup == false)
         {
             EmitGroupContents(exec, subExecs, suppressEarlyExit, destSlot);
             return;
@@ -277,8 +278,15 @@ internal sealed class PlanEmitter
         using var _ = AllocateScratchSlot(out int groupSlot);
         EmitGroupContents(exec, subExecs, suppressEarlyExit: true, groupSlot);
 
+        // An AND group under an OR of a scored plan saves its result for the score pass before the merge consumes it
+        if (isScoringGroup)
+            _ops.Add(new PlanOp { Kind = PlanOpKind.SaveScoringGroup, BitmapLocal = groupSlot, ParamIndex = exec.Clause.ScoringGroupIndex });
+
         switch (merge)
         {
+            case MergeKind.Fill:
+                _ops.Add(new PlanOp { Kind = PlanOpKind.ClearBitmap, BitmapLocal = destSlot });
+                goto case MergeKind.OrInto;
             case MergeKind.OrInto:
                 _ops.Add(new PlanOp { Kind = PlanOpKind.LazyOrBitmaps, BitmapLocal = destSlot, ParamIndex2 = groupSlot });
                 break;
