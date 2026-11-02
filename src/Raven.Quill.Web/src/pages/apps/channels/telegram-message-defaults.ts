@@ -73,7 +73,7 @@ export const TELEGRAM_MESSAGE_FIELDS = (Object.keys(TELEGRAM_MESSAGE_DEFAULTS) a
 // Every message key belongs to exactly one group.
 const MESSAGE_GROUPS: { title: string; description: string; keys: MessageKey[] }[] = [
     {
-        title: "Commands",
+        title: "Conversation",
         description: "Replies to the /start and /clear commands.",
         keys: ["greeting", "conversationCleared"],
     },

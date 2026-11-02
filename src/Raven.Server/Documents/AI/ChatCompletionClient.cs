@@ -509,6 +509,40 @@ public class ChatCompletionClient : IDisposable
         }
     }
 
+    internal static bool TryGetRetryAfter(HttpResponseMessage response, out TimeSpan retryAfter)
+    {
+        retryAfter = TimeSpan.Zero;
+
+        if (response.Headers.TryGetValues(Constants.Headers.RetryAfterMs, out var milliseconds) &&
+            double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
+            double.IsFinite(ms) && ms > 0)
+        {
+            retryAfter = ClampRetryAfter(TimeSpan.FromMilliseconds(Math.Min(ms, MaxRetryAfter.TotalMilliseconds)));
+            return true;
+        }
+
+        if (response.Headers.RetryAfter is not { } header)
+            return false;
+
+        if (header.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            retryAfter = ClampRetryAfter(delta);
+            return true;
+        }
+
+        if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
+        {
+            retryAfter = ClampRetryAfter(until);
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromDays(1);
+
+    private static TimeSpan ClampRetryAfter(TimeSpan value) => value > MaxRetryAfter ? MaxRetryAfter : value;
+
     private static readonly Regex GoDurationRegex = new(
         @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant
@@ -522,16 +556,16 @@ public class ChatCompletionClient : IDisposable
             return false;
 
         // As int: 1684293600
-        if (int.TryParse(input, out var seconds1))
+        if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds1))
         {
-            time = TimeSpan.FromSeconds(seconds1);
+            time = ClampSeconds(seconds1);
             return true;
         }
 
         // As double: 33011.382867097855
-        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2))
+        if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds2) && double.IsFinite(seconds2))
         {
-            time = TimeSpan.FromSeconds(seconds2);
+            time = ClampSeconds(seconds2);
             return true;
         }
 
@@ -540,36 +574,35 @@ public class ChatCompletionClient : IDisposable
         if (matches.Count == 0)
             return false;
 
+        var seconds = 0d;
         foreach (Match m in matches)
         {
             var v = double.Parse(m.Groups["value"].Value, CultureInfo.InvariantCulture);
-            switch (m.Groups["unit"].Value)
+            seconds += m.Groups["unit"].Value switch
             {
-                case "h":
-                    time += TimeSpan.FromHours(v);
-                    break;
-                case "m":
-                    time += TimeSpan.FromMinutes(v);
-                    break;
-                case "s":
-                    time += TimeSpan.FromSeconds(v);
-                    break;
-                case "ms":
-                    time += TimeSpan.FromMilliseconds(v);
-                    break;
-                case "us":
-                case "µs":
-                    time += TimeSpan.FromTicks((long)(v * 10));
-                    break; // 1 µs = 10 ticks
-                case "ns":
-                    time += TimeSpan.FromTicks((long)(v / 100));
-                    break; // 1 ns = 1/100 tick
-                default:
-                    return false;
-            }
+                "h" => v * 3600,
+                "m" => v * 60,
+                "s" => v,
+                "ms" => v / 1e3,
+                "us" or "µs" => v / 1e6,
+                "ns" => v / 1e9,
+                _ => double.NaN
+            };
         }
 
+        if (double.IsNaN(seconds))
+            return false;
+
+        time = ClampSeconds(seconds);
         return true;
+    }
+
+    private static TimeSpan ClampSeconds(double seconds)
+    {
+        if (seconds <= 0)
+            return TimeSpan.Zero;
+
+        return TimeSpan.FromSeconds(Math.Min(seconds, MaxRetryAfter.TotalSeconds));
     }
 
     public static string GetSchemaForRequest(string schema, string sampleObject)

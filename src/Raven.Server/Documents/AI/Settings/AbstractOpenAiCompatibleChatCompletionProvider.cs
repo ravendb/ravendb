@@ -400,13 +400,13 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     {
         var headers = response.Headers;
 
-        // The Retry-After headers only make the error retryable; their value is not read.
         if (headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfterMs) == false &&
             headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfter) == false &&
             error.RetryAfter == null)
             return null;
 
-        var retryAfter = error.RetryAfter ?? TimeSpan.Zero;
+        var retryAfter = error.RetryAfter
+                         ?? (ChatCompletionClient.TryGetRetryAfter(response, out var retryAfterFromHeaders) ? retryAfterFromHeaders : TimeSpan.Zero);
 
         if (headers.TryGetValues(ChatCompletionClient.Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
         {

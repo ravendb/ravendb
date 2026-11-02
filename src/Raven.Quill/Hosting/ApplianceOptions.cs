@@ -24,6 +24,8 @@ public sealed class ApplianceOptions
 
     public string? ApiKey { get; set; }
 
+    public TimeSpan ApiKeyCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
+
     public string? RavenDbS6Service { get; set; }
 
     /// <summary>
@@ -44,6 +46,20 @@ public sealed class ApplianceOptions
     public SlackOptions Slack { get; set; } = new();
 
     public DiscordOptions Discord { get; set; } = new();
+
+    public TimeSpan? ChannelConversationIdleWindow { get; set; } = TimeSpan.FromHours(24);
+
+    public TimeSpan ChannelApplyChangesInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    public int ChannelSenderQueueCapacity { get; set; } = 8;
+
+    public TimeSpan ChannelSenderIdleTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
+    public TimeSpan ChannelRuntimeStopTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    public int LoginAttemptLimit { get; set; } = 10;
+
+    public TimeSpan LoginAttemptWindow { get; set; } = TimeSpan.FromMinutes(1);
 
     public TimeSpan ReadinessInitialDelay { get; set; } = TimeSpan.FromSeconds(15);
 

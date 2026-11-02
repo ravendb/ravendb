@@ -23,11 +23,12 @@ export const slugSchema = z
         }
     });
 
-export const providerSchema = z.union([
-    z.literal("Npgsql"),
-    z.literal("SqlClient"),
-    z.literal("MySqlConnectorFactory"),
-]);
+export const providerSchema = z.union(
+    [z.literal("Npgsql"), z.literal("SqlClient"), z.literal("MySqlConnectorFactory")],
+    {
+        error: 'The configuration\'s "provider" must be "Npgsql" (PostgreSQL), "SqlClient" (SQL Server) or "MySqlConnectorFactory" (MySQL).',
+    },
+);
 
 const hasUniqueValues = (values: Array<string | null | undefined>) => {
     const normalized = values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));

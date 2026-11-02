@@ -5,16 +5,16 @@ import { toast } from "sonner";
 import type { DiscoverResponse } from "@/api/generated/server-api";
 import { api } from "@/api/api";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { type AppFormData, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import {
     collectConfigSchemas,
     collectSourceTableRefs,
     parseConfigFile,
+    parseConfigTables,
     type WizardConfig,
 } from "@/pages/setup/add-app-wizard/config-io";
 import { parseConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
-import { wrapDtoTablesToFormShape } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import {
     findDiscoveredTable,
     getSourceTableLabel,
@@ -115,14 +115,9 @@ export function useImportConfig() {
                 );
             }
 
-            try {
-                const formTables = tablesSchema.parse(wrapDtoTablesToFormShape(config.tables));
-                return { config, slug, isDraftSlug, formTables, discoverResult, schemas };
-            } catch {
-                throw new Error(
-                    "The configuration's table mapping is invalid or was exported from an incompatible version.",
-                );
-            }
+            const formTables = parseConfigTables(config.tables);
+
+            return { config, slug, isDraftSlug, formTables, discoverResult, schemas };
         },
         onSuccess: ({ config, slug, isDraftSlug, formTables, discoverResult, schemas }) => {
             toast.success("Configuration imported");
