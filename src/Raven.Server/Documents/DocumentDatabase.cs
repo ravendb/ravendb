@@ -2259,10 +2259,7 @@ namespace Raven.Server.Documents
             if (ioChange.MeterItem.RateOfWritesInMbPerSec > 1)
                 return;
 
-            // the slow write is evidence for its disk; while that disk has a congestion hint, it says it all - no per-database hint on top
-            if (_serverStore.StorageDeviceMonitor.RecordSlowWrite(FindDeviceOf(ioChange.FileName), ioChange))
-                return;
-
+            _serverStore.StorageDeviceMonitor.RecordSlowWrite(FindDeviceOf(ioChange.FileName), ioChange);
             NotificationCenter.SlowWrites.Add(ioChange);
         }
 
