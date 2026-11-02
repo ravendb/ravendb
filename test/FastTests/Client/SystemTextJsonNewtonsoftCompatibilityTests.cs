@@ -1848,6 +1848,37 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsBigInteger
+    {
+        public System.Numerics.BigInteger Value { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsBigIntegerWritesAndReadsBigIntegerValuesLikeNewtonsoft()
+    {
+        var value = new HoldsBigInteger { Value = System.Numerics.BigInteger.Parse("12345678901234567890123") };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            Assert.ThrowsAny<Exception>(() => Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context));
+
+            var exception = Assert.ThrowsAny<NotSupportedException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context));
+            Assert.Contains(nameof(System.Numerics.BigInteger), exception.Message);
+
+            foreach (string json in new[] { "{\"Value\":12345678901234567890123}", "{\"Value\":\"12345678901234567890123\"}" })
+            {
+                using (BlittableJsonReaderObject blittable = context.Sync.ReadForMemory(json, "big-integer"))
+                {
+                    var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsBigInteger>(blittable);
+                    var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsBigInteger>(blittable);
+
+                    Assert.Equal(value.Value, expected.Value);
+                    Assert.Equal(expected.Value, actual.Value);
+                }
+            }
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

@@ -352,6 +352,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             options.Converters.Add(VectorConverter.Instance);
             options.Converters.Add(EnumerableConstructorConverter.Instance);
             options.Converters.Add(JsonDynamicConverters.Value);
+            options.Converters.Add(BigIntegerConverter.Instance);
             options.Converters.Add(StringContractConverterFactory.Instance);
             options.Converters.Add(new ObjectConverter(typeNameHandling));
         }
