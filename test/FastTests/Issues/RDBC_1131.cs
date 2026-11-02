@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -109,7 +109,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_PopulatesExtensionDictionary()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
             await SeedAsync(store, Id);
 
             using var session = store.OpenAsyncSession();
@@ -126,7 +126,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loaded_EditMetadataInDictionary_IsNotWritten()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())
@@ -151,7 +151,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loaded_ModifyIdThroughDictionary_IdIsUnchanged()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())
@@ -352,7 +352,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task JTokenDictionary_LoadEditAndStore_IsPersisted()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())

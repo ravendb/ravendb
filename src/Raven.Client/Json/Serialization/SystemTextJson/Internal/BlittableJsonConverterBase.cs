@@ -125,6 +125,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (useResolver)
             {
                 RavenJsonTypeInfoResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
+                RavenJsonTypeInfoResolver.RootDocument = removeIdentityProperty ? entity : null;
                 RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
 
                 try
@@ -134,6 +135,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 finally
                 {
                     RavenJsonTypeInfoResolver.RootEntity = null;
+                    RavenJsonTypeInfoResolver.RootDocument = null;
                 }
             }
             else
