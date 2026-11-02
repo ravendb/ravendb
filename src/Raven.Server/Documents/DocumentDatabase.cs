@@ -50,6 +50,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Storage;
 using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Sparrow;
@@ -2273,25 +2274,23 @@ namespace Raven.Server.Documents
         private DeviceWriteBudget FindDeviceOf(string fileName)
         {
             StringComparison comparison = PlatformDetails.RunningOnWindows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            StorageEnvironmentOptions best = null;
+            DeviceWriteBudget best = null;
             int bestLength = -1;
             foreach (StorageEnvironmentWithType env in GetAllStoragesEnvironment())
             {
                 StorageEnvironmentOptions options = env.Environment?.Options;
-                if (options == null)
+                string directory = options?.BasePath?.FullPath;
+                if (directory == null || directory.Length <= bestLength || fileName.StartsWith(directory, comparison) == false)
                     continue;
 
-                foreach (string directory in new[] { options.BasePath?.FullPath, options.JournalPath?.FullPath })
-                {
-                    if (directory == null || directory.Length <= bestLength || fileName.StartsWith(directory, comparison) == false)
-                        continue;
-
-                    best = options;
-                    bestLength = directory.Length;
-                }
+                // a journal in a Journals directory linked to another disk is not a write to the data file's device
+                bool journalElsewhere = options.JournalPath?.FullPath is { } journals && fileName.StartsWith(journals, comparison) &&
+                                        StorageDeviceMonitor.GetDrives(options).JournalsElsewhere != null;
+                best = journalElsewhere ? null : options.DeviceWriteBudget;
+                bestLength = directory.Length;
             }
 
-            return best?.DeviceWriteBudget;
+            return best;
         }
 
         public long GetEnvironmentsHash()

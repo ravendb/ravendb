@@ -908,6 +908,7 @@ export class ManageServerStubs {
                     DeviceId: "2049",
                     PathOnDevice: "/ravendb/data/Databases/CarDealership/Raven.voron",
                     MountPoint: "/",
+                    JournalMountPoint: null,
                     Status: "Saturated",
                     StatusReason:
                         "Saturated since 2026-10-24 03:12:40Z: writes were paced more than 50% of an hour because the disk was congested.",

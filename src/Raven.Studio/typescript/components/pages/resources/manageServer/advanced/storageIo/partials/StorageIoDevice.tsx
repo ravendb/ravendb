@@ -24,7 +24,10 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
         <Card className="mb-3">
             <Card.Header className="hstack gap-2 flex-wrap">
                 <Icon icon="drive" margin="m-0" />
-                <strong>Disk {device.MountPoint ?? device.PathOnDevice}</strong>
+                <strong>
+                    Disk {device.MountPoint ?? device.PathOnDevice}
+                    {device.JournalMountPoint && ` (journals on ${device.JournalMountPoint})`}
+                </strong>
                 <Badge bg={storageStatusColor[device.Status]} title={storageStatusHelp[device.Status]} pill>
                     {storageStatusLabel[device.Status]}
                 </Badge>

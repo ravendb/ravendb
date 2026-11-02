@@ -70,6 +70,9 @@ namespace Raven.Server.Storage
 
         public string MountPoint { get; set; }
 
+        // where journals linked to another disk live: the journal write numbers of this device are measured there
+        public string JournalMountPoint { get; set; }
+
         public StorageDeviceStatus Status { get; set; }
 
         // plain words
@@ -121,6 +124,7 @@ namespace Raven.Server.Storage
                 DeviceId = device.DeviceId.ToString(),
                 PathOnDevice = device.PathOnDevice,
                 MountPoint = tracker?.MountPoint,
+                JournalMountPoint = tracker?.JournalMountPoint,
                 Status = status,
                 StatusReason = GetStatusReason(tracker, status, last, thresholds),
                 Class = deviceClass,

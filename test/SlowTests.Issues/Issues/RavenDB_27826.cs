@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations;
@@ -7,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Storage;
+using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Tests.Infrastructure;
@@ -180,6 +183,61 @@ public class RavenDB_27826 : RavenTestBase
         now = now.AddSeconds(10);
         monitor.Sample();
         Assert.False(server.ServerStore.NotificationCenter.Exists(hintId));
+    }
+
+    [RavenFact(RavenTestCategory.Monitoring)]
+    public async Task Journals_linked_to_another_disk_are_named_and_keep_their_own_slow_io()
+    {
+        string dataPath = NewDataPath(forceCreateDir: true);
+        string journalsTarget = Path.Combine(Path.GetTempPath(), $"{nameof(RavenDB_27826)}-{Guid.NewGuid():N}");
+        if (PlatformDetails.RunningOnPosix || string.Equals(Path.GetPathRoot(dataPath), Path.GetPathRoot(journalsTarget), StringComparison.OrdinalIgnoreCase))
+            Assert.Skip("Needs the temp directory on another drive than the test data, to link the Journals directory there");
+
+        // the usual way to put journals on their own disk: link the Journals directory
+        string journalsLink = Path.Combine(dataPath, "Journals");
+        Directory.CreateDirectory(journalsTarget);
+        using (var mklink = Process.Start(new ProcessStartInfo("cmd.exe", $"/c mklink /J \"{journalsLink}\" \"{journalsTarget}\"") { UseShellExecute = false, CreateNoWindow = true }))
+        {
+            mklink.WaitForExit();
+            Assert.Equal(0, mklink.ExitCode);
+        }
+
+        try
+        {
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = dataPath }))
+            {
+                var database = await GetDatabase(server, store.Database);
+                var monitor = server.ServerStore.StorageDeviceMonitor;
+
+                DeviceWriteBudget device = database.DocumentsStorage.Environment.Options.DeviceWriteBudget;
+                Assert.NotNull(device);
+
+                var now = DateTime.UtcNow;
+                monitor.ForTestingPurposesOnly().UtcNow = () => now;
+                monitor.ForTestingPurposesOnly().SampleOverride = d => ReferenceEquals(d, device) ? Congested : Healthy;
+
+                for (var i = 0; i <= 61; i++)
+                {
+                    now = now.AddSeconds(10);
+                    monitor.Sample();
+                }
+
+                // a slow journal write is on the other disk: no evidence for this one, the database keeps its own Slow IO hint
+                database.CheckWriteRateAndNotifyIfNecessary(SlowJournalWrite(database));
+                database.NotificationCenter.SlowWrites.UpdateNotificationInStorage(null);
+                Assert.True(database.NotificationCenter.Exists(PerformanceHint.GetKey(PerformanceHintReason.SlowIO, "slow-writes")));
+                Assert.Empty(monitor.GetTracker(device).GetSlowWrites(now));
+
+                // the journal latency of this device comes from the linked disk, so the status names it
+                Assert.Contains($"journals on {Path.GetPathRoot(journalsTarget)}", StorageStatusInfo.Create(monitor).Summary);
+            }
+        }
+        finally
+        {
+            Directory.Delete(journalsLink); // the link, not its target
+            Directory.Delete(journalsTarget, recursive: true);
+        }
     }
 
     private static IoChange SlowJournalWrite(DocumentDatabase database)
