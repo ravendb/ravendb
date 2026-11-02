@@ -4,7 +4,6 @@ import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
 import { IndexesStubs } from "test/stubs/IndexesStubs";
 import { within } from "@testing-library/dom";
-import { act } from "@testing-library/react";
 import { INDEX_TERMS_PAGE_LIMIT } from "components/pages/database/indexes/list/terms/useIndexTerms";
 import TermsQueryResult = Raven.Client.Documents.Queries.TermsQueryResult;
 
@@ -104,9 +103,7 @@ describe("IndexTerms", () => {
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
         const accordionButton = within(accordion).getByRole("button");
 
-        await act(async () => {
-            await user.click(accordionButton);
-        });
+        await user.click(accordionButton);
 
         const termPills = await within(accordion).findAllByTestId(testIdSelectors.termPill);
 
@@ -124,9 +121,7 @@ describe("IndexTerms", () => {
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
         const accordionButton = within(accordion).getByRole("button");
 
-        await act(async () => {
-            await user.click(accordionButton);
-        });
+        await user.click(accordionButton);
 
         const termPills = within(accordion).queryAllByTestId(testIdSelectors.termPill);
 
@@ -148,9 +143,7 @@ describe("IndexTerms", () => {
         const accordion = (await screen.findAllByTestId(testIdSelectors.termAccordion))[0];
         const accordionButton = within(accordion).getByRole("button");
 
-        await act(async () => {
-            await user.click(accordionButton);
-        });
+        await user.click(accordionButton);
 
         const loadMoreBtn = within(accordion).queryByTestId(testIdSelectors.termLoadMoreButton);
 

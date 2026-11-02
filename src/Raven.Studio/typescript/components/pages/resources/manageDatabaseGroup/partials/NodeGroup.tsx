@@ -1,4 +1,4 @@
-﻿import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import Button from "react-bootstrap/Button";
 import {
     ReorderNodes,
@@ -28,7 +28,10 @@ import {
 } from "components/common/DatabaseGroup";
 import { useGroup } from "components/pages/resources/manageDatabaseGroup/partials/useGroup";
 import { Icon } from "components/common/Icon";
-import useConfirm from "components/common/ConfirmDialog";
+import {
+    DeleteFromGroupModal,
+    NodeDeletion,
+} from "components/pages/resources/manageDatabaseGroup/partials/DeleteFromGroupModal";
 
 export interface NodeGroupProps {
     db: DatabaseSharedInfo;
@@ -51,7 +54,7 @@ export function NodeGroup(props: NodeGroupProps) {
 
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
-    const confirm = useConfirm();
+    const [deletion, setDeletion] = useState<NodeDeletion>(null);
 
     const addNode = useCallback(() => {
         const addKeyView = new addNewNodeToDatabaseGroup(db.name, db.nodes, db.isEncrypted);
@@ -67,25 +70,9 @@ export function NodeGroup(props: NodeGroupProps) {
         [databasesService, db.name, reportEvent, exitReorder]
     );
 
-    const deleteNodeFromGroup = useCallback(
-        async (nodeTag: string, hardDelete: boolean) => {
-            const isConfirmed = await confirm({
-                icon: "trash",
-                title: (
-                    <span>
-                        Do you want to delete database <strong>{db.name}</strong> from node <strong>{nodeTag}</strong>?
-                    </span>
-                ),
-                confirmText: "Delete",
-                actionColor: "danger",
-            });
-
-            if (isConfirmed) {
-                await databasesService.deleteDatabaseFromNode(db.name, [nodeTag], hardDelete);
-            }
-        },
-        [confirm, db.name, databasesService]
-    );
+    const deleteNodeFromGroup = (nodeTag: string, isHardDelete: boolean) => {
+        setDeletion({ nodeTag, isHardDelete });
+    };
 
     const onSave = async () => {
         await saveNewOrder(
@@ -159,6 +146,14 @@ export function NodeGroup(props: NodeGroupProps) {
                         </DatabaseGroupList>
                     </DatabaseGroup>
                 </React.Fragment>
+            )}
+            {deletion && (
+                <DeleteFromGroupModal
+                    db={db}
+                    deletion={deletion}
+                    onHardDeleteInstead={() => setDeletion({ ...deletion, isHardDelete: true })}
+                    onClose={() => setDeletion(null)}
+                />
             )}
         </RichPanel>
     );

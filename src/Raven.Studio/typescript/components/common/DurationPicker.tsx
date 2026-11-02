@@ -49,64 +49,52 @@ export default function DurationPicker(props: DurationPickerProps) {
     return (
         <div className="d-flex gap-1">
             {showDays && (
-                <div>
-                    <Form.Label htmlFor="days" className="small-label">
-                        Days
-                    </Form.Label>
+                <Form.Group controlId="days">
+                    <Form.Label className="small-label">Days</Form.Label>
                     <Form.Control
                         type="number"
-                        id="days"
                         min={0}
-                        value={days}
+                        value={days ?? ""}
                         placeholder={placeholder?.days}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
-                </div>
+                </Form.Group>
             )}
-            <div>
-                <Form.Label htmlFor="hours" className="small-label">
-                    Hours
-                </Form.Label>
+            <Form.Group controlId="hours">
+                <Form.Label className="small-label">Hours</Form.Label>
                 <Form.Control
                     type="number"
                     min={0}
-                    id="hours"
-                    value={hours}
+                    value={hours ?? ""}
                     placeholder={placeholder?.hours}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
-            </div>
-            <div>
-                <Form.Label htmlFor="minutes" className="small-label">
-                    Minutes
-                </Form.Label>
+            </Form.Group>
+            <Form.Group controlId="minutes">
+                <Form.Label className="small-label">Minutes</Form.Label>
                 <Form.Control
                     type="number"
-                    id="minutes"
                     min={0}
-                    value={minutes}
+                    value={minutes ?? ""}
                     placeholder={placeholder?.minutes}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
-            </div>
+            </Form.Group>
             {showSeconds && (
-                <div>
-                    <Form.Label htmlFor="seconds" className="small-label">
-                        Seconds
-                    </Form.Label>
+                <Form.Group controlId="seconds">
+                    <Form.Label className="small-label">Seconds</Form.Label>
                     <Form.Control
                         type="number"
-                        id="seconds"
                         min={0}
-                        value={seconds}
+                        value={seconds ?? ""}
                         placeholder={placeholder?.seconds}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />
-                </div>
+                </Form.Group>
             )}
         </div>
     );

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             _documentsStorage = documentsStorage;
         }
 
-        public override string Name => "DocumentsCleanup";
+        public override string Name => IndexingOperation.Cleanup.Documents;
 
         protected override long ReadLastProcessedTombstoneEtag(RavenTransaction transaction, string collection) =>
             IndexStorage.ReadLastProcessedTombstoneEtag(transaction, collection);

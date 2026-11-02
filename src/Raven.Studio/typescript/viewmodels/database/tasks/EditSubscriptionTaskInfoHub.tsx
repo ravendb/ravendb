@@ -10,9 +10,11 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 
 export function EditSubscriptionTaskInfoHub() {
-    const hasConcurrentDataSubscriptions = useAppSelector(licenseSelectors.statusValue("HasConcurrentDataSubscriptions"));
+    const hasConcurrentDataSubscriptions = useAppSelector(
+        licenseSelectors.statusValue("HasConcurrentDataSubscriptions")
+    );
     const hasRevisionsInSubscriptions = useAppSelector(licenseSelectors.statusValue("HasRevisionsInSubscriptions"));
-    
+
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
         overwrites: [
@@ -60,8 +62,8 @@ export function EditSubscriptionTaskInfoHub() {
                         The <strong>starting point</strong> from where to send the matching documents can be configured.
                     </li>
                     <li className="margin-top-xxs">
-                        You can <strong>test the subscription query</strong> in this view to preview sample document results
-                        that will be sent to the client.
+                        You can <strong>test the subscription query</strong> in this view to preview sample document
+                        results that will be sent to the client.
                     </li>
                 </ul>
                 <hr />
@@ -70,7 +72,10 @@ export function EditSubscriptionTaskInfoHub() {
                     <Icon icon="newtab" /> Docs - Subscription Task
                 </a>
             </AccordionItemWrapper>
-            <FeatureAvailabilitySummaryWrapper isUnlimited={hasConcurrentDataSubscriptions && hasRevisionsInSubscriptions} data={featureAvailability} />
+            <FeatureAvailabilitySummaryWrapper
+                isUnlimited={hasConcurrentDataSubscriptions && hasRevisionsInSubscriptions}
+                data={featureAvailability}
+            />
         </AboutViewFloating>
     );
 }
@@ -89,5 +94,5 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
-    }
+    },
 ];

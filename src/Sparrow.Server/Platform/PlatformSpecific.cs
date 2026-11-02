@@ -48,7 +48,7 @@ namespace Sparrow.Server.Platform
                     // we pass NULL (IntPtr.Zero) as the first parameter (address / start) so the kernel chooses the(page-aligned) address at which to create the mapping
 
                     var pageAlignedMemory = Syscall.mmap64(IntPtr.Zero, (UIntPtr)size, MmapProts.PROT_READ | MmapProts.PROT_WRITE,
-                        MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS, -1, 0L);
+                        MmapFlags.MAP_PRIVATE | PerPlatformValues.MmapFlags.MAP_ANONYMOUS, -1, 0L);
 
                     if (pageAlignedMemory.ToInt64() == -1)
                     {

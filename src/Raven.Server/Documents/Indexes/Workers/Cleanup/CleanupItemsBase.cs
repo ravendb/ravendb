@@ -60,6 +60,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
             var moreWorkFound = false;
             var batchContinuationResult = Index.CanContinueBatchResult.None;
             var totalProcessedCount = 0;
+            var lastCheckedSeenItemsCount = 0L;
 
             foreach (var collection in _index.Collections)
             {
@@ -109,26 +110,37 @@ namespace Raven.Server.Documents.Indexes.Workers.Cleanup
                                     _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag}.");
 
                                 if (IsValidTombstoneType(tombstone) == false)
-                                    continue; // this can happen when we have '@all_docs'
+                                {
+                                    // this can happen when we have '@all_docs'
+                                    if (CanContinueCleanupBatch() == false)
+                                        break;
+
+                                    continue;
+                                }
 
                                 HandleDelete(tombstone, collection, writeOperation, queryContext, indexContext, collectionStats);
                                 stats.RecordTombstoneDeleteSuccess();
 
-                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.Cleanup, queryContext, indexContext, writeOperation, lastEtag,
-                                    lastCollectionEtag,
-                                    totalProcessedCount, sw);
-
-                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
-
-                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
-                                {
-                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
+                                if (CanContinueCleanupBatch() == false)
                                     break;
-                                }
                             }
 
                             if (hasChanges == false)
                                 break;
+
+                            bool CanContinueCleanupBatch()
+                            {
+                                var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.Cleanup, queryContext, indexContext, writeOperation, lastEtag, lastCollectionEtag, totalProcessedCount, totalProcessedCount, sw);
+
+                                batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen, ref lastCheckedSeenItemsCount);
+                                if (batchContinuationResult != Index.CanContinueBatchResult.True)
+                                {
+                                    keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;
+                                    return false;
+                                }
+
+                                return true;
+                            }
                         }
                     }
 

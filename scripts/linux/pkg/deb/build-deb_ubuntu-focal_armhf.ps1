@@ -5,3 +5,5 @@ $env:OUTPUT_DIR = "$PSScriptRoot/dist"
 .\set-raven-version-env.ps1
 
 .\build-deb.ps1
+
+exit $LASTEXITCODE

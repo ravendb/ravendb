@@ -7,12 +7,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -336,15 +334,7 @@ exit 0";
 
             await Server.ServerStore.EnsureNotPassiveAsync();
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
-            X509Certificate2 serverCertificate;
-            try
-            {
-                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptographicException($"Failed to load the test certificate from {certificates}.", e);
-            }
+            var serverCertificate = certificates.ServerCertificate.Value;
             using (var store = GetDocumentStore(new Options
             {
                 AdminCertificate = serverCertificate,
@@ -405,16 +395,7 @@ exit 0";
 
             UseNewLocalServer(customSettings: customSettings, runInMemory: false);
             // The master key loading is lazy, let's put a database secret key to invoke it.
-            X509Certificate2 serverCertificate;
-            try
-            {
-                serverCertificate = new X509Certificate2(certificates.ServerCertificatePath, (string)null,
-                    CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
-            }
-            catch (CryptographicException e)
-            {
-                throw new CryptographicException($"Failed to load the test certificate from {certificates}.", e);
-            }
+            var serverCertificate = certificates.ServerCertificate.Value;
 
             var ts = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             Server.ServerStore.Engine.StateMachine.Changes.ValueChanged += (index, type) =>

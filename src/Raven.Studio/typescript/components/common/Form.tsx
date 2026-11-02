@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useCallback, useRef, useState } from "react";
+import React, { ChangeEvent, ComponentProps, ReactNode, useCallback, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import { Control, ControllerProps, FieldPath, FieldValues, PathValue, useController } from "react-hook-form";
@@ -10,7 +10,14 @@ import AceEditor, { AceEditorProps } from "./AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import {
+    GetOptionValue,
+    GroupBase,
+    InputActionMeta,
+    OnChangeValue,
+    OptionsOrGroups,
+    Props as SelectProps,
+} from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
@@ -22,7 +29,6 @@ import { InputType } from "../../../typings/_studio/react-bootstrap";
 import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 import useBoolean from "components/hooks/useBoolean";
-import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { MultiRadioToggle } from "./toggles/MultiRadioToggle";
 import "./VerificationCodeInput.scss";
 
@@ -348,7 +354,7 @@ export function FormSelectAutocomplete<
     const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
     const labelAccessor = props.getOptionLabel ?? ((option: any) => option.label);
 
-    const handleFilterOption = (option: FilterOptionOption<Option>, inputValue: string) => {
+    const handleFilterOption: SelectProps<Option, IsMulti, Group>["filterOption"] = (option, inputValue) => {
         if (isInitialOpen) {
             return true;
         }
@@ -590,7 +596,7 @@ function FormInputGeneral<
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}
-                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            onChange={(x: ChangeEvent<HTMLInputElement>) => handleValueChange(x.currentTarget.value)}
                             value={value == null ? "" : value}
                             isInvalid={invalid}
                             className={classNames(
@@ -744,7 +750,7 @@ export function FormPathSelector<
                         ref={inputRef}
                         name={name}
                         type="text"
-                        onChange={(x) => onChange(x.currentTarget.value)}
+                        onChange={(x: ChangeEvent<HTMLInputElement>) => onChange(x.currentTarget.value)}
                         value={formValuePath == null ? "" : formValuePath}
                         isInvalid={invalid}
                         className="position-relative d-flex flex-grow-1"

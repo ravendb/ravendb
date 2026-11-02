@@ -1018,7 +1018,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever,
             DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
+            throw new NotSupportedInCoraxException($"{nameof(Corax)} does not support intersect queries.");
         }
 
         public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)

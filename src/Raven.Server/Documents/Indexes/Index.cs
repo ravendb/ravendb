@@ -2440,6 +2440,57 @@ namespace Raven.Server.Documents.Indexes
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
 
+        private bool _mapReachedIndexCreationEtag;
+
+        internal bool HasMapReachedIndexCreationEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, IndexingStatsScope stats)
+        {
+            if (_mapReachedIndexCreationEtag)
+                return true;
+
+            // a new index first maps everything that existed when it was created and only then starts to handle references,
+            // so the initial indexing isn't spent on re-mapping items whose references changed in the meantime.
+            // the map is done with those items once the last indexed etag of every collection reached the database etag
+            // recorded on index creation, or the last etag of the collection when the collection has no newer items
+
+            var currentIndexingScope = CurrentIndexingScope.Current;
+            if (currentIndexingScope.MapReachedIndexCreationEtag != null)
+                return currentIndexingScope.MapReachedIndexCreationEtag.Value; // already checked in this batch by another references worker
+
+            var reached = true;
+
+            using (queryContext.OpenReadTransaction())
+            {
+                foreach (var collection in Collections)
+                {
+                    var lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
+                    if (lastIndexedEtag >= _indexStorage.LastDatabaseEtagOnIndexCreation)
+                        continue;
+
+                    var lastItemEtag = GetLastItemEtagInCollection(queryContext, collection);
+                    if (lastIndexedEtag >= lastItemEtag)
+                        continue;
+
+                    var reason = $"Skipped handling references because the map of collection '{collection}' hasn't reached the database etag recorded on index creation ({_indexStorage.LastDatabaseEtagOnIndexCreation:#,#;;0}) yet. " +
+                                 $"Last indexed etag: {lastIndexedEtag:#,#;;0}, last etag in collection: {lastItemEtag:#,#;;0}";
+
+                    stats.RecordBatchCompletedReason(IndexingWorkType.References, reason);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"{reason}. Index: '{Name}'");
+
+                    reached = false;
+                    break;
+                }
+            }
+
+            currentIndexingScope.MapReachedIndexCreationEtag = reached;
+
+            if (reached)
+                _mapReachedIndexCreationEtag = true;
+
+            return reached;
+        }
+
         public void InitializeTestRun(DocumentsOperationContext context, int docsToProcessPerCollection, int numberOfCollections)
         {
             TestRun = new TestIndexRun(context, docsToProcessPerCollection, numberOfCollections);
@@ -3282,12 +3333,27 @@ namespace Raven.Server.Documents.Indexes
             return stats;
         }
 
-        public DateTime? GetLastQueryingTime() => _lastQueriedTimeTracker.LastQueryDate;
+        public DateTime? GetLastQueryingTime()
+        {
+            if (_initialized == false)
+                return null;
 
-        public TimeSpan GetElapsedTimeFromLastQuery() => _lastQueriedTimeTracker.ElapsedSinceQueried;
+            return _lastQueriedTimeTracker.LastQueryDate;
+        }
+
+        public TimeSpan? GetElapsedTimeFromLastQuery()
+        {
+            if (_initialized == false)
+                return null;
+
+            return _lastQueriedTimeTracker.ElapsedSinceQueried;
+        }
 
         public bool NoQueryRecently()
         {
+            if (_initialized == false)
+                return false;
+
             var last = _lastQueriedTimeTracker.LastQueryDate;
             return DocumentDatabase.Time.GetUtcNow() - last > Configuration.TimeSinceLastQueryAfterWhichDeepCleanupCanBeExecuted.AsTimeSpan;
         }
@@ -3423,6 +3489,7 @@ namespace Raven.Server.Documents.Indexes
                                 Reference<long> totalResults = new();
                                 Reference<long> skippedResults = new();
                                 Reference<long> scannedResults = new();
+                                reader.TrackResultsForLogging(totalResults, skippedResults);
                                 IncludeCountersCommand includeCountersCommand = null;
                                 IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                                 IncludeRevisionsCommand includeRevisionsCommand = new(DocumentDatabase, queryContext.Documents, query.Metadata.RevisionIncludes);
@@ -4494,6 +4561,8 @@ namespace Raven.Server.Documents.Indexes
         private int? _minBatchSize;
 
         private const int MinMapBatchSize = 128;
+
+        public const int CanContinueBatchCheckInterval = 128;
         internal const int MinMapReduceBatchSize = 64;
 
         private int MinBatchSize
@@ -4597,7 +4666,7 @@ namespace Raven.Server.Documents.Indexes
             RenewTransaction
         }
 
-        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
+        public CanContinueBatchResult CanContinueBatch(in CanContinueBatchParameters parameters, ref TimeSpan maxTimeForDocumentTransactionToRemainOpen, ref long lastCheckedSeenItemsCount)
         {
             if (Configuration.MapBatchSize.HasValue && parameters.Count >= Configuration.MapBatchSize.Value)
             {
@@ -4611,11 +4680,13 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            if (parameters.Count % 128 != 0)
+            if (lastCheckedSeenItemsCount > 0 && parameters.SeenCount - lastCheckedSeenItemsCount < CanContinueBatchCheckInterval)
             {
-                // do the actual check only every N ops
+                // the counter advances in jumps (fanout results, loaded items) - do the actual check on the first call and then once per at least CanContinueBatchCheckInterval seen items
                 return CanContinueBatchResult.True;
             }
+
+            lastCheckedSeenItemsCount = parameters.SeenCount;
 
             if (parameters.Sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
             {
@@ -4653,11 +4724,10 @@ namespace Raven.Server.Documents.Indexes
                 return CanContinueBatchResult.False;
             }
 
-            var cpuCreditsAlertFlag = DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised;
-            if (cpuCreditsAlertFlag.IsRaised())
+            if (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
             {
                 HandleStoppedBatchesConcurrently(parameters.Stats, parameters.Count,
-                   canContinue: () => cpuCreditsAlertFlag.IsRaised() == false,
+                   canContinue: () => DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() == false,
                    reason: "CPU credits balance is low", parameters.WorkType);
 
                 parameters.Stats.RecordBatchCompletedReason(parameters.WorkType, $"The batch was stopped after processing {parameters.Count:#,#;;0} documents because the CPU credits balance is almost completely used");

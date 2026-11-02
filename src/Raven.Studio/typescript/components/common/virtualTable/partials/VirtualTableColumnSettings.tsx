@@ -2,7 +2,7 @@ import { Column, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
 import { HStack } from "components/common/HStack";
 import { Icon } from "components/common/Icon";
-import { useMemo, useState } from "react";
+import { ChangeEvent, useMemo, useState } from "react";
 import Form from "react-bootstrap/Form";
 
 import Button from "react-bootstrap/Button";
@@ -91,7 +91,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                                     type="text"
                                     placeholder="Search..."
                                     value={localFilter}
-                                    onChange={(e) => handleFilterChange(e.target.value)}
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => handleFilterChange(e.target.value)}
                                     className="pe-4"
                                 />
                                 {localFilter && (

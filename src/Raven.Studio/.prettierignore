@@ -10,14 +10,14 @@ obj/
 languageService/
 
 typescript/main.ts
-typescript/commands
-typescript/common
-typescript/models
-typescript/durandalPlugins
-typescript/transitions
-typescript/overrides
-typescript/viewmodels
-typescript/widgets
+typescript/commands/**/*.ts
+typescript/common/**/*.ts
+typescript/models/**/*.ts
+typescript/durandalPlugins/**/*.ts
+typescript/transitions/**/*.ts
+typescript/overrides/**/*.ts
+typescript/viewmodels/**/*.ts
+typescript/widgets/**/*.ts
 typings/
 
 wwwroot/App

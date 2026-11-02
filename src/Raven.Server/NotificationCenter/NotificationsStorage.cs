@@ -124,18 +124,39 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        public IDisposable Read(string id, out NotificationTableValue value)
+        public IDisposable Read(string id, out NotificationTableValue value, JsonOperationContext context = null)
         {
             using (var scope = new DisposableScope())
             {
                 RavenTransaction tx;
 
-                scope.EnsureDispose(ContextPool.AllocateOperationContext(out TransactionOperationContext context));
-                scope.EnsureDispose(tx = context.OpenReadTransaction());
+                scope.EnsureDispose(ContextPool.AllocateOperationContext(out TransactionOperationContext readContext));
+                scope.EnsureDispose(tx = readContext.OpenReadTransaction());
 
-                value = Get(id, context, tx);
+                var notification = Get(id, readContext, tx);
 
-                return scope.Delay();
+                if (context == null)
+                {
+                    value = notification;
+
+                    return scope.Delay();
+                }
+
+                using (notification)
+                {
+                    var cloned = notification == null
+                        ? null
+                        : new NotificationTableValue
+                        {
+                            CreatedAt = notification.CreatedAt,
+                            PostponedUntil = notification.PostponedUntil,
+                            Json = notification.Json.Clone(context)
+                        };
+
+                    value = cloned;
+
+                    return new DisposableAction(() => cloned?.Dispose());
+                }
             }
         }
 

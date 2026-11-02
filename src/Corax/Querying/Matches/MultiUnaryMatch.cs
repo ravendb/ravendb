@@ -122,14 +122,14 @@ public unsafe struct MultiUnaryItem
                     byteComparer = &LessThanMatchComparer.Compare;
                     longComparer = &LessThanMatchComparer.Compare;
                     doubleComparer = &LessThanMatchComparer.Compare;
-                    compareNull = &TrueUnlessNull;
+                    compareNull = &AlwaysFalse;
                     compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.LessThanOrEqual:
                     byteComparer = &LessThanOrEqualMatchComparer.Compare;
                     longComparer = &LessThanOrEqualMatchComparer.Compare;
                     doubleComparer = &LessThanOrEqualMatchComparer.Compare;
-                    compareNull = &AlwaysTrue;
+                    compareNull = &FalseUnlessNull;
                     compareNotExisting = &AlwaysFalse;
                     break;
                 case UnaryMatchOperation.GreaterThan:

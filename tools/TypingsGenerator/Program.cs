@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -150,7 +150,7 @@ namespace TypingsGenerator
             Directory.CreateDirectory(targetDir);
 
             var scripter = new CustomScripter()
-                .UsingFormatter(new TsFormatter
+                .UsingFormatter(new CustomFormatter
                 {
                     EnumsAsString = true
                 });

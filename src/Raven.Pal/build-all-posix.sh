@@ -35,6 +35,9 @@ if [ ! -d "$OSXCROSS_SDKROOT" ]; then
 fi
 export OSXCROSS_SDKROOT
 
+# osxcross clang needs its ld64 & friends on PATH; non-interactive shells (wsl bash -c) don't read ~/.bashrc
+export PATH="$PATH:$(realpath osxcross/target/bin)"
+
 [ -d artifacts ] || mkdir artifacts
 archs=( linux-x64 linux-arm linux-arm64 osx-x64 osx-arm64 )
 for arch in "${archs[@]}"; do

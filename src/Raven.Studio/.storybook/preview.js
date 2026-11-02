@@ -58,6 +58,9 @@ export const decorators = [
 ]
 
 export const parameters = {
+  a11y: {
+    test: "off",
+  },
   actions: { }, //TODO: it was regexp
   controls: {
     matchers: {

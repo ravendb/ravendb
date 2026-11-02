@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -10,6 +11,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
+using Raven.Server.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
@@ -646,6 +648,84 @@ namespace SlowTests.Core.Indexing
                     {
                         Text = body == null ? null : body.Text
                     };
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task NewIndex_ShouldMapTheDocumentsThatExistedOnItsCreationBeforeHandlingReferences(Options options)
+        {
+            const int mapBatchSize = 128; // the minimum allowed map batch size
+            const int companiesCount = mapBatchSize * 3;
+            const string employeeId = "employees/1";
+
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Employee { LastName = "Before" }, employeeId);
+
+                    for (var i = 0; i < companiesCount; i++)
+                        await session.StoreAsync(new Company { EmployeesIds = new List<string> { employeeId } }, $"companies/{i}");
+
+                    await session.SaveChangesAsync();
+                }
+
+                // the index is created while indexing is stopped, so the test runs its batches one by one
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
+
+                var index = new Companies_ByEmployeeLastName
+                {
+                    Configuration =
+                    {
+                        // the map needs several batches to reach the etag recorded on index creation
+                        [RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = mapBatchSize.ToString()
+                    }
+                };
+                await index.ExecuteAsync(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    // the referenced document changes after the index was created, so its etag is above the one recorded on index creation
+                    var employee = await session.LoadAsync<Employee>(employeeId);
+                    employee.LastName = "After";
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await GetDatabase(store.Database);
+                var indexInstance = database.IndexStore.GetIndex(index.IndexName);
+
+                Assert.Equal(mapBatchSize, indexInstance.Configuration.MapBatchSize);
+
+                var batches = new List<(long MapAttempts, long MapReferenceAttempts)>();
+                bool moreWork;
+                do
+                {
+                    var stats = new IndexingRunStats();
+                    moreWork = indexInstance.DoIndexingWork(new IndexingStatsScope(stats), CancellationToken.None);
+                    batches.Add((stats.MapAttempts, stats.MapReferenceAttempts));
+
+                    Assert.True(batches.Count <= companiesCount * 4, $"the index didn't finish indexing after {batches.Count} batches");
+                } while (moreWork);
+
+                var batchesDescription = string.Join(", ", batches.Select((x, i) => $"batch {i}: map {x.MapAttempts}, references {x.MapReferenceAttempts}"));
+
+                Assert.True(batches.Count(x => x.MapAttempts > 0) == companiesCount / mapBatchSize, $"the map should have needed {companiesCount / mapBatchSize} batches. {batchesDescription}");
+                Assert.Equal(companiesCount, batches.Sum(x => x.MapAttempts));
+                Assert.Equal(companiesCount, batches.Sum(x => x.MapReferenceAttempts));
+
+                var lastMapBatch = batches.FindLastIndex(x => x.MapAttempts > 0);
+                var firstReferencesBatch = batches.FindIndex(x => x.MapReferenceAttempts > 0);
+                Assert.True(lastMapBatch < firstReferencesBatch, $"references were handled in batch {firstReferencesBatch} while the map finished only in batch {lastMapBatch}. {batchesDescription}");
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var count = await session.Query<Companies_ByEmployeeLastName.Result, Companies_ByEmployeeLastName>()
+                        .Where(x => x.LastName == "After")
+                        .CountAsync();
+
+                    Assert.Equal(companiesCount, count);
+                }
             }
         }
     }

@@ -171,15 +171,15 @@ namespace Raven.Server.Documents.Revisions
                 if (Configuration.Collections != null &&
                     Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
                     return configuration;
-
-                if (Configuration.Default != null)
-                    return Configuration.Default;
             }
 
             if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
             {
                 return ConflictConfiguration.Default;
             }
+
+            if (Configuration?.Default != null)
+                return Configuration.Default;
 
             return deleteRevisionsWhenNoCofiguration ? ZeroConfiguration : _emptyConfiguration;
         }
@@ -2895,7 +2895,7 @@ namespace Raven.Server.Documents.Revisions
                 LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
-                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr)
+                ChangeVector = TableValueToChangeVector((int)RevisionsTable.ChangeVector, ref tvr)
             };
 
             if (size != sizeof(short))

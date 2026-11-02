@@ -17,9 +17,9 @@ namespace Raven.Server.Documents.Indexes.Spatial
             Vertices ??= new List<Coordinates>();
 
             Vertices.Add(new Coordinates(rectangle.MaxY, rectangle.MaxX));
-            Vertices.Add(new Coordinates(rectangle.MaxY, rectangle.MinY));
             Vertices.Add(new Coordinates(rectangle.MinY, rectangle.MaxX));
             Vertices.Add(new Coordinates(rectangle.MinY, rectangle.MinX));
+            Vertices.Add(new Coordinates(rectangle.MaxY, rectangle.MinX));
         }
         
         public Polygon(NetTopologySuite.Geometries.Polygon polygon) : base(SpatialShapeType.Polygon)

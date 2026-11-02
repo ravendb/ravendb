@@ -11,6 +11,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Querying.Matches.TermProviders;
 using Corax.Utils;
 using Sparrow;
@@ -38,6 +39,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private const long BitmapAndFillDensityDivisor = 256;
     private const long BitmapOrFillDensityDivisor = 32;
     internal const int BitmapAndFillSingleBatchThreshold = 4096;
+    internal const int BitmapDrainBufferSize = 4096;
     
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
@@ -194,7 +196,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
     
-    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
     {
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
@@ -203,7 +205,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         InitializeSpecialTermsMarkers();
 
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, key);
     }
     
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -381,6 +383,64 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
         
         return termAmount;
+    }
+
+    /// <summary>Whether a scan of the sort field's value tree, plus nulls and non-existing, reaches every entry.
+    /// False for a mixed-type field: the scan would skip the entries holding the other types (RavenDB-27035).</summary>
+    public bool SortFieldTreeCoversAllEntries(in FieldMetadata field, MatchCompareFieldType fieldType)
+    {
+        // a value of any type also writes a textual term, and null and non-existing are terms of their own, so this
+        // tree has a row for every entry the sequence scan reaches
+        if (fieldType == MatchCompareFieldType.Sequence)
+            return (EntriesToTermsReader(field.FieldName)?.NumberOfEntries ?? 0) >= NumberOfEntries;
+
+        Slice treeName;
+        switch (fieldType)
+        {
+            case MatchCompareFieldType.Integer:
+                IndexFieldsMappingBuilder.GetFieldNameForLongs(Allocator, field.FieldName, out treeName);
+                break;
+            case MatchCompareFieldType.Floating:
+                IndexFieldsMappingBuilder.GetFieldNameForDoubles(Allocator, field.FieldName, out treeName);
+                break;
+            default:
+                return false;
+        }
+
+        // only an entry holding several values for the field can sit in the value tree and in a marker list at once,
+        // so the three counts below are disjoint exactly when the field holds none
+        if (HasMultipleTermsInField(field))
+            return false;
+
+        // entries -> terms is keyed by entry id, so its count is the number of entries with a value in that tree
+        long covered = EntriesToTermsReader(treeName)?.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId))
+            covered += GetPostingList(nullPostingListId)?.State.NumberOfEntries ?? 0;
+
+        if (TryGetPostingListForNonExisting(field, out var nonExistingPostingListId))
+            covered += GetPostingList(nonExistingPostingListId)?.State.NumberOfEntries ?? 0;
+
+        return covered >= NumberOfEntries;
+    }
+
+    /// <summary>
+    /// The number of terms a pass over the terms of the field visits, as <see cref="TextualAggregation"/> does: one per
+    /// distinct value, plus one for null when any entry holds a null. <see cref="GetTermAmountInField"/> adds the number
+    /// of entries holding a null instead.
+    /// </summary>
+    public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
+    {
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (fieldTree == null)
+            return 0;
+
+        var numberOfTerms = fieldTree.NumberOfEntries;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId) && GetPostingList(nullPostingListId)?.State.NumberOfEntries > 0)
+            numberOfTerms++;
+
+        return numberOfTerms;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)

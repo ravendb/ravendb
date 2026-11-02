@@ -538,6 +538,28 @@ namespace Voron.Impl.Paging
                 GetSourceName());
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void ThrowIfOverflowExtentExceedsAllocatedPages(long pageNumber, PageHeader* pageHeader)
+        {
+            // OverflowSize is only defined on overflow pages, other page types hold their own fields at that offset
+            if ((pageHeader->Flags & PageFlags.Overflow) != PageFlags.Overflow)
+                return;
+
+            // the persisted size is untrusted, its extent must fit the allocated file
+            int overflowSize = pageHeader->OverflowSize;
+            if (overflowSize < 0 || pageNumber + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize) > NumberOfAllocatedPages)
+                ThrowOverflowExtentExceedsAllocatedPages(pageNumber, overflowSize);
+        }
+
+        [DoesNotReturn]
+        private void ThrowOverflowExtentExceedsAllocatedPages(long pageNumber, int overflowSize)
+        {
+            VoronUnrecoverableErrorException.Raise(_options,
+                "The overflow page " + pageNumber + " has an invalid overflow size of " + overflowSize +
+                " bytes, spanning " + VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(overflowSize) + " pages, but only " +
+                NumberOfAllocatedPages + " pages are allocated in " + GetSourceName());
+        }
+
         [DoesNotReturn]
         public static void ThrowIncreasingDataFileInCopyOnWriteModeException(string dataFilePath, long requestedSize)
         {

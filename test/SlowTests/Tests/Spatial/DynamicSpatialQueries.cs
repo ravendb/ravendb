@@ -309,10 +309,15 @@ namespace SlowTests.Tests.Spatial
                     Assert.True((spatialShapes[0] as BlittableJsonReaderObject).TryGet(nameof(Polygon.Vertices), out BlittableJsonReaderArray vertices));
                     Assert.Equal(4, vertices.Length);
 
-                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Latitude), out double latitude);
-                    Assert.Equal(50, latitude);
-                    (vertices[0] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Longitude), out double longitude);
-                    Assert.Equal(-90, longitude);
+                    var expectedVertices = new[] { (50d, -90d), (40d, -90d), (40d, -95d), (50d, -95d) };
+
+                    for (var i = 0; i < expectedVertices.Length; i++)
+                    {
+                        Assert.True((vertices[i] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Latitude), out double latitude));
+                        Assert.Equal(expectedVertices[i].Item1, latitude);
+                        Assert.True((vertices[i] as BlittableJsonReaderObject).TryGet(nameof(Coordinates.Longitude), out double longitude));
+                        Assert.Equal(expectedVertices[i].Item2, longitude);
+                    }
                 }
             }
         }

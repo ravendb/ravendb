@@ -37,7 +37,7 @@ import { useServices } from "hooks/useServices";
 import { SelectOption } from "components/common/select/Select";
 import { isEmpty } from "common/typeUtils";
 import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/esm/Col";
+import Col from "react-bootstrap/Col";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardConstants, setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import useBoolean from "hooks/useBoolean";
@@ -907,7 +907,7 @@ interface AddAnotherNodeProps {
     onAddNode: () => void;
 }
 
-function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
+export function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const { getValues } = useFormContext<SetupWizardFormData>();
 
     const licenseKeyStep = getValues("licenseKeyStep");
@@ -927,7 +927,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
             <ConditionalPopover
                 conditions={[
                     {
-                        isActive: !hasLicense,
+                        isActive: !hasLicense && isMaxClusterNodes,
                         message: (
                             <>
                                 <p className="mb-0">
@@ -1563,7 +1563,7 @@ export const nodeEditFormSchema = yup.object({
 
                 return hasExtConfig || hasZeroAddress;
             },
-            then: (schema) =>
+            then: (schema: yup.StringSchema) =>
                 schema
                     .required(
                         "External IP address is required, it tells RavenDB how to identify itself to other nodes and clients"
@@ -1578,7 +1578,7 @@ export const nodeEditFormSchema = yup.object({
                         "Please enter a valid IPv4 address (hostname not allowed, no port)",
                         (value) => !!value && genUtils.regexIPv4.test(value)
                     ),
-            otherwise: (schema) =>
+            otherwise: (schema: yup.StringSchema) =>
                 schema.test(
                     "valid-ipv4-optional",
                     "Please enter a valid IPv4 address (hostname not allowed, no port)",

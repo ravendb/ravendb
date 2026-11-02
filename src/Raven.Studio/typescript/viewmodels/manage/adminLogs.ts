@@ -668,8 +668,6 @@ class adminLogs extends viewModelBase {
         $("[name=to]", $form).val(this.endDateToUse());
 
         $form.submit();
-        
-        return true;
     }
     
     updateMouseStatus(pressed: boolean) {

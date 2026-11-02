@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
@@ -104,9 +105,15 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected virtual bool ItemsAndReferencesAreUsingSameEtagPool => true;
 
+        // a referenced item that already existed when the index was created is loaded by the map step
+        protected virtual bool ReferencedItemExistedOnIndexCreation(long referencedItemEtag) => _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItemEtag);
+
         public (bool MoreWorkFound, Index.CanContinueBatchResult BatchContinuationResult) Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperationBase> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
+            if (_index.HasMapReachedIndexCreationEtag(queryContext, indexContext, stats) == false)
+                return (false, Index.CanContinueBatchResult.None);
+
             const long pageSize = long.MaxValue;
             var maxTimeForDocumentTransactionToRemainOpen = Debugger.IsAttached == false
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
@@ -133,6 +140,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
 
             var totalProcessedCount = 0;
+            var totalSeenItemsCount = 0;
+            var lastCheckedSeenItemsCount = 0L;
             foreach (var collection in _index.Collections)
             {
                 if (TryGetReferencedCollectionsFor(collection, out var referencedCollections) == false)
@@ -219,10 +228,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 foreach (var referencedItem in references)
                                 {
                                     hasChanges = true;
+                                    totalSeenItemsCount++;
 
                                     using (referencedItem)
                                     {
-                                        if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
+                                        if (ReferencedItemExistedOnIndexCreation(referencedItem.Etag))
                                         {
                                             // the referenced item will be indexed in the map step
                                             lastEtag = referencedItem.Etag;
@@ -267,14 +277,16 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                                 lastIndexedParentEtag = current.Etag;
                                                 totalProcessedCount++;
+                                                totalSeenItemsCount++;
                                                 collectionStats.RecordMapReferenceAttempt();
                                                 stats.RecordDocumentSize(current.Size);
 
                                                 numberOfReferencedItemLoad++;
 
+                                                var numberOfResults = 0;
                                                 try
                                                 {
-                                                    var numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
+                                                    numberOfResults = _index.HandleMap(current, mapResults, writeOperation, indexContext, collectionStats);
 
                                                     resultsCount += numberOfResults;
                                                     collectionStats.RecordMapReferenceSuccess();
@@ -292,6 +304,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                     collectionStats.AddMapReferenceError(current.Id,
                                                         $"Failed to execute mapping function on {current.Id}. Exception: {e}");
                                                 }
+
+                                                totalSeenItemsCount += numberOfResults - (numberOfResults > 0).ToInt32();
+                                                totalSeenItemsCount += CurrentIndexingScope.Current.LoadedItemsCount;
+                                                CurrentIndexingScope.Current.LoadedItemsCount = 0;
 
                                                 _index.UpdateThreadAllocations(indexContext, writeOperation, stats, IndexingWorkType.References);
                                             }
@@ -319,9 +335,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 bool CanContinueReferenceBatch()
                                 {
                                     var parameters = new CanContinueBatchParameters(stats, IndexingWorkType.References, queryContext, indexContext, writeOperation,
-                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw);
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, totalSeenItemsCount, sw);
 
-                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    batchContinuationResult = _index.CanContinueBatch(in parameters, ref maxTimeForDocumentTransactionToRemainOpen, ref lastCheckedSeenItemsCount);
                                     if (batchContinuationResult != Index.CanContinueBatchResult.True)
                                     {
                                         keepRunning = batchContinuationResult == Index.CanContinueBatchResult.RenewTransaction;

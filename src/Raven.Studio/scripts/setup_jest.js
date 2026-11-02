@@ -72,6 +72,8 @@ Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
     value: 1000,
 });
 
+window.scrollTo = jest.fn();
+
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
 }
@@ -84,3 +86,5 @@ window.HTMLElement.prototype.getBoundingClientRect = () => ({
     right: 0,
     top: 0,
 });
+
+global.structuredClone = (val) => JSON.parse(JSON.stringify(val));

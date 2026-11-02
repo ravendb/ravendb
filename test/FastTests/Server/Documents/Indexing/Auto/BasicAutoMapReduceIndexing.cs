@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
@@ -107,12 +107,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                     Assert.Equal(locations.Length, results.Count);
 
+                    // the query has no ORDER BY, so the order of the reduce results is not defined
+                    var actual = results.ToDictionary(x => x.Data["Location"].ToString(), x => x.Data["Count"]);
+
                     for (int i = 0; i < locations.Length; i++)
                     {
-                        Assert.Equal(locations[i], results[i].Data["Location"].ToString());
-
                         long expected = numberOfUsers / locations.Length + numberOfUsers % (locations.Length - i);
-                        Assert.Equal(expected, results[i].Data["Count"]);
+                        Assert.Equal(expected, actual[locations[i]]);
                     }
                 }
             }
