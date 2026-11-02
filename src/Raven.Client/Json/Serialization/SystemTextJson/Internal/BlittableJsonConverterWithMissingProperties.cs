@@ -34,9 +34,11 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     private bool CaptureObject(object instance, Type type, BlittableJsonReaderObject json)
     {
-        if (IsObject(type) == false)
+        JsonTypeInfo typeInfo = Conventions.Options.GetTypeInfo(type);
+        if (typeInfo.Kind != JsonTypeInfoKind.Object)
             return false;
 
+        bool ownsUnknownProperties = RavenJsonTypeInfoResolver.OwnsUnknownProperties(typeInfo);
         Dictionary<string, JsonPropertyInfo> knownProperties = Conventions.GetJsonProperties(type);
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
         bool captured = false;
@@ -50,7 +52,9 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
             if (knownProperties.TryGetValue(propertyName, out JsonPropertyInfo property) == false)
             {
-                captured |= RegisterMissingProperties(instance, propertyName, propertyDetails.Value);
+                if (ownsUnknownProperties == false)
+                    captured |= RegisterMissingProperties(instance, propertyName, propertyDetails.Value);
+
                 continue;
             }
 
