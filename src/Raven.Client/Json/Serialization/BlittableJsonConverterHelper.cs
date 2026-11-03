@@ -151,7 +151,15 @@ namespace Raven.Client.Json.Serialization
             if (rootType == null)
                 return null;
 
-            return _propertyTypeCache.GetOrAdd((rootType, propertyName), static key => ResolvePropertyType(key.Item2, key.Item1));
+            (Type, string) key = (rootType, propertyName);
+            if (_propertyTypeCache.TryGetValue(key, out Type propertyType))
+                return propertyType;
+
+            propertyType = ResolvePropertyType(propertyName, rootType);
+            if (propertyType != null)
+                _propertyTypeCache.TryAdd(key, propertyType);
+
+            return propertyType;
         }
 
         private static Type ResolvePropertyType(string propertyName, Type rootType)
