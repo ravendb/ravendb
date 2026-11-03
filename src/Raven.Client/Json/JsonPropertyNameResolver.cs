@@ -42,7 +42,7 @@ namespace Raven.Client.Json
             return (string)attribute?.GetType().GetProperty("PropertyName")?.GetValue(attribute);
         }
 
-        private static string GetDataContractMemberName(MemberInfo member)
+        internal static string GetDataContractMemberName(MemberInfo member)
         {
             for (Type type = member.DeclaringType; type != null; type = type.BaseType)
             {

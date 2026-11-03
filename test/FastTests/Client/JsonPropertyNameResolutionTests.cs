@@ -34,6 +34,41 @@ public class JsonPropertyNameResolutionTests(ITestOutputHelper output) : RavenTe
         public override string Name { get; set; }
     }
 
+    private class WithDataMemberOnly
+    {
+        [System.Runtime.Serialization.DataMember(Name = "data_member_name")]
+        public string Name { get; set; }
+    }
+
+    [System.Runtime.Serialization.DataContract]
+    private class WithDataContract
+    {
+        [System.Runtime.Serialization.DataMember(Name = "data_member_name")]
+        public string Name { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+    [InlineData(false, typeof(WithDataMemberOnly))]
+    [InlineData(false, typeof(WithDataContract))]
+    [InlineData(true, typeof(WithDataMemberOnly))]
+    [InlineData(true, typeof(WithDataContract))]
+    public void DataMemberRenamesMatchStoredPropertyNames(bool useSystemTextJson, Type type)
+    {
+        var conventions = new DocumentConventions
+        {
+            Serialization = useSystemTextJson ? new SystemTextJsonSerializationConventions() : new NewtonsoftJsonSerializationConventions()
+        };
+
+        object entity = Activator.CreateInstance(type);
+        type.GetProperty("Name")!.SetValue(entity, "a");
+
+        string resolved = JsonPropertyNameResolver.GetJsonPropertyName(type.GetProperty("Name"), conventions) ?? "Name";
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+            Assert.Equal([resolved], json.GetPropertyNames());
+    }
+
     [RavenFact(RavenTestCategory.Querying)]
     public void NewtonsoftConventionsRenameQueryFieldsByJsonProperty()
     {
