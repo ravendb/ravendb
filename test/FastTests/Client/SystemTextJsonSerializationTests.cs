@@ -109,6 +109,66 @@ namespace FastTests.Client
             }
         }
 
+        private class WithIgnoredMember
+        {
+            public string Name { get; set; }
+
+            [JsonIgnore]
+            public string Secret { get; set; }
+        }
+
+        private class WithSecret
+        {
+            public string Name { get; set; }
+
+            public string Secret { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SystemTextJsonIgnoredMembersAreNeitherWrittenNorRead()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new WithIgnoredMember { Name = "a", Secret = "s" }, context))
+                    Assert.Equal([nameof(WithIgnoredMember.Name)], json.GetPropertyNames());
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"a\",\"Secret\":\"s\"}", "ignored"))
+                    Assert.Null(conventions.Serialization.DefaultConverter.FromBlittable<WithIgnoredMember>(json).Secret);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SystemTextJsonKeepsDocumentFieldsOfIgnoredMembersOnSave()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new WithSecret { Name = "a", Secret = "s" }, "items/1");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var item = session.Load<WithIgnoredMember>("items/1");
+                Assert.Null(item.Secret);
+                item.Name = "b";
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var item = session.Load<WithSecret>("items/1");
+                Assert.Equal("b", item.Name);
+                Assert.Equal("s", item.Secret);
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanStoreAndLoadStringsThatNeedEscapingWithSystemTextJson()
         {
