@@ -336,6 +336,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
                 options.Converters.Add(EnumMemberStringEnumConverter.Instance);
+            else
+                options.Converters.Add(IntegerEnumConverter.Instance);
 
             foreach (JsonConverter converter in IntegralNumberConverters.All)
                 options.Converters.Add(converter);
