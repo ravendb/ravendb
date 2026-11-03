@@ -147,9 +147,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return RavenAssemblies.Contains(item.GetType().Assembly);
         }
 
-        private static JsonSerializerOptions _ravenAssemblyOptions;
+        private JsonSerializerOptions _ravenAssemblyOptions;
 
-        private static JsonSerializerOptions GetRavenAssemblyOptions(JsonSerializerOptions baseOptions)
+        private JsonSerializerOptions GetRavenAssemblyOptions(JsonSerializerOptions baseOptions)
         {
             JsonSerializerOptions existing = _ravenAssemblyOptions;
             if (existing != null)
