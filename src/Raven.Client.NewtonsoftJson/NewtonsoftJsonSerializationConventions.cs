@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -174,7 +173,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         string IJsonPropertyNameResolver.GetJsonPropertyName(MemberInfo member)
         {
             return _jsonPropertyNames.GetOrAdd(member, static m =>
-                m.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName ?? m.GetCustomAttribute<DataMemberAttribute>(inherit: true)?.Name);
+                m.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName ?? JsonPropertyNameResolver.GetDataContractMemberName(m));
         }
 
         private NewtonsoftJsonJsonSerializer CreateInitialSerializer()
