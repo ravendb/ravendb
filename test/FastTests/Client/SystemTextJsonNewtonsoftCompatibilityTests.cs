@@ -910,6 +910,36 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class WithServiceConstructor
+    {
+        public WithServiceConstructor(string name, int age, IServiceProvider services)
+        {
+            Name = name;
+            Age = age;
+        }
+
+        public string Name { get; }
+
+        public int Age { get; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConstructorWithUnboundParameterStillReceivesBoundValues(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"Oren\",\"Age\":40}", "constructor"))
+        {
+            var read = conventions.Serialization.DefaultConverter.FromBlittable<WithServiceConstructor>(json);
+
+            Assert.Equal("Oren", read.Name);
+            Assert.Equal(40, read.Age);
+        }
+    }
+
     private class NullHandling
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]

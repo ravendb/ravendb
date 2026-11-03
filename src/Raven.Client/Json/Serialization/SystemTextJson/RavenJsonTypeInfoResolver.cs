@@ -1128,9 +1128,32 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 arguments[i] = parameter.HasDefaultValue
                     ? parameter.DefaultValue
                     : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
+
+                SetBackingFieldOfBoundReadOnlyProperty(typeInfo, parameter);
             }
 
             typeInfo.CreateObject = () => constructor.Invoke(arguments);
+        }
+
+        private static void SetBackingFieldOfBoundReadOnlyProperty(JsonTypeInfo typeInfo, ParameterInfo parameter)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not PropertyInfo propertyInfo ||
+                    string.Equals(propertyInfo.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) == false ||
+                    property.PropertyType != parameter.ParameterType)
+                    continue;
+
+                if (property.Set == null)
+                {
+                    FieldInfo backingField = propertyInfo.DeclaringType?.GetField($"<{propertyInfo.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+                    if (backingField != null)
+                        property.Set = backingField.SetValue;
+                }
+
+                return;
+            }
         }
 
         private static ConstructorInfo GetParameterizedConstructor(Type type)
