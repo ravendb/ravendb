@@ -1151,6 +1151,28 @@ namespace FastTests.Corax
         }
 
         [RavenFact(RavenTestCategory.Corax)]
+        public void ScoringMultiTermMatchObservesCancellation()
+        {
+            var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
+            var entry2 = new IndexSingleEntry {Id = "entry/2", Content = "Running"};
+
+            using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+            IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
+
+            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
+            var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex, hasBoost: true);
+            using var cts = new System.Threading.CancellationTokenSource();
+            var match = searcher.ContainsQuery(contentMetadata, "ing", token: cts.Token);
+
+            var ids = new long[16];
+            var read = match.Fill(ids);
+            Assert.Equal(2, read);
+
+            cts.Cancel();
+            Assert.Throws<OperationCanceledException>(() => match.Score(ids.AsSpan(0, read), new float[read], 1f));
+        }
+
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleWildcardStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
