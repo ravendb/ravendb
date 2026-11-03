@@ -484,6 +484,41 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void DerivedValuesThatConvertersWriteAsScalarsAreWrittenWithoutTypeNames()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new Drawing { Main = new Circle { Radius = 5 } }, context))
+                Assert.Equal("r=5", json[nameof(Drawing.Main)].ToString());
+        }
+
+        private class Shape
+        {
+            public string Name { get; set; }
+        }
+
+        [JsonConverter(typeof(CircleAsTextConverter))]
+        private class Circle : Shape
+        {
+            public int Radius { get; set; }
+        }
+
+        private class CircleAsTextConverter : JsonConverter<Circle>
+        {
+            public override Circle Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) =>
+                new Circle { Radius = int.Parse(reader.GetString().Substring(2)) };
+
+            public override void Write(System.Text.Json.Utf8JsonWriter writer, Circle value, System.Text.Json.JsonSerializerOptions options) =>
+                writer.WriteStringValue($"r={value.Radius}");
+        }
+
+        private class Drawing
+        {
+            public Shape Main { get; set; }
+        }
+
         private enum Level
         {
             [System.Runtime.Serialization.EnumMember(Value = "low-level")]
