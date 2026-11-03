@@ -15,15 +15,15 @@ namespace Raven.Server.Documents.Replication
             
             return type switch
             {
-                ReplicationNode.ReplicationType.PullAsHub => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<PullReplicationAsHub>(bjro,
+                ReplicationNode.ReplicationType.PullAsHub => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<PullReplicationAsHub>(bjro,
                     "PullReplicationAsHub"),
-                ReplicationNode.ReplicationType.PullAsSink => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<PullReplicationAsSink>(bjro,
+                ReplicationNode.ReplicationType.PullAsSink => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<PullReplicationAsSink>(bjro,
                     "PullReplicationAsSink"),
-                ReplicationNode.ReplicationType.External => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ExternalReplication>(bjro,
+                ReplicationNode.ReplicationType.External => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ExternalReplication>(bjro,
                     "ExternalReplication"),
-                ReplicationNode.ReplicationType.Internal => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<InternalReplication>(bjro,
+                ReplicationNode.ReplicationType.Internal => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<InternalReplication>(bjro,
                     "InternalReplication"),
-                ReplicationNode.ReplicationType.Migration => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<BucketMigrationReplication>(bjro,
+                ReplicationNode.ReplicationType.Migration => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<BucketMigrationReplication>(bjro,
                     "BucketMigrationReplication"),
                 _ => throw new ArgumentOutOfRangeException()
             };

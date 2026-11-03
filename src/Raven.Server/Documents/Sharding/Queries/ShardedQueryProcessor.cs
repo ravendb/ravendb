@@ -196,7 +196,7 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
             if (tsInclude == null)
                 continue;
 
-            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, context));
+            ((ShardedTimeSeriesIncludes)result.GetTimeSeriesIncludes()).AddMissingTimeSeries(tsInclude.Id, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(tsInclude.Values, context));
         }
 
     }

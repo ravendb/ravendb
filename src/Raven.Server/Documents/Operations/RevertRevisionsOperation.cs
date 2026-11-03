@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Operations
                 {
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(async stream =>
-                        await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false), _conventions)
+                        await ctx.WriteAsync(stream, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false), _conventions)
                 };
             }
 
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationIdResult>(response);
+                Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<OperationIdResult>(response);
             }
         }
     }
