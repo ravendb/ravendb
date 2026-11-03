@@ -83,7 +83,7 @@ namespace Raven.Client.Json
                 case BlittableSupportedReturnType.Null:
                     return null;
                 case BlittableSupportedReturnType.String:
-                    return value.ToString();
+                    return ConvertEnum(value, conventions, context);
                 case BlittableSupportedReturnType.Enumerable:
                     {
                         if (value is byte[] bytes)
@@ -130,6 +130,20 @@ namespace Raven.Client.Json
             if (value is Guid guid)
                 return guid.ToString("D");
 
+            return Serialize(value, conventions, context);
+        }
+
+        internal static object ConvertEnum(object value, DocumentConventions conventions, JsonOperationContext context)
+        {
+            if (conventions.SaveEnumsAsIntegers)
+                return value.ToString();
+
+            object serialized = Serialize(value, conventions, context);
+            return serialized is LazyStringValue text ? text.ToString() : serialized;
+        }
+
+        private static object Serialize(object value, DocumentConventions conventions, JsonOperationContext context)
+        {
             using (var writer = conventions.Serialization.CreateWriter(context))
             {
                 var serializer = conventions.Serialization.CreateSerializer();
