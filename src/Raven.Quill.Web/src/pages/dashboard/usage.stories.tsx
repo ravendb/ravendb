@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { sampleTopologyIds, settingsMocks } from "@/mocks/settings-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { DashboardUsage } from "./usage";
 
 const meta = {
@@ -35,13 +36,11 @@ export const Default: Story = {};
 
 export const Empty: Story = {
     parameters: {
-        msw: {
-            // Overriding a service replaces its whole handler array, so keep the
-            // license endpoint and only swap usage for an empty month.
-            handlers: {
-                settings: [settingsMocks.license(), settingsMocks.usage({ byPeriod: [], perApplication: [] })],
-            },
-        },
+        // Overriding a service replaces its whole handler array, so keep the
+        // license endpoint and only swap usage for an empty month.
+        msw: mockHandlers({
+            settings: [settingsMocks.license(), settingsMocks.usage({ byPeriod: [], perApplication: [] })],
+        }),
     },
 };
 

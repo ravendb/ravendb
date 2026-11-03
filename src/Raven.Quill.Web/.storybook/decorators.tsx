@@ -29,8 +29,7 @@ type PageParameter = {
     bare?: boolean;
 };
 
-// Type the `router` and `page` story parameters so their keys autocomplete and are
-// checked, the same way `msw` is typed in `default-mocks.ts`.
+// Type the `router` and `page` story parameters so their keys autocomplete and are checked.
 declare module "storybook/internal/csf" {
     interface Parameters {
         router?: RouterParameter;

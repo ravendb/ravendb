@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { dnsMocks } from "@/mocks/dns-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { DashboardIpConfiguration } from "./ip-configuration";
 
 const meta = {
@@ -23,11 +24,9 @@ export const Default: Story = {};
 
 export const LookupFailed: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                dns: [dnsMocks.ipBindingError()],
-            },
-        },
+        msw: mockHandlers({
+            dns: [dnsMocks.ipBindingError()],
+        }),
     },
 };
 

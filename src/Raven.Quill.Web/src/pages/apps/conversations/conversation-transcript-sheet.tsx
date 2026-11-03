@@ -103,7 +103,7 @@ function TranscriptRows({ scrollElement, rows }: { scrollElement: HTMLDivElement
     // freeze the visible window on its first value. The row contents stay compiled.
     "use no memo";
 
-    // eslint-disable-next-line react-hooks/incompatible-library -- handled by "use no memo" above
+    // eslint-disable-next-line react-hooks-js/incompatible-library -- handled by "use no memo" above
     const virtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: () => ESTIMATED_ROW_HEIGHT_IN_PX,

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { AppUsageResponse } from "@/api/generated/server-api";
 import { statsMocks } from "@/mocks/stats-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { AppAnalytics } from "./app-analytics";
 
 const meta = {
@@ -36,10 +37,8 @@ const emptyAppUsage: AppUsageResponse = {
 
 export const Empty: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                stats: [statsMocks.appUsage(emptyAppUsage)],
-            },
-        },
+        msw: mockHandlers({
+            stats: [statsMocks.appUsage(emptyAppUsage)],
+        }),
     },
 };

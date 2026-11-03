@@ -1,6 +1,6 @@
 import "@/index.css";
 import type { Preview } from "@storybook/react-vite";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { withProviders } from "./decorators";
 import { mswLoader } from "./mock-service-worker";
 import { resetAllStores } from "./zustand";
@@ -34,9 +34,7 @@ const preview: Preview = {
                 date: /Date$/i,
             },
         },
-        msw: {
-            handlers: defaultApiMocks,
-        },
+        msw: mockHandlers(defaultApiMocks),
     },
 };
 

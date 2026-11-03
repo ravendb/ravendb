@@ -1,0 +1,11 @@
+{
+    "name": "@raven-quill/api-codegen",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "//": "Separate package on purpose: openapi-typescript needs the TypeScript compiler API, which TypeScript 7 does not ship. Here it gets TypeScript 6, while the rest of the project uses TypeScript 7. Remove once openapi-typescript supports TypeScript 7 (openapi-ts/openapi-typescript#2841).",
+    "devDependencies": {
+        "openapi-typescript": "^7.13.0",
+        "typescript": "npm:@typescript/typescript6@^6.0.2"
+    }
+}

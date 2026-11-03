@@ -9,7 +9,7 @@ import { AI_OUT_OF_TOKENS_MESSAGE } from "@/components/ai-consent/use-ai-consent
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { RANGE_PREVIEW_ROW_CLASSNAME } from "@/components/table/row-range-selection";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import {
     discoveryWithAllStates,
     failedCdcVerification,
@@ -269,7 +269,7 @@ const connectFailureHandlers = {
 };
 
 export const ConnectSourceError: Story = {
-    parameters: { msw: { handlers: connectFailureHandlers } },
+    parameters: { msw: mockHandlers(connectFailureHandlers) },
     render: () => <AppWizardAtStep initialStep="externalConnection" />,
     // A failure belongs to the connection it was made with: editing any part of that connection
     // drops it, and exactly one alert shows at a time.
@@ -296,7 +296,7 @@ export const ConnectSourceError: Story = {
 // Verified tables (one with table-level warnings), tables that need configuration (CDC
 // disabled and an unsupported reason), and a response-level warning banner.
 export const VerifySchema: Story = {
-    parameters: { msw: { handlers: discoverHandlers(discoveryWithAllStates) } },
+    parameters: { msw: mockHandlers(discoverHandlers(discoveryWithAllStates)) },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={discoveryWithAllStates} />,
     // Every verified table starts selected, so the header draws a check rather than a partial dash.
     play: async ({ canvasElement }) => {
@@ -314,7 +314,7 @@ const allVerifiedDiscovery: DiscoverResponse = {
 };
 
 export const VerifySchemaAllVerified: Story = {
-    parameters: { msw: { handlers: discoverHandlers(allVerifiedDiscovery) } },
+    parameters: { msw: mockHandlers(discoverHandlers(allVerifiedDiscovery)) },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={allVerifiedDiscovery} />,
     // Without tables that need configuration the tabs are hidden, but the warnings filter still shows.
     play: async ({ canvasElement }) => {
@@ -327,7 +327,7 @@ export const VerifySchemaAllVerified: Story = {
 };
 
 export const VerifySchemaWarningsFilter: Story = {
-    parameters: { msw: { handlers: discoverHandlers(discoveryWithAllStates) } },
+    parameters: { msw: mockHandlers(discoverHandlers(discoveryWithAllStates)) },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={discoveryWithAllStates} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -356,7 +356,7 @@ export const VerifySchemaWarningsFilter: Story = {
 
 // Discovery failed: only the destructive error banner is shown, no tables.
 export const VerifySchemaDiscoveryFailed: Story = {
-    parameters: { msw: { handlers: discoverHandlers(failedDiscovery) } },
+    parameters: { msw: mockHandlers(discoverHandlers(failedDiscovery)) },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={failedDiscovery} />,
 };
 
@@ -375,7 +375,7 @@ export const VerifySchemaWithoutSelection: Story = {
 };
 
 export const VerifySchemaSelectionLimit: Story = {
-    parameters: { msw: { handlers: discoverHandlers(manyTablesDiscovery) } },
+    parameters: { msw: mockHandlers(discoverHandlers(manyTablesDiscovery)) },
     render: () => (
         <AppWizardAtStep initialStep="verifySchema" discovery={manyTablesDiscovery} hasSelectedTables={false} />
     ),
@@ -425,7 +425,7 @@ export const VerifySchemaSelectionLimit: Story = {
 // inherit the anchor row's own state, so with nothing selected the click cleared an already empty
 // range - and suppressed the plain toggle on the way - leaving the click with no effect at all.
 export const VerifySchemaShiftSelectFromEmpty: Story = {
-    parameters: { msw: { handlers: discoverHandlers(manyTablesDiscovery) } },
+    parameters: { msw: mockHandlers(discoverHandlers(manyTablesDiscovery)) },
     render: () => (
         <AppWizardAtStep initialStep="verifySchema" discovery={manyTablesDiscovery} hasSelectedTables={false} />
     ),
@@ -461,7 +461,7 @@ export const VerifySchemaShiftSelectFromEmpty: Story = {
 // seeded from a stored configuration, or cleared through "Deselect all" - used to leave the first
 // shift-click with no second endpoint, degrading it to a plain single toggle.
 export const VerifySchemaShiftSelectWithoutClicking: Story = {
-    parameters: { msw: { handlers: discoverHandlers(discoveryWithAllStates) } },
+    parameters: { msw: mockHandlers(discoverHandlers(discoveryWithAllStates)) },
     render: () => <AppWizardAtStep initialStep="verifySchema" discovery={discoveryWithAllStates} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -484,7 +484,7 @@ export const VerifySchemaShiftSelectWithoutClicking: Story = {
 
 export const VerifySchemaCdcVerificationFailed: Story = {
     parameters: {
-        msw: { handlers: { setup: [setupMocks.verifyCdc(failedCdcVerification), ...defaultApiMocks.setup] } },
+        msw: mockHandlers({ setup: [setupMocks.verifyCdc(failedCdcVerification), ...defaultApiMocks.setup] }),
     },
     render: () => <AppWizardAtStep initialStep="verifySchema" />,
     // The dry run's blockers keep the wizard on this step and stay on screen until the selection changes.
@@ -587,7 +587,7 @@ export const MapSchemaIntentPromptFromManual: Story = {
 
 // No consent on file yet: the AI card stays on screen disabled, and "Next" waits until it is accepted.
 export const MapSchemaConsentRequired: Story = {
-    parameters: { msw: { handlers: consentHandlers("ConsentRequired") } },
+    parameters: { msw: mockHandlers(consentHandlers("ConsentRequired")) },
     render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -599,7 +599,7 @@ export const MapSchemaConsentRequired: Story = {
 
 // A license that rules AI out leaves nothing to accept, so only Manual can carry the wizard on.
 export const MapSchemaAiUnavailable: Story = {
-    parameters: { msw: { handlers: consentHandlers("InvalidCredentials") } },
+    parameters: { msw: mockHandlers(consentHandlers("InvalidCredentials")) },
     render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -612,7 +612,7 @@ export const MapSchemaAiUnavailable: Story = {
 
 // An exhausted quota also leaves nothing to accept, but unlike a license answer it offers a retry.
 export const MapSchemaAiOutOfTokens: Story = {
-    parameters: { msw: { handlers: consentHandlers("OutOfTokens") } },
+    parameters: { msw: mockHandlers(consentHandlers("OutOfTokens")) },
     render: () => <AppWizardAtStep initialStep="map" seedOverride={withoutIntentPrompt} />,
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -669,7 +669,7 @@ export const MapTablesUnselectedTable: Story = {
 // The suggestion call routinely runs for more than a minute, so it is parked here to keep the
 // progress skeleton and its stage labels on screen.
 export const MapTablesSuggesting: Story = {
-    parameters: { msw: { handlers: { setup: [setupMocks.suggestCdcPending(), ...defaultApiMocks.setup] } } },
+    parameters: { msw: mockHandlers({ setup: [setupMocks.suggestCdcPending(), ...defaultApiMocks.setup] }) },
     render: () => <AppWizardAtStep initialStep="mapTables" isMappingApplied={false} />,
 };
 
@@ -687,7 +687,7 @@ export const Preview: Story = {
 // The mapping ran but reported errors, so the preview shows the destructive banner instead of documents.
 export const PreviewMappingErrors: Story = {
     parameters: {
-        msw: { handlers: { setup: [setupMocks.testMapping(failedMappingTest), ...defaultApiMocks.setup] } },
+        msw: mockHandlers({ setup: [setupMocks.testMapping(failedMappingTest), ...defaultApiMocks.setup] }),
     },
     render: () => <AppWizardAtStep initialStep="preview" />,
     play: async ({ canvasElement }) => {
