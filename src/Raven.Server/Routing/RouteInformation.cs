@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Cluster;
@@ -72,41 +70,17 @@ namespace Raven.Server.Routing
 
         public RouteType TypeOfRoute => _typeOfRoute;
         
-        public void BuildSharded(MethodInfo shardedAction)
+        internal void BuildSharded(HandleRequest shardedRequest)
         {
-            _shardedRequest = BuildInternal(shardedAction);
+            _shardedRequest = shardedRequest;
         }
-        
-        public void Build(MethodInfo action)
+
+        internal void Build(HandleRequest request, bool isDatabaseHandler)
         {
-            if (typeof(DatabaseRequestHandler).IsAssignableFrom(action.DeclaringType))
-            {
+            if (isDatabaseHandler)
                 _typeOfRoute = RouteType.Databases;
-            }
 
-            _request = BuildInternal(action);
-        }
-
-        
-        private static HandleRequest BuildInternal(MethodInfo action)
-        {
-            if (action.ReturnType != typeof(Task))
-                throw new InvalidOperationException(action.DeclaringType.FullName + "." + action.Name +
-                                                    " must return Task");
-
-            // CurrentRequestContext currentRequestContext
-            var currentRequestContext = Expression.Parameter(typeof(RequestHandlerContext), "currentRequestContext");
-            // new Handler(currentRequestContext)
-            var constructorInfo = action.DeclaringType.GetConstructor(new Type[0]);
-            var newExpression = Expression.New(constructorInfo);
-            var handler = Expression.Parameter(action.DeclaringType, "handler");
-
-            var block = Expression.Block(typeof(Task), new[] { handler },
-                Expression.Assign(handler, newExpression),
-                Expression.Call(handler, nameof(RequestHandler.Init), new Type[0], currentRequestContext),
-                Expression.Call(handler, action.Name, new Type[0]));
-            // .Handle();
-            return Expression.Lambda<HandleRequest>(block, currentRequestContext).Compile();
+            _request = request;
         }
 
         public Task CreateDatabase(RequestHandlerContext context)
@@ -119,7 +93,7 @@ namespace Raven.Server.Routing
                 throw new NodeIsPassiveException($"Can't perform actions on the database '{databaseName}' while the node is passive.");
             }
 
-            if (context.RavenServer.ServerStore.IdleDatabases.TryGetValue(databaseName.Value, out var replicationsDictionary))
+            if (context.RavenServer.ServerStore.IdleDatabasesByName.TryGetValue(databaseName.AsSpan(), out var replicationsDictionary))
             {
                 if (context.HttpContext.Request.Query.TryGetValue("from-outgoing", out var dbId) && context.HttpContext.Request.Query.TryGetValue("etag", out var replicationEtag))
                 {
@@ -253,11 +227,11 @@ namespace Raven.Server.Routing
             throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. Database initialization log: " + Environment.NewLine + log);
         }
 
-        public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)
+        public (HandleRequest Handler, Task<HandleRequest> PendingHandler) TryGetHandler(RequestHandlerContext context)
         {
             if (_typeOfRoute == RouteType.None)
             {
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
+                return (_request, null);
             }
             var database = CreateDatabase(context);
             if (database == null)
@@ -268,14 +242,14 @@ namespace Raven.Server.Routing
                     throw new InvalidOperationException($"Unable to run request {context.HttpContext.Request.GetFullUrl()}, the database is sharded, but no sharded route is defined for this operation!");
                 }
 
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_shardedRequest, null);
+                return (_shardedRequest, null);
             }
 
             if (database.Status == TaskStatus.RanToCompletion)
             {
-                return Tuple.Create<HandleRequest, Task<HandleRequest>>(_request, null);
+                return (_request, null);
             }
-            return Tuple.Create<HandleRequest, Task<HandleRequest>>(null, WaitForDb(database));
+            return (null, WaitForDb(database));
         }
 
         private async Task<HandleRequest> WaitForDb(Task databaseLoading)

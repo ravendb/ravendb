@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.Disposables;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -235,9 +234,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             };
         }
 
+        private sealed class AsyncCleanup(Func<Task> cleanup) : IAsyncDisposable
+        {
+            public async ValueTask DisposeAsync() => await cleanup();
+        }
+
         private IAsyncDisposable CleanupAsync()
         {
-            return new AsyncDisposable(async () =>
+            return new AsyncCleanup(async () =>
             {
                 var settings = GetGoogleCloudSettings();
                 if (settings == null)

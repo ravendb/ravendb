@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
@@ -139,7 +138,7 @@ namespace SlowTests.Issues
                     DeleteInTransactionMode(store, 1),
                     StoreInRegularMode(store, 3),
                 };
-                await tasks.WhenAll();
+                await Task.WhenAll(tasks);
 
                 using (var session = store.OpenSession())
                 {
@@ -318,7 +317,7 @@ namespace SlowTests.Issues
                     DeleteAndStoreInTransactionMode(store, 1),
                     StoreInRegularMode(store, 3),
                 };
-                await tasks.WhenAll();
+                await Task.WhenAll(tasks);
 
                 using (var session = store.OpenSession())
                 {
@@ -393,7 +392,7 @@ namespace SlowTests.Issues
                     DeleteAndStoreInTransactionMode(store, 1),
                     StoreInRegularMode(store, 1),
                 };
-                await tasks.WhenAll();
+                await Task.WhenAll(tasks);
 
                 using (var session = store.OpenSession())
                 {

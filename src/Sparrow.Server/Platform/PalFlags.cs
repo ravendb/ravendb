@@ -74,6 +74,8 @@ namespace Sparrow.Server.Platform
             FailMutexUnlock = 64,
             FailWritebackNotSupported = 65,
             FailMoveFile = 66,
+            FailPrefetchFilesExhausted = 67,
+            FailIoRingFilesExhausted = 68,
         };
 
         [Flags]

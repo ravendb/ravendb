@@ -24,6 +24,7 @@ Set-Content src/rvngetpalver.c -Value $GenCode
 
 $shared = `
     "src/shared_all.c",
+"src/slots.c",
 "src/rvngetpalver.c"
 
 $win_files = `
@@ -51,7 +52,9 @@ $posix_files = `
 
 $linux_only = `
     "src/posix/linuxonly.c",
-    "src/posix/ioring.c"
+    "src/posix/ioring.c",
+    "src/posix/prefetch.c",
+    "src/posix/syscalls.c"
 
 Remove-Item .\runtimes -Force -Recurse -ErrorAction Ignore
 Remove-Item .\artifacts -Force -Recurse -ErrorAction Ignore

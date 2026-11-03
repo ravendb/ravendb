@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using FastTests.Voron.Util;
-using Nito.Disposables;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
@@ -130,7 +129,7 @@ namespace SlowTests.Voron.Storage
 
             var totalAllocationSize = dataPagerState.TotalAllocatedSize;
             
-            //prevent continuous allocation and force remapping on next pager growth			
+            //prevent continuous allocation and force remapping on next pager growth            
             byte* adjacentBlockAddress = null;
             try
             {

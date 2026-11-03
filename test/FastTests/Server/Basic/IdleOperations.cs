@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,6 +34,29 @@ namespace FastTests.Server.Basic
                 db.RunIdleOperations();
 
                 Assert.NotEqual(lastIdleTime, db.LastIdleTime);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public async Task Should_Update_LastAccessTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var db = await GetDatabase(store.Database);
+
+                db.LastAccessTime = DateTime.MinValue;
+                Assert.Equal(DateTime.MinValue, db.LastAccessTime);
+
+                var tenMinutesAgo = DateTime.UtcNow.AddMinutes(-10);
+                db.LastAccessTime = tenMinutesAgo;
+                Assert.InRange(db.LastAccessTime, tenMinutesAgo.AddSeconds(-1), tenMinutesAgo.AddSeconds(1));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<Product>("products/1");
+                }
+
+                Assert.InRange(db.LastAccessTime, DateTime.UtcNow.AddSeconds(-5), DateTime.UtcNow.AddSeconds(1));
             }
         }
 

@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Utils.DiskStatsGetter;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -17,37 +19,76 @@ namespace FastTests.Voron
         {
         }
 
-        [LinuxFact]
-        public unsafe void DeviceQueueDepthReader_reads_a_real_device()
+        [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Monitoring, RavenPlatform.Linux | RavenPlatform.Windows)]
+        public async Task DeviceIoSampler_reads_a_real_device()
         {
-            var state = Env.CurrentStateRecord.DataPagerState;
-            Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _));
+            RequireFileBasedPager(); // a memory-only environment never writes to the device
+            var deviceId = DataFileDeviceId();
 
-            using var reader = DeviceQueueDepthReader.TryCreate(Env.Options.BasePath.FullPath, deviceId);
-            if (reader == null)
-                return; // container without sysfs - the fallback path, nothing to assert
-
-            // generate some write traffic so the counters move
-            using (var tx = Env.WriteTransaction())
+            var sampler = DeviceIoSampler.ForDevice(deviceId, Env.Options.BasePath.FullPath);
+            if (sampler == null)
             {
+                Output.WriteLine($"device {deviceId}: no counters");
+                return; // no counters for this device (a container without sysfs): the fallback path, nothing to assert
+            }
+
+            // the monitoring finds the device by path: it must reach the sampler of the data file's device
+            Assert.Same(sampler, DeviceIoSampler.ForPath(Env.Options.BasePath.FullPath));
+
+            var stopwatch = Stopwatch.StartNew();
+            while (sampler.Current == null)
+            {
+                Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(10), "the sampler took no sample in 10 seconds");
+                await Task.Delay(100);
+            }
+
+            var current = sampler.Current;
+            Output.WriteLine($"device {deviceId}: {current}");
+            Assert.True(current.QueueDepth >= 0 && current.WritesPerSecond >= 0 && current.WriteLatencyMs >= 0, $"negative values: {current}");
+
+            var stats = new SampledDiskStatsGetter().Get(Env.Options.BasePath.FullPath);
+            Assert.NotNull(stats);
+            Assert.True(stats.QueueLength >= 0, $"negative queue length: {stats}");
+
+            if (PlatformDetails.RunningOnLinux == false)
+                return;
+
+            using var counters = DeviceCounters.LinuxSysfsCounters.TryCreate(deviceId);
+            Assert.False(counters.TrySample(Stopwatch.GetTimestamp(), out _)); // the baseline
+
+            // journal writes are O_DIRECT | O_DSYNC: each commit reaches the device
+            for (var i = 0; i < 8; i++)
+            {
+                using var tx = Env.WriteTransaction();
                 var tree = tx.CreateTree("qdepth");
-                var buffer = new byte[8192];
-                for (var i = 0; i < 512; i++)
-                    tree.Add("key-" + i, buffer);
+                tree.Add("key-" + i, new byte[8192]);
                 tx.Commit();
             }
 
-            var first = reader.Read();
-            Assert.True(first >= 0, $"queue depth must not be negative, got {first}");
+            Assert.True(counters.TrySample(Stopwatch.GetTimestamp(), out var sample));
+            Assert.True(sample.WritesPerSecond > 0, $"no writes reached the device: {sample}");
+        }
 
-            var second = reader.Read();
-            Assert.True(second >= 0, $"queue depth must not be negative, got {second}");
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FirstTouchHintIgnoresPagesOutsideTheFile()
+        {
+            RequireFileBasedPager();
+            var state = Env.CurrentStateRecord.DataPagerState;
+            foreach (var page in new[] { -1L, -64L, long.MinValue, long.MaxValue })
+                Env.HintFirstTouch(state, page);
+        }
+
+        private unsafe ulong DataFileDeviceId()
+        {
+            var state = Env.CurrentStateRecord.DataPagerState;
+            Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _));
+            return deviceId;
         }
 
         [RavenFact(RavenTestCategory.Voron)]
         public void DeviceWriteBudget_selects_drain_mode_and_returns_to_trickle()
         {
-            var gate = new global::Voron.Impl.Journal.DeviceWriteBudget(queueReader: null, pathOnDevice: "test",
+            var gate = new global::Voron.Impl.Journal.DeviceWriteBudget(sampler: null, pathOnDevice: "test",
                 syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
                 classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
 
@@ -67,7 +108,7 @@ namespace FastTests.Voron
         [RavenFact(RavenTestCategory.Voron)]
         public void DeviceWriteBudget_classifies_fast_device_from_small_writes_when_latency_is_decisive()
         {
-            var gate = new global::Voron.Impl.Journal.DeviceWriteBudget(queueReader: null, pathOnDevice: "test",
+            var gate = new global::Voron.Impl.Journal.DeviceWriteBudget(sampler: null, pathOnDevice: "test",
                 syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
                 classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
 
@@ -80,7 +121,7 @@ namespace FastTests.Voron
 
             // gp3-shaped: 12KB writes at 1.5ms. Small writes must NOT classify - a small write can be
             // fast on a slow device, so only the decisively-low band is trusted below the 256KB size gate.
-            var gp3 = new global::Voron.Impl.Journal.DeviceWriteBudget(queueReader: null, pathOnDevice: "test",
+            var gp3 = new global::Voron.Impl.Journal.DeviceWriteBudget(sampler: null, pathOnDevice: "test",
                 syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
                 classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
             for (var i = 0; i < 16; i++)

@@ -16,6 +16,18 @@ namespace Sparrow.Server.Platform.Posix
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
         public static extern long syscall0(long number);
 
+        public const int RLIMIT_NOFILE = 7;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct RLimit
+        {
+            public nuint Current; // RLIM_INFINITY: nuint.MaxValue
+            public nuint Maximum;
+        }
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int getrlimit(int resource, out RLimit limit);
+
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 

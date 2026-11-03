@@ -947,7 +947,7 @@ namespace Raven.Server.Documents.TransactionMerger
                 meter.IncrementCounter(1);
                 meter.IncrementCommands(op.Execute(context, _recording.State));
                 if (op.UpdateAccessTime)
-                    UpdateLastAccessTime(_time.GetUtcNow());
+                    UpdateLastAccessTime();
 
                 modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize + llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
@@ -982,7 +982,7 @@ namespace Raven.Server.Documents.TransactionMerger
             return status;
         }
 
-        protected abstract void UpdateLastAccessTime(DateTime time);
+        protected abstract void UpdateLastAccessTime();
 
         private void UnlikelyRejectOperations(IAsyncResult previousOperation, Stopwatch sp, LowLevelTransaction llt, long modifiedSize)
         {

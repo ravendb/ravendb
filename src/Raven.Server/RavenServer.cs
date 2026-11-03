@@ -108,6 +108,8 @@ namespace Raven.Server
 
         public readonly RavenConfiguration Configuration;
 
+        internal readonly long MinResponseSizeToCompressInBytes;
+
         public Timer ServerMaintenanceTimer;
 
         public SystemTime Time = new SystemTime();
@@ -163,6 +165,8 @@ namespace Raven.Server
             if (Configuration.Initialized == false)
                 throw new InvalidOperationException("Configuration must be initialized");
 
+            MinResponseSizeToCompressInBytes = Configuration.Http.MinResponseSizeToCompress.GetValue(SizeUnit.Bytes);
+
             Statistics = new ServerStatistics();
 
             AdminScripts = new ScriptRunnerCache(null, Configuration)
@@ -212,7 +216,7 @@ namespace Raven.Server
 
             CpuUsageCalculator.Init();
 
-            DiskStatsGetter = DiskUtils.GetOsDiskUsageCalculator(Configuration.Monitoring.MinDiskStatsInterval.AsTimeSpan);
+            DiskStatsGetter = new SampledDiskStatsGetter();
 
             MetricCacher.Initialize();
 
@@ -381,6 +385,7 @@ namespace Raven.Server
 
                             services.Configure<DeflateCompressionProviderOptions>(options => { options.Level = Configuration.Http.DeflateResponseCompressionLevel; });
 
+                            services.AddSingleton<IResponseCompressionProvider, RavenResponseCompressionProvider>();
                             services.AddResponseCompression();
                         }
 
@@ -1818,7 +1823,11 @@ namespace Raven.Server
 
             public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
             private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
-            public X509Certificate2 Certificate;
+            public readonly X509Certificate2 Certificate;
+
+            // PERF: computed once per connection, X509Certificate2.Thumbprint creates the string on every call
+            public readonly string CertificateThumbprint;
+
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
 
@@ -1828,9 +1837,11 @@ namespace Raven.Server
 
             public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
-            public AuthenticateConnection(TwoFactor twoFactor)
+            public AuthenticateConnection(TwoFactor twoFactor, X509Certificate2 certificate = null)
             {
                 _twoFactor = twoFactor;
+                Certificate = certificate;
+                CertificateThumbprint = certificate?.Thumbprint;
             }
 
             public bool CanAccess(string database, bool requireAdmin, bool requireWrite)
@@ -1984,10 +1995,7 @@ namespace Raven.Server
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate, object connectionInfo, StringBuilder log = null)
         {
-            var authenticationStatus = new AuthenticateConnection(TwoFactor)
-            {
-                Certificate = certificate
-            };
+            var authenticationStatus = new AuthenticateConnection(TwoFactor, certificate);
             var wellKnown = Configuration.Security.WellKnownAdminCertificates;
             if (certificate == null)
             {

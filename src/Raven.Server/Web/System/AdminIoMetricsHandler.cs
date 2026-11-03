@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -9,7 +10,12 @@ using Raven.Server.Utils;
 using Raven.Server.Utils.IoMetrics;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Platform;
+using Sparrow.Server.Utils;
 using Voron;
+using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Web.System
 {
@@ -23,6 +29,47 @@ namespace Raven.Server.Web.System
             {
                 var result = IoMetricsUtil.GetIoMetricsResponse(GetSystemEnvironment(ServerStore), null);
                 context.Write(writer, result.ToJson());
+            }
+        }
+
+        [RavenAction("/admin/debug/io-metrics/prefetch", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task PrefetchStats()
+        {
+            // the counters of the process wide prefetch ring (page hints and segment read-ahead), since the server started
+            var ring = PrefetchRing.Default;
+            var stats = ring.GetStats();
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
+            {
+                context.Write(writer, new DynamicJsonValue
+                {
+                    [nameof(PrefetchRing.IsAvailable)] = ring.IsAvailable,
+                    [nameof(PrefetchRing.MaxFiles)] = ring.MaxFiles,
+                    [nameof(PrefetchRingStats.Submitted)] = stats?.Submitted,
+                    [nameof(PrefetchRingStats.DroppedFull)] = stats?.DroppedFull,
+                    [nameof(PrefetchRingStats.DroppedStale)] = stats?.DroppedStale,
+                    [nameof(PrefetchRingStats.Failed)] = stats?.Failed,
+                    [nameof(PrefetchRingStats.ReadGroups)] = stats?.ReadGroups,
+                    [nameof(PrefetchRingStats.Reads)] = stats?.Reads,
+                    [nameof(PrefetchRingStats.UsesIoUring)] = stats?.UsesIoUring,
+                    ["SegmentReadAheadWarmUp"] = PrefetchPolicy.Global.Generation,
+                    ["Devices"] = new DynamicJsonArray(DeviceWriteBudget.Devices.Select(d => new DynamicJsonValue
+                    {
+                        [nameof(DeviceWriteBudget.PathOnDevice)] = d.PathOnDevice,
+                        [nameof(DeviceWriteBudget.QueueDepth)] = d.QueueDepth,
+                        [nameof(DeviceWriteBudget.ReadAheadBytesPerInterval)] = d.ReadAheadBytesPerInterval,
+                        [nameof(DeviceWriteBudget.DeviceStats)] = d.DeviceStats == null ? null : new DynamicJsonValue
+                        {
+                            [nameof(DeviceIoStats.ReadsPerSecond)] = d.DeviceStats.ReadsPerSecond,
+                            [nameof(DeviceIoStats.WritesPerSecond)] = d.DeviceStats.WritesPerSecond,
+                            [nameof(DeviceIoStats.ReadBytesPerSecond)] = d.DeviceStats.ReadBytesPerSecond,
+                            [nameof(DeviceIoStats.WriteBytesPerSecond)] = d.DeviceStats.WriteBytesPerSecond,
+                            [nameof(DeviceIoStats.QueueDepth)] = d.DeviceStats.QueueDepth,
+                            [nameof(DeviceIoStats.ReadLatencyMs)] = d.DeviceStats.ReadLatencyMs,
+                            [nameof(DeviceIoStats.WriteLatencyMs)] = d.DeviceStats.WriteLatencyMs
+                        }
+                    }))
+                });
             }
         }
 

@@ -23,6 +23,7 @@ public class RavenDB_27779 : StorageTest
         GC.KeepAlive(Env); // may be the first native call in the process
 
         Assert.Equal(expected.Storage.IoRingQueueSize, PalConfiguration.IoRingQueueSize);
+        Assert.Equal(expected.Storage.IoRingMaxFiles, PalConfiguration.IoRingMaxFiles);
         Assert.Equal(expected.Storage.LowPriorityFlushAndSync, PalConfiguration.LowPriorityIo);
 
         // for Auto the PAL writes the resolved mode back

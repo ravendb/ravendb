@@ -5,12 +5,13 @@ using System.Text;
 using Microsoft.Win32.SafeHandles;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using unsafe ReadsDoneCallback = delegate* unmanaged<void*, uint*, int, void>;
 
 namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70902; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70916; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -25,6 +26,7 @@ namespace Sparrow.Server.Platform
             var cfg = new rvn_configuration
             {
                 io_ring_queue_size = PalConfiguration.IoRingQueueSize,
+                io_ring_max_files = PalConfiguration.IoRingFileTableSize,
                 low_priority_io = PalConfiguration.LowPriorityIo,
                 pal_version = -1, // loaded by the call
                 version = RvnConfigurationVersion.Current,
@@ -103,6 +105,8 @@ namespace Sparrow.Server.Platform
             DoNotConsiderMemoryLockFailureAsCatastrophicError = 1 << 7,
             CopyOnWrite = 1 << 8,
             DoNotMap = 1 << 9,
+            RandomAccess = 1 << 10,
+            Prefetch = 1 << 11,
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -117,7 +121,8 @@ namespace Sparrow.Server.Platform
             public long PagesDeferredHot; 
         }
 
-        [DllImport(LIBRVNPAL, SetLastError = true)]
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
         public static extern PalFlags.ErrnoSpecialCodes rvn_get_error_meaning(Int32 error);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
@@ -164,6 +169,62 @@ namespace Sparrow.Server.Platform
             out void* mem,
             out Int32 errorCode);
             
+        /// <summary>Starts reading the range into the page cache; returns 1 when queued, 0 when dropped. Never blocks.</summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern Int32 rvn_pager_prefetch(
+            void* handle, Int64 offset, Int64 length);
+
+        /// <summary>Starts reading the range into the page cache, without waiting.</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_pager_will_need(
+            void* handle, Int64 offset, Int64 length);
+
+        /// <summary>
+        /// Moves the 8 KB pages at the offsets that are not in the page cache to the front and returns their number, without
+        /// waiting. Kernel 6.12 and later also start their reads; earlier kernels do not.
+        /// </summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_pager_start_reads(
+            void* handle, Int64* offsets, Int32 count);
+
+        /// <summary>
+        /// The largest WILLNEED request the data file's device reads whole, and the file's ticket on its prefetch ring (-1 when
+        /// not registered).
+        /// </summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern PalFlags.FailCodes rvn_pager_get_prefetch_info(
+            void* handle, out PalDefinitions.PagerPrefetchInfo info);
+
+        /// <summary>
+        /// Reads the 8 KB pages at the offsets and passes group to the ring's callback when done. Returns 1 when queued, 0 when
+        /// dropped for lack of room (no callback). Never waits.
+        /// </summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern Int32 rvn_prefetch_ring_read_pages(
+            void* ring, Int64 ticket, Int64* offsets, Int32 count, UInt32 group);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_create(
+            Int32 ringEntries, Int32 maxFiles, Int32 queueSize, Int32 maxGroups, ReadsDoneCallback onReadsDone, void* onReadsDoneContext,
+            out void* ring, out Int32 errorCode);
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_destroy(
+            void* ring, out Int32 errorCode);
+
+        /// <summary>For tests: the ring's next <paramref name="count"/> submits fail with <paramref name="error"/> (an errno); transient errors for <paramref name="giveUpMs"/> fail the ring.</summary>
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_fail_submits(void* ring, Int32 count, Int32 error, Int32 giveUpMs);
+
+        [DllImport(LIBRVNPAL)]
+        [SuppressGCTransition]
+        public static extern PalFlags.FailCodes rvn_prefetch_ring_stats(
+            void* ring, out PrefetchRingStats stats);
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_close_pager(
             void* handle, out Int32 errorCode);
@@ -195,6 +256,7 @@ namespace Sparrow.Server.Platform
             string filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,
@@ -202,7 +264,7 @@ namespace Sparrow.Server.Platform
             out Int32 errorCode)
         {
             using var convert = new Converter(filename);
-            return rvn_init_pager(convert.Pointer, initialFileSize, flags,
+            return rvn_init_pager(convert.Pointer, initialFileSize, flags, prefetchRing,
                 out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
         }
 
@@ -229,6 +291,7 @@ namespace Sparrow.Server.Platform
             byte* filename,
             Int64 initialFileSize,
             OpenFileFlags flags,
+            void* prefetchRing,
             out void* handle,
             out byte* readAddress,
             out byte* writeAddress,
@@ -296,6 +359,10 @@ namespace Sparrow.Server.Platform
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern WriterFunc rvn_get_writer(void* handle);
+
+        /// <summary>For tests: the write ring's registrations fail once <paramref name="max"/> additional files are registered; a negative value removes the limit.</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_io_ring_limit_files_for_testing(Int32 max);
 
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_get_file_handle(
@@ -551,6 +618,8 @@ namespace Sparrow.Server.Platform
 
             public delegate* unmanaged[Cdecl]<Int64, char*, void> memoryLockCallback;
             public delegate* unmanaged[Cdecl]<Int64, char*, int> recoveryMemoryLockFailureCallback;
+
+            public Int32 io_ring_max_files;
         };
         
         [DllImport(LIBRVNPAL, SetLastError = true)]
