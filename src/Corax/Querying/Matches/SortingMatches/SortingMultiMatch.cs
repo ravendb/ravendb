@@ -169,12 +169,11 @@ public sealed unsafe partial class SortingMultiMatch<TInner> : SortingMultiMatch
             }
             else
             {
-                using var scope = SortingHelpers.DrainMatch(ref match._inner, match._searcher.Allocator, out Span<long> allMatches);
+                using var scope = SortingHelpers.DrainMatch(ref match._inner, match._searcher.Allocator, out Span<long> allMatches, out match.CandidatesAreSorted);
                 match.TotalResults = allMatches.Length;
                 if (match.TotalResults == 0)
                     return 0;
-                
-                match.CandidatesAreSorted = true;
+
                 long sortStart = Stopwatch.GetTimestamp();
                 SortResults<TComparer1, TComparer2, TComparer3>(match, allMatches);
                 match.SortingTimeInTicks += Stopwatch.GetTimestamp() - sortStart;
