@@ -11,12 +11,14 @@ internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 {
     private readonly string[] _names;
     private readonly bool _exact;
+    private readonly string[] _excludedNames;
 
-    public GetIndexesProgressCommand(string nodeTag, string[] names = null, bool exact = false)
+    public GetIndexesProgressCommand(string nodeTag, string[] names = null, bool exact = false, string[] excludedNames = null)
     {
         SelectedNodeTag = nodeTag;
         _names = names;
         _exact = exact;
+        _excludedNames = excludedNames;
     }
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -25,14 +27,8 @@ internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 
         char separator = '?';
 
-        if (_names is { Length: > 0 })
-        {
-            for (int i = 0; i < _names.Length; i++)
-            {
-                url += $"{separator}name={Uri.EscapeDataString(_names[i])}";
-                separator = '&';
-            }
-        }
+        AppendNames(ref url, ref separator, "name", _names);
+        AppendNames(ref url, ref separator, "excludeName", _excludedNames);
 
         if (_exact)
         {
@@ -43,6 +39,18 @@ internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
         {
             Method = HttpMethod.Get
         };
+    }
+
+    private static void AppendNames(ref string url, ref char separator, string parameterName, string[] names)
+    {
+        if (names is not { Length: > 0 })
+            return;
+
+        foreach (string name in names)
+        {
+            url += $"{separator}{parameterName}={Uri.EscapeDataString(name)}";
+            separator = '&';
+        }
     }
 
     public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)

@@ -34,6 +34,7 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
     private IEnumerable<IndexProgress> GetIndexesProgress()
     {
         HashSet<string> names = GetNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> excludedNames = GetExcludedNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
         bool exact = IsExact();
 
         using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
@@ -44,6 +45,9 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
             foreach (var index in RequestHandler.Database.IndexStore.GetIndexes())
             {
                 if (names.Count > 0 && names.Contains(index.Name) == false)
+                    continue;
+
+                if (excludedNames.Contains(index.Name))
                     continue;
 
                 IndexProgress indexProgress = null;

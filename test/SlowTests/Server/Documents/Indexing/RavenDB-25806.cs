@@ -4,8 +4,10 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,33 +25,7 @@ namespace SlowTests.Server.Documents.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                var usersIndex = new Users_ByName();
-                var companiesIndex = new Companies_ByName();
-                await usersIndex.ExecuteAsync(store);
-                await companiesIndex.ExecuteAsync(store);
-
-                Indexes.WaitForIndexing(store);
-
-                await store.Maintenance.SendAsync(new StopIndexingOperation());
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    for (var i = 1; i <= 5; i++)
-                    {
-                        await session.StoreAsync(new User { Name = $"user-{i}" }, $"users/{i}");
-                        await session.StoreAsync(new Company { Name = $"company-{i}" }, $"companies/{i}");
-                    }
-
-                    await session.SaveChangesAsync();
-                }
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    session.Delete("users/1");
-                    session.Delete("users/2");
-                    session.Delete("companies/1");
-                    await session.SaveChangesAsync();
-                }
+                var (usersIndex, companiesIndex) = await CreateStaleIndexesAsync(store);
 
                 // no names - progress of all indexes is returned
                 var progress = await GetProgressAsync(store);
@@ -82,11 +58,96 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        private static async Task<IndexProgress[]> GetProgressAsync(IDocumentStore store, string[] names = null, bool exact = false)
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task Can_Exclude_Indexes_From_Progress()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var (usersIndex, companiesIndex) = await CreateStaleIndexesAsync(store);
+
+                // the excluded index is skipped
+                var progress = await GetProgressAsync(store, excludedNames: new[] { usersIndex.IndexName });
+                var companiesProgress = Assert.Single(progress);
+                Assert.Equal(companiesIndex.IndexName, companiesProgress.Name);
+
+                // the exclusion is case insensitive, like the index names
+                progress = await GetProgressAsync(store, excludedNames: new[] { usersIndex.IndexName.ToUpperInvariant() });
+                companiesProgress = Assert.Single(progress);
+                Assert.Equal(companiesIndex.IndexName, companiesProgress.Name);
+
+                // the exclusion wins over the name filter
+                progress = await GetProgressAsync(store, names: new[] { usersIndex.IndexName }, excludedNames: new[] { usersIndex.IndexName });
+                Assert.Empty(progress);
+
+                // an unknown excluded name changes nothing
+                progress = await GetProgressAsync(store, excludedNames: new[] { "Unknown/Index" });
+                Assert.Equal(2, progress.Length);
+
+                // every stale index can be excluded
+                progress = await GetProgressAsync(store, excludedNames: new[] { usersIndex.IndexName, companiesIndex.IndexName });
+                Assert.Empty(progress);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void Indexes_Progress_Command_Forwards_The_Query_Parameters()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var node = new ServerNode { Url = "http://localhost:8080", Database = "db" };
+
+                var command = new GetIndexesProgressCommand(nodeTag: null, names: new[] { "Users/ByName", "Companies/ByName" }, exact: true, excludedNames: new[] { "Orders/ByTotal" });
+                command.CreateRequest(context, node, out string url);
+                Assert.Equal("http://localhost:8080/databases/db/indexes/progress?name=Users%2FByName&name=Companies%2FByName&excludeName=Orders%2FByTotal&exact=true", url);
+
+                command = new GetIndexesProgressCommand(nodeTag: null, excludedNames: new[] { "Orders/ByTotal" });
+                command.CreateRequest(context, node, out url);
+                Assert.Equal("http://localhost:8080/databases/db/indexes/progress?excludeName=Orders%2FByTotal", url);
+
+                command = new GetIndexesProgressCommand(nodeTag: null);
+                command.CreateRequest(context, node, out url);
+                Assert.Equal("http://localhost:8080/databases/db/indexes/progress", url);
+            }
+        }
+
+        private async Task<(Users_ByName UsersIndex, Companies_ByName CompaniesIndex)> CreateStaleIndexesAsync(IDocumentStore store)
+        {
+            var usersIndex = new Users_ByName();
+            var companiesIndex = new Companies_ByName();
+            await usersIndex.ExecuteAsync(store);
+            await companiesIndex.ExecuteAsync(store);
+
+            Indexes.WaitForIndexing(store);
+
+            await store.Maintenance.SendAsync(new StopIndexingOperation());
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (var i = 1; i <= 5; i++)
+                {
+                    await session.StoreAsync(new User { Name = $"user-{i}" }, $"users/{i}");
+                    await session.StoreAsync(new Company { Name = $"company-{i}" }, $"companies/{i}");
+                }
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete("users/1");
+                session.Delete("users/2");
+                session.Delete("companies/1");
+                await session.SaveChangesAsync();
+            }
+
+            return (usersIndex, companiesIndex);
+        }
+
+        private static async Task<IndexProgress[]> GetProgressAsync(IDocumentStore store, string[] names = null, bool exact = false, string[] excludedNames = null)
         {
             using (var commands = store.Commands())
             {
-                var cmd = new GetIndexesProgressCommand(nodeTag: null, names, exact);
+                var cmd = new GetIndexesProgressCommand(nodeTag: null, names, exact, excludedNames);
                 await commands.ExecuteAsync(cmd);
                 return cmd.Result;
             }
