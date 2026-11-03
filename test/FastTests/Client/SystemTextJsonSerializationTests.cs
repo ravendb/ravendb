@@ -495,6 +495,19 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public void DynamicValuesWrappingNullAreEqual()
+        {
+            var value = new Raven.Client.Json.JsonDynamicValue(null);
+            var other = new Raven.Client.Json.JsonDynamicValue(null);
+
+            Assert.True(value.Equals(value));
+            Assert.True(value.Equals(other));
+            Assert.Equal(value.GetHashCode(), other.GetHashCode());
+            Assert.False(value.Equals(new Raven.Client.Json.JsonDynamicValue(1L)));
+            Assert.False(value.Equals((Raven.Client.Json.JsonDynamicValue)null));
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PropertyNamingPolicyRequiresPropertyNameConverter()
         {
             var withoutConverter = new DocumentConventions
