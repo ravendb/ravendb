@@ -170,17 +170,23 @@ public class LogDivergenceTests : RachisConsensusTestBase
     {
         node.ClearAppendedEntriesAfter(context, 0);
         var lastCommittedTerm = -1L;
+        var lastTerm = info.LastTruncatedTerm;
 
         foreach (var (term, index) in info)
         {
             if (info.CommitIndex == index)
                 lastCommittedTerm = term;
+            lastTerm = term;
 
             var cmd = new TestCommand {Name = "test", Value = 1};
             RachisConsensus.TestingStuff.InsertToLogDirectlyForDebug(context, node, term, index, cmd, RachisEntryFlags.StateMachineCommand);
         }
 
         RachisConsensus.TestingStuff.UpdateStateDirectlyForDebug(context, node, info.CommitIndex, lastCommittedTerm, info.LastTruncatedIndex, info.LastTruncatedTerm);
+
+        // a node's term is never below a term in its log: with a lower one, the next leader appends its entries after entries
+        // of a higher term, the most up to date log no longer wins the elections, and they may never settle
+        node.UpdateTermIn(context, lastTerm);
     }
 
     private class LogInfo : IEnumerable<(long Term, long Index)>
