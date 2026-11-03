@@ -36,7 +36,7 @@ namespace Corax.Querying.Matches.TermsProviders
             Reset();
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
             ReadOnlySpan<byte> decodedStartsWith = _startWith.Decoded();
             int count = 0;
@@ -65,6 +65,8 @@ namespace Corax.Querying.Matches.TermsProviders
                 if (key.StartsWith(decodedStartsWith) == false)
                     break;
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = compactKey.Decoded().Length;
                 postingListIds[count++] = postingListId;
             }
 

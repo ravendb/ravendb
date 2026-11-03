@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -14,6 +15,9 @@ namespace Corax.Querying;
 
 public partial class IndexSearcher
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private IndexSearcher GetScoringSearcher(in FieldMetadata field) => field.HasBoost ? this : null;
+
     private IQueryMatch TermsProviderMatchBuilder<TTermsProvider>(in FieldMetadata field, Slice term, bool validatePostfixLen = false, in CancellationToken token = default)
         where TTermsProvider : struct, ITermsProvider
     {
@@ -35,7 +39,7 @@ public partial class IndexSearcher
 
         CompactKey seekTerm = BuildBackwardStartsWithSeekLimit<TTermsProvider>(terms, term.AsReadOnlySpan());
         ITermsProvider provider = GetMultiTermMatchProvider<TTermsProvider>(field, terms, termKey, seekTerm, validatePostfixLen, token);
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field), averageTermLength: GetAverageTermLength(field, terms));
     }
 
     private IQueryMatch TermsProviderMatchBuilder<TTermsProvider>(in FieldMetadata field, string term, CancellationToken token)
@@ -51,7 +55,7 @@ public partial class IndexSearcher
 
         CompactKey seekTerm = BuildBackwardStartsWithSeekLimit<TTermsProvider>(terms, slicedTerm.AsReadOnlySpan());
         ITermsProvider provider = GetMultiTermMatchProvider<TTermsProvider>(field, terms, termKey, seekTerm, validatePostfixLen: false, token: token);
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field), averageTermLength: GetAverageTermLength(field, terms));
     }
 
     // A backward StartsWith scan must seek to the END of the prefix block and walk down. The seek upper bound is

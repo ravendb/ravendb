@@ -30,7 +30,7 @@ public struct RegexTermsProvider<TLookupIterator> : ITermsProvider
         _field = field;
     }
 
-    public int FillPostingListIds(Span<long> postingListIds)
+    public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
     {
         int count = 0;
 
@@ -52,6 +52,8 @@ public struct RegexTermsProvider<TLookupIterator> : ITermsProvider
                 if (_regex.IsMatch(ToChars(key, ref buffer)) == false)
                     continue;
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = compactKey.Decoded().Length;
                 postingListIds[count++] = postingListId;
             }
         }
