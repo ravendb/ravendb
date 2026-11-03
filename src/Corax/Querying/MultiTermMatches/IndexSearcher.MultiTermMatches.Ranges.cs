@@ -177,7 +177,7 @@ public partial class IndexSearcher
             ? new TermsRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>(this, terms, field, low, high)
             : (ITermsProvider)new TermsRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
     }
 
     private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool forward)
@@ -193,7 +193,7 @@ public partial class IndexSearcher
             ? new TermsNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high)
             : (ITermsProvider)new TermsNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
     }
 
     private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool forward)
@@ -209,6 +209,6 @@ public partial class IndexSearcher
             ? new TermsNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high)
             : (ITermsProvider)new TermsNumericRangeProvider<Lookup<DoubleLookupKey>.BackwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
     }
 }

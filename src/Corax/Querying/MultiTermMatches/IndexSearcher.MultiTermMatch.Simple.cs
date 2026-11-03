@@ -96,9 +96,10 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IQueryMatch ExistsQuery(in FieldMetadata field, bool forward = true, in CancellationToken token = default)
     {
+        var constantScoreField = field.ChangeScoringMode(false);
         return forward
-            ? TermsProviderMatchBuilder<ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(field, default(Slice), token: token)
-            : TermsProviderMatchBuilder<ExistsTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(field, default(Slice), token: token);
+            ? TermsProviderMatchBuilder<ExistsTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>>(constantScoreField, default(Slice), token: token)
+            : TermsProviderMatchBuilder<ExistsTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>>(constantScoreField, default(Slice), token: token);
     }
 
     /// <summary>
@@ -129,7 +130,7 @@ public partial class IndexSearcher
             ? new RegexTermsProvider<Lookup<CompactKeyLookup>.ForwardIterator>(this, terms, field, regex)
             : new RegexTermsProvider<Lookup<CompactKeyLookup>.BackwardIterator>(this, terms, field, regex);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token);
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field), averageTermLength: GetAverageTermLength(field, terms));
     }
 
     /// <summary>
