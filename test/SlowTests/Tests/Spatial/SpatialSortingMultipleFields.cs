@@ -16,7 +16,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {
@@ -78,13 +77,13 @@ namespace SlowTests.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     // the first (and lowest latitude) branch of X is the farthest one, the nearest one is closer than the branch of Y
-                    // Z has no branches, so it is last in both directions
+                    // Z has no branches, see ExpectedAscendingShops for its position
                     var ascending = session.Query<Shop, Shops_ByBranches>()
                         .OrderByDistance("Branches", 10, 10)
                         .Select(x => x.Name)
                         .ToList();
 
-                    Assert.Equal(new[] { "X", "Y", "Z" }, ascending);
+                    Assert.Equal(ExpectedAscendingShops(options, "X", "Y"), ascending);
 
                     var descending = session.Query<Shop, Shops_ByBranches>()
                         .OrderByDistanceDescending("Branches", 10, 10)
@@ -125,7 +124,7 @@ namespace SlowTests.Tests.Spatial
                 Indexes.WaitForIndexing(store);
 
                 var database = await GetDatabase(store.Database);
-                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_62, database.IndexStore.GetIndex(index.IndexName).Definition.Version);
+                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72, database.IndexStore.GetIndex(index.IndexName).Definition.Version);
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(index.IndexName, "Branches_spatial(centers)", fromValue: null));
 
@@ -181,7 +180,7 @@ namespace SlowTests.Tests.Spatial
 
                     // legacy behavior: Lucene calculates the distance from the first shape stored in the entry, regardless of the requested field,
                     // Corax from the point with the lowest latitude of the requested field
-                    AssertOrder(store, databaseName, expectedShops: new[] { "Y", "X", "Z" }, expectedByWork: isLucene ? new[] { "A", "B" } : new[] { "B", "A" });
+                    AssertOrder(store, databaseName, expectedShops: ExpectedAscendingShops(options, "Y", "X"), expectedByWork: isLucene ? new[] { "A", "B" } : new[] { "B", "A" });
 
                     store.Maintenance.ForDatabase(databaseName).Send(new ResetIndexOperation(shopsIndex.IndexName));
                     store.Maintenance.ForDatabase(databaseName).Send(new ResetIndexOperation(peopleIndex.IndexName));
@@ -189,13 +188,13 @@ namespace SlowTests.Tests.Spatial
                     // wait for the reset indexes to replace the legacy ones before waiting for them to catch up
                     foreach (var indexName in new[] { shopsIndex.IndexName, peopleIndex.IndexName })
                     {
-                        var version = WaitForValue(() => database.IndexStore.GetIndex(indexName)?.Definition.Version, IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_62);
-                        Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_62, version);
+                        var version = WaitForValue(() => database.IndexStore.GetIndex(indexName)?.Definition.Version, IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72);
+                        Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72, version);
                     }
 
                     Indexes.WaitForIndexing(store, databaseName);
 
-                    AssertOrder(store, databaseName, expectedShops: new[] { "X", "Y", "Z" }, expectedByWork: new[] { "B", "A" });
+                    AssertOrder(store, databaseName, expectedShops: ExpectedAscendingShops(options, "X", "Y"), expectedByWork: new[] { "B", "A" });
                 }
             }
 
@@ -239,7 +238,7 @@ namespace SlowTests.Tests.Spatial
                         .ToList()
                         .Select(x => x.Name);
 
-                    Assert.Equal(new[] { "X", "Y", "Z" }, ascending);
+                    Assert.Equal(ExpectedAscendingShops(options, "X", "Y"), ascending);
 
                     var descending = session.Advanced.DocumentQuery<Shop>(index.IndexName)
                         .OrderByDistanceDescending("Branches", 10, 10)
@@ -370,8 +369,12 @@ namespace SlowTests.Tests.Spatial
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void EntriesWithoutASpatialValueAreSortedLast(Options options)
+        public void OrderingOfEntriesWithoutASpatialValue(Options options)
         {
+            // Lucene sorts the entries without a value last in both directions,
+            // Corax places them according to its nulls sort mode (by default the smallest: first for ascending, last for descending)
+            var isCorax = options.SearchEngineMode == RavenSearchEngineMode.Corax;
+
             using (var store = GetDocumentStore(options))
             {
                 new Spots_ByGroupAndLocation().Execute(store);
@@ -396,8 +399,9 @@ namespace SlowTests.Tests.Spatial
                         .Select(x => x.Name)
                         .ToList();
 
-                    Assert.Equal(new[] { "A", "D", "B" }, ascending.Take(3));
-                    Assert.Equal(new[] { "C", "E" }, ascending.Skip(3).OrderBy(x => x));
+                    var (withValue, withoutValue) = isCorax ? (ascending.Skip(2), ascending.Take(2)) : (ascending.Take(3), ascending.Skip(3));
+                    Assert.Equal(new[] { "A", "D", "B" }, withValue);
+                    Assert.Equal(new[] { "C", "E" }, withoutValue.OrderBy(x => x));
 
                     var descending = session.Query<Spot, Spots_ByGroupAndLocation>()
                         .OrderByDistanceDescending("Location", 10, 10)
@@ -414,7 +418,7 @@ namespace SlowTests.Tests.Spatial
                         .ToList()
                         .Select(x => x.Name);
 
-                    Assert.Equal(new[] { "A", "B", "C", "D", "E" }, byGroupThenDistance);
+                    Assert.Equal(isCorax ? new[] { "C", "A", "B", "E", "D" } : new[] { "A", "B", "C", "D", "E" }, byGroupThenDistance);
 
                     var byGroupThenDistanceDescending = session.Advanced.DocumentQuery<Spot, Spots_ByGroupAndLocation>()
                         .OrderBy(x => x.Group)
@@ -425,6 +429,14 @@ namespace SlowTests.Tests.Spatial
                     Assert.Equal(new[] { "B", "A", "C", "D", "E" }, byGroupThenDistanceDescending);
                 }
             }
+        }
+
+        // Z has no branches: Lucene sorts it last, Corax (nulls are the smallest by default) first
+        private static string[] ExpectedAscendingShops(Options options, params string[] shopsWithBranches)
+        {
+            return options.SearchEngineMode == RavenSearchEngineMode.Corax
+                ? shopsWithBranches.Prepend("Z").ToArray()
+                : shopsWithBranches.Append("Z").ToArray();
         }
 
         private static void StoreShops(IDocumentStore store)
