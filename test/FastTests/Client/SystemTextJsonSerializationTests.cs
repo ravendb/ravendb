@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.ServerWide;
@@ -434,6 +436,28 @@ namespace FastTests.Client
                 Assert.Equal(numbers.Fraction, read.Fraction);
                 Assert.Equal(numbers.Single, read.Single);
                 Assert.Equal(numbers.Decimal, read.Decimal);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
+        public void QueryParametersOfRavenTypesUseTheirOwnConventions()
+        {
+            var integers = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new SystemTextJsonSerializationConventions() };
+            var strings = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            Assert.Equal(FacetTermSortMode.CountDesc.ToString("D"), WriteTermSortMode(integers));
+            Assert.Equal(nameof(FacetTermSortMode.CountDesc), WriteTermSortMode(strings));
+
+            static string WriteTermSortMode(DocumentConventions conventions)
+            {
+                var parameters = new Parameters { ["options"] = new FacetOptions { TermSortMode = FacetTermSortMode.CountDesc } };
+
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(parameters, context))
+                {
+                    var options = (BlittableJsonReaderObject)json["options"];
+                    return options[nameof(FacetOptions.TermSortMode)].ToString();
+                }
             }
         }
 
