@@ -56,7 +56,7 @@ public sealed class KafkaConnectionSettings
         if (ConnectionOptions != null)
         {
             foreach (var option in ConnectionOptions)
-                optionsHash += HashCode.Combine(option.Key, option.Value);
+                optionsHash += HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(option.Key), option.Value);
         }
 
         var hashCode = new HashCode();
