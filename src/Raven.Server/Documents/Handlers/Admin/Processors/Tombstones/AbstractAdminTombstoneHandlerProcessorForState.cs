@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Tombstones;
 using Raven.Server.Documents.Handlers.Processors;

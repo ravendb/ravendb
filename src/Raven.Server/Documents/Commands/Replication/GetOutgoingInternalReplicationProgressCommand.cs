@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Json;

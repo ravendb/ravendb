@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client.Documents.Replication;
 using Voron.Data.Fixed;
 

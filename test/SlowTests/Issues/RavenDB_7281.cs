@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;

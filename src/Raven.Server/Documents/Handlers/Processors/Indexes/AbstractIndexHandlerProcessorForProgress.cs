@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
