@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow;
@@ -17,7 +18,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 
         private static readonly HashSet<Assembly> RavenAssemblies = new HashSet<Assembly>
         {
-            typeof(ParametersConverter).Assembly,
+            typeof(DocumentConventions).Assembly,
             typeof(LazyStringValue).Assembly
         };
 

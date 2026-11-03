@@ -48,7 +48,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
         {
             const string query = "from Employees select LastName, FirstName";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(conventions: NewtonsoftJsonConventions()))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
@@ -232,7 +232,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
         {
             const string query = "from index 'Orders/Totals'";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(conventions: NewtonsoftJsonConventions()))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
@@ -275,7 +275,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
             const string query = "from index 'Orders/Totals' select Total";
             const string totalField = "Total";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(conventions: NewtonsoftJsonConventions()))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
@@ -482,7 +482,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
         {
             const string query = "from index 'Orders/ByCompany'";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(conventions: NewtonsoftJsonConventions()))
             {
                 await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
