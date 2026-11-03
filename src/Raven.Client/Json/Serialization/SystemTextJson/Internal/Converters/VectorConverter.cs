@@ -77,7 +77,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             if (reader.TokenType != JsonTokenType.StartObject)
                 throw new JsonException($"Expected StartObject token, got {reader.TokenType}.");
 
-            reader.Read(); // move to property name
+            reader.Read();
             if (reader.TokenType != JsonTokenType.PropertyName)
                 throw new JsonException($"Expected PropertyName token, got {reader.TokenType}.");
 
@@ -85,7 +85,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             if (propertyName != Sparrow.Global.Constants.Naming.VectorPropertyName)
                 throw new JsonException($"Expected property '{Sparrow.Global.Constants.Naming.VectorPropertyName}', got '{propertyName}'.");
 
-            reader.Read(); // move to array start
+            reader.Read();
             if (reader.TokenType != JsonTokenType.StartArray)
                 throw new JsonException($"Expected StartArray token, got {reader.TokenType}.");
 
@@ -93,7 +93,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 values.Add(ReadElement(ref reader));
 
-            reader.Read(); // move past EndObject
+            reader.Read();
             if (reader.TokenType != JsonTokenType.EndObject)
                 throw new JsonException($"Expected EndObject token, got {reader.TokenType}.");
 

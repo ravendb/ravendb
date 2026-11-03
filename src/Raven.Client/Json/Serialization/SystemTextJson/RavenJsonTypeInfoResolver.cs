@@ -85,10 +85,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             Modifiers.Add(ModifyTypeInfo);
         }
 
-        /// <summary>
-        /// Returns a resolver that tries the user's source-generated context first,
-        /// then falls back to reflection, applying Raven modifications to both.
-        /// </summary>
         internal IJsonTypeInfoResolver WithSourceGenerationContext(JsonSerializerContext context)
         {
             return new SourceGenCombinedResolver(context, this);
@@ -107,16 +103,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
             {
-                // Try the source-generated context first (returns null for unknown types)
                 JsonTypeInfo typeInfo = ((IJsonTypeInfoResolver)_context).GetTypeInfo(type, options);
                 if (typeInfo != null)
                 {
-                    // Apply Raven modifications (identity property handling, property filtering)
                     _fallback.ModifyTypeInfo(typeInfo);
                     return typeInfo;
                 }
 
-                // Fall back to reflection-based resolver (Raven mods applied via Modifiers)
                 return ((IJsonTypeInfoResolver)_fallback).GetTypeInfo(type, options);
             }
         }
@@ -1544,8 +1537,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static void SetupNonPublicConstructor(JsonTypeInfo typeInfo)
         {
-            // STJ by default only uses public parameterless constructors.
-            // Replicate Newtonsoft's AllowNonPublicDefaultConstructor behavior.
             if (typeInfo.CreateObject != null)
                 return;
 
