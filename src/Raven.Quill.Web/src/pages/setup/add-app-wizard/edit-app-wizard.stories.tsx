@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { appsMocks, sampleAppCdcConfiguration } from "@/mocks/apps-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { EditAppWizard } from "./edit-app-wizard";
 
 const meta = {
@@ -38,16 +38,14 @@ export const Default: Story = {
 // A configuration written outside the wizard says why instead of opening an empty mapping.
 export const UnsupportedConfiguration: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                apps: [
-                    appsMocks.cdcGet({
-                        configuration: { name: "cdc/acme-shop", tables: [] },
-                        connectionString: sampleAppCdcConfiguration.connectionString,
-                    }),
-                    ...defaultApiMocks.apps,
-                ],
-            },
-        },
+        msw: mockHandlers({
+            apps: [
+                appsMocks.cdcGet({
+                    configuration: { name: "cdc/acme-shop", tables: [] },
+                    connectionString: sampleAppCdcConfiguration.connectionString,
+                }),
+                ...defaultApiMocks.apps,
+            ],
+        }),
     },
 };

@@ -4,4 +4,8 @@ allowBuilds:
     esbuild: false
     msw: false
 overrides:
+    glob@13: ^14.0.2
     js-yaml@4: ^4.3.1
+peerDependencyRules:
+    allowedVersions:
+        openapi-typescript>typescript: "6"

@@ -46,7 +46,7 @@ function CdcBatchList({ batches }: { batches: CdcLiveBatch[] }) {
     // list without ever moving scrollTop - cannot be mistaken for a scroll away from the tail.
     const highWaterOffsetRef = useRef(0);
 
-    // eslint-disable-next-line react-hooks/incompatible-library -- handled by "use no memo" above
+    // eslint-disable-next-line react-hooks-js/incompatible-library -- handled by "use no memo" above
     const virtualizer = useVirtualizer({
         count: batches.length,
         estimateSize: () => COLLAPSED_ROW_HEIGHT_IN_PX,
