@@ -39,8 +39,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (jsonSerializer == null)
                 throw new ArgumentNullException(nameof(jsonSerializer));
 
-            var type = entity.GetType();
             var options = ((SystemTextJsonJsonSerializer)jsonSerializer).Options;
+
+            try
+            {
+                PopulateEntityInternal(entity, json, options);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Could not populate entity.", ex);
+            }
+        }
+
+        private void PopulateEntityInternal(object entity, BlittableJsonReaderObject json, JsonSerializerOptions options)
+        {
+            var type = entity.GetType();
             object newInstance;
 
             using (var reader = new SystemTextJsonBlittableReader())
