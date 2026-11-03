@@ -391,6 +391,69 @@ namespace FastTests.Client
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task SessionStoresExponentNumbersWithoutLosingPrecision(bool useSystemTextJson)
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = useSystemTextJson
+                        ? new SystemTextJsonSerializationConventions()
+                        : new NewtonsoftJsonSerializationConventions();
+                }
+            });
+
+            var numbers = new ExponentNumbers
+            {
+                Epsilon = double.Epsilon,
+                Small = 1.2345678901234567E-15,
+                Tiny = 1e-30,
+                Huge = 1e300,
+                Fraction = 0.30000000000000004,
+                Single = 1.5E-20f,
+                Decimal = 0.1234567890123456789012345678m
+            };
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(numbers, "numbers/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var read = await session.LoadAsync<ExponentNumbers>("numbers/1");
+
+                Assert.Equal(numbers.Epsilon, read.Epsilon);
+                Assert.Equal(numbers.Small, read.Small);
+                Assert.Equal(numbers.Tiny, read.Tiny);
+                Assert.Equal(numbers.Huge, read.Huge);
+                Assert.Equal(numbers.Fraction, read.Fraction);
+                Assert.Equal(numbers.Single, read.Single);
+                Assert.Equal(numbers.Decimal, read.Decimal);
+            }
+        }
+
+        private class ExponentNumbers
+        {
+            public double Epsilon { get; set; }
+
+            public double Small { get; set; }
+
+            public double Tiny { get; set; }
+
+            public double Huge { get; set; }
+
+            public double Fraction { get; set; }
+
+            public float Single { get; set; }
+
+            public decimal Decimal { get; set; }
+        }
+
         private class NamedLiterals
         {
             public double NaN { get; set; }

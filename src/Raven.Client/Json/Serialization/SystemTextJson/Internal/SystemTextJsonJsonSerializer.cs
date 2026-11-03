@@ -192,7 +192,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     case JsonTokenType.Number:
                         if (namedLiterals != null && namedLiterals.TryGetValue(jsonReader.TokenStartIndex, out double literal)) writer.WriteValue(literal);
                         else if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
-                        else if (jsonReader.TryGetDecimal(out decimal dec)) writer.WriteValue(dec);
+                        else if (jsonReader.ValueSpan.IndexOfAny((byte)'e', (byte)'E') < 0 && jsonReader.TryGetDecimal(out decimal dec)) writer.WriteValue(dec);
                         else writer.WriteValue(jsonReader.GetDouble());
                         break;
                     case JsonTokenType.True: writer.WriteValue(true); break;
