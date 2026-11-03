@@ -70,7 +70,7 @@ namespace Corax.Querying.Matches.TermsProviders
             ? _seekPrefixLength > 0
             : _seekLimitForBackward != null;
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
             var pattern = _pattern.Decoded();
             var prefix = IsBoundedByPrefix ? pattern[.._seekPrefixLength] : default;
@@ -109,6 +109,8 @@ namespace Corax.Querying.Matches.TermsProviders
                 if (isMatch == false)
                     continue;
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = compactKey.Decoded().Length;
                 postingListIds[count++] = postingListId;
             }
 
