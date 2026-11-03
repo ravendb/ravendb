@@ -494,6 +494,33 @@ namespace FastTests.Client
                 Assert.Equal("r=5", json[nameof(Drawing.Main)].ToString());
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void PropertyNamingPolicyRequiresPropertyNameConverter()
+        {
+            var withoutConverter = new DocumentConventions
+            {
+                Serialization = new SystemTextJsonSerializationConventions { CustomizeJsonSerializerOptions = o => o.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
+            };
+
+            var exception = Assert.Throws<NotSupportedException>(() => GetStoredNames(withoutConverter));
+            Assert.Contains(nameof(DocumentConventions.PropertyNameConverter), exception.Message);
+
+            var withConverter = new DocumentConventions
+            {
+                PropertyNameConverter = member => member.Name.ToLowerInvariant(),
+                Serialization = new SystemTextJsonSerializationConventions { CustomizeJsonSerializerOptions = o => o.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
+            };
+
+            Assert.Equal(["name"], GetStoredNames(withConverter));
+
+            static string[] GetStoredNames(DocumentConventions conventions)
+            {
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new Shape { Name = "a" }, context))
+                    return json.GetPropertyNames();
+            }
+        }
+
         private class Shape
         {
             public string Name { get; set; }
