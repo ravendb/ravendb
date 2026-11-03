@@ -3,24 +3,23 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Json.Serialization.SystemTextJson;
 
 namespace Raven.Client.Json
 {
     internal static class JsonPropertyNameResolver
     {
-        private static readonly ConcurrentDictionary<MemberInfo, string> _newtonsoftCache = new();
         private static readonly ConcurrentDictionary<MemberInfo, string> _systemTextJsonCache = new();
 
         public static string GetJsonPropertyName(MemberInfo member, DocumentConventions conventions)
         {
-            if (conventions?.Serialization is SystemTextJsonSerializationConventions)
+            if ((conventions ?? DocumentConventions.Default).Serialization is not IJsonPropertyNameResolver resolver)
                 return GetSystemTextJsonPropertyName(member);
 
-            string result = _newtonsoftCache.GetOrAdd(member, ResolveNewtonsoftName);
-            return result.Length == 0 ? null : result;
+            string name = resolver.GetJsonPropertyName(member);
+            return string.IsNullOrEmpty(name) ? null : name;
         }
 
         internal static string GetSystemTextJsonPropertyName(MemberInfo member)
@@ -29,21 +28,18 @@ namespace Raven.Client.Json
             return result.Length == 0 ? null : result;
         }
 
-        private static string ResolveNewtonsoftName(MemberInfo member)
-        {
-            string name = member.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName;
-            if (name != null)
-                return name;
-
-            return member.GetCustomAttribute<DataMemberAttribute>(inherit: true)?.Name ?? string.Empty;
-        }
-
         private static string ResolveSystemTextJsonName(MemberInfo member)
         {
             return member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name
-                   ?? member.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName
+                   ?? GetNewtonsoftJsonPropertyName(member)
                    ?? GetDataContractMemberName(member)
                    ?? string.Empty;
+        }
+
+        private static string GetNewtonsoftJsonPropertyName(MemberInfo member)
+        {
+            object attribute = RavenJsonTypeInfoResolver.GetNewtonsoftAttribute(member, RavenJsonTypeInfoResolver.NewtonsoftJsonPropertyAttributeName);
+            return (string)attribute?.GetType().GetProperty("PropertyName")?.GetValue(attribute);
         }
 
         private static string GetDataContractMemberName(MemberInfo member)

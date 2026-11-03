@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -12,8 +15,10 @@ using Raven.Client.Documents.Subscriptions;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson
 {
-    public class NewtonsoftJsonSerializationConventions : ISerializationConventions
+    public class NewtonsoftJsonSerializationConventions : ISerializationConventions, IJsonPropertyNameResolver
     {
+        private static readonly ConcurrentDictionary<MemberInfo, string> _jsonPropertyNames = new();
+
         private BlittableJsonConverter _defaultConverter;
         private IContractResolver _jsonContractResolver;
         private Action<JsonSerializer> _customizeJsonSerializer;
@@ -164,6 +169,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         T ISerializationConventions.DeserializeEntityFromBlittable<T>(BlittableJsonReaderObject json)
         {
             return (T)DeserializeEntityFromBlittable(typeof(T), json);
+        }
+
+        string IJsonPropertyNameResolver.GetJsonPropertyName(MemberInfo member)
+        {
+            return _jsonPropertyNames.GetOrAdd(member, static m =>
+                m.GetCustomAttribute<JsonPropertyAttribute>(inherit: true)?.PropertyName ?? m.GetCustomAttribute<DataMemberAttribute>(inherit: true)?.Name);
         }
 
         private NewtonsoftJsonJsonSerializer CreateInitialSerializer()

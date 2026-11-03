@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -17,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson
 {
-    public class SystemTextJsonSerializationConventions : ISerializationConventions
+    public class SystemTextJsonSerializationConventions : ISerializationConventions, IJsonPropertyNameResolver
     {
         internal static readonly JsonWriterOptions WriterOptions = new() { Encoder = SupplementaryPlaneJavaScriptEncoder.Instance };
 
@@ -158,6 +159,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         T ISerializationConventions.DeserializeEntityFromBlittable<T>(BlittableJsonReaderObject json)
         {
             return (T)DeserializeEntityFromBlittable(typeof(T), json);
+        }
+
+        string IJsonPropertyNameResolver.GetJsonPropertyName(MemberInfo member)
+        {
+            return JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member);
         }
 
         internal Dictionary<string, JsonPropertyInfo> GetJsonProperties(Type type)
