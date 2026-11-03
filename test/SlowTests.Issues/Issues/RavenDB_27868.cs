@@ -265,7 +265,6 @@ namespace SlowTests.Issues
 
             var result = store.Maintenance.Send(new UpdateEtlOperation<TConnectionString>(taskId, configuration));
             await Databases.WaitForRaftIndex(store.Database, result.RaftCommandIndex);
-            await Task.Delay(TimeSpan.FromSeconds(1));
 
             var after = Assert.Single(database.EtlLoader.Processes, x => x.ConfigurationName == configuration.Name);
             Assert.Same(before, after);
