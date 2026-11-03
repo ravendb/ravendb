@@ -76,7 +76,9 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
                     olapConfig.Format != Format ||
                     olapConfig.CustomPartitionValue != CustomPartitionValue ||
                     EnumerableExtension.ContentEqualsIgnoringOrder(olapConfig.OlapTables, OlapTables) == false)
+                {
                     diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+                }
             }
 
             return diff;
