@@ -71,7 +71,7 @@ namespace Raven.Client.Json
 
         public int CompareTo(object obj) => Compare(Value, Unwrap(obj));
 
-        public bool Equals(JsonDynamicValue other) => other != null && ValueEquals(Value, other.Value);
+        public bool Equals(JsonDynamicValue other) => other is not null && ValueEquals(Value, other.Value);
 
         public override bool Equals(object obj) => obj is JsonDynamicValue other && Equals(other);
 
