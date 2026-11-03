@@ -118,7 +118,7 @@ public unsafe sealed partial class SortingMultiMatch<TInner>
             else
                 match._inner.Score(batchResults, readScores, 1f);
             
-            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: match.CandidatesAreSorted);
         }
 
         public void SortBatch<TComparer2, TComparer3>(SortingMultiMatch<TInner> match,
@@ -142,7 +142,7 @@ public unsafe sealed partial class SortingMultiMatch<TInner>
                 match._inner.Score(batchResults, readScores, 1f);
             match._token.ThrowIfCancellationRequested();
 
-            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: match.CandidatesAreSorted);
 
             // Note! readScores & indexes are aliased and same as batchTermIds
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
