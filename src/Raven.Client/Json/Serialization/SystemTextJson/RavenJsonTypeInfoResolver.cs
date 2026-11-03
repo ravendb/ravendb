@@ -1358,7 +1358,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             for (int i = typeInfo.Properties.Count - 1; i >= 0; i--)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (ShouldFilterProperty(property, isRecord))
+                if (ShouldFilterProperty(property, isRecord) || (property.AttributeProvider is MemberInfo member && IsIgnoredBySystemTextJson(member)))
                     typeInfo.Properties.RemoveAt(i);
             }
         }
