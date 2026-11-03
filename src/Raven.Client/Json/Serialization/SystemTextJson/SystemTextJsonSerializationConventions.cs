@@ -209,8 +209,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             InitializeConverters(options, typeNameHandling);
             CustomizeJsonSerializerOptions(options);
 
+            if (options.PropertyNamingPolicy != null && Conventions?.PropertyNameConverter == null)
+                ThrowPropertyNamingPolicyNotSupported();
+
             return options;
         }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowPropertyNamingPolicyNotSupported() =>
+            throw new NotSupportedException(
+                $"{nameof(JsonSerializerOptions)}.{nameof(JsonSerializerOptions.PropertyNamingPolicy)} renames document fields, while queries, indexes and patches address them by member name. " +
+                $"Set {nameof(DocumentConventions)}.{nameof(DocumentConventions.PropertyNameConverter)} instead, which RavenDB applies to both.");
 
         internal bool TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
         {

@@ -1605,7 +1605,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             throw new NotSupportedException(
                 $"{target} names members with a Newtonsoft.Json naming strategy (NamingStrategyType). " +
                 $"{nameof(SystemTextJsonSerializationConventions)} requires System.Text.Json.Serialization.JsonPropertyNameAttribute, " +
-                $"or a naming policy set through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
+                $"or {nameof(DocumentConventions)}.{nameof(DocumentConventions.PropertyNameConverter)}, which queries, indexes and patches also apply.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowNewtonsoftItemConverterNotSupported(string target) =>
