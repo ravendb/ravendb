@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches;
 using Corax.Utils;
 using Voron.Data.RoaringBitmaps;
 using Sparrow.Server.Utils;
@@ -279,18 +280,22 @@ public struct VectorSearchMatch : IPostFilterMatch
 
         } while (currentRead != 0);
         
-        if (_sortByScore == false)
+        var matchesCount = Sorting.SortAndMinOnDuplicates(matches.Results, distances.Results);
+        distances.Truncate(matchesCount);
+        matches.Truncate(matchesCount);
+
+        // The same order as SortAll gives for `order by score()`: best score first, NaN last, equal scores by entry id.
+        if (_sortByScore)
         {
-            var matchesCount = Sorting.SortAndMinOnDuplicates(matches.Results, distances.Results);
-            distances.Truncate(matchesCount);
-            matches.Truncate(matchesCount);
-        }
-        
-        // Score order requested and the retriever didn't already return distance-sorted: sort by distance
-        // (nearest-first). distances is the sort key; matches is permuted to follow.
-        if (_sortByScore && _vectorSearchRetriever.IsSortedByDistance == false)
-        {
-            distances.Results.Sort(matches.Results);
+            using var _ = _indexSearcher.Allocator.Allocate(matchesCount, out Span<long> keys);
+            using var __ = _indexSearcher.Allocator.Allocate(matchesCount, out Span<float> idOrderedDistances);
+            distances.Results.CopyTo(idOrderedDistances);
+            for (var i = 0; i < keys.Length; i++)
+                keys[i] = SortingHelpers.PackScore(Bm25Relevance.InitialScoreValue + _vectorSearchRetriever.DistanceToScore(idOrderedDistances[i]), i, direction: -1);
+
+            keys.Sort(matches.Results);
+            for (var i = 0; i < keys.Length; i++)
+                distances.Results[i] = idOrderedDistances[(int)keys[i]];
         }
 
         Count = _matches.Count;
@@ -337,9 +342,10 @@ public struct VectorSearchMatch : IPostFilterMatch
             // Single vector post-filter streaming in score order: the SortingMatch wrapper that would
             // normally surface scores was skipped, so the read loop calls Score once per Fill batch. The
             // persisted distances are already in score order and aligned 1:1 with Fill's emission, so we
-            // copy the batch starting at the running position (rather than always from 0) and convert it.
-            _distances.Results.Slice(_scorePosition, scores.Length).CopyTo(scores);
-            _vectorSearchRetriever.DistancesToScores(scores);
+            // score the batch starting at the running position (rather than always from 0).
+            var distances = _distances.Results.Slice(_scorePosition, scores.Length);
+            for (var i = 0; i < scores.Length; ++i)
+                scores[i] += _vectorSearchRetriever.DistanceToScore(distances[i]);
             _scorePosition += scores.Length;
 
             // A single full-set call (from the SortingMatch comparer) drains immediately; the batched
