@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow.Json;
@@ -92,6 +93,50 @@ public class PatchEnumMemberValuesTests(ITestOutputHelper output) : RavenTestBas
             Assert.Equal(Stage.InProgress, item.ByStep["review"]);
             Assert.Equal(Stage.InProgress, (await session.LoadAsync<Item>("items/2")).Stage);
             Assert.False(session.Advanced.HasChanges);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Patching)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PatchOperationValuesStoreEnumMemberValuesLikeStore(bool useSystemTextJson)
+    {
+        using var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s =>
+            {
+                s.Conventions.Serialization = useSystemTextJson ? new SystemTextJsonSerializationConventions() : new NewtonsoftJsonSerializationConventions();
+            }
+        });
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(CreateItem(), "items/1");
+            await session.SaveChangesAsync();
+        }
+
+        await store.Operations.SendAsync(new PatchOperation("items/1", null, new PatchRequest
+        {
+            Script = "this.Stage = args.stage; this.History = args.history;",
+            Values =
+            {
+                ["stage"] = Stage.InProgress,
+                ["history"] = new[] { Stage.NotStarted, Stage.InProgress }
+            }
+        }));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            BlittableJsonReaderObject item = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+            Assert.Equal("in-progress", item[nameof(Item.Stage)].ToString());
+            Assert.Equal(["not-started", "in-progress"], ((BlittableJsonReaderArray)item[nameof(Item.History)]).Select(x => x.ToString()));
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            Item item = await session.LoadAsync<Item>("items/1");
+            Assert.Equal(Stage.InProgress, item.Stage);
+            Assert.Equal([Stage.NotStarted, Stage.InProgress], item.History);
         }
     }
 

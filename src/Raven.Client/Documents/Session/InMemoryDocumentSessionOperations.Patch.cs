@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -115,7 +114,6 @@ namespace Raven.Client.Documents.Session
                     JavascriptConversionExtensions.ConstantSupport.Instance)
             );
 
-            ConvertEnumParametersForPatch(extension);
             var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
             string collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             string clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
@@ -246,7 +244,6 @@ namespace Raven.Client.Documents.Session
                     JavascriptConversionExtensions.ToStringSupport.Instance,
                     JavascriptConversionExtensions.ConstantSupport.Instance));
 
-            ConvertEnumParametersForPatch(extension);
             var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
 
             if (TryMergePatches(id, patchRequest) == false)
@@ -609,28 +606,7 @@ namespace Raven.Client.Documents.Session
             if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching)
                 return Convert.ToInt32(value);
 
-            if (DocumentStore.Conventions.SaveEnumsAsIntegers)
-                return value.ToString();
-
-            using (var writer = Conventions.Serialization.CreateWriter(Context))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("Value");
-
-                Conventions.Serialization.CreateSerializer().Serialize(writer, value, value.GetType());
-
-                writer.WriteEndObject();
-                writer.FinalizeDocument();
-
-                object serialized = writer.CreateReader()["Value"];
-                return serialized is LazyStringValue text ? text.ToString() : serialized;
-            }
-        }
-
-        private void ConvertEnumParametersForPatch(JavascriptConversionExtensions.CustomMethods extension)
-        {
-            foreach (string name in new List<string>(extension.Parameters.Keys))
-                extension.Parameters[name] = ConvertEnumForPatch(extension.Parameters[name]);
+            return TypeConverter.ConvertEnum(value, Conventions, Context);
         }
 
         private bool TryCreateArrayJsonPatch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
