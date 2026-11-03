@@ -47,11 +47,43 @@ const useTypographyComponents = {
     },
 };
 
+// msw-storybook-addon types `parameters.msw` loosely, so only mockHandlers() checks the service names. With a
+// mistyped name, the story's handler lands after the defaults and is silently ignored.
+const useMockHandlers = {
+    meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+            rawMswParameter:
+                "Build the msw parameter with mockHandlers() from @/mocks/default-mocks, so a mistyped service name is a compile error.",
+        },
+    },
+    create(context) {
+        return {
+            Property(node) {
+                const isMswKey = !node.computed && node.key.type === "Identifier" && node.key.name === "msw";
+                if (!isMswKey) {
+                    return;
+                }
+
+                const isMockHandlersCall =
+                    node.value.type === "CallExpression" &&
+                    node.value.callee.type === "Identifier" &&
+                    node.value.callee.name === "mockHandlers";
+                if (!isMockHandlersCall) {
+                    context.report({ node: node.value, messageId: "rawMswParameter" });
+                }
+            },
+        };
+    },
+};
+
 export default {
     meta: {
         name: "local-rules",
     },
     rules: {
         "use-typography-components": useTypographyComponents,
+        "use-mock-handlers": useMockHandlers,
     },
 };
