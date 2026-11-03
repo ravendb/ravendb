@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Acornima;
 using Acornima.Ast;
 using Raven.Server.Utils;
-using Sparrow.Extensions;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Patch;
@@ -55,6 +54,8 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
 
     private readonly record struct Update(Target Target, UpdateKind Kind, Operand Value);
 
+    private const int MaxUpdates = 16;
+
     private static readonly Operand One = new(null, 1d);
 
     private readonly Update[] _updates;
@@ -102,7 +103,21 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             updates.Add(update);
         }
 
-        return updates.Count == 0 ? null : new SimpleAssignmentPatch(updates.ToArray());
+        if (updates.Count == 0 || updates.Count > MaxUpdates)
+            return null;
+
+        if (updates.Count > 1)
+        {
+            // each update has a field of its own; a field from the arguments may be any of them
+            var fields = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var update in updates)
+            {
+                if (update.Target.Field == null || fields.Add(update.Target.Field) == false)
+                    return null;
+            }
+        }
+
+        return new SimpleAssignmentPatch(updates.ToArray());
     }
 
     private static bool TryParseUpdate(Expression expression, out Update update)
@@ -183,72 +198,81 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         }
     }
 
+    // A field the script updates: where it is in the document, the value the script engine sees there, and its new value
+    private struct Change
+    {
+        public string Field;
+        public int PropertyIndex; // -1: a new property
+        public int Offset;        // of the stored value: insertion order is descending offset
+        public BlittableJsonToken OriginalType;
+        public bool HasStored;    // false: undefined in JavaScript
+        public object Stored;
+        public object Value;      // null, string, bool or double, like Stored
+        public bool Unchanged;
+    }
+
+    [InlineArray(MaxUpdates)]
+    private struct Changes
+    {
+        private Change _first;
+    }
+
     /// <summary>
     /// Applies the updates to <paramref name="document"/>. Returns false when the values do not fit (the caller then runs
     /// the script). <paramref name="modified"/> is null when the result equals the document.
     /// </summary>
-    public bool TryApply(JsonOperationContext context, string id, BlittableJsonReaderObject document, BlittableJsonReaderObject args, out BlittableJsonReaderObject modified)
+    public bool TryApply(JsonOperationContext context, BlittableJsonReaderObject document, BlittableJsonReaderObject args, out BlittableJsonReaderObject modified)
     {
         modified = null;
         if (args == null)
             return false;
 
-        // the JavaScript value of every updated field: null, string, bool or double
-        var values = new Dictionary<string, object>(StringComparer.Ordinal);
-        foreach (var update in _updates)
+        var buffer = new Changes();
+        Span<Change> changes = buffer[.._updates.Length];
+        for (var i = 0; i < _updates.Length; i++)
         {
+            var update = _updates[i];
             if (TryGetField(update.Target, args, out var field) == false ||
                 TryGetOperand(update.Value, args, out var operand) == false)
                 return false;
 
+            ref var change = ref changes[i];
+            change = Find(document, field);
             if (update.Kind == UpdateKind.Assign)
             {
-                values[field] = operand;
+                change.Value = operand;
                 continue;
             }
 
-            if (values.TryGetValue(field, out var current) == false && TryGetJsValue(document, field, out current) == false)
-                return false;
-
-            object result;
-            switch (current, operand)
+            switch (change.Stored, operand)
             {
                 case (double a, double b):
-                    result = update.Kind == UpdateKind.Add ? a + b : a - b;
-                    if (double.IsFinite((double)result) == false)
+                    var result = update.Kind == UpdateKind.Add ? a + b : a - b;
+                    if (double.IsFinite(result) == false)
                         return false;
+                    change.Value = result;
                     break;
                 case (string a, string b) when update.Kind == UpdateKind.Add:
-                    result = a + b;
+                    change.Value = a + b;
                     break;
                 default:
                     return false; // JavaScript's conversions (undefined, null, bool, string with number) stay with the script runner
             }
-            values[field] = result;
         }
 
-        var modifications = new DynamicJsonValue(document);
-        foreach (var (field, value) in values)
+        // like the engine (BlittableObjectProperty), a value that equals the stored one keeps the stored representation
+        var changed = 0;
+        foreach (ref var change in changes)
         {
-            // like the engine (BlittableObjectProperty), a value that equals the stored one keeps the stored representation
-            if (TryGetJsValue(document, field, out var stored) && JsEquals(stored, value))
-                continue;
-            modifications[field] = value is double d ? ToWrittenNumber(document, field, d) : value;
+            change.Unchanged = change.HasStored && JsEquals(change.Stored, change.Value);
+            if (change.Unchanged == false)
+                changed++;
         }
 
-        if (modifications.Properties.Count == 0)
+        if (changed == 0)
             return true; // not modified
-        document.Modifications = modifications;
-        BlittableJsonReaderObject patched;
-        try
-        {
-            patched = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-        }
-        finally
-        {
-            document.Modifications = null;
-        }
 
+        var patched = Write(context, document, changes);
         try
         {
             if (DocumentCompare.IsEqualTo(document, patched, DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata) == DocumentCompareResult.Equal)
@@ -265,6 +289,97 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
 
         modified = patched;
         return true;
+    }
+
+    private static Change Find(BlittableJsonReaderObject document, string field)
+    {
+        var change = new Change { Field = field, PropertyIndex = document.GetPropertyIndex(field), OriginalType = BlittableJsonToken.Null };
+        if (change.PropertyIndex == -1)
+            return change;
+
+        change.Offset = document.GetPropertyOffset(change.PropertyIndex);
+        var property = new BlittableJsonReaderObject.PropertyDetails();
+        document.GetPropertyByIndex(change.PropertyIndex, ref property);
+        change.OriginalType = property.Token & BlittableJsonReaderBase.TypesMask;
+        change.HasStored = TryToJsValue(property.Value, out change.Stored);
+        return change;
+    }
+
+    // Writes the document as the script engine does: the properties in their order, a changed one in its place and a new one last
+    private static unsafe BlittableJsonReaderObject Write(JsonOperationContext context, BlittableJsonReaderObject document, ReadOnlySpan<Change> changes)
+    {
+        using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+        {
+            context.CachedProperties.NewDocument(); // the context may have written other documents: our names table holds only ours
+            writer.Reset(BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            writer.StartWriteObjectDocument();
+            writer.StartWriteObject();
+
+            // the changes of existing properties, in insertion order
+            Span<int> offsets = stackalloc int[MaxUpdates];
+            Span<int> inPlace = stackalloc int[MaxUpdates];
+            var count = 0;
+            for (var c = 0; c < changes.Length; c++)
+            {
+                if (changes[c].PropertyIndex == -1 || changes[c].Unchanged)
+                    continue;
+                offsets[count] = -changes[c].Offset;
+                inPlace[count++] = c;
+            }
+            offsets[..count].Sort(inPlace[..count]);
+
+            var next = 0;
+            var property = new BlittableJsonReaderObject.PropertyDetails();
+            using (var order = document.GetPropertiesByInsertionOrder())
+            {
+                for (var i = 0; i < order.Size; i++)
+                {
+                    var index = order.Properties[i];
+                    document.GetPropertyByIndex(index, ref property);
+                    writer.WritePropertyName(property.Name);
+                    if (next < count && changes[inPlace[next]].PropertyIndex == index)
+                        WriteValue(writer, changes[inPlace[next++]]);
+                    else
+                        writer.WriteValue(property.Token & BlittableJsonReaderBase.TypesMask, property.Value);
+                }
+            }
+
+            foreach (ref readonly var change in changes)
+            {
+                if (change.PropertyIndex != -1 || change.Unchanged)
+                    continue;
+                writer.WritePropertyName(change.Field);
+                WriteValue(writer, change);
+            }
+
+            writer.WriteObjectEnd();
+            writer.FinalizeDocument();
+            return writer.CreateReader();
+        }
+    }
+
+    private static void WriteValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, in Change change)
+    {
+        switch (change.Value)
+        {
+            case null:
+                writer.WriteValueNull();
+                break;
+            case string s:
+                writer.WriteValue(s);
+                break;
+            case bool b:
+                writer.WriteValue(b);
+                break;
+            case double d when JsBlittableBridge.WriteAsDouble(change.OriginalType, d):
+                writer.WriteValue(d);
+                break;
+            case double d:
+                writer.WriteValue((long)d);
+                break;
+            default:
+                throw new InvalidOperationException($"Unexpected value of type {change.Value.GetType()} for '{change.Field}'");
+        }
     }
 
     private static bool TryGetField(in Target target, BlittableJsonReaderObject args, out string field)
@@ -303,16 +418,6 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         return TryToJsValue(argument, out value);
     }
 
-    private static bool TryGetJsValue(BlittableJsonReaderObject document, string field, out object value)
-    {
-        if (document.TryGetMember(field, out object raw) == false)
-        {
-            value = null;
-            return false; // undefined in JavaScript
-        }
-        return TryToJsValue(raw, out value);
-    }
-
     private static bool JsEquals(object a, object b) => (a, b) switch
     {
         (null, null) => true,
@@ -349,19 +454,5 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
                 value = null;
                 return false; // objects, arrays, numbers outside the double range
         }
-    }
-
-    private static object ToWrittenNumber(BlittableJsonReaderObject document, string field, double d)
-    {
-        var originalType = BlittableJsonToken.Null; // a new property
-        var propertyIndex = document.GetPropertyIndex(field);
-        if (propertyIndex != -1)
-        {
-            var property = new BlittableJsonReaderObject.PropertyDetails();
-            document.GetPropertyByIndex(propertyIndex, ref property);
-            originalType = property.Token & BlittableJsonReaderBase.TypesMask;
-        }
-
-        return JsBlittableBridge.WriteAsDouble(originalType, d) ? d : (object)(long)d; // object: a plain ?: would make both a double
     }
 }

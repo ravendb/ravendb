@@ -48,6 +48,8 @@ namespace FastTests.Client.Documents
             yield return ["this[args.f] = args.v;", new Dictionary<string, object> { ["f"] = "Age", ["v"] = 42L }];
             yield return ["this.Name = args.n; this.Age = args.a; this.Score = args.s; this.Active = args.b; this.Note = args.z;",
                 new Dictionary<string, object> { ["n"] = "x", ["a"] = 7L, ["s"] = 1.5, ["b"] = false, ["z"] = null }];
+            yield return ["this.Note = args.z; this.Extra = args.e; this.Age = args.a; this.Name = args.n;", // not in the order of the document
+                new Dictionary<string, object> { ["z"] = "note", ["e"] = "new", ["a"] = 7L, ["n"] = "x" }];
             yield return ["this.Name = args.v", new Dictionary<string, object> { ["v"] = "original" }]; // not modified
             yield return ["this.Name = args.a; this.Name = args.b;", new Dictionary<string, object> { ["a"] = "temp", ["b"] = "original" }]; // last wins, not modified
             yield return ["this.Extra = args.v;", new Dictionary<string, object> { ["v"] = "new field" }];
@@ -185,7 +187,7 @@ namespace FastTests.Client.Documents
                         changeVector = document.ChangeVector;
                         flags = document.Flags;
                         var preparedArgs = context.ReadObject(new DynamicJsonValue { ["v"] = "from-snapshot" }, "args");
-                        Assert.True(SimpleAssignmentPatch.TryGet(patch).TryApply(context, document.Id, document.Data, preparedArgs, out prepared));
+                        Assert.True(SimpleAssignmentPatch.TryGet(patch).TryApply(context, document.Data, preparedArgs, out prepared));
                     }
 
                     // the document changes after the snapshot was taken
@@ -264,6 +266,19 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("this.Name = args.v; this.Age += 1;", true)]
+        [InlineData("this[args.f] = args.v;", true)]
+        [InlineData("this.Name = args.v; this.Name += args.w;", false)] // a field updated twice
+        [InlineData("this.Name = args.v; this['Name'] = args.w;", false)]
+        [InlineData("this[args.f] = args.v; this.Age += 1;", false)] // the field from the arguments may be Age
+        [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15;", true)]
+        [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15; this.F16 = 16;", false)] // more updates than the fast path holds
+        public void ScriptsThatTakeTheFastPath(string script, bool simple)
+        {
+            Assert.Equal(simple, SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch)) != null);
+        }
+
         [RavenFact(RavenTestCategory.Patching)]
         public void LowMemoryClearsTheScriptCache()
         {
@@ -285,22 +300,8 @@ namespace FastTests.Client.Documents
                 document.Modifications = new DynamicJsonValue(document);
                 document.Modifications.Remove(Constants.Documents.Metadata.Key);
                 using (var body = commands.Context.ReadObject(document, id))
-                    return collection + " " + SortedJson(body); // the field order is not part of the result
+                    return collection + " " + body; // in insertion order: a patch keeps the order of the properties
             }
-        }
-
-        private static string SortedJson(BlittableJsonReaderObject document)
-        {
-            var node = System.Text.Json.Nodes.JsonNode.Parse(document.ToString());
-            return Sort(node).ToJsonString();
-
-            static System.Text.Json.Nodes.JsonNode Sort(System.Text.Json.Nodes.JsonNode n) => n switch
-            {
-                System.Text.Json.Nodes.JsonObject o => new System.Text.Json.Nodes.JsonObject(o.OrderBy(p => p.Key, StringComparer.Ordinal)
-                    .Select(p => KeyValuePair.Create(p.Key, p.Value == null ? null : Sort(p.Value)))),
-                System.Text.Json.Nodes.JsonArray a => new System.Text.Json.Nodes.JsonArray(a.Select(x => x == null ? null : Sort(x)).ToArray()),
-                _ => System.Text.Json.Nodes.JsonNode.Parse(n.ToJsonString())
-            };
         }
     }
 }

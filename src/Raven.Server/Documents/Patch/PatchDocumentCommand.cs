@@ -548,7 +548,7 @@ namespace Raven.Server.Documents.Patch
                     return true;
                 }
 
-                if (_simplePatch.TryApply(context, current.Id, current.Data, _patch.Args, out var modified) == false)
+                if (_simplePatch.TryApply(context, current.Data, _patch.Args, out var modified) == false)
                     return false;
 
                 if (modified == null)

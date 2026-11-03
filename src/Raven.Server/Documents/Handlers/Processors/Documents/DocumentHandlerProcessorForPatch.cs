@@ -38,7 +38,7 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
             if (document == null)
                 return ValueTask.CompletedTask;
 
-            if (simplePatch != null && simplePatch.TryApply(context, document.Id, document.Data, args, out var modified))
+            if (simplePatch != null && simplePatch.TryApply(context, document.Data, args, out var modified))
             {
                 if (modified == null)
                 {

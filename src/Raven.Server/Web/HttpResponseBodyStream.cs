@@ -14,6 +14,10 @@ internal sealed class HttpResponseBodyStream(HttpContext httpContext, long minRe
         if (TotalWritten != 0)
             return false;
 
+        // nothing to send: the response stays as it was, so an error that follows still sets its status
+        if (length == 0)
+            return true;
+
         // PERF: compressing a small response costs more CPU than the bytes it saves are worth
         if (length < minResponseSizeToCompress)
             httpContext.Features.Set(SkipResponseCompressionFeature.Instance);
@@ -23,4 +27,11 @@ internal sealed class HttpResponseBodyStream(HttpContext httpContext, long minRe
         // the response is completed (and so flushed) when the handler returns
         return true;
     }
+
+    /// <summary>
+    /// A writer passed content without flushing it: the response has not started, but an error that follows must be appended
+    /// to the content, not replace its status.
+    /// </summary>
+    internal static bool HasContent(HttpContext httpContext) =>
+        httpContext.Features.Get<SkipResponseCompressionFeature>() != null || httpContext.Features.Get<ResponseContentLengthFeature>() != null;
 }

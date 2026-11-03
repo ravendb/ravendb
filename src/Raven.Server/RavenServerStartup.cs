@@ -412,7 +412,7 @@ namespace Raven.Server
         {
             var response = httpContext.Response;
 
-            if (response.HasStarted)
+            if (response.HasStarted || HttpResponseBodyStream.HasContent(httpContext))
                 return;
 
             if (exception is InsufficientTransportLayerProtectionException)
