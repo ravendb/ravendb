@@ -82,7 +82,7 @@ public class SnowflakeEtlTable
 
     private bool Equals(SnowflakeEtlTable other)
     {
-        return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
+        return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn) &&
                InsertOnlyMode == other.InsertOnlyMode;
     }
 
@@ -93,7 +93,7 @@ public class SnowflakeEtlTable
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn), InsertOnlyMode);
+        return HashCode.Combine(TableName, DocumentIdColumn, InsertOnlyMode);
     }
 
     public DynamicJsonValue ToJson()
