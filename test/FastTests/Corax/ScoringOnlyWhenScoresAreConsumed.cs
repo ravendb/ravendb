@@ -67,6 +67,54 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         Assert.All(HasIndexScore(store, "order by Age as long, score()"), Assert.True);
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData("not Name = 'Maciej'")]
+    [InlineData("not boost(Name = 'Maciej', 2)")]
+    [InlineData("not startsWith(Name, 'maciej2')")]
+    [InlineData("not Age between 25 and 35")]
+    public void ExcludedSideOfNegationIsNotScored(string negation)
+    {
+        using var store = GetStoreWithDocumentBoostedIndex(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances: true));
+        using var session = store.OpenSession();
+
+        var expected = Scores(session, "where Tag = 'a' order by score()");
+        var actual = Scores(session, $"where Tag = 'a' and {negation} order by score()");
+
+        Assert.NotEmpty(actual);
+        Assert.All(actual, x => Assert.Equal(expected[x.Key], x.Value));
+    }
+
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    public void VectorSearchWithFieldOrderBuildsNoScoringState()
+    {
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (var session = store.OpenSession())
+        {
+            for (var i = 0; i < 5; i++)
+                session.Store(new VectorDoc { Text = "car", Counter0 = 1, Counter1 = 3 });
+            session.Store(new VectorDoc { Text = "cars", Counter0 = 2, Counter1 = 3 });
+            session.Store(new VectorDoc { Text = "bike", Counter0 = 1, Counter1 = 2 });
+            session.SaveChanges();
+        }
+
+        new VectorDocsIndex().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        Assert.DoesNotContain(MatchDispatch, Dispatches(VectorQueryPlan(store, "order by Counter0")));
+        Assert.Contains(MatchDispatch, Dispatches(VectorQueryPlan(store, "order by score()")));
+    }
+
+    private static QueryInspectionNode VectorQueryPlan(IDocumentStore store, string orderBy)
+    {
+        using var session = store.OpenSession();
+        session.Advanced
+            .RawQuery<VectorDoc>($"from index '{new VectorDocsIndex().IndexName}' where Counter0 = 1 and Counter1 <= 3 and vector.search(Text, 'car') {orderBy} include timings()")
+            .Timings(out QueryTimings timings)
+            .ToList();
+
+        return (QueryInspectionNode)timings.QueryPlan;
+    }
+
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Facets)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void FacetsWithWhereOnDocumentBoostedIndex(Options options)
@@ -124,6 +172,11 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
             yield return value;
     }
 
+    private static Dictionary<string, double> Scores(IDocumentSession session, string rql)
+    {
+        return Query(session, rql, out _).ToDictionary(x => x.Id, x => session.Advanced.GetMetadataFor(x).GetDouble(Raven.Client.Constants.Documents.Metadata.IndexScore));
+    }
+
     private static bool[] HasIndexScore(IDocumentStore store, string orderBy)
     {
         using var session = store.OpenSession();
@@ -150,5 +203,23 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         public string Name { get; set; }
         public string Tag { get; set; }
         public int Age { get; set; }
+    }
+
+    private class VectorDocsIndex : AbstractIndexCreationTask<VectorDoc>
+    {
+        public VectorDocsIndex()
+        {
+            Map = docs => from doc in docs
+                select new { Text = CreateVector(doc.Text), doc.Counter0, doc.Counter1 };
+            SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
+        }
+    }
+
+    private class VectorDoc
+    {
+        public string Id { get; set; }
+        public string Text { get; set; }
+        public int Counter0 { get; set; }
+        public int Counter1 { get; set; }
     }
 }
