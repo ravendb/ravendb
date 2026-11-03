@@ -461,6 +461,46 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void EnumsSavedAsIntegersAreReadFromNamesAndNumbers()
+        {
+            var conventions = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Level\":\"High\",\"Maybe\":\"LOW-LEVEL\",\"History\":[0,\"high\",\"1\"]}", "levels"))
+            {
+                var levels = conventions.Serialization.DefaultConverter.FromBlittable<WithLevels>(json);
+
+                Assert.Equal(Level.High, levels.Level);
+                Assert.Equal(Level.Low, levels.Maybe);
+                Assert.Equal([Level.Low, Level.High, Level.High], levels.History);
+
+                using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(levels, context))
+                {
+                    Assert.Equal(1L, written[nameof(WithLevels.Level)]);
+                    Assert.Equal(0L, written[nameof(WithLevels.Maybe)]);
+                    Assert.Equal([0L, 1L, 1L], ((BlittableJsonReaderArray)written[nameof(WithLevels.History)]).Cast<long>());
+                }
+            }
+        }
+
+        private enum Level
+        {
+            [System.Runtime.Serialization.EnumMember(Value = "low-level")]
+            Low,
+
+            High
+        }
+
+        private class WithLevels
+        {
+            public Level Level { get; set; }
+
+            public Level? Maybe { get; set; }
+
+            public List<Level> History { get; set; }
+        }
+
         private class ExponentNumbers
         {
             public double Epsilon { get; set; }

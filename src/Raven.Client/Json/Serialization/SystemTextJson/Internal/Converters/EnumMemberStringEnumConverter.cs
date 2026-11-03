@@ -33,7 +33,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return factory.CreateConverter(typeToConvert, options);
         }
 
-        private static Dictionary<string, string> GetEnumMemberValues(Type enumType)
+        internal static Dictionary<string, string> GetEnumMemberValues(Type enumType)
         {
             var values = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (FieldInfo field in enumType.GetFields(BindingFlags.Public | BindingFlags.Static))
