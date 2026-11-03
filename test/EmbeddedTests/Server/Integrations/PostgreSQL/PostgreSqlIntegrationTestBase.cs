@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
@@ -40,7 +41,7 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
         protected const string CorrectUser = "root";
         protected const string CorrectPassword = "s3cr3t";
 
-        protected IDocumentStore GetDocumentStore([CallerMemberName] string caller = null, bool sharded = false)
+        protected IDocumentStore GetDocumentStore([CallerMemberName] string caller = null, bool sharded = false, DocumentConventions conventions = null)
         {
             var options = CopyServerAndCreateOptions();
 
@@ -68,11 +69,13 @@ namespace EmbeddedTests.Server.Integrations.PostgreSQL
                             {2, new DatabaseTopology()},
                         }
                     }
-                }));
+                }) { Conventions = conventions });
             }
 
-            return _embeddedServer.GetDocumentStore(caller);
+            return _embeddedServer.GetDocumentStore(new DatabaseOptions(caller) { Conventions = conventions });
         }
+
+        protected static DocumentConventions NewtonsoftJsonConventions() => new() { Serialization = new NewtonsoftJsonSerializationConventions() };
 
         public static int GetAvailablePort(int startingPort)
         {
