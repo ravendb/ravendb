@@ -18,8 +18,7 @@ import { FormGroup, FormInput, FormLabel } from "components/common/Form";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
-import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useSheetDirtyFlag, useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import {
     closestCenter,
     DndContext,
@@ -153,7 +152,7 @@ function TableDisplaySettingsSheet({
         xor(pinnedIds, initialPinnedIds).length > 0 ||
         !isEqual(customColumnList, initialCustomColumns);
 
-    useDirtyFlag(hasUnappliedChanges);
+    useSheetDirtyFlag(hasUnappliedChanges);
 
     const sensors = useSensors(useSensor(PointerSensor));
 
