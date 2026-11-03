@@ -1,6 +1,5 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, rmSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,9 +13,14 @@ const specPath = process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH
     ? path.resolve(webDirectory, process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH)
     : path.resolve(repoRoot, "src", "Raven.Quill", "obj", "openapi", "quill.json");
 const outputPath = path.resolve(webDirectory, "src", "api", "generated", "server-api.ts");
-const openApiTypescriptCliPath = resolvePackageBin(
-    path.resolve(webDirectory, "packages", "api-codegen"),
+const openApiTypescriptCliPath = path.resolve(
+    webDirectory,
+    "packages",
+    "api-codegen",
+    "node_modules",
     "openapi-typescript",
+    "bin",
+    "cli.js",
 );
 const tempSpecPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.json`);
 const tempTypesPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.ts`);
@@ -439,14 +443,6 @@ function normalizeOpenApiNumericTypes(value) {
 
 function isValidIdentifier(value) {
     return /^[A-Za-z_$][A-Za-z0-9_$]*$/u.test(value);
-}
-
-// openapi-typescript's package exports do not expose bin/cli.js, so read the bin path from its package.json.
-function resolvePackageBin(packageDirectory, packageName) {
-    const packageRequire = createRequire(path.join(packageDirectory, "package.json"));
-    const packageJsonPath = packageRequire.resolve(`${packageName}/package.json`);
-    const { bin } = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-    return path.resolve(path.dirname(packageJsonPath), bin[packageName]);
 }
 
 function run(command, args, cwd) {

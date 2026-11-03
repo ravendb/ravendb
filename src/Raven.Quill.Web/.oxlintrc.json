@@ -143,6 +143,12 @@
             }
         },
         {
+            "files": ["**/*.stories.{ts,tsx}", ".storybook/preview.tsx"],
+            "rules": {
+                "local-rules/use-mock-handlers": "error"
+            }
+        },
+        {
             "files": [".storybook/main.ts"],
             "rules": {
                 "storybook/no-uninstalled-addons": "error"
