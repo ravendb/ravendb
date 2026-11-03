@@ -32,6 +32,7 @@ jobs:
       - name: Build Client
         run: |
           dotnet build ./src/Raven.Client/Raven.Client.csproj /p:GenerateDocumentationFile=true
+          dotnet build ./src/Raven.Client.NewtonsoftJson/Raven.Client.NewtonsoftJson.csproj /p:GenerateDocumentationFile=true
           
       - name: Build Server
         run: |

@@ -134,7 +134,6 @@
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
-    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
     <PackageReference Include="System.Text.Json" />
   </ItemGroup>
