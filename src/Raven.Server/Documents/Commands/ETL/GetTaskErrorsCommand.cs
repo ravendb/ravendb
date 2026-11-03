@@ -43,7 +43,7 @@ internal sealed class GetTaskErrorsCommand : RavenCommand<TaskErrors[]>
         if (response == null)
             return;
 
-        Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<TaskErrorsResponse>(response).Results;
+        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<TaskErrorsResponse>(response).Results;
     }
 
     // ReSharper disable once ClassNeverInstantiated.Local

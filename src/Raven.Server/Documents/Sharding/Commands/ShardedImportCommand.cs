@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Sharding.Commands
                     Content = new MultipartFormDataContent
                     {
                         {
-                            new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, ctx)), DocumentConventions.DefaultForServer),
+                            new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(_options, ctx)), DocumentConventions.DefaultForServer),
                             Constants.Smuggler.ImportOptions
                         },
                         {

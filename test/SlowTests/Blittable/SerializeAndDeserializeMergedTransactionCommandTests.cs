@@ -467,7 +467,7 @@ namespace SlowTests.Blittable
 
         private static JsonSerializer GetJsonSerializer()
         {
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
             jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
             jsonSerializer.Converters.Add(StreamConverter.Instance);

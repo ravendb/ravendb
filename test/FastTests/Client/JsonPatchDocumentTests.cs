@@ -4,6 +4,8 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -30,20 +32,26 @@ public class JsonPatchDocumentTests(ITestOutputHelper output) : NoDisposalNeeded
         }
     }
 
-    [RavenFact(RavenTestCategory.Patching)]
-    public void WireFormatMatchesMicrosoftJsonPatchDocumentSerialization()
+    [RavenTheory(RavenTestCategory.Patching)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WireFormatMatchesMicrosoftJsonPatchDocumentSerialization(bool useSystemTextJson)
     {
         var (raven, microsoft) = BuildBoth();
-        ISerializationConventions serialization = DocumentConventions.Default.Serialization;
+        ISerializationConventions newtonsoft = NewtonsoftTestConventions.Default.Serialization;
+        ISerializationConventions serialization = new DocumentConventions
+        {
+            Serialization = useSystemTextJson ? new SystemTextJsonSerializationConventions() : new NewtonsoftJsonSerializationConventions()
+        }.Serialization;
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
         {
-            IJsonSerializer serializer = serialization.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
+            IJsonSerializer serializer = newtonsoft.CreateSerializer(new CreateSerializerOptions { TypeNameHandling = TypeNameHandling.None });
             List<BlittableJsonReaderObject> ravenOperations = raven.ToBlittable(serialization, context);
 
             for (int i = 0; i < microsoft.Operations.Count; i++)
             {
-                BlittableJsonReaderObject expected = serialization.DefaultConverter.ToBlittable(microsoft.Operations[i], context, serializer);
+                BlittableJsonReaderObject expected = newtonsoft.DefaultConverter.ToBlittable(microsoft.Operations[i], context, serializer);
 
                 Assert.True(JToken.DeepEquals(JObject.Parse(expected.ToString()), JObject.Parse(ravenOperations[i].ToString())),
                     $"Expected {expected} but got {ravenOperations[i]}");
