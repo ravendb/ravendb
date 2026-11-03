@@ -1,0 +1,891 @@
+# RavenDB analyzers
+
+Roslyn analyzers that catch common RavenDB misuses at compile time. They ship
+**embedded inside the `RavenDB.Client` NuGet package** — every consumer of
+`RavenDB.Client` gets them automatically; there is no separate
+`RavenDB.Analyzers` package to install.
+
+All rules default to **Warning** (or **Info** where noted). Promote a rule to
+**Error** or silence it via `.editorconfig`:
+
+```editorconfig
+# Promote a single rule to error
+dotnet_diagnostic.RVN004.severity = error
+
+# Silence a single rule
+dotnet_diagnostic.RVN014.severity = none
+
+# Silence every RavenDB analyzer
+dotnet_diagnostic.RVN*.severity = none
+```
+
+Or in code, around a single intentional violation:
+
+```csharp
+#pragma warning disable RVN014
+Map = orders => orders.SelectMany(o => o.Lines).Select(l => new { l.Product });
+#pragma warning restore RVN014
+```
+
+## Assembly structure
+
+`RavenDB.Client.nupkg` ships two DLLs under `analyzers/dotnet/cs/`:
+
+| Assembly | Contents | References |
+|---|---|---|
+| `Raven.Analyzers.dll` (`src/Raven.Analyzers`) | All diagnostic analyzers, the index-metadata source generator, and shared helpers | `Microsoft.CodeAnalysis.CSharp` only |
+| `Raven.Analyzers.CodeFixes.dll` (`src/Raven.Analyzers.CodeFixes`) | All `CodeFixProvider` implementations | `+ Microsoft.CodeAnalysis.CSharp.Workspaces` |
+
+The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues/7438) rule: analyzer assemblies must only depend on compiler-provided references. `Microsoft.CodeAnalysis.CSharp.Workspaces` is not a compiler-provided reference — it is only available inside an IDE host — so code-fix providers must live in a separate assembly. IDEs load both DLLs from the analyzer folder automatically; `dotnet build` loads only the analyzer DLL, which keeps command-line builds free of the Workspaces dependency and the RS1038 warning.
+
+### Roslyn version floor
+
+Both assemblies are pinned to `Microsoft.CodeAnalysis` **4.4.0** through `VersionOverride`, well below
+the repo-wide version, and they deliberately do not track it. An analyzer is forward compatible but not
+backward: the compiler refuses to load one built against a newer Roslyn than itself, reports `CS9057`,
+and under `TreatWarningsAsErrors` that is a build *failure* in the consumer's project. Since these DLLs
+ship inside `RavenDB.Client`, the version pinned here is the oldest SDK a consumer can build with.
+4.4.0 covers roughly the .NET 7 SDK and VS 2022 17.4 upward. Roslyn 4.0 is a hard floor because
+`IIncrementalGenerator` does not exist before it.
+
+Two consequences worth knowing before touching these projects:
+
+- `CentralPackageTransitivePinningEnabled` is switched **off** in both. The repo pins
+  `System.Collections.Immutable` and `System.Reflection.Metadata` far newer than the host compiler
+  ships, and pinning them here makes the analyzer fail to load with `CS8032`. Roslyn's own constraints
+  are the correct ones for an assembly the compiler loads.
+- `ImmutableArray<T>` at that version predates `CollectionBuilderAttribute`, so collection expressions
+  do not work with it (`CS9210`). `SupportedDiagnostics` and `FixableDiagnosticIds` use
+  `ImmutableArray.Create(...)` for that reason, not by preference.
+
+The shared helpers the code-fix providers reuse from `Raven.Analyzers` — `KnownTypes`, `DiagnosticIds`, and the public members of `SyntaxHelpers` — are declared `public` so they are visible across the assembly boundary. There is no `InternalsVisibleTo` bridge: `Raven.Analyzers.CodeFixes` references `Raven.Analyzers` as an ordinary project reference and calls those public APIs directly. (Helpers used only within `Raven.Analyzers` stay `internal`.)
+
+## How index facts reach the analyzers
+
+Several rules need to know something about an index: which fields its `Map` projects, which it
+stores, whether the chain assigns a `Map` at all. An index declares all of that inside a
+constructor body, and **constructor bodies are not part of compiled metadata**. An analyzer
+looking at a query in one project therefore cannot read an index that lives in another one; there
+is nothing there to read.
+
+Attributes *are* part of metadata. So `IndexMetadataGenerator` runs in the project that declares
+the index, where the source is available, extracts the shape, and records it as an assembly-level
+`RavenIndexMetadataAttribute` (one per index class, including abstract bases). Analyzers then read
+that attribute back through the ordinary symbol API, and get the same answer whether the index came
+from source in the same project or from a referenced DLL.
+
+```csharp
+// generated into the project that declares the index
+[assembly: RavenIndexMetadata(typeof(BooksByAuthor), Analyzable = true,
+    MapFields = new string[] { "AuthorId" }, StoreAllFields = false,
+    AssignsMap = true, AddMapCount = 0, AddMapInLoop = false, UsesAdditionalCode = false)]
+```
+
+`RavenIndexMetadataAttribute` lives in `Raven.Client` (so both projects bind the same type) and is
+marked `[EditorBrowsable(Never)]`, so it stays out of completion lists. Nobody writes it by hand.
+
+There is exactly one path here. Analyzers never read an index constructor: `IndexFieldExtractor`,
+`IndexStoredFieldExtractor` and the chain walks in `IndexInheritanceInspector` belong to the
+generator, and `IndexMetadataRegistry` is the only way an analyzer obtains index facts. Rules that
+inspect the index *in front of them* rather than facts extracted from one (RVN001, RVN009's call
+scan, RVN014) work on local syntax as usual.
+
+`Analyzable = false` means the generator looked and could not read the index: a JavaScript index,
+dynamic fields via `CreateField`, a block-bodied `Map`, or a base class whose own metadata is
+missing. Consumers treat that as *unknown*, never as *no fields*, and report nothing. A generic
+index is recorded by its open definition (`typeof(Foo<>)`). A private or protected nested index
+cannot be named by an assembly-level `typeof()` and so gets no entry at all, with the same effect.
+
+RVN009 is the one exception to "report nothing": its call scan works on the index in front of it,
+and `UsesAdditionalCode` only suppresses. When the metadata is unknown it reads the
+`AdditionalSources` / `AdditionalAssemblies` writes out of the part of the chain declared in the
+current compilation instead, so a helper call in an unreadable index is still reported unless that
+index visibly ships its own code.
+
+Which rule uses which recorded fact:
+
+| Rule | Reads |
+|---|---|
+| RVN004 | `AssignsMap` |
+| RVN005, RVN006 | `AddMapCount`, `AddMapInLoop` |
+| RVN007 | `MapFields` |
+| RVN008 | `MapFields`, `StoredFields`, `StoreAllFields` |
+| RVN009 | `UsesAdditionalCode` (suppression only) |
+
+`test/AnalyzersTests/Indexes/CrossProjectIndexRegressionTests.cs` covers this, running every case
+through both a compiled DLL and a `CompilationReference`, because a command-line build supplies the
+former and an IDE the latter. `IndexMetadataGeneratorIncrementalityTests` pins the generator's
+caching, which is invisible to any other test: if it regresses the generator merely gets slow.
+
+## Sandbox and benchmarking
+
+The `bench/Raven.Analyzers` project exercises every rule against real code. It is the fastest
+way to see diagnostics in an IDE, and it carries a `compare.ps1` script that times a baseline
+build against a build with the analyzers enabled, which measures the analyzer overhead.
+
+It lives under `bench/` alongside the other benchmark projects (and inherits
+`bench/Directory.Build.props`), so its `compare.ps1` runs as a regular benchmark. It has its
+own `Raven.Analyzers.sln`, is not part of `RavenDB.sln`, and is not built by CI. See
+`bench/Raven.Analyzers/readme.md` for how to build it and read the output.
+
+`compare.ps1` interleaves several clean builds per case (5 by default) and reports the median.
+It writes `analyzers-benchmark-result.json` next to the script (git-ignored) with `without`,
+`with`, `overheadAbsolute`, `overheadRelative` (percent), and `success`. `success` is the gate:
+it is `true` when the relative overhead the analyzers add to a cold build stays under 20%.
+
+Test and CI plans for the analyzers, including how this project is used as an integration
+smoke check, are tracked in HRINT-4901.
+
+## RVN001: Map or Reduce assigned outside constructor
+
+**Triggered by:** assigning the `Map` or `Reduce` property of an index class inside a regular method (not a constructor).
+
+RavenDB reads the `Map` and `Reduce` expression trees at **index registration time**, which happens when the index class is constructed. If the assignment is done in a helper method that the constructor delegates to, or in any method called conditionally after construction, the analyzer cannot guarantee the assignment happens in time and neither can the runtime:
+
+```csharp
+// ❌ Bad: Map is assigned in a method, not the constructor
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex() { Configure(); }
+
+    private void Configure()
+    {
+        Map = orders => from o in orders   // RVN001
+                        select new { o.Id };
+    }
+}
+
+// ✅ Good: Map is assigned directly in the constructor
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex()
+    {
+        Map = orders => from o in orders
+                        select new { o.Id };
+    }
+}
+```
+
+This rule also fires for `Reduce` assigned in a method:
+
+```csharp
+// ❌ Bad
+public void SetReduce()
+{
+    Reduce = results => ...;    // RVN001
+}
+```
+
+**Docs:** [Creating and deploying indexes](https://docs.ravendb.net/indexes/creating-and-deploying)
+
+
+---
+
+## RVN002: RavenDB query operator after projection
+
+**Triggered by:** calling any of the following query operators on an `IRavenQueryable<T>` chain that has already called `ProjectInto<T>()` or `Select(...)`:
+
+`Where` · `OrderBy` · `OrderByDescending` · `ThenBy` · `ThenByDescending` · `GroupBy` · `Search` · `Spatial` · `OrderByDistance` · `OrderByDistanceDescending` · `OrderByScore` · `OrderByScoreDescending` · `ThenByScore` · `ThenByScoreDescending` · `MoreLikeThis` · `VectorSearch` · `Filter` · `GroupByArrayValues` · `GroupByArrayContent`
+
+RavenDB translates a LINQ query chain into a single server-side query. Projection (`ProjectInto` / `Select`) changes the element type of the chain: all of the operators above bind to the **source document / index shape** and must therefore appear *before* projection. When called after a projection they silently operate on the wrong type or throw a runtime exception.
+
+```csharp
+// ❌ Bad: Where runs on OrderView, not on Order
+var q = session.Query<Order>()
+    .ProjectInto<OrderView>()
+    .Where(x => x.Status == "active");   // RVN002
+
+// ✅ Good: move projection to the end
+var q = session.Query<Order>()
+    .Where(x => x.Status == "active")
+    .ProjectInto<OrderView>();
+```
+
+The same applies to Raven-specific operators:
+
+```csharp
+// ❌ Bad: Search on a spatial field applies to OrderView, not Order
+var q = session.Query<Order>()
+    .ProjectInto<OrderView>()
+    .Search(x => x.Description, "urgent");   // RVN002
+
+// ❌ Bad: OrderByDistance after Select has no source-shape coordinates to sort on
+var q = session.Query<Order>()
+    .Select(x => new { x.Id })
+    .OrderByDistance(x => x.Location, 51.5, -0.1);   // RVN002
+
+// ✅ Good: all operators before projection
+var q = session.Query<Order>()
+    .Search(x => x.Description, "urgent")
+    .OrderByDistance(x => x.Location, 51.5, -0.1)
+    .ProjectInto<OrderView>();
+```
+
+**Explicitly not flagged** (legitimately usable after projection): `Include`, `Highlight`, `Statistics`, `Customize`, `Skip`, `Take`.
+
+**Docs:** [Projecting query results](https://docs.ravendb.net/client-api/session/querying/how-to-project-query-results)
+
+---
+
+## RVN003: ProjectInto called more than once
+
+**Triggered by:** a second `.ProjectInto<T>()` call on the same query chain.
+
+Calling `ProjectInto` sets an internal flag on the RavenDB query provider. Calling it again unconditionally throws `InvalidOperationException` at runtime. There is no scenario where two `ProjectInto` calls on the same chain are valid.
+
+```csharp
+// ❌ Bad: throws InvalidOperationException at runtime
+var q = session.Query<Order>()
+    .ProjectInto<OrderView>()
+    .ProjectInto<OrderView2>();    // RVN003
+
+// ✅ Good: project into one target type only
+var q = session.Query<Order>()
+    .ProjectInto<OrderView>();
+```
+
+---
+
+## RVN004: AbstractIndexCreationTask subclass is missing a Map assignment
+
+**Triggered by:** a class that inherits from `AbstractIndexCreationTask<T>` but has no constructor that assigns the `Map` property.
+
+Every RavenDB index must define what it maps. A class without a `Map` assignment has no index definition and will throw when deployed to a server. This is the most common cause of a "blank index" that compiles fine but fails on first use.
+
+```csharp
+// ❌ Bad: no Map assigned anywhere
+class OrdersByStatus : AbstractIndexCreationTask<Order>
+{
+    public OrdersByStatus() { }   // RVN004 reported on the class name
+}
+
+// ❌ Bad: no constructor at all (implicit parameterless ctor has no Map)
+class OrdersByStatus : AbstractIndexCreationTask<Order>
+{
+}
+
+// ✅ Good
+class OrdersByStatus : AbstractIndexCreationTask<Order>
+{
+    public OrdersByStatus()
+    {
+        Map = orders => from o in orders
+                        select new { o.Status };
+    }
+}
+```
+
+Note: if the `Map` is assigned in a helper method rather than the constructor body directly, RVN001 fires on the assignment and RVN004 fires on the class. Both rules apply simultaneously because the constructor itself still has no `Map` assignment.
+
+**Docs:** [Creating and deploying indexes](https://docs.ravendb.net/indexes/creating-and-deploying)
+
+---
+
+## RVN005: Multi-map index has no AddMap call in any constructor
+
+**Triggered by:** a class that inherits from `AbstractMultiMapIndexCreationTask<T>`, `AbstractMultiMapTimeSeriesIndexCreationTask<T>`, or `AbstractMultiMapCountersIndexCreationTask<T>` but has no constructor that calls `AddMap` or `AddMapForAll`.
+
+Multi-map index classes do not expose a `Map` property: they define their mappings by calling `AddMap<TSource>(...)` in the constructor. Without at least one `AddMap` call the index has no definition and will throw when deployed.
+
+```csharp
+// ❌ Bad: no AddMap call
+class MultiIndex : AbstractMultiMapIndexCreationTask<Result>
+{
+    public MultiIndex() { }   // RVN005 reported on the class name
+}
+
+// ✅ Good
+class MultiIndex : AbstractMultiMapIndexCreationTask<Result>
+{
+    public MultiIndex()
+    {
+        AddMap<Company>(companies => from c in companies
+                                     select new Result { Name = c.Name });
+        AddMap<Employee>(employees => from e in employees
+                                      select new Result { Name = e.FirstName });
+    }
+}
+```
+
+Note: `AddMap` calls in a helper method that the constructor delegates to are **not** counted: the same logic as RVN001/RVN004. Move `AddMap` calls into the constructor body directly.
+
+**Docs:** [Multi-map indexes](https://docs.ravendb.net/indexes/multi-map-indexes)
+
+---
+
+## RVN006: Multi-map index uses only a single AddMap (Info)
+
+**Triggered by:** a class that inherits from a multi-map index base but calls `AddMap` exactly once across all constructors.
+
+A multi-map index base class is designed to map over **multiple** document types (or time-series/counter names). When only a single `AddMap` is present, the simpler `AbstractIndexCreationTask<TDocument>` form is equivalent and more readable.
+
+This rule has **Info** severity and is purely a style suggestion.
+
+```csharp
+// ⚠️ Single AddMap: consider a regular index instead (RVN006)
+class MultiIndex : AbstractMultiMapIndexCreationTask<Result>
+{
+    public MultiIndex()
+    {
+        AddMap<Company>(companies => from c in companies
+                                     select new Result { Name = c.Name });
+    }
+}
+
+// ✅ Simpler equivalent
+class CompanyIndex : AbstractIndexCreationTask<Company>
+{
+    public CompanyIndex()
+    {
+        Map = companies => from c in companies
+                           select new { c.Name };
+    }
+}
+```
+
+**Docs:** [Multi-map indexes](https://docs.ravendb.net/indexes/multi-map-indexes)
+
+---
+
+## RVN007: Query field not defined in the index (Info)
+
+**Triggered by:** a `Where`, `OrderBy`, `OrderByDescending`, `ThenBy`, `ThenByDescending`, or `Search` lambda on a `session.Query<T, TIndexCreator>()` (or the `indexName:` string overload) that references a field not defined by the index's `Map` function.
+
+RavenDB translates the LINQ chain into a server-side query against a specific index. If a `Where` or `OrderBy` clause references a field the index's `Map` function does not define, the server has no index field to match documents against and rejects the query or returns no results for it.
+
+The index may live in a different project from the query. Its shape is read from the metadata its own assembly records (see [How index facts reach the analyzers](#how-index-facts-reach-the-analyzers)); when no metadata is recorded for it, or it could not be read, this rule reports nothing.
+
+```csharp
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name, o.Status };
+    }
+}
+
+// ❌ Bad: Price is not defined by the index's Map
+var q = session.Query<Order, OrderIndex>()
+    .Where(x => x.Price > 100);    // RVN007 on x.Price
+
+// ✅ Good: Name is defined by the index's Map
+var q = session.Query<Order, OrderIndex>()
+    .Where(x => x.Name == "Acme");
+```
+
+The same rule applies to `OrderBy`, `Search`, and the string-based overload:
+
+```csharp
+// ❌ Bad: Price is not indexed
+var q = session.Query<Order>(indexName: "OrderIndex")
+    .OrderBy(x => x.Price);        // RVN007 on x.Price
+```
+
+This rule has **Info** severity. It bails silently (no diagnostic) when:
+- The index uses `CreateField`, `AsJson`, or `StoreAllFields` (dynamic fields)
+- The index inherits from `AbstractJavaScriptIndexCreationTask`
+- The `Map` right-hand side is not a lambda expression
+- The index class is not in the current compilation
+- The `indexName:` string argument is a variable rather than a string literal (string-based overload only)
+- The index overrides `IndexName` with a non-literal expression such as a variable or concatenation (string-based overload only — the generic `Query<T, TIndex>()` form always resolves the class directly and is unaffected)
+
+**Docs:** [Querying an index](https://docs.ravendb.net/indexes/querying/query-index)
+
+---
+
+## RVN008: Projected field not retrievable under the applied ProjectionBehavior (Info)
+
+**Triggered by:** a `ProjectInto<T>()` or `Select(…)` call on a `session.Query<TSource, TIndex>()` where a projected field is not retrievable under the effective `ProjectionBehavior`.
+
+RavenDB fetches each projected field from the index entry (if the field is stored) or falls back to the source document. This behavior is controlled by `ProjectionBehavior`:
+
+| Behavior | Where fields come from |
+|---|---|
+| `Default` (or none) | Stored index field → fallback to source document |
+| `FromIndex` / `FromIndexOrThrow` | Stored index field only: no document fallback |
+| `FromDocument` / `FromDocumentOrThrow` | Source document only: no stored field lookup |
+
+Fields are stored via `Store(x => x.Field, FieldStorage.Yes)`, `Store("FieldName", FieldStorage.Yes)`, `Stores[…] = FieldStorage.Yes`, `StoresStrings["FieldName"] = FieldStorage.Yes`, or `StoreAllFields(FieldStorage.Yes)`. Just appearing in the `Map` projection does **not** store a field.
+
+As with RVN007, the index may live in a different project; its stored-field facts come from the metadata its own assembly records (see [How index facts reach the analyzers](#how-index-facts-reach-the-analyzers)).
+
+```csharp
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name };
+        Store(x => x.Name, FieldStorage.Yes);
+    }
+}
+
+class Dto { public string Name { get; set; } public string Ghost { get; set; } }
+
+// ❌ Bad: Ghost is not stored and not on Order; projected value will be null
+var q = session.Query<Order, OrderIndex>().ProjectInto<Dto>();   // RVN008 on Ghost
+
+// ✅ Good: Name is stored; Price is on the source document
+class Dto2 { public string Name { get; set; } public decimal Price { get; set; } }
+var q2 = session.Query<Order, OrderIndex>().ProjectInto<Dto2>();
+
+// ❌ Bad: Price is on source doc, but FromIndexOrThrow disables document fallback
+var q3 = session.Query<Order, OrderIndex>()
+    .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+    .ProjectInto<Dto2>();   // RVN008 on Price: only Name is stored
+```
+
+The same rule applies to `Select` projections when `FromIndex` or `FromIndexOrThrow` is set:
+
+```csharp
+// ❌ Bad: Price is not stored; FromIndexOrThrow means no document fallback
+var q = session.Query<Order, OrderIndex>()
+    .Customize(x => x.Projection(ProjectionBehavior.FromIndexOrThrow))
+    .Select(x => new { x.Name, x.Price });   // RVN008 on x.Price
+```
+
+This rule has **Info** severity. It bails silently (no diagnostic) when:
+- The index uses `CreateField`, `AsJson`, or other dynamic-field methods
+- The index inherits from `AbstractJavaScriptIndexCreationTask`
+- A `Store(…)` argument is a variable rather than a lambda or string literal
+- A `Customize(x => x.Projection(…))` argument is a variable rather than a `ProjectionBehavior.X` member access
+- The index class is not in the current compilation
+- `Query<T>()` is called without an index reference (auto-index)
+
+**Docs:** [Projecting query results](https://docs.ravendb.net/client-api/session/querying/how-to-project-query-results)
+
+---
+
+## RVN009: Unsupported method call inside index Map/Reduce expression
+
+**Triggered by:** an invocation of a user-defined method inside the lambda body of a `Map`, `Reduce`, or `AddMap` assignment in a RavenDB index class.
+
+RavenDB compiles index `Map` and `Reduce` expressions to server-side IL at **index deployment time**. Only BCL methods (string, Math, etc.), LINQ operators, and Raven-provided helpers (e.g. `LoadDocument`, `CreateField`) can be translated. A user-defined helper method — whether a local method on the index class, a static utility, or an instance method on a user type — cannot be compiled by the expression engine and will cause the index to fail with a runtime exception.
+
+```csharp
+// ❌ Bad: MyHelpers.Normalize is user-defined and cannot be translated
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };  // RVN009
+    }
+}
+
+// ✅ Good: inline the operation or use BCL / Raven helpers
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = p.Name.ToLowerInvariant() };
+    }
+}
+```
+
+The same rule applies to `Reduce` and multi-map `AddMap` lambdas:
+
+```csharp
+// ❌ Bad: user-defined method in Reduce
+Reduce = results => from r in results
+                    group r by r.Tag into g
+                    select new { Tag = g.Key, Count = Utils.Sum(g) };  // RVN009
+```
+
+This rule bails silently (no diagnostic) for:
+- Indexes derived from `AbstractJavaScriptIndexCreationTask` (JS indexes cannot be statically analyzed)
+- Methods whose containing type is defined in a referenced assembly (BCL, Raven.Client, NuGet packages)
+
+**Docs:** [Map indexes](https://docs.ravendb.net/indexes/map-indexes)
+
+---
+
+## RVN010: Unsupported method call inside RavenDB query expression
+
+**Triggered by:** an invocation of a user-defined method inside a lambda passed to a RavenDB LINQ query chain method (`Where`, `OrderBy`, `Select`, `Search`, `ProjectInto`, etc.) on `IRavenQueryable<T>`.
+
+RavenDB translates LINQ query lambdas to RQL before sending them to the server. User-defined methods inside these lambdas cannot be translated and will throw an exception at runtime. Compute derived values before the query, inline the predicate logic, or materialize with `ToList()` first and apply the method client-side.
+
+```csharp
+// ❌ Bad: MyFilters.IsActive is user-defined and cannot be sent to the server
+var results = session.Query<Order>()
+    .Where(o => MyFilters.IsActive(o.Status))   // RVN010
+    .ToList();
+
+// ✅ Good: resolve the value before the query
+var results = session.Query<Order>()
+    .Where(o => o.Status == "Active")
+    .ToList();
+
+// ✅ Also good: project first, then apply client-side logic
+var results = session.Query<Order>()
+    .ToList()
+    .Where(o => MyFilters.IsActive(o.Status));
+```
+
+The same rule applies to `OrderBy`, `Select`, and other lambda-taking query methods:
+
+```csharp
+// ❌ Bad: user-defined method in Select projection
+var results = session.Query<Order>()
+    .Select(o => new { Score = MyScorer.Compute(o) });  // RVN010
+```
+
+This rule applies **only** to `IRavenQueryable<T>` chains (`session.Query<T>()`). Standard LINQ on in-memory collections is not affected.
+
+**Docs:** [Querying in RavenDB](https://docs.ravendb.net/querying/overview)
+
+---
+
+## RVN011: Use batch.OpenSession inside a subscription Run delegate
+
+**Triggered by:** calling `OpenSession()` or `OpenAsyncSession()` on an `IDocumentStore` receiver inside a lambda passed to `SubscriptionWorker<T>.Run()`.
+
+Inside a subscription worker's `Run` delegate, sessions should be opened via the batch parameter, not via the document store directly. The batch session targets the subscription's database and node through the worker's request executor, is preloaded with the batch's documents and included data, and can be opened once per batch. A session opened on the store may talk to another node or database and loads every batch document again.
+
+```csharp
+// ❌ Bad: using store.OpenSession() in the Run delegate
+var subscription = store.Subscriptions.Create<Order>(new SubscriptionCreationOptions<Order>());
+var worker = store.Subscriptions.GetSubscriptionWorker<Order>(subscription);
+
+worker.Run(batch =>
+{
+    using var session = store.OpenSession();   // RVN011
+    // ... process orders ...
+});
+
+// ✅ Good: use batch.OpenSession()
+worker.Run(batch =>
+{
+    using var session = batch.OpenSession();
+    // ... process orders: batch.Items are already loaded into the session ...
+});
+```
+
+This also applies to the async variant:
+
+```csharp
+// ❌ Bad: using store.OpenAsyncSession()
+worker.Run(async batch =>
+{
+    using var session = store.OpenAsyncSession();   // RVN011
+    // ...
+});
+
+// ✅ Good
+worker.Run(async batch =>
+{
+    using var session = batch.OpenAsyncSession();
+    // ...
+});
+```
+
+The rule correctly detects the issue regardless of how the store is accessed:
+
+```csharp
+// ❌ Also flagged: field-accessed store
+private readonly IDocumentStore _store;
+
+public void Subscribe(SubscriptionWorker<Order> worker)
+{
+    worker.Run(batch =>
+    {
+        using var session = _store.OpenSession();   // RVN011
+    });
+}
+```
+
+**Note:** This rule applies to lambda expressions passed directly to `Run()`. Named method-group references are not detected (e.g., `worker.Run(ProcessBatch)` where `ProcessBatch` is a separate method).
+
+**Docs:** [Subscriptions](https://docs.ravendb.net/client-api/data-subscriptions/what-are-data-subscriptions)
+
+---
+
+## RVN012: Batch independent session operations using the lazy API
+
+**Triggered by:** a method that contains two or more independent materializing session operations — a single-argument `session.Load<T>(id)` or a `session.Query<T>()...ToList()` / `.ToArray()` (and their async forms) — each of which causes a separate HTTP round-trip to the RavenDB server.
+
+Only `ToList`/`ToArray` query materializers are flagged: they are the ones with a direct `query.Lazily()` / `LazilyAsync()` equivalent that the code fix can produce. Scalar/element materializers such as `.First()`, `.Single()`, `.Any()`, and `.Count()` have no lazy batching API and are not flagged. The include-builder `Load<T>(id, includes)` overload is likewise excluded — it has no lazy counterpart.
+
+RavenDB's lazy API queues operations and sends them as a single multi-get HTTP request. Use `session.Advanced.Lazily.Load<T>(id)` and `query.Lazily()` to register operations lazily, then read the values. Reading the first `.Value` (or awaiting it in async code) dispatches every pending lazy operation in one round-trip — no explicit call is needed. You can still force the batch without reading a value via `session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()` (or `...ExecuteAllPendingLazyOperationsAsync()`), but that is optional.
+
+Operations that depend on an earlier result cannot be made lazy — the analyzer only flags calls where the argument is provably independent of prior session results (a parameter, field, constant, or simple local not derived from a session call).
+
+```csharp
+// ❌ Bad: two round-trips
+void GetData(IDocumentSession session, string userId, string orderId)
+{
+    var user  = session.Load<User>(userId);   // RVN012
+    var order = session.Load<Order>(orderId); // RVN012
+}
+
+// ✅ Good: one round-trip
+void GetData(IDocumentSession session, string userId, string orderId)
+{
+    var lazyUser  = session.Advanced.Lazily.Load<User>(userId);
+    var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);
+    var user  = lazyUser.Value; // first .Value dispatches the whole batch
+    var order = lazyOrder.Value;
+}
+```
+
+```csharp
+// ❌ Bad: query + load as two round-trips
+void GetData(IDocumentSession session, string managerId)
+{
+    var employees = session.Query<Employee>().Where(e => e.Active).ToList(); // RVN012
+    var manager   = session.Load<User>(managerId);                           // RVN012
+}
+
+// ✅ Good: one round-trip
+void GetData(IDocumentSession session, string managerId)
+{
+    var lazyEmployees = session.Query<Employee>().Where(e => e.Active).Lazily();
+    var lazyManager   = session.Advanced.Lazily.Load<User>(managerId);
+    var employees = lazyEmployees.Value.ToList(); // first .Value dispatches the whole batch
+    var manager   = lazyManager.Value;
+}
+```
+
+The same optimization applies to async contexts:
+
+```csharp
+// ❌ Bad: two async round-trips
+async Task GetDataAsync(IAsyncDocumentSession session, string userId, string orderId)
+{
+    var user  = await session.LoadAsync<User>(userId);   // RVN012
+    var order = await session.LoadAsync<Order>(orderId); // RVN012
+}
+
+// ✅ Good: one round-trip
+async Task GetDataAsync(IAsyncDocumentSession session, string userId, string orderId)
+{
+    var lazyUser  = session.Advanced.Lazily.LoadAsync<User>(userId);
+    var lazyOrder = session.Advanced.Lazily.LoadAsync<Order>(orderId);
+    var user  = await lazyUser.Value; // awaiting the first .Value dispatches the whole batch async
+    var order = await lazyOrder.Value;
+}
+```
+
+**Note:** Loads whose ID argument is derived from a prior session result are not flagged — they genuinely depend on the earlier call and cannot be batched with it. Only single-method analysis is performed; cross-method patterns are not detected.
+
+Three further rules decide which operations are grouped into one candidate batch:
+
+- **Session barriers.** A call that changes session state ends the batch: `SaveChanges()`, `Store()`, `Delete()`, `Advanced.Evict()`, `Advanced.Clear()`, `Advanced.Refresh()` and any other session or `Advanced` method apart from the read-only ones (`Load`, `Query`, `Include`, `IsLoaded`, `HasChanged`, `GetDocumentId`, `GetMetadataFor`, ...). Passing the session to another method, or calling a lambda or local function that contains such a call, is treated as a barrier too, since the callee may do anything with it. Operations on either side of a barrier are grouped separately, so a pair before `SaveChanges()` and a single load after it produce two diagnostics, not three.
+- **Branch grouping.** Operations are grouped only with others in the same branch of control flow: the same `if`/`else` block, `switch` section, loop body, conditional (`?:`) arm, `??` / `&&` / `||` right-hand side or `?.` continuation. A load in the `if` body and another in the `else` body never execute together, so they are not reported as a batch.
+- **Repeated loads of the same ID.** Two `Load<T>` calls with the same type argument and the same constant ID, or the same parameter or local that is never reassigned, hit the session cache on the second call and count as one operation. `Load<User>(id)` twice is not reported; `Load<User>(id)` and `Load<Order>(id)` are.
+
+```csharp
+void GetData(IDocumentSession session, string userId, string orderId, bool flag)
+{
+    var user  = session.Load<User>(userId);        // RVN012
+    var order = session.Load<Order>(orderId);      // RVN012
+    session.SaveChanges();                         // barrier: a new group starts here
+    var again = session.Load<User>(userId);        // alone in its group: not reported
+
+    if (flag)
+    {
+        var a = session.Load<User>("users/1");     // different branch from b: not reported
+    }
+    else
+    {
+        var b = session.Load<User>("users/2");
+    }
+}
+```
+
+**Docs:** [Perform requests lazily](https://docs.ravendb.net/client-api/session/how-to/perform-operations-lazily)
+
+---
+
+## RVN013: Query result is not bounded by Take()
+
+**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, `ToArrayAsync()`, `Lazily()` or `LazilyAsync()` on a chain rooted in a RavenDB query (`session.Query<T>()`, `session.Advanced.DocumentQuery<T>()`, or `session.Advanced.RawQuery<T>()`, including their async forms) that does not have a `.Take(n)` call anywhere in the chain. The chain is followed through standard `System.Linq` operators such as `OfType<T>()`, `As<T>()`, `GroupBy` and `Select`, and through locals typed as `IQueryable<T>`, so the rule still fires when the file lacks `using Raven.Client.Documents.Linq;`.
+
+An unbounded query returns **every** matching document: the server applies no default limit (`IndexQueryServerSide.PageSize` starts at `int.MaxValue`), and the client only sends a `limit` when you set one. Without an explicit `.Take(n)` the result size is whatever the dataset happens to hold, so a query that was fine against test data can pull the whole collection in production. Add `.Take(n)` to bound it.
+
+```csharp
+// ❌ Bad: unbounded, returns every match
+var users = session.Query<User>().ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var users = session.Query<User>().Take(10).ToList();
+```
+
+This applies to filtered queries as well:
+
+```csharp
+// ❌ Bad: unbounded, returns every match
+var activeUsers = session.Query<User>()
+    .Where(u => u.Active)
+    .ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var activeUsers = session.Query<User>()
+    .Where(u => u.Active)
+    .Take(10)
+    .ToList();
+```
+
+And to async queries:
+
+```csharp
+// ❌ Bad: unbounded, returns every match
+var users = await session.Query<User>().ToListAsync();   // RVN013
+
+// ✅ Good: explicit bound
+var users = await session.Query<User>().Take(10).ToListAsync();
+```
+
+A lazy registration fetches the full result set the same way once the batch is dispatched, so `session.Query<User>().Lazily()` (the shape the RVN012 code fix produces) is reported like `ToList()` and needs its own `.Take(n)`.
+
+**Not flagged** (inherently bounded or scalar): `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`, `Any()`, `Count()`, `LongCount()`. Other ways of reading a query, such as `foreach`, `ToDictionary()` or `AsEnumerable().ToList()`, are not checked.
+
+**Not flagged** (in-memory LINQ, not a database query): any `ToList()` after the query has already been materialized, e.g. `session.Query<User>().Take(5).ToList().Where(...).ToList()` or `session.TimeSeriesFor(...).Get().GroupBy(...).ToList()`.
+
+`DocumentQuery<T>()` is bounded by its own `.Take(n)`. A `RawQuery<T>(rql)` is bounded by a `limit` clause in the RQL text; when the text is not known at compile time (a variable, a method result, or an interpolated string with a hole such as `$"from Orders {limitClause}"`) the rule stays silent.
+
+```csharp
+// ❌ Bad: unbounded, returns every match
+var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, true).ToList();   // RVN013
+var orders = session.Advanced.RawQuery<Order>("from Orders").ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var users = session.Advanced.DocumentQuery<User>().WhereEquals(u => u.Active, true).Take(10).ToList();
+var orders = session.Advanced.RawQuery<Order>("from Orders limit 10").ToList();
+```
+
+**Docs:** [Querying: Paging](https://docs.ravendb.net/indexes/querying/paging)
+
+---
+
+## RVN014: Index Map fans out over a collection
+
+**Triggered by:** using `SelectMany` (method-chain form) or nested `from` clauses (query-expression form) in an index `Map` or `AddMap` lambda.
+
+Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. Each element in the collection yields a separate index entry. This multiplies indexing work and storage proportional to collection cardinality. Large collections can significantly degrade indexing performance.
+
+The RavenDB server raises the **High indexing fanout ratio** performance hint at runtime, but only once a single document produces more index entries than `PerformanceHints.Indexing.MaxIndexOutputsPerDocument` (1024 by default). This analyzer reports the fan-out syntax at compile time regardless of collection size.
+
+**Example — method-chain form:**
+
+```csharp
+// ❌ Bad: fans out over order.Lines
+class OrderLineIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderLineIndex()
+    {
+        Map = orders => orders
+            .SelectMany(o => o.Lines)   // RVN014 — each order produces N entries (one per line)
+            .Select(l => new { l.Product, l.Qty });
+    }
+}
+
+// ✅ Good: if the fan-out is intentional and cardinality is acceptable, you can suppress the diagnostic
+#pragma warning disable RVN014
+class OrderLineIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderLineIndex()
+    {
+        Map = orders => orders
+            .SelectMany(o => o.Lines)
+            .Select(l => new { l.Product, l.Qty });
+    }
+}
+#pragma warning restore RVN014
+```
+
+**Example — query-expression form (nested from):**
+
+```csharp
+// ❌ Bad: nested from creates fan-out
+class DocumentItemIndex : AbstractIndexCreationTask<Document>
+{
+    public DocumentItemIndex()
+    {
+        Map = docs => from doc in docs
+                      from item in doc.Items   // RVN014 — fans out over Items
+                      select new { item.Value };
+    }
+}
+
+// ✅ Good: single from, no fan-out
+class DocumentIndex : AbstractIndexCreationTask<Document>
+{
+    public DocumentIndex()
+    {
+        Map = docs => from doc in docs
+                      select new { doc.Title };
+    }
+}
+```
+
+**Not flagged:** Normal `Select`, `Where`, `OrderBy`, and other LINQ operators that do not iterate over a collection. In a time-series index the standard `from entry in segment.Entries` expansion is the unit of work of every such map and is not reported; a further nested `from` over the entry (for example its `Values`) is.
+
+A `SelectMany` in the source of a `from` clause (`from line in orders.SelectMany(o => o.Lines)`) and a query expression wrapped in parentheses, with or without a trailing method call (`(from o in orders from l in o.Lines select …).Where(…)`), are reported the same way.
+
+**Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas. A map lambda stored in a variable or field and then assigned to `Map` or passed to `AddMap` is not followed.
+
+**Docs:** [Indexes: Indexing nested data - Fanout index](https://docs.ravendb.net/indexes/indexing-nested-data#fanout-index---multiple-index-entries-per-document)
+
+---
+
+## RVN015: Correlated conditions over a nested collection in a dynamic query
+
+**Triggered by:** a dynamic query (`session.Query<T>()` with no index) whose predicate calls `Any` on a collection member of the document with a lambda that joins two or more conditions on the element with `&&`, or calls `All` on such a member with any predicate. The predicate may be passed to `Where` or to a predicate overload of `First`, `FirstOrDefault`, `Single`, `SingleOrDefault`, `Any`, `Count` or `LongCount` (and their async forms), which the client translates into the same where clause.
+
+The auto index that serves a dynamic query flattens the collection into one multi-valued field per member (e.g. `Members[].UserId`, `Members[].Role`). The query would become `where Members[].UserId = $p0 and Members[].Role = $p1`, where each condition is matched independently: a document matches when *some* member has the user id and *some* member (possibly another one) has the role. Because of that, the client rejects an `Any` predicate that combines conditions on different fields in a dynamic query: building the query throws `InvalidOperationException` ("Using multiple fields inside method 'Any' can lead to unexpected query results for auto index"). A predicate the client lets through, such as two conditions on the same field or a dictionary Key/Value pair, runs and returns documents where no single element satisfies both. The server never creates fan-out auto indexes, so per-element correlation needs a static index whose map emits one entry per element.
+
+```csharp
+// Bad: the client throws InvalidOperationException when the query is built
+var projects = session.Query<Project>()
+    .Where(p => p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor))   // RVN015
+    .ToList();
+
+// Good: a fan-out static index correlates the conditions per member
+class Projects_ByMember : AbstractIndexCreationTask<Project>
+{
+    public Projects_ByMember()
+    {
+        Map = projects => from p in projects
+                          from m in p.Members
+                          select new { m.UserId, m.Role };
+    }
+}
+
+var projects = session.Query<Projects_ByMember.Result, Projects_ByMember>()
+    .Where(r => r.UserId == userId && r.Role == Role.Contributor)
+    .OfType<Project>()
+    .ToList();
+```
+
+The query-expression form is flagged the same way:
+
+```csharp
+var projects = from p in session.Query<Project>()
+               where p.Members.Any(m => m.UserId == userId && m.Role == Role.Contributor)   // RVN015
+               select p;
+```
+
+`All` is reported whatever its conditions, with its own message: the client does not translate `All` inside a query predicate at all and throws `NotSupportedException` (`Method not supported: All`) when the query runs.
+
+```csharp
+var projects = session.Query<Project>()
+    .Where(p => p.Members.All(m => m.Role == Role.Contributor))   // RVN015: All is not supported
+    .ToList();
+```
+
+**Not flagged:**
+
+- a single condition on the element: `p.Members.Any(m => m.UserId == userId)`;
+- conditions joined with `||`, which match the same way with or without flattening;
+- an inclusive range on one member, `m.Value >= 5 && m.Value <= 10`, which the client sends as a single `between` clause that one indexed value must satisfy; an exclusive range (`>` and `<`) is sent as two clauses and is reported;
+- separate `Any` calls, which state the uncorrelated matching explicitly: `p.Members.Any(m => m.UserId == userId) && p.Members.Any(m => m.Role == Role.Contributor)`;
+- queries over a static index (`session.Query<T, TIndex>()` or an index name), where RVN014 covers the fan-out on the index side; a query that only names the collection (`session.Query<T>(collectionName: "Orders")`) is still dynamic and is checked;
+- `Any`/`All` over something that is not a collection member of the document.
+
+A dictionary member is a collection of Key/Value pairs and is flagged the same way: `p.Counters.Any(kv => kv.Key == "a" && kv.Value == 1)` matches a document whose dictionary has key `a` in one entry and value `1` in another. The client lets this particular shape run instead of rejecting it, so the warning is the only signal.
+
+**Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
+
+**Docs:** [Indexes: Indexing nested data](https://docs.ravendb.net/indexes/indexing-nested-data)
