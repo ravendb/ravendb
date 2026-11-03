@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,20 +13,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
     {
         public static readonly EnumerableConstructorConverter Instance = new();
 
+        private static readonly ConcurrentDictionary<Type, (ConstructorInfo Constructor, Type ElementType)> _constructors = new();
+
         private EnumerableConstructorConverter()
         {
         }
 
         public override bool CanConvert(Type typeToConvert)
         {
-            return GetConstructor(typeToConvert, out _) != null;
+            return GetCachedConstructor(typeToConvert).Constructor != null;
         }
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         {
-            ConstructorInfo constructor = GetConstructor(typeToConvert, out Type elementType);
+            (ConstructorInfo constructor, Type elementType) = GetCachedConstructor(typeToConvert);
             Type converterType = typeof(EnumerableConstructorConverterInner<,>).MakeGenericType(typeToConvert, elementType);
             return (JsonConverter)Activator.CreateInstance(converterType, constructor);
+        }
+
+        private static (ConstructorInfo Constructor, Type ElementType) GetCachedConstructor(Type type)
+        {
+            return _constructors.GetOrAdd(type, static t => (GetConstructor(t, out Type elementType), elementType));
         }
 
         private static ConstructorInfo GetConstructor(Type type, out Type elementType)
