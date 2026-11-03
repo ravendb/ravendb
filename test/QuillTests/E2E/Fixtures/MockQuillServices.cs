@@ -21,6 +21,9 @@ public sealed record ToolCallTurn(string ActionName, string ArgumentsJson, strin
 /// e.g. <c>{"reply":"done"}</c>.
 public sealed record FinalTurn(string ContentJson) : MockLlmTurn;
 
+/// A 200 that carries no content at all.
+public sealed record EmptyTurn : MockLlmTurn;
+
 /// <summary>
 /// Every third party in the Quill topology, on one in-process host bound to an ephemeral loopback port
 /// ⇒ parallel-safe. Each is reached over a real socket by a different caller, which is why they cannot be
@@ -137,6 +140,22 @@ public sealed class MockQuillServices : IAsyncDisposable
 
     // ---- /chat/completions — the LLM RavenDB talks to ----
 
+    /// When set, a completion fails with this status and body instead of streaming a turn.
+    public (int Status, string Body) CompletionFailure { get; set; }
+
+    /// When true, a completion drops the connection instead of answering.
+    public bool CompletionAbortsConnection { get; set; }
+
+    /// Completion requests the provider has received, i.e. attempts including retries.
+    public int CompletionAttempts
+    {
+        get
+        {
+            lock (_sync)
+                return _completionRequests.Count;
+        }
+    }
+
     /// The tool result the model was fed last — i.e. what the action executor produced.
     public string? LastToolMessageContent()
     {
@@ -209,6 +228,8 @@ public sealed class MockQuillServices : IAsyncDisposable
         WebhookResponse = (200, """{"ok":true}""");
         WebhookResponseHeaders.Clear();
         WebhookDelay = TimeSpan.Zero;
+        CompletionFailure = default;
+        CompletionAbortsConnection = false;
         _turns.Clear();
         lock (_sync)
         {
@@ -340,6 +361,20 @@ public sealed class MockQuillServices : IAsyncDisposable
         lock (_sync)
             _completionRequests.Add(request.RootElement.Clone());
 
+        if (CompletionAbortsConnection)
+        {
+            ctx.Abort();
+            return;
+        }
+
+        if (CompletionFailure is { Status: > 0 } failure)
+        {
+            ctx.Response.StatusCode = failure.Status;
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync(failure.Body, ctx.RequestAborted);
+            return;
+        }
+
         if (_turns.TryDequeue(out var turn) == false)
         {
             // an unscripted call means the test's expectations drifted — say so instead of hanging
@@ -404,6 +439,11 @@ public sealed class MockQuillServices : IAsyncDisposable
 
             case FinalTurn final:
                 yield return Chunk(new { role = "assistant", content = final.ContentJson });
+                yield return Chunk(new { }, finishReason: "stop");
+                break;
+
+            case EmptyTurn:
+                yield return Chunk(new { role = "assistant" });
                 yield return Chunk(new { }, finishReason: "stop");
                 break;
 

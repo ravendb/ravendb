@@ -173,7 +173,7 @@ jobs:
         run: |
           set -eu
           for i in $(seq 1 60); do
-            CODE=$(docker exec quill-pr-check curl -sk -o /dev/null -w "%{http_code}" https://127.0.0.1/healthz 2>/dev/null || true)
+            CODE=$(docker exec quill-pr-check curl -sk -o /dev/null -w "%{http_code}" --resolve api.localhost:443:127.0.0.1 https://api.localhost/healthz 2>/dev/null || true)
             case "$CODE" in
               200|503) echo "healthz responded HTTP $CODE via :443 - OK"; exit 0 ;;
               000|"")  echo "attempt $i: not yet"; sleep 2 ;;
@@ -189,8 +189,8 @@ jobs:
           set -eu
           c=quill-pr-check
           T=aabbccddeeff00112233445566778899
-          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/apps/acme/embed/$T" || true
-          docker exec "$c" curl -sk -o /dev/null "https://127.0.0.1/APPS/acme/EMBED/$T" || true
+          docker exec "$c" curl -sk -o /dev/null --resolve public.localhost:443:127.0.0.1 "https://public.localhost/apps/acme/embed/$T" || true
+          docker exec "$c" curl -sk -o /dev/null --resolve public.localhost:443:127.0.0.1 "https://public.localhost/APPS/acme/EMBED/$T" || true
           sleep 1
           log=$(docker exec "$c" cat /var/lib/quill/proxy/access.log 2>/dev/null || true)
           echo "$log" | grep -i embed || true

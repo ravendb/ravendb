@@ -314,7 +314,7 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Health_reports_token_validity_per_channel_and_caches_the_verdict()
+    public async Task Health_reports_token_validity_per_channel()
     {
         await using var app = await NewAppAsync();
         var agentId = await SeedAgentAsync(app);
@@ -325,21 +325,22 @@ public class DiscordChannelEndpointsTests(ITestOutputHelper output, QuillDiscord
 
         var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
             ChannelType.Discord, agentId, null, DisplayName: "Support bot", Discord: new(botToken)));
+        await Discord.WaitUntilConnectedAsync();
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+        await Discord.WaitUntilAsync(() => Discord.IsConnected == false, "the gateway to disconnect");
+        var applicationCallsAfterProvision = Discord.ApplicationCalls.Count(t => t == botToken);
 
         var rows = await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(
             Host.Client, QuillRoutes.DiscordHealth(app.Slug));
 
+        Assert.Equal(applicationCallsAfterProvision, Discord.ApplicationCalls.Count(t => t == botToken));
         var row = Assert.Single(rows, r => r.ChannelId == created.ChannelId);
         Assert.True(row.TokenValid);
         Assert.Null(row.TokenError);
         Assert.Equal(applicationId, row.ApplicationId);
         Assert.Equal(botUserId, row.BotUserId);
-        Assert.True(row.Enabled);
+        Assert.False(row.Enabled);
         Assert.Null(row.LastInboundAt);
-
-        var callsAfterFirstPoll = Discord.IdentityCalls.Count;
-        await QuillHttp.GetAsync<DiscordChannelHealthResponse[]>(Host.Client, QuillRoutes.DiscordHealth(app.Slug));
-        Assert.Equal(callsAfterFirstPoll, Discord.IdentityCalls.Count);
     }
 
     private static async Task<string> SeedAgentAsync(QuillApp app, params AiAgentParameter[] parameters)

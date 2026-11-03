@@ -54,7 +54,7 @@ export const defaultApiMocks = {
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
-    slack: [slackMocks.webhookInfo(), slackMocks.health()],
+    slack: [slackMocks.health()],
     discord: [discordMocks.health()],
     dns: [dnsMocks.ipBinding()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],

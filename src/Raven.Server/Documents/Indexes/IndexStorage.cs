@@ -78,6 +78,8 @@ namespace Raven.Server.Documents.Indexes
 
         private long _lastDatabaseEtagOnIndexCreation;
 
+        private long _lastCompareExchangeIndexOnIndexCreation;
+
         public const int MaxNumberOfKeptErrors = 500;
 
         internal bool SimulateCorruption = false;
@@ -155,7 +157,7 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
                 tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
-                _lastDatabaseEtagOnIndexCreation = InitializeLastDatabaseEtagOnIndexCreation(context);
+                InitializeLastEtagsOnIndexCreation(context);
 
                 _index.Definition.Persist(context, _environment.Options);
 
@@ -266,32 +268,45 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private long InitializeLastDatabaseEtagOnIndexCreation(TransactionOperationContext indexContext)
+        private void InitializeLastEtagsOnIndexCreation(TransactionOperationContext indexContext)
         {
-            const string key = "LastEtag";
+            const string lastEtagKey = "LastEtag";
+            const string lastCompareExchangeIndexKey = "LastCompareExchangeIndex";
 
             if (_environment.IsNew == false)
             {
                 var tree = indexContext.Transaction.InnerTransaction.ReadTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
-                var result = tree?.Read(key);
-                return result?.Reader.Read<long>() ?? 0;
+                _lastDatabaseEtagOnIndexCreation = tree?.Read(lastEtagKey)?.Reader.Read<long>() ?? 0;
+                _lastCompareExchangeIndexOnIndexCreation = tree?.Read(lastCompareExchangeIndexKey)?.Reader.Read<long>() ?? 0;
+                return;
             }
 
-            using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, _index))
+            // the map step loads every document and compare exchange value that exists at this point,
+            // so the references workers don't need to handle them
+            using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, needsServerContext: true))
             using (queryContext.OpenReadTransaction())
-            using (Slice.From(indexContext.Allocator, key, out var slice))
+            using (Slice.From(indexContext.Allocator, lastEtagKey, out var lastEtagSlice))
+            using (Slice.From(indexContext.Allocator, lastCompareExchangeIndexKey, out var lastCompareExchangeIndexSlice))
             {
-                var lastDatabaseEtag = DocumentDatabase.DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
-                var tree = indexContext.Transaction.InnerTransaction.CreateTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
-                tree.Add(slice, lastDatabaseEtag);
+                _lastDatabaseEtagOnIndexCreation = DocumentDatabase.DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
+                _lastCompareExchangeIndexOnIndexCreation = DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
 
-                return lastDatabaseEtag;
+                var tree = indexContext.Transaction.InnerTransaction.CreateTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
+                tree.Add(lastEtagSlice, _lastDatabaseEtagOnIndexCreation);
+                tree.Add(lastCompareExchangeIndexSlice, _lastCompareExchangeIndexOnIndexCreation);
             }
         }
+
+        public long LastDatabaseEtagOnIndexCreation => _lastDatabaseEtagOnIndexCreation;
 
         public bool LowerThanLastDatabaseEtagOnIndexCreation(long currentEtag)
         {
             return _lastDatabaseEtagOnIndexCreation >= currentEtag;
+        }
+
+        public bool LowerThanLastCompareExchangeIndexOnIndexCreation(long currentIndex)
+        {
+            return _lastCompareExchangeIndexOnIndexCreation >= currentIndex;
         }
 
         public void WriteDefinition(IndexDefinitionBaseServerSide indexDefinition, TimeSpan? timeout = null)
