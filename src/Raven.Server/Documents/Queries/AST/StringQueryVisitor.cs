@@ -249,6 +249,13 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitBetween(BetweenExpression expr)
         {
+            // a folded between prints as the comparisons it came from, so a shard parses what the user wrote and folds it again
+            if (expr.Folded || expr.MinInclusive == false || expr.MaxInclusive == false)
+            {
+                VisitCompoundWhereExpression(new BinaryExpression(expr.LowerBound(), expr.UpperBound(), OperatorType.And));
+                return;
+            }
+
             EnsureSpace();
 
             VisitExpression(expr.Source);

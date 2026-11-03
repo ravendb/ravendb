@@ -35,6 +35,202 @@ public static class QueryBuilderHelper
 {
     internal const int ScoreId = -1;
 
+    internal static bool IsRangeBound(BinaryExpression expression)
+    {
+        return expression.IsRangeOperation && expression.Right is ValueExpression;
+    }
+
+    // a folded between may mix value kinds, which a between translates as one, so it is translated as the two comparisons
+    // it came from; a null side stays a between, which reads it as an open end
+    internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
+        out BinaryExpression lower, out BinaryExpression upper)
+    {
+        lower = null;
+        upper = null;
+
+        if (between.Folded == false)
+            return false;
+
+        var (_, minType) = GetValue(query, metadata, parameters, between.Min);
+        var (_, maxType) = GetValue(query, metadata, parameters, between.Max);
+        if (minType == maxType || minType == ValueTokenType.Null || maxType == ValueTokenType.Null)
+            return false;
+
+        lower = between.LowerBound();
+        upper = between.UpperBound();
+        return true;
+    }
+
+    // FieldExpression.Equals ignores the first path segment to tolerate an alias, which would match 'Origin.X' with 'Destination.X'
+    internal static bool IsSameField(QueryExpression first, QueryExpression second)
+    {
+        if (first is FieldExpression firstField && second is FieldExpression secondField)
+            return firstField.FieldValue == secondField.FieldValue;
+
+        return first.Equals(second);
+    }
+
+    // lower bounds keep the greater value, upper bounds the lesser; on a tie the strict operator wins
+    internal static BinaryExpression TighterBound(BinaryExpression first, BinaryExpression second, int comparison)
+    {
+        if (comparison == 0)
+            return first.Operator is OperatorType.GreaterThan or OperatorType.LessThan ? first : second;
+
+        if (first.IsGreaterThan)
+            return comparison > 0 ? first : second;
+
+        return comparison < 0 ? first : second;
+    }
+
+    // walks the bounds on one field the metadata placed next to each other along the left spine of the 'and' chain and keeps
+    // the tighter ones; what the walk did not consume comes back as the remainder, null when it consumed the whole chain
+    internal static bool TryMergeSameDirectionBounds(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
+        out QueryExpression tighter, out QueryExpression remainder)
+    {
+        tighter = null;
+        remainder = null;
+
+        if (TryGetBoundField(and.Right, out var field) == false)
+            return false;
+
+        QueryFieldName fieldName = null;
+        var merged = false;
+        tighter = and.Right;
+        QueryExpression node = and.Left;
+
+        while (node != null)
+        {
+            QueryExpression candidate;
+            QueryExpression rest;
+            if (node is BinaryExpression { Operator: OperatorType.And } inner && TryGetBoundField(inner.Right, out var candidateField))
+            {
+                candidate = inner.Right;
+                rest = inner.Left;
+            }
+            else if (TryGetBoundField(node, out candidateField))
+            {
+                candidate = node;
+                rest = null;
+            }
+            else
+                break;
+
+            if (IsSameField(candidateField, field) == false)
+                break;
+
+            fieldName ??= ExtractIndexFieldName(query, parameters, field, metadata);
+
+            var tightened = Tighten(candidate, tighter, query, metadata, parameters, index, fieldName);
+            if (tightened == null)
+                break;
+
+            tighter = tightened;
+            merged = true;
+            node = rest;
+        }
+
+        if (merged == false)
+        {
+            tighter = null;
+            return false;
+        }
+
+        remainder = node;
+        return true;
+    }
+
+    private static bool TryGetBoundField(QueryExpression expression, out QueryExpression field)
+    {
+        switch (expression)
+        {
+            case BinaryExpression bound when IsRangeBound(bound):
+                field = bound.Left;
+                return true;
+            case BetweenExpression { Folded: true } between:
+                field = between.Source;
+                return true;
+            default:
+                field = null;
+                return false;
+        }
+    }
+
+    // null when the values cannot be compared. Two bare bounds of opposite directions stay apart: the metadata paired every
+    // pair it could, and one that reaches the builders apart is a between of mixed kinds taken apart on purpose
+    private static QueryExpression Tighten(QueryExpression first, QueryExpression second, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters,
+        Index index, QueryFieldName fieldName)
+    {
+        if (first is BinaryExpression firstBound && second is BinaryExpression secondBound && firstBound.IsGreaterThan != secondBound.IsGreaterThan)
+            return null;
+
+        var (firstLower, firstUpper) = Sides(first);
+        var (secondLower, secondUpper) = Sides(second);
+
+        if (TryTightenSide(firstLower, secondLower, out var lower) == false || TryTightenSide(firstUpper, secondUpper, out var upper) == false)
+            return null;
+
+        if (lower == null)
+            return upper;
+
+        if (upper == null)
+            return lower;
+
+        return new BetweenExpression(lower.Left, (ValueExpression)lower.Right, (ValueExpression)upper.Right)
+        {
+            MinInclusive = lower.Operator == OperatorType.GreaterThanEqual,
+            MaxInclusive = upper.Operator == OperatorType.LessThanEqual,
+            Folded = true
+        };
+
+        bool TryTightenSide(BinaryExpression a, BinaryExpression b, out BinaryExpression side)
+        {
+            side = a ?? b;
+            if (a == null || b == null)
+                return true;
+
+            var comparison = CompareBoundValues(query, metadata, parameters, index, fieldName, (ValueExpression)a.Right, (ValueExpression)b.Right);
+            if (comparison == null)
+                return false;
+
+            side = TighterBound(a, b, comparison.Value);
+            return true;
+        }
+
+        static (BinaryExpression Lower, BinaryExpression Upper) Sides(QueryExpression expression)
+        {
+            return expression switch
+            {
+                BetweenExpression between => (between.LowerBound(), between.UpperBound()),
+                BinaryExpression { IsGreaterThan: true } lower => (lower, null),
+                BinaryExpression upper => (null, upper),
+                _ => throw new InvalidOperationException("Expected a range bound or a between, but got: " + expression)
+            };
+        }
+    }
+
+    // a long against a double is not comparable, each queries its own term of the field
+    private static int? CompareBoundValues(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index, QueryFieldName fieldName,
+        ValueExpression first, ValueExpression second)
+    {
+        var (firstValue, firstType) = GetValue(query, metadata, parameters, first);
+        var (secondValue, secondType) = GetValue(query, metadata, parameters, second);
+
+        if (firstType != secondType)
+            return null;
+
+        switch (firstType)
+        {
+            case ValueTokenType.Long:
+                return ((long)firstValue).CompareTo((long)secondValue);
+            case ValueTokenType.Double:
+                return ((double)firstValue).CompareTo((double)secondValue);
+            case ValueTokenType.String when TryUseTime(index, fieldName, firstValue, secondValue, exact: false, out var firstTicks, out var secondTicks):
+                return firstTicks.CompareTo(secondTicks);
+            default:
+                return null;
+        }
+    }
+
     internal static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,
         BlittableJsonReaderObject parameters, ValueExpression value)
     {

@@ -8,6 +8,8 @@ namespace Raven.Server.Documents.Queries.AST
         public bool MinInclusive = true;
         public bool MaxInclusive = true;
 
+        public bool Folded;
+
         public BetweenExpression(QueryExpression source, ValueExpression min, ValueExpression max)
         {
             Source = source;
@@ -15,6 +17,11 @@ namespace Raven.Server.Documents.Queries.AST
             Max = max;
             Type = ExpressionType.Between;
         }
+
+        // the two comparisons the between stands for, each with its own inclusivity
+        public BinaryExpression LowerBound() => new BinaryExpression(Source, Min, MinInclusive ? OperatorType.GreaterThanEqual : OperatorType.GreaterThan);
+
+        public BinaryExpression UpperBound() => new BinaryExpression(Source, Max, MaxInclusive ? OperatorType.LessThanEqual : OperatorType.LessThan);
 
         public override string ToString()
         {
