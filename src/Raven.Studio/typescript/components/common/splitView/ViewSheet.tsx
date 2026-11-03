@@ -2,11 +2,12 @@ import classNames from "classnames";
 import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
-import { ComponentProps, PropsWithChildren, ReactNode, useCallback } from "react";
+import { ComponentProps, PropsWithChildren, ReactNode, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 
 export type ViewSheetWidth = number | `${number}%`;
 
@@ -156,6 +157,15 @@ export function useViewSheet() {
         isOpen: !!sheetComponent,
         activeSheetOwnerId,
     };
+}
+
+export function useSheetDirtyFlag(isDirty: boolean) {
+    const dirtyFlag = useDirtyFlag(isDirty);
+    const { registerSheetDirtyFlag } = useSplitViewContext();
+
+    useEffect(() => registerSheetDirtyFlag(dirtyFlag.id), [dirtyFlag.id, registerSheetDirtyFlag]);
+
+    return dirtyFlag;
 }
 
 ViewSheet.Header = SheetHeader;

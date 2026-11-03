@@ -1,11 +1,11 @@
 import { rtlRender } from "test/rtlTestUtils";
 import Button from "react-bootstrap/Button";
-import { useViewSheet, ViewSheet } from "./ViewSheet";
+import { useSheetDirtyFlag, useViewSheet, ViewSheet } from "./ViewSheet";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
 
 function FormSheet({ isDirty }: { isDirty: boolean }) {
-    useDirtyFlag(isDirty);
+    useSheetDirtyFlag(isDirty);
 
     return (
         <ViewSheet>

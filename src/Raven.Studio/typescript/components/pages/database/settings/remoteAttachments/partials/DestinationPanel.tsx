@@ -33,8 +33,7 @@ import {
 } from "components/pages/database/settings/remoteAttachments/partials/RemoteAttachmentsFields";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
-import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useSheetDirtyFlag, useViewSheet, ViewSheet } from "components/common/splitView/ViewSheet";
 import { remoteAttachmentsConstants } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsConstants";
 import { remoteAttachmentsUtils } from "components/pages/database/settings/remoteAttachments/remoteAttachmentsUtils";
 import { OptionWithIcon, SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
@@ -157,7 +156,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
 
     const { control, watch, handleSubmit, trigger, setValue, formState } = form;
 
-    useDirtyFlag(formState.isDirty);
+    useSheetDirtyFlag(formState.isDirty);
 
     const formValues = useWatch({ control });
 

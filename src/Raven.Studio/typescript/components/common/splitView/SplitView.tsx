@@ -19,17 +19,13 @@ import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 import useConfirm from "components/common/ConfirmDialog";
-import { DirtyFlagProvider, useDirtyFlag } from "components/hooks/useDirtyFlag";
-
-interface PageDirtyState {
-    isDirty: boolean;
-    customDialog?: () => JQueryDeferred<confirmDialogResult>;
-}
+import { useDirtyFlagRegistry } from "components/hooks/useDirtyFlag";
 
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
     confirmBeforeClose: (action: () => void) => void;
+    registerSheetDirtyFlag: (dirtyFlagId: string) => () => void;
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
     setActiveSheetOwnerId: (ownerId: string | null) => void;
@@ -49,21 +45,20 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
-    const [pageDirtyState, setPageDirtyState] = useState<PageDirtyState>({ isDirty: false });
-    const [isSheetDirty, setIsSheetDirty] = useState(false);
+    const sheetDirtyFlagIdsRef = useRef(new Set<string>());
+    const { isDirty } = useDirtyFlagRegistry();
     const confirm = useConfirm();
 
-    useDirtyFlag(pageDirtyState.isDirty || isSheetDirty, pageDirtyState.customDialog);
-
-    const setIsPageDirty = useCallback(
-        (isDirty: boolean, customDialog?: PageDirtyState["customDialog"]) =>
-            setPageDirtyState({ isDirty, customDialog }),
-        []
-    );
+    const registerSheetDirtyFlag = useCallback((dirtyFlagId: string) => {
+        sheetDirtyFlagIdsRef.current.add(dirtyFlagId);
+        return () => {
+            sheetDirtyFlagIdsRef.current.delete(dirtyFlagId);
+        };
+    }, []);
 
     const confirmBeforeClose = useCallback(
         (action: () => void) => {
-            if (!isSheetDirty) {
+            if (!Array.from(sheetDirtyFlagIdsRef.current).some(isDirty)) {
                 action();
                 return;
             }
@@ -76,7 +71,7 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
                 confirmIcon: "trash",
             }).then((isConfirmed) => isConfirmed && action());
         },
-        [confirm, isSheetDirty]
+        [confirm, isDirty]
     );
 
     const setSheetComponent = useCallback((component: ReactNode) => {
@@ -85,8 +80,6 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
             onSheetCloseRef.current = null;
             setActiveSheetOwnerId(null);
         }
-        // useDirtyFlag does not reset on unmount, so the replaced sheet's flag is cleared here
-        setIsSheetDirty(false);
         setSheetComponentState(component);
     }, []);
 
@@ -103,24 +96,29 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
             sheetComponent,
             setSheetComponent,
             confirmBeforeClose,
+            registerSheetDirtyFlag,
             registerSheetClose,
             activeSheetOwnerId,
             setActiveSheetOwnerId,
             sheetPortalNode,
             setSheetPortalNode,
         }),
-        [sheetComponent, setSheetComponent, confirmBeforeClose, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
+        [
+            sheetComponent,
+            setSheetComponent,
+            confirmBeforeClose,
+            registerSheetDirtyFlag,
+            registerSheetClose,
+            activeSheetOwnerId,
+            sheetPortalNode,
+        ]
     );
 
     return (
         <SplitViewContext.Provider value={contextValue}>
             <div className="split-view">
-                <DirtyFlagProvider setIsDirty={setIsPageDirty}>
-                    <BodyWrapper>{props.children}</BodyWrapper>
-                </DirtyFlagProvider>
-                <DirtyFlagProvider setIsDirty={setIsSheetDirty}>
-                    <SheetWrapper>{sheetComponent}</SheetWrapper>
-                </DirtyFlagProvider>
+                <BodyWrapper>{props.children}</BodyWrapper>
+                <SheetWrapper>{sheetComponent}</SheetWrapper>
             </div>
         </SplitViewContext.Provider>
     );
