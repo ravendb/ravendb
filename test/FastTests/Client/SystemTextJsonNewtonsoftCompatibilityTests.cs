@@ -910,6 +910,21 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PopulateEntityReportsFailuresAsInvalidOperation(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Age\":\"not a number\"}", "populate"))
+        {
+            var exception = Assert.Throws<InvalidOperationException>(() => conventions.Serialization.DefaultConverter.PopulateEntity(new Person(), json));
+            Assert.NotNull(exception.InnerException);
+        }
+    }
+
     private class WithServiceConstructor
     {
         public WithServiceConstructor(string name, int age, IServiceProvider services)
