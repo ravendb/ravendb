@@ -80,7 +80,9 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
                 if (queueConfig.BrokerType != BrokerType ||
                     queueConfig.SkipAutomaticQueueDeclaration != SkipAutomaticQueueDeclaration ||
                     EnumerableExtension.ContentEqualsIgnoringOrder(queueConfig.Queues, Queues) == false)
+                {
                     diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+                }
             }
 
             return diff;

@@ -48,7 +48,9 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
             if (config is ElasticSearchEtlConfiguration elasticConfig)
             {
                 if (EnumerableExtension.ContentEqualsIgnoringOrder(elasticConfig.ElasticIndexes, ElasticIndexes) == false)
+                {
                     diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+                }
             }
 
             return diff;
