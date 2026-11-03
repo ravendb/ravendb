@@ -80,17 +80,6 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions Default = new();
 
-        internal static readonly DocumentConventions DefaultForServer = new()
-        {
-            SendApplicationIdentifier = false,
-            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
-#if NETCOREAPP3_1_OR_GREATER
-            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
-#endif
-            DisposeCertificate = false,
-            DisableTopologyCache = true
-        };
-
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
 
         private static readonly bool DefaultDisableTcpCompression = false;
@@ -223,40 +212,12 @@ namespace Raven.Client.Documents.Conventions
         static DocumentConventions()
         {
 #if NETCOREAPP3_1_OR_GREATER
-            var httpPooledConnectionLifetimeAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC");
-            if (httpPooledConnectionLifetimeAsString != null)
-            {
-                if (int.TryParse(httpPooledConnectionLifetimeAsString, out var httpPooledConnectionLifetime) == false)
-                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC' env variable with value '{httpPooledConnectionLifetimeAsString}'.");
-
-                DefaultForServer.HttpPooledConnectionLifetime = httpPooledConnectionLifetime < 0
-                    ? null
-                    : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
-            }
-
-            var httpVersionAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_VERSION");
-            if (httpVersionAsString != null)
-            {
-                Version httpVersion;
-                try
-                {
-                    httpVersion = Version.Parse(httpVersionAsString);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_VERSION' env variable with value '{httpVersionAsString}'.", e);
-                }
-
-                DefaultForServer.HttpVersion = httpVersion;
-            }
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                 (RuntimeInformation.ProcessArchitecture == Architecture.Arm || RuntimeInformation.ProcessArchitecture == Architecture.Arm64) &&
                 IsZstdAvailable() == false)
             {
                 DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
                 Default.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
-                DefaultForServer.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
             }
 
             var httpCompressionAlgorithmAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_COMPRESSION_ALGORITHM");
@@ -274,7 +235,6 @@ namespace Raven.Client.Documents.Conventions
 
                 DefaultHttpCompressionAlgorithm = httpCompressionAlgorithm;
                 Default.HttpCompressionAlgorithm = httpCompressionAlgorithm;
-                DefaultForServer.HttpCompressionAlgorithm = httpCompressionAlgorithm;
             }
 #endif
 
@@ -288,7 +248,6 @@ namespace Raven.Client.Documents.Conventions
 #endif
 
             Default.Freeze();
-            DefaultForServer.Freeze();
         }
 
 #if NETCOREAPP3_1_OR_GREATER
