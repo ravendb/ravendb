@@ -283,6 +283,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 valueJson = valueStream.ToArray();
             }
 
+            if (valueJson.Length < 2 || valueJson[0] != (byte)'{')
+            {
+                writer.WriteRawValue(valueJson, skipInputValidation: true);
+                return;
+            }
+
             using (var stream = new MemoryStream())
             {
                 using (var typeWriter = new Utf8JsonWriter(stream, SystemTextJsonSerializationConventions.MetadataWriterOptions))
