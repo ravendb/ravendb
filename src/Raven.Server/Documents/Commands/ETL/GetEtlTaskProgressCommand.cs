@@ -25,7 +25,7 @@ internal sealed class GetEtlTaskProgressCommand : RavenCommand<EtlTaskProgress[]
     {
         url = $"{node.Url}/databases/{node.Database}/etl/progress";
 
-        var separator = '?';
+        char separator = '?';
 
         if (_names is { Length: > 0 })
         {

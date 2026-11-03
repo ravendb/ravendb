@@ -1676,7 +1676,7 @@ namespace Voron.Data.Fixed
 
         public NumberOfEntriesAfterResult GetNumberOfEntriesAfter(TVal value, Stopwatch overallDuration, EstimationAccuracy accuracy)
         {
-            var result = new NumberOfEntriesAfterResult
+            NumberOfEntriesAfterResult result = new NumberOfEntriesAfterResult
             {
                 Total = NumberOfEntries
             };

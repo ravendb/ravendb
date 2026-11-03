@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override RavenCommand<IReplicationTaskProgress[]> CreateCommandForNode(string nodeTag)
         {
-            var exact = IsExact();
+            bool exact = IsExact();
 
             if (_internalReplication)
                 return new GetOutgoingInternalReplicationProgressCommand(nodeTag, exact);

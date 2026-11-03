@@ -24,7 +24,7 @@ internal sealed class EtlHandlerProcessorForProgress : AbstractEtlHandlerProcess
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        var exact = RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
+        bool exact = RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, RequestHandler.ResponseBodyStream()))

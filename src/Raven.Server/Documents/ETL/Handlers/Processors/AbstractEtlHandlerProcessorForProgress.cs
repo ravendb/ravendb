@@ -19,7 +19,7 @@ internal abstract class AbstractEtlHandlerProcessorForProgress<TRequestHandler, 
     protected override RavenCommand<EtlTaskProgress[]> CreateCommandForNode(string nodeTag)
     {
         var names = GetNames();
-        var exact = RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
+        bool exact = RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 
         return new GetEtlTaskProgressCommand(names, nodeTag, exact);
     }

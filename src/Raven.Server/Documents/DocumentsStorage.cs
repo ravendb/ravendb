@@ -2475,7 +2475,7 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                    CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                     if (collectionName == null)
                         return new NumberOfEntriesAfterResult();
 
@@ -2487,7 +2487,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+                CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
                 if (collectionName == null)
                     return new NumberOfEntriesAfterResult();
 

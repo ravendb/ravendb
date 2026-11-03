@@ -14,6 +14,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -162,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration, bool exact)
         {
-            var entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
+            NumberOfEntriesAfterResult entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
                 queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
             progressStats.AddItems(entriesAfter);

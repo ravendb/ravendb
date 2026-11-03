@@ -73,6 +73,7 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.Containers;
+using Voron.Data.Fixed;
 using Voron.Data.PostingLists;
 using Voron.Debugging;
 using Voron.Exceptions;
@@ -3087,7 +3088,7 @@ namespace Raven.Server.Documents.Indexes
         internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration, bool exact)
         {
-            var entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
+            NumberOfEntriesAfterResult entriesAfter = collectionName == Constants.Documents.Collections.AllDocumentsCollection
                 ? DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
                     queryContext.Documents, progressStats.LastProcessedItemEtag, overallDuration, exact)
                 : DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(

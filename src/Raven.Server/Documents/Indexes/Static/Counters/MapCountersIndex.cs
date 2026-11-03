@@ -18,6 +18,7 @@ using Raven.Server.Documents.Queries.Results.Counters;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
             Stopwatch overallDuration, bool exact)
         {
-            var entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
+            NumberOfEntriesAfterResult entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
                 queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
             progressStats.AddItems(entriesAfter);

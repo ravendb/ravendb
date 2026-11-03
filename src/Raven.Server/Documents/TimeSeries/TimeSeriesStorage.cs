@@ -2473,7 +2473,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            Table table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
             TableSchema.FixedSizeKeyIndexDef indexDef = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }

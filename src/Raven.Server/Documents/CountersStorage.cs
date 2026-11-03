@@ -1944,23 +1944,23 @@ namespace Raven.Server.Documents
         public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, long afterEtag, Stopwatch overallDuration, bool exact)
         {
             var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
-            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
+            TableSchema.FixedSizeKeyIndexDef indexDef = CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice];
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            var collection = _documentsStorage.GetCollection(collectionName, throwIfDoesNotExist: false);
+            CollectionName collection = _documentsStorage.GetCollection(collectionName, throwIfDoesNotExist: false);
             if (collection == null)
                 return new NumberOfEntriesAfterResult();
 
-            var counterTombstonesTableName = collection.GetTableName(CollectionTableType.CounterTombstones);
-            var table = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
+            string counterTombstonesTableName = collection.GetTableName(CollectionTableType.CounterTombstones);
+            Table table = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
 
             if (table == null)
                 return new NumberOfEntriesAfterResult();
 
-            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice];
+            TableSchema.FixedSizeKeyIndexDef indexDef = CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice];
 
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }

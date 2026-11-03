@@ -33,8 +33,8 @@ internal sealed class IndexHandlerProcessorForProgress : AbstractIndexHandlerPro
 
     private IEnumerable<IndexProgress> GetIndexesProgress()
     {
-        var names = GetNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var exact = IsExact();
+        HashSet<string> names = GetNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool exact = IsExact();
 
         using (var context = QueryOperationContext.Allocate(RequestHandler.Database, needsServerContext: true))
         using (context.OpenReadTransaction())

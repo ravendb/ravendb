@@ -17,8 +17,8 @@ internal abstract class AbstractIndexHandlerProcessorForProgress<TRequestHandler
 
     protected override RavenCommand<IndexProgress[]> CreateCommandForNode(string nodeTag)
     {
-        var names = GetNames();
-        var exact = IsExact();
+        StringValues names = GetNames();
+        bool exact = IsExact();
         return new GetIndexesProgressCommand(nodeTag, names, exact);
     }
 

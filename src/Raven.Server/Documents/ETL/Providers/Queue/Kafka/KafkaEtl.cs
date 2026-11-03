@@ -42,7 +42,7 @@ public sealed class KafkaEtl : QueueEtl<KafkaItem>
 
     public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact)
     {
-        var result = base.GetProgress(documentsContext, exact);
+        EtlProcessProgress result = base.GetProgress(documentsContext, exact);
         result.TransactionalId = TransactionalId;
         return result;
     }

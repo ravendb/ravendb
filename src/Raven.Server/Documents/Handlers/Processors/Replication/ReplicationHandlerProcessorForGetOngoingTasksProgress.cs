@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         public IDictionary<long, ReplicationTaskProgress> GetProcessesProgress(DocumentsOperationContext context, StringValues names)
         {
             var replicationTasks = new Dictionary<long, ReplicationTaskProgress>();
-            var isExact = IsExact();
+            bool isExact = IsExact();
 
             foreach (var handler in RequestHandler.Database.ReplicationLoader.OutgoingHandlers)
             {

@@ -23,11 +23,11 @@ internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
     {
         url = $"{node.Url}/databases/{node.Database}/indexes/progress";
 
-        var separator = '?';
+        char separator = '?';
 
         if (_names is { Length: > 0 })
         {
-            for (var i = 0; i < _names.Length; i++)
+            for (int i = 0; i < _names.Length; i++)
             {
                 url += $"{separator}name={Uri.EscapeDataString(_names[i])}";
                 separator = '&';

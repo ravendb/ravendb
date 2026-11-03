@@ -19,7 +19,7 @@ internal sealed class AdminTombstoneHandlerProcessorForState : AbstractAdminTomb
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        var state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: IsExact());
+        TombstoneCleaner.TombstonesState state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: IsExact());
         var response = new GetTombstonesStateCommand.Response(state);
 
         using (RequestHandler.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))

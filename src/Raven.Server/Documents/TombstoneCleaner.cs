@@ -386,7 +386,7 @@ namespace Raven.Server.Documents
                         collection = string.Empty;
                     }
 
-                    var estimatedAfter = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection, overallDuration, exact);
+                    NumberOfEntriesAfterResult estimatedAfter = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection, overallDuration, exact);
 
                     var key = $"{subscription.TombstoneCleanerIdentifier}/{tombstoneInfo.Value.Name}/{collection}";
 
@@ -398,7 +398,7 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        var newSubscriptionInfo = CreateSubscriptionInfo(type, tombstoneInfo.Value, collection, estimatedAfter.Count, estimatedAfter.Estimated);
+                        SubscriptionInfoExtended newSubscriptionInfo = CreateSubscriptionInfo(type, tombstoneInfo.Value, collection, estimatedAfter.Count, estimatedAfter.Estimated);
                         PerSubscriptionInfoExtended[key] = newSubscriptionInfo;
                     }
                 }

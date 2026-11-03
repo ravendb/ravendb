@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Commands.Replication
         {
             url = $"{node.Url}/databases/{node.Database}/replication/progress";
 
-            var separator = '?';
+            char separator = '?';
 
             if (_names is { Length: > 0 })
             {

@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             var replicationTasks = new List<InternalReplicationTaskProgress>();
 
-            var isExact = IsExact();
+            bool isExact = IsExact();
 
             foreach (var handler in RequestHandler.Database.ReplicationLoader.OutgoingHandlers)
             {
