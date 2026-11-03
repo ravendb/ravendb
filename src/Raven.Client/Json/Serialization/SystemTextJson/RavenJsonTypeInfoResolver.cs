@@ -34,7 +34,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private const string NewtonsoftJTokenName = "Newtonsoft.Json.Linq.JToken";
 
-        private const string NewtonsoftJsonPropertyAttributeName = "Newtonsoft.Json.JsonPropertyAttribute";
+        internal const string NewtonsoftJsonPropertyAttributeName = "Newtonsoft.Json.JsonPropertyAttribute";
 
         private const string NewtonsoftJsonRequiredAttributeName = "Newtonsoft.Json.JsonRequiredAttribute";
 
@@ -439,9 +439,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return itemType;
         }
 
-        private static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
+        internal static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
         {
-            object[] attributes = provider.GetCustomAttributes(true);
+            object[] attributes = provider is MemberInfo member ? Attribute.GetCustomAttributes(member, inherit: true) : provider.GetCustomAttributes(true);
             for (int i = 0; i < attributes.Length; i++)
             {
                 if (attributes[i].GetType().FullName == attributeName)
