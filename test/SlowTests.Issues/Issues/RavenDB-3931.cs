@@ -2,7 +2,6 @@
 using System.IO;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Conventions;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -34,8 +33,7 @@ namespace SlowTests.Issues
             // Don't try to fix this issue without reading the details, it is a single line fix, but it
             // takes time to get to the right reason
 
-            var DocumentConventions = new DocumentConventions();
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
             var stringWriter = new StringWriter();
             jsonSerializer.Serialize(stringWriter, new Item());
             var str = stringWriter.GetStringBuilder().ToString();

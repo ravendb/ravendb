@@ -28,8 +28,8 @@ internal sealed class ValidateUnusedIdsCommand : RavenCommand
         {
             Method = HttpMethod.Post,
             Content = new BlittableJsonContent(
-                async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx))
-                    .ConfigureAwait(false), DocumentConventions.Default)
+                async stream => await ctx.WriteAsync(stream, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(_parameters, ctx))
+                    .ConfigureAwait(false), DocumentConventions.DefaultForServer)
         };
     }
 

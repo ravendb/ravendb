@@ -31,7 +31,7 @@ public sealed class GetIndexStalenessCommand : RavenCommand<GetIndexStalenessCom
 
     public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
     {
-        Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<IndexStaleness>(response);
+        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IndexStaleness>(response);
     }
 
     public sealed class IndexStaleness
