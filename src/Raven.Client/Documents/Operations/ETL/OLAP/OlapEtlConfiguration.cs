@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
         private bool Equals(OlapEtlTable other)
         {
             return string.Equals(TableName, other.TableName) &&
-                   string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase);
+                   string.Equals(DocumentIdColumn, other.DocumentIdColumn);
         }
 
         public override bool Equals(object obj)
@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(TableName, DocumentIdColumn == null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(DocumentIdColumn));
+            return HashCode.Combine(TableName, DocumentIdColumn);
         }
 
         public DynamicJsonValue ToJson()
