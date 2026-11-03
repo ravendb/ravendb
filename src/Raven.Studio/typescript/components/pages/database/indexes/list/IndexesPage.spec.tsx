@@ -78,7 +78,7 @@ describe("IndexesPage", function () {
         await waitFor(() => expect(getProgress).toHaveBeenCalled());
 
         // the periodic refresh is not scoped to any index, so the server reports every stale index
-        expect(getProgress).toHaveBeenLastCalledWith(expect.any(String), expect.anything());
+        expect(getProgress).toHaveBeenLastCalledWith(expect.any(String), expect.anything(), null, false, []);
 
         const distributionItems = screen.queryAllByClassName("distribution-item");
         expect(distributionItems.length).toBeGreaterThan(0);
@@ -97,6 +97,35 @@ describe("IndexesPage", function () {
             )
         );
         expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+    });
+
+    it("skips the indexes with exact progress in the estimated progress request", async () => {
+        jest.useFakeTimers({ advanceTimers: true });
+        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+            expect(await screen.findByText("show estimated counts")).toBeInTheDocument();
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+
+            await waitFor(() =>
+                expect(getProgress).toHaveBeenCalledWith(expect.any(String), expect.anything(), null, false, [
+                    "StaleInProgress",
+                ])
+            );
+        } finally {
+            jest.useRealTimers();
+        }
     });
 
     it("keeps the estimated counts when the exact progress request fails", async () => {

@@ -201,8 +201,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         const exactNames = getExactProgressIndexNames();
 
         try {
-            // not scoped, so the server also reports the indexes that became stale since the last stats refresh
-            const progress = await indexesService.getProgress(db.name, location);
+            // not scoped, so the server also reports the indexes that became stale since the last stats refresh;
+            // the indexes with exact progress are skipped, the exact request covers them
+            const progress = await indexesService.getProgress(db.name, location, null, false, exactNames);
 
             if (!isLatestRequest()) {
                 return;

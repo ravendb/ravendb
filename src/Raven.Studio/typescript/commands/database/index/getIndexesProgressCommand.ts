@@ -4,20 +4,8 @@ import endpoints = require("endpoints");
 
 class getIndexesProgressCommand extends commandBase {
 
-    private db: database | string;
-
-    private location: databaseLocationSpecifier;
-
-    private indexNames: string[];
-
-    private exact: boolean;
-
-    constructor(db: database | string, location: databaseLocationSpecifier, indexNames: string[] = null, exact = false) {
+    constructor(private readonly db: database | string, private readonly location: databaseLocationSpecifier, private readonly indexNames: string[] = null, private readonly exact = false, private readonly excludedIndexNames: string[] = null) {
         super();
-        this.location = location;
-        this.db = db;
-        this.indexNames = indexNames;
-        this.exact = exact;
     }
 
     execute(): JQueryPromise<Raven.Client.Documents.Indexes.IndexProgress[]> {
@@ -25,6 +13,7 @@ class getIndexesProgressCommand extends commandBase {
             ...this.location,
             name: this.indexNames?.length ? this.indexNames : undefined,
             exact: this.exact ? true : undefined,
+            excludeName: this.excludedIndexNames?.length ? this.excludedIndexNames : undefined,
         };
         const url = endpoints.databases.index.indexesProgress + this.urlEncodeArgs(args);
         const extractor = (response: resultsDto<Raven.Client.Documents.Indexes.IndexProgress>) => response.Results;
