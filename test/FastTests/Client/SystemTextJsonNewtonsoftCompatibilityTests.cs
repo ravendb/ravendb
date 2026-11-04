@@ -812,6 +812,25 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsTypeNamedKey
+    {
+        public Dictionary<string, string> Headers { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonKeepsDictionaryEntriesNamedLikeTypeNamesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Headers\":{\"a\":\"1\",\"$type\":\"x\"}}", "headers"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsTypeNamedKey>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsTypeNamedKey>(json);
+
+            Assert.Equal(expected.Headers, actual.Headers);
+            Assert.Equal("x", actual.Headers["$type"]);
+        }
+    }
+
     private class HiddenBase
     {
         public double[] Max;

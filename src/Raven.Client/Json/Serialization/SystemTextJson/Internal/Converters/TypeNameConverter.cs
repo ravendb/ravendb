@@ -408,12 +408,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(typeof(string), valueType).GetProperty("Item");
 
+            bool leading = true;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
                 string key = reader.GetString();
                 reader.Read();
 
-                if (key == TypePropertyName)
+                bool isTypeName = leading && key == TypePropertyName;
+                leading = false;
+                if (isTypeName)
                     continue;
 
                 object value = Read(ref reader, valueType, options);
