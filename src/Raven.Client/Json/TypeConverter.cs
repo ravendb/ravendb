@@ -62,7 +62,7 @@ namespace Raven.Client.Json
         }
 
 
-        public static object ToBlittableSupportedType(object value, DocumentConventions conventions, JsonOperationContext context)
+        public static object ToBlittableSupportedType(object value, DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames = false)
         {
             if (value == null)
                 return null;
@@ -94,7 +94,7 @@ namespace Raven.Client.Json
                         var enumerable = (IEnumerable)value;
                         foreach (var x in enumerable)
                         {
-                            dja.Add(ToBlittableSupportedType(x, conventions, context));
+                            dja.Add(ToBlittableSupportedType(x, conventions, context, writeTypeNames));
                         }
 
                         return dja;
@@ -107,7 +107,7 @@ namespace Raven.Client.Json
                         foreach (var key in dictionary.Keys)
                         {
                             var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                            @object[keyAsString] = ToBlittableSupportedType(dictionary[key], conventions, context);
+                            @object[keyAsString] = ToBlittableSupportedType(dictionary[key], conventions, context, writeTypeNames);
                         }
 
                         return @object;
@@ -120,7 +120,7 @@ namespace Raven.Client.Json
                         foreach (var key in dDictionary.Keys)
                         {
                             var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                            @object[keyAsString] = ToBlittableSupportedType(dDictionary[key], conventions, context);
+                            @object[keyAsString] = ToBlittableSupportedType(dDictionary[key], conventions, context, writeTypeNames);
                         }
 
                         return @object;
@@ -130,7 +130,7 @@ namespace Raven.Client.Json
             if (value is Guid guid)
                 return guid.ToString("D");
 
-            return Serialize(value, conventions, context);
+            return Serialize(value, conventions, context, writeTypeNames);
         }
 
         internal static object ConvertEnum(object value, DocumentConventions conventions, JsonOperationContext context)
@@ -138,11 +138,11 @@ namespace Raven.Client.Json
             if (conventions.SaveEnumsAsIntegers)
                 return value.ToString();
 
-            object serialized = Serialize(value, conventions, context);
+            object serialized = Serialize(value, conventions, context, writeTypeNames: false);
             return serialized is LazyStringValue text ? text.ToString() : serialized;
         }
 
-        private static object Serialize(object value, DocumentConventions conventions, JsonOperationContext context)
+        private static object Serialize(object value, DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames)
         {
             using (var writer = conventions.Serialization.CreateWriter(context))
             {
@@ -151,7 +151,10 @@ namespace Raven.Client.Json
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");
 
-                serializer.Serialize(writer, value);
+                if (writeTypeNames)
+                    serializer.Serialize(writer, value, typeof(object));
+                else
+                    serializer.Serialize(writer, value);
 
                 writer.WriteEndObject();
 

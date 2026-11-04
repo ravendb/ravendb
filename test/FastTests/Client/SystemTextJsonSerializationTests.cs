@@ -1137,7 +1137,7 @@ namespace FastTests.Client
             {
                 var raw = await session.LoadAsync<BlittableJsonReaderObject>("users/1");
                 Assert.True(raw.TryGet("Payload", out BlittableJsonReaderObject payload));
-                Assert.Equal(["n"], payload.GetPropertyNames());
+                Assert.Equal(["$type", "n"], payload.GetPropertyNames());
                 Assert.Equal("x", payload["n"].ToString());
             }
         }
