@@ -17,6 +17,28 @@ namespace SlowTests.Client
         {
         }
 
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.ClusterTransactions)]
+        public async Task ForceRevisionCreationForDocumentWrittenInClusterWideTransaction()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Revisions.ForceRevisionCreationFor("companies/1");
+                    await session.SaveChangesAsync();
+
+                    var revisions = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
+                    Assert.Equal(1, revisions.Count);
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForSingleUnTrackedEntityByID()
         {

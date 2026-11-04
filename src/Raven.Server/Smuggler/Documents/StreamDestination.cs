@@ -270,6 +270,9 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteComma();
 
                 _writer.WriteArray(nameof(databaseRecord.UnusedDatabaseIds), databaseRecord.UnusedDatabaseIds);
+                _writer.WriteComma();
+
+                _writer.WriteArray(nameof(databaseRecord.SupportedFeatures), databaseRecord.SupportedFeatures);
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.LockMode))
                 {
