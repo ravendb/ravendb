@@ -28,11 +28,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             private readonly Dictionary<string, T> _enumMemberValues = new(StringComparer.OrdinalIgnoreCase);
 
+            private readonly Dictionary<string, string> _enumMemberValuesByName;
+
             private readonly bool _unsigned;
 
             public IntegerEnumConverterInner()
             {
-                foreach (KeyValuePair<string, string> entry in EnumMemberStringEnumConverter.GetEnumMemberValues(typeof(T)))
+                _enumMemberValuesByName = EnumMemberStringEnumConverter.GetEnumMemberValues(typeof(T));
+                foreach (KeyValuePair<string, string> entry in _enumMemberValuesByName)
                     _enumMemberValues[entry.Value] = (T)Enum.Parse(typeof(T), entry.Key);
 
                 _unsigned = Type.GetTypeCode(Enum.GetUnderlyingType(typeof(T))) is TypeCode.Byte or TypeCode.UInt16 or TypeCode.UInt32 or TypeCode.UInt64;
@@ -66,13 +69,42 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override void WriteAsPropertyName(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
             {
-                writer.WritePropertyName(value.ToString());
+                writer.WritePropertyName(ToPropertyName(value));
+            }
+
+            private string ToPropertyName(T value)
+            {
+                string name = value.ToString();
+                if (_enumMemberValuesByName.Count == 0)
+                    return name;
+
+                string[] names = name.Split([", "], StringSplitOptions.None);
+                for (int i = 0; i < names.Length; i++)
+                {
+                    if (_enumMemberValuesByName.TryGetValue(names[i], out string enumMemberValue))
+                        names[i] = enumMemberValue;
+                }
+
+                return string.Join(", ", names);
             }
 
             private T Parse(string text)
             {
                 if (_enumMemberValues.TryGetValue(text, out T value) || Enum.TryParse(text, ignoreCase: true, out value))
                     return value;
+
+                if (_enumMemberValues.Count > 0 && text.IndexOf(',') >= 0)
+                {
+                    string[] names = text.Split(',');
+                    for (int i = 0; i < names.Length; i++)
+                    {
+                        string name = names[i].Trim();
+                        names[i] = _enumMemberValues.TryGetValue(name, out T member) ? member.ToString() : name;
+                    }
+
+                    if (Enum.TryParse(string.Join(", ", names), ignoreCase: true, out value))
+                        return value;
+                }
 
                 throw new JsonException($"The JSON value '{text}' could not be converted to {typeof(T)}.");
             }

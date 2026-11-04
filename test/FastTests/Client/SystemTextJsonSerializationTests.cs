@@ -482,7 +482,7 @@ namespace FastTests.Client
                     Assert.Equal(1L, written[nameof(WithLevels.Level)]);
                     Assert.Equal(0L, written[nameof(WithLevels.Maybe)]);
                     Assert.Equal([0L, 1L, 1L], ((BlittableJsonReaderArray)written[nameof(WithLevels.History)]).Cast<long>());
-                    Assert.Equal(["High", "Low"], ((BlittableJsonReaderObject)written[nameof(WithLevels.ByLevel)]).GetPropertyNames().OrderBy(x => x));
+                    Assert.Equal(["High", "low-level"], ((BlittableJsonReaderObject)written[nameof(WithLevels.ByLevel)]).GetPropertyNames().OrderBy(x => x, StringComparer.Ordinal));
                 }
             }
         }

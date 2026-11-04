@@ -604,6 +604,57 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [Flags]
+    private enum Permission
+    {
+        None = 0,
+
+        [EnumMember(Value = "r")]
+        Read = 1,
+
+        [EnumMember(Value = "w")]
+        Write = 2
+    }
+
+    private class HoldsEnumKeys
+    {
+        public Dictionary<Stage, int> ByStage { get; set; }
+
+        public Dictionary<Permission, int> ByPermission { get; set; }
+
+        public static HoldsEnumKeys Create() => new()
+        {
+            ByStage = new Dictionary<Stage, int> { [Stage.InProgress] = 1, [Stage.Done] = 2 },
+            ByPermission = new Dictionary<Permission, int> { [Permission.Read] = 1, [Permission.Read | Permission.Write] = 3 }
+        };
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesEnumMemberDictionaryKeysLikeNewtonsoftWhenEnumsAreSavedAsIntegers()
+    {
+        var newtonsoft = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new NewtonsoftJsonSerializationConventions() };
+        var systemTextJson = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new SystemTextJsonSerializationConventions() };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = newtonsoft.Serialization.DefaultConverter.ToBlittable(HoldsEnumKeys.Create(), context))
+        using (BlittableJsonReaderObject actual = systemTextJson.Serialization.DefaultConverter.ToBlittable(HoldsEnumKeys.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.Equal(1, (int)actualJson["ByStage"]?["in-progress"]);
+            Assert.Equal(3, (int)actualJson["ByPermission"]?["r, w"]);
+
+            var holder = systemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsEnumKeys>(actual);
+
+            Assert.Equal(1, holder.ByStage[Stage.InProgress]);
+            Assert.Equal(2, holder.ByStage[Stage.Done]);
+            Assert.Equal(1, holder.ByPermission[Permission.Read]);
+            Assert.Equal(3, holder.ByPermission[Permission.Read | Permission.Write]);
+        }
+    }
+
     private class HoldsNewtonsoftLinq
     {
         public JObject Data { get; set; }
