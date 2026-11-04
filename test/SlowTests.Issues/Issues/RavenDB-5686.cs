@@ -1,5 +1,4 @@
 using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Server.Utils.Metrics;
 using Xunit;
 using Tests.Infrastructure;
@@ -22,7 +21,7 @@ namespace SlowTests.Issues
             {
                 using (var session = store.OpenSession())
                 {
-                    var json = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(meter, session.Advanced.Context);
+                    var json = store.Conventions.Serialization.DefaultConverter.ToBlittable(meter, session.Advanced.Context);
                     var parsed = (MeterValue)session.Advanced.JsonConverter.FromBlittable(typeof(MeterValue), ref json, "meter", trackEntity: true);
 
                     Assert.Equal(meter.Name, parsed.Name);
