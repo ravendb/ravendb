@@ -10,13 +10,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Initialize(BlittableJsonReaderObject blittable)
         {
-            if (blittable.Modifications != null)
-                blittable = blittable._context.ReadObject(blittable, "system-text-json/modifications");
+            BlittableJsonReaderObject materialized = blittable.Modifications != null
+                ? blittable._context.ReadObject(blittable, "system-text-json/modifications")
+                : null;
 
-            _buffer = new ContextMemoryBufferWriter(blittable._context, Math.Max(blittable.Size * 2, 512));
+            using (materialized)
+            {
+                BlittableJsonReaderObject source = materialized ?? blittable;
+                _buffer = new ContextMemoryBufferWriter(source._context, Math.Max(source.Size * 2, 512));
 
-            using (var stream = new BufferWriterStream(_buffer))
-                blittable.WriteJsonTo(stream);
+                using (var stream = new BufferWriterStream(_buffer))
+                    source.WriteJsonTo(stream);
+            }
 
             QuoteNamedFloatingPointLiterals(blittable._context);
         }
