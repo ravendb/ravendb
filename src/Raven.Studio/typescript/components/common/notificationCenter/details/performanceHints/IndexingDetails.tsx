@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import performanceHint from "common/notifications/models/performanceHint";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { useKnockoutValue } from "hooks/useKnockoutValue";
 import { NotificationDetailsProps } from "../notificationDetailsProvider";
 import { PerformanceHintDetailsModal } from "../NotificationDetailsModal";
@@ -69,7 +70,9 @@ export default function IndexingDetails({
             />
             {suggestions.length > 0 && (
                 <Alert variant="info" className="mb-0">
-                    <strong>{suggestions.length === 1 ? "Suggestion:" : "Suggestions:"}</strong>
+                    <strong>
+                        {pluralizeHelpers.pluralize(suggestions.length, "Suggestion:", "Suggestions:", true)}
+                    </strong>
                     {suggestions.map((suggestion) => (
                         <div key={suggestion}>{suggestion}</div>
                     ))}

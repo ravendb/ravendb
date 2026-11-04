@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { useKnockoutValue } from "hooks/useKnockoutValue";
+import useBoolean from "components/hooks/useBoolean";
 import alert from "common/notifications/models/alert";
 import performanceHint from "common/notifications/models/performanceHint";
 import notificationCenterSettings from "common/notifications/notificationCenterSettings";
@@ -87,11 +88,11 @@ export function PerformanceHintDetailsFooter({
 }
 
 function PostponeDropdown({ actions }: { actions: NotificationDetailsActions }) {
-    const [isPostponing, setIsPostponing] = useState(false);
+    const { value: isPostponing, setTrue: startPostponing, setFalse: stopPostponing } = useBoolean(false);
 
     const postpone = (timeInSeconds: number) => {
-        setIsPostponing(true);
-        actions.postpone(timeInSeconds).catch(() => setIsPostponing(false));
+        startPostponing();
+        actions.postpone(timeInSeconds).catch(stopPostponing);
     };
 
     return (
