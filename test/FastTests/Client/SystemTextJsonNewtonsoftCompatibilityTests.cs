@@ -687,6 +687,38 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class IdentifiedUntypedCollections
+    {
+        public string Id { get; set; }
+
+        public Dictionary<string, object> Data { get; set; }
+
+        public object Any { get; set; }
+
+        public static IdentifiedUntypedCollections Create() => new()
+        {
+            Id = "items/1",
+            Data = new Dictionary<string, object> { ["array"] = new object[] { 1, "a" }, ["list"] = new List<object> { 2 } },
+            Any = new List<object> { 3, "b" }
+        };
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesUntypedCollectionsOfIdentifiedEntitiesAsArraysLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(IdentifiedUntypedCollections.Create(), context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(IdentifiedUntypedCollections.Create(), context))
+        {
+            JObject expectedJson = JObject.Parse(expected.ToString());
+            JObject actualJson = JObject.Parse(actual.ToString());
+
+            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
+            Assert.IsType<JArray>(actualJson["Any"]);
+            Assert.IsType<JArray>(actualJson["Data"]?["array"]);
+        }
+    }
+
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonReadsCovariantArrayItemsWrittenByNewtonsoft()
     {

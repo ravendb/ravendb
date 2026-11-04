@@ -62,7 +62,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 return bjro;
 
             if (jsonSerializer is SystemTextJsonJsonSerializer stjSerializer)
-                return stjSerializer.SerializeToBlittable(entity, entity.GetType(), context);
+            {
+                Type type = entity.GetType();
+                return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: false,
+                    () => stjSerializer.SerializeToBlittable(entity, type, context));
+            }
 
             using (var writer = new SystemTextJsonBlittableWriter(context, documentInfo: null))
                 return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer, removeIdentityProperty: false);
