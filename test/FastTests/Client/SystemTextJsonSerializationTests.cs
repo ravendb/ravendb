@@ -201,6 +201,47 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task BulkInsertWritesMetadataValuesLikeTheSession()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            var when = new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.FromHours(2));
+            var at = new DateTime(2026, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+
+            await using (var bulkInsert = store.BulkInsert())
+            {
+                await bulkInsert.StoreAsync(new User { Name = "bulk" }, "users/bulk", new Raven.Client.Json.MetadataAsDictionary
+                {
+                    ["When"] = when,
+                    ["Info"] = new Dictionary<string, object> { ["At"] = at }
+                });
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var user = new User { Name = "session" };
+                await session.StoreAsync(user, "users/session");
+
+                var metadata = session.Advanced.GetMetadataFor(user);
+                metadata["When"] = when;
+                metadata["Info"] = new Dictionary<string, object> { ["At"] = at };
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var bulk = (BlittableJsonReaderObject)(await session.LoadAsync<BlittableJsonReaderObject>("users/bulk"))[Raven.Client.Constants.Documents.Metadata.Key];
+                var stored = (BlittableJsonReaderObject)(await session.LoadAsync<BlittableJsonReaderObject>("users/session"))[Raven.Client.Constants.Documents.Metadata.Key];
+
+                Assert.Equal(stored["When"].ToString(), bulk["When"].ToString());
+                Assert.Equal(((BlittableJsonReaderObject)stored["Info"])["At"].ToString(), ((BlittableJsonReaderObject)bulk["Info"])["At"].ToString());
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void FloatingPointNumbersAreWrittenLikeNewtonsoft()
         {
