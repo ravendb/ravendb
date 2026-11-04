@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
@@ -52,6 +53,12 @@ namespace Raven.Client.Documents.Smuggler
         public TimeSpan Elapsed => _sw.Elapsed;
 
         public IOperationProgress Progress => _progress;
+
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            _progress?.RefreshFromResult();
+        }
 
         bool IOperationResult.CanMerge => true;
 
@@ -222,6 +229,11 @@ namespace Raven.Client.Documents.Smuggler
             public SmugglerProgress(SmugglerResult result)
             {
                 _result = result;
+                RefreshFromResult();
+            }
+
+            internal void RefreshFromResult()
+            {
                 Message = _result?.Message;
                 DatabaseRecord = _result?.DatabaseRecord;
                 Documents = _result?.Documents;
