@@ -56,6 +56,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static readonly ConcurrentDictionary<Type, Dictionary<string, int>> _memberRanks = new();
 
+        private static readonly ConditionalWeakTable<object, HashSet<string>> _presentMembers = new();
+
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
 
         private static readonly object[] _callbackArguments = { new StreamingContext(StreamingContextStates.All) };
@@ -1192,6 +1194,66 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 Func<object, object> get = property.Get;
                 property.Set = (target, value) => PopulateExisting(get(target), value, options);
+
+                if (property.PropertyType != typeof(object) && typeof(IEnumerable).IsAssignableFrom(property.PropertyType) == false)
+                    TrackPresentMembers(property);
+            }
+        }
+
+        private static void TrackPresentMembers(JsonPropertyInfo property)
+        {
+            if (property.CustomConverter != null && typeof(JsonConverter<>).MakeGenericType(property.PropertyType).IsInstanceOfType(property.CustomConverter) == false)
+                return;
+
+            Type converterType = typeof(PresentMembersConverter<>).MakeGenericType(property.PropertyType);
+            property.CustomConverter = (JsonConverter)Activator.CreateInstance(converterType, property.CustomConverter);
+        }
+
+        private sealed class PresentMembersConverter<T> : JsonConverter<T>
+        {
+            private readonly JsonConverter<T> _inner;
+
+            public PresentMembersConverter(JsonConverter<T> inner)
+            {
+                _inner = inner;
+            }
+
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                HashSet<string> present = ReadPropertyNames(reader, options);
+                T value = _inner != null ? _inner.Read(ref reader, typeToConvert, options) : JsonSerializer.Deserialize<T>(ref reader, options);
+
+                if (value != null && present != null)
+                {
+                    _presentMembers.Remove(value);
+                    _presentMembers.Add(value, present);
+                }
+
+                return value;
+            }
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+            {
+                if (_inner != null)
+                    _inner.Write(writer, value, options);
+                else
+                    JsonSerializer.Serialize(writer, value, options);
+            }
+
+            private static HashSet<string> ReadPropertyNames(Utf8JsonReader reader, JsonSerializerOptions options)
+            {
+                if (reader.TokenType != JsonTokenType.StartObject)
+                    return null;
+
+                var names = new HashSet<string>(options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    names.Add(reader.GetString());
+                    if (reader.Read() == false || reader.TrySkip() == false)
+                        return null;
+                }
+
+                return names;
             }
         }
 
@@ -1216,10 +1278,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return;
 
+            _presentMembers.TryGetValue(value, out HashSet<string> present);
+
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.Get != null && property.Set != null)
+                if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(property.Name)))
                     property.Set(target, property.Get(value));
             }
         }

@@ -770,6 +770,34 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class Settings
+    {
+        public int Timeout { get; set; }
+
+        public string Name { get; set; }
+    }
+
+    private class OwnsReadOnlySettings
+    {
+        public Settings Settings { get; } = new() { Timeout = 5 };
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("{\"Settings\":{\"Name\":\"x\"}}")]
+    [InlineData("{\"Settings\":{\"Name\":\"x\",\"Timeout\":0}}")]
+    public void SystemTextJsonPopulatesReadOnlyMembersOnlyWithPresentPropertiesLikeNewtonsoft(string document)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(document, "settings"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<OwnsReadOnlySettings>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<OwnsReadOnlySettings>(json);
+
+            Assert.Equal(expected.Settings.Timeout, actual.Settings.Timeout);
+            Assert.Equal("x", actual.Settings.Name);
+        }
+    }
+
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonReadsCovariantArrayItemsWrittenByNewtonsoft()
     {
