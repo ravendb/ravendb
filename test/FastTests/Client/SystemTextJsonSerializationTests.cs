@@ -467,19 +467,22 @@ namespace FastTests.Client
             var conventions = new DocumentConventions { SaveEnumsAsIntegers = true, Serialization = new SystemTextJsonSerializationConventions() };
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Level\":\"High\",\"Maybe\":\"LOW-LEVEL\",\"History\":[0,\"high\",\"1\"]}", "levels"))
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Level\":\"High\",\"Maybe\":\"LOW-LEVEL\",\"History\":[0,\"high\",\"1\"],\"ByLevel\":{\"High\":1,\"low-level\":2}}", "levels"))
             {
                 var levels = conventions.Serialization.DefaultConverter.FromBlittable<WithLevels>(json);
 
                 Assert.Equal(Level.High, levels.Level);
                 Assert.Equal(Level.Low, levels.Maybe);
                 Assert.Equal([Level.Low, Level.High, Level.High], levels.History);
+                Assert.Equal(1, levels.ByLevel[Level.High]);
+                Assert.Equal(2, levels.ByLevel[Level.Low]);
 
                 using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(levels, context))
                 {
                     Assert.Equal(1L, written[nameof(WithLevels.Level)]);
                     Assert.Equal(0L, written[nameof(WithLevels.Maybe)]);
                     Assert.Equal([0L, 1L, 1L], ((BlittableJsonReaderArray)written[nameof(WithLevels.History)]).Cast<long>());
+                    Assert.Equal(["High", "Low"], ((BlittableJsonReaderObject)written[nameof(WithLevels.ByLevel)]).GetPropertyNames().OrderBy(x => x));
                 }
             }
         }
@@ -574,6 +577,8 @@ namespace FastTests.Client
             public Level? Maybe { get; set; }
 
             public List<Level> History { get; set; }
+
+            public Dictionary<Level, int> ByLevel { get; set; }
         }
 
         private class ExponentNumbers
