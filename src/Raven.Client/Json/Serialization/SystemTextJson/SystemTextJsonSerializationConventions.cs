@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -13,6 +15,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
@@ -276,7 +279,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return true;
         }
 
-        internal static void WriteMetadata(Utf8JsonWriter writer, IMetadataDictionary metadata)
+        internal static void WriteMetadata(Utf8JsonWriter writer, IEnumerable<KeyValuePair<string, object>> metadata)
         {
             writer.WriteStartObject();
             foreach (var kvp in metadata)
@@ -318,20 +321,37 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     writer.WriteStringValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
                     break;
                 case DateTimeOffset dto:
-                    writer.WriteStringValue(dto.UtcDateTime.GetDefaultRavenFormat(isUtc: true));
+                    writer.WriteStringValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
                     break;
                 case TimeSpan ts:
                     writer.WriteStringValue(ts.ToString("c"));
                     break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                case DateOnly @do:
+                    writer.WriteStringValue(@do.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    break;
+                case TimeOnly to:
+                    writer.WriteStringValue(to.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    break;
+#endif
                 case null:
                     writer.WriteNullValue();
                     break;
-                case IMetadataDictionary dict:
-                    WriteMetadata(writer, dict);
+                case IDictionary<string, object> dictionary:
+                    WriteMetadata(writer, dictionary);
                     break;
-                case object[] arr:
+                case IDictionary dictionary:
+                    writer.WriteStartObject();
+                    foreach (DictionaryEntry entry in dictionary)
+                    {
+                        writer.WritePropertyName(entry.Key.ToString());
+                        WriteMetadataValue(writer, entry.Value);
+                    }
+                    writer.WriteEndObject();
+                    break;
+                case IEnumerable items:
                     writer.WriteStartArray();
-                    foreach (var item in arr)
+                    foreach (object item in items)
                         WriteMetadataValue(writer, item);
                     writer.WriteEndArray();
                     break;
