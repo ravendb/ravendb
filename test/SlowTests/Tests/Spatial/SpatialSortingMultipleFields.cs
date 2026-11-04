@@ -431,6 +431,65 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Spatial | RavenTestCategory.Corax)]
+        [RavenData(true, true, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(true, false, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, true, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, false, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        public void NullsOrderingWhenSortingByTheNearestPointOfTheField(Options options, bool ascending, bool nullsFirst)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new Outlets_ByChainAndBranches().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    // the lowest latitude branch of X is the farthest one from (10, 10), its nearest one is the closest of all branches
+                    session.Store(new Outlet { Name = "X", Chain = "c1", Branches = new[] { new Location { Lat = 5, Lng = 40 }, new Location { Lat = 10.5, Lng = 10.5 } } });
+                    session.Store(new Outlet { Name = "Y", Chain = "c1", Branches = new[] { new Location { Lat = 12, Lng = 12 } } });
+                    session.Store(new Outlet { Name = "Z", Chain = "c1", Branches = new Location[0] });
+                    session.Store(new Outlet { Name = "W", Chain = "c2", Branches = new[] { new Location { Lat = 11, Lng = 11 } } });
+                    session.Store(new Outlet { Name = "V", Chain = "c2", Branches = new Location[0] });
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+
+                var nulls = nullsFirst ? NullsOrdering.First : NullsOrdering.Last;
+
+                using (var session = store.OpenSession())
+                {
+                    // the distance as the only ordering, the order between the entries without a value is not defined
+                    var byDistance = OrderByDistance(session.Advanced.DocumentQuery<Outlet, Outlets_ByChainAndBranches>())
+                        .ToList()
+                        .Select(x => x.Name)
+                        .ToList();
+
+                    var withValue = ascending ? new[] { "X", "W", "Y" } : new[] { "Y", "W", "X" };
+                    var (actualWithValue, actualWithoutValue) = nullsFirst ? (byDistance.Skip(2), byDistance.Take(2)) : (byDistance.Take(3), byDistance.Skip(3));
+                    Assert.Equal(withValue, actualWithValue);
+                    Assert.Equal(new[] { "V", "Z" }, actualWithoutValue.OrderBy(x => x));
+
+                    // the distance as a secondary ordering
+                    var byChainThenDistance = OrderByDistance(session.Advanced.DocumentQuery<Outlet, Outlets_ByChainAndBranches>().OrderBy(x => x.Chain))
+                        .ToList()
+                        .Select(x => x.Name);
+
+                    var c1 = Place(ascending ? new[] { "X", "Y" } : new[] { "Y", "X" }, "Z");
+                    var c2 = Place(new[] { "W" }, "V");
+                    Assert.Equal(c1.Concat(c2), byChainThenDistance);
+                }
+
+                IDocumentQuery<Outlet> OrderByDistance(IDocumentQuery<Outlet> query) => ascending
+                    ? query.OrderByDistance("Branches", 10, 10, nulls)
+                    : query.OrderByDistanceDescending("Branches", 10, 10, nulls);
+
+                string[] Place(string[] withValue, string withoutValue) => nullsFirst
+                    ? withValue.Prepend(withoutValue).ToArray()
+                    : withValue.Append(withoutValue).ToArray();
+            }
+        }
+
         // Z has no branches: Lucene sorts it last, Corax (nulls are the smallest by default) first
         private static string[] ExpectedAscendingShops(Options options, params string[] shopsWithBranches)
         {
@@ -527,6 +586,28 @@ namespace SlowTests.Tests.Spatial
                                    s.Name,
                                    Branches = s.Branches.Select(b => CreateSpatialField(b.Lat, b.Lng))
                                };
+            }
+        }
+
+        private class Outlet
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Chain { get; set; }
+            public Location[] Branches { get; set; }
+        }
+
+        private class Outlets_ByChainAndBranches : AbstractIndexCreationTask<Outlet>
+        {
+            public Outlets_ByChainAndBranches()
+            {
+                Map = outlets => from o in outlets
+                                 select new
+                                 {
+                                     o.Name,
+                                     o.Chain,
+                                     Branches = o.Branches.Select(b => CreateSpatialField(b.Lat, b.Lng))
+                                 };
             }
         }
 
