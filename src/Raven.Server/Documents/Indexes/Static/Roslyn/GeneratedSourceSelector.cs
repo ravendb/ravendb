@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
                 choices.Add(invocation);
                 if (demand == Demand.Checked)
-                    consumers.Add(invocation, (SyntaxNode)GetConsumerArgument(generated, invocation) ?? invocation);
+                    consumers.Add(invocation, (SyntaxNode)GetConsumerArgument(semanticModel, generated, invocation) ?? invocation);
             }
 
             if (choices.Count == 0)
@@ -327,16 +327,30 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 : Demand.None;
         }
 
+        // A cast to dynamic only defers the binding of its context, so the result has the demand and the consumer of the cast.
+        private static ExpressionSyntax GetContextOperand(SemanticModel semanticModel, ExpressionSyntax expression)
+        {
+            while (expression.Parent is ParenthesizedExpressionSyntax ||
+                   expression.Parent is CastExpressionSyntax cast && semanticModel.GetTypeInfo(cast.Type).Type is { TypeKind: TypeKind.Dynamic })
+                expression = (ExpressionSyntax)expression.Parent;
+
+            return expression;
+        }
+
         private static Demand GetDemand(SemanticModel semanticModel, HashSet<InvocationExpressionSyntax> generated, INamedTypeSymbol equalityComparer, ExpressionSyntax expression)
         {
-            var result = expression;
-            while (result.Parent is ParenthesizedExpressionSyntax parenthesized)
-                result = parenthesized;
-
+            var result = GetContextOperand(semanticModel, expression);
             switch (result.Parent)
             {
                 case CastExpressionSyntax cast:
                     return IsTypedSequence(semanticModel.GetTypeInfo(cast.Type).Type) ? Demand.Certain : Demand.None;
+                // A branch takes the element type of the source only where the conditional must have it, since a consumer of the conditional
+                // is not guarded for its results.
+                case ConditionalExpressionSyntax conditional when conditional.Condition != result:
+                    return GetDemand(semanticModel, generated, equalityComparer, conditional) == Demand.Certain ? Demand.Certain : Demand.None;
+                case EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax declarator } when result is not IdentifierNameSyntax &&
+                                                                                                  IsTypedSequence(semanticModel.GetTypeInfo(result).ConvertedType) == false:
+                    return GetLocalDemand(semanticModel, generated, equalityComparer, declarator);
                 case BinaryExpressionSyntax binary when binary.IsKind(SyntaxKind.IsExpression) || binary.IsKind(SyntaxKind.AsExpression):
                     return binary.Left == result ? Demand.Certain : Demand.None;
                 case IsPatternExpressionSyntax isPattern when isPattern.Expression == result:
@@ -367,6 +381,29 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             }
         }
 
+        // An implicitly typed or object local takes the dynamic result only when every reference to it needs the element type of the source,
+        // as the result written there would; a reference that reads the local as objects keeps the object result for all of them.
+        private static Demand GetLocalDemand(SemanticModel semanticModel, HashSet<InvocationExpressionSyntax> generated, INamedTypeSymbol equalityComparer,
+            VariableDeclaratorSyntax declarator)
+        {
+            if (semanticModel.GetDeclaredSymbol(declarator) is not ILocalSymbol local || declarator is not { Parent: VariableDeclarationSyntax declaration, Initializer: { } initializer })
+                return Demand.None;
+
+            // An implicitly typed local has the type of the object result, which a type of the index sources named var would not have.
+            var implicitlyTyped = declaration.Type.IsVar && SymbolEqualityComparer.Default.Equals(local.Type, semanticModel.GetTypeInfo(initializer.Value).Type);
+            if (implicitlyTyped == false && local.Type.SpecialType != SpecialType.System_Object)
+                return Demand.None;
+
+            // Only references after the declarator count, so the demand of a reference never leads back to the declarator.
+            var references = declarator.FirstAncestorOrSelf<StatementSyntax>()?.Parent?.DescendantNodes().OfType<IdentifierNameSyntax>()
+                .Where(identifier => identifier.SpanStart >= declarator.Span.End && identifier.Identifier.ValueText == local.Name &&
+                                     SymbolEqualityComparer.Default.Equals(semanticModel.GetSymbolInfo(identifier).Symbol, local))
+                .ToList();
+            return references is { Count: > 0 } && references.All(reference => GetDemand(semanticModel, generated, equalityComparer, reference) == Demand.Certain)
+                ? Demand.Checked
+                : Demand.None;
+        }
+
         private static bool IsTypeTest(PatternSyntax pattern)
         {
             return IsEligiblePattern(pattern) &&
@@ -388,15 +425,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             };
         }
 
-        private static ArgumentSyntax GetConsumerArgument(HashSet<InvocationExpressionSyntax> generated, ExpressionSyntax expression)
+        private static ArgumentSyntax GetConsumerArgument(SemanticModel semanticModel, HashSet<InvocationExpressionSyntax> generated, ExpressionSyntax expression)
         {
             while (true)
             {
-                var result = expression;
-                while (result.Parent is ParenthesizedExpressionSyntax parenthesized)
-                    result = parenthesized;
-
-                switch (result.Parent)
+                switch (GetContextOperand(semanticModel, expression).Parent)
                 {
                     case ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax marker } }
                         when IsAccess(marker.Expression, ObjectDelegateSource) && generated.Contains(marker):
@@ -446,14 +479,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         // binds as written for it; the binder keeps an ambiguity among typed overloads as before.
         private static List<TypeSyntax> GetViews(SemanticModel semanticModel, InvocationExpressionSyntax distinct, SyntaxNode consumer)
         {
-            if (consumer is not ArgumentSyntax { Parent: ArgumentListSyntax { Parent: ExpressionSyntax call and (InvocationExpressionSyntax or BaseObjectCreationExpressionSyntax) } argumentList } argument)
-                return null;
-
-            var expression = argument.Expression;
-            while (expression is ParenthesizedExpressionSyntax parenthesized)
-                expression = parenthesized.Expression;
-
-            if (expression != distinct)
+            if (consumer is not ArgumentSyntax { Parent: ArgumentListSyntax { Parent: ExpressionSyntax call and (InvocationExpressionSyntax or BaseObjectCreationExpressionSyntax) } argumentList } argument ||
+                GetContextOperand(semanticModel, distinct) != argument.Expression)
                 return null;
 
             var index = argumentList.Arguments.IndexOf(argument);

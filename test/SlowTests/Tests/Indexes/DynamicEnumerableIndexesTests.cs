@@ -1289,6 +1289,11 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         [RavenData("Enumerable.Count(item.Tags, tag => ArgumentProbe.MostEvaluations(() => Enumerable.Count<int>(Enumerable.Distinct(comparer: (dynamic)ArgumentProbe.IntComparer, source: (dynamic)ArgumentProbe.IntValues))) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum((IEnumerable<int>)Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => TypedConsumers.Sum(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A cast to dynamic only defers the binding of the consumer, which still gets the result with the element type of the source,
+        // or as objects when the element type matches none of its typed overloads.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum((dynamic)Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick((dynamic)Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick((dynamic)Enumerable.Distinct((dynamic)new[] { 1L, 1L, 2L })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<IdentityTuple>(Enumerable.Distinct((dynamic)new[] { new IdentityTuple(1), new IdentityTuple(1) })) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         // The result stays deferred, and null sources and enumeration errors surface as before.
         [RavenData("Enumerable.Count(item.Tags, tag => DeferredProbe.Run((Func<IEnumerable<int>>)(() => (IEnumerable<int>)Enumerable.Distinct((dynamic)DeferredProbe.Values()))) == \"source,returned,enumerated,2\") == 2", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -1323,8 +1328,14 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         [RavenData("Enumerable.Count(item.Tags, tag => new Holder { Items = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) }.Items.Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum(((Func<IEnumerable<int>>)(() => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })))()) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Sum(((Func<IEnumerable<int>>)(() => { return Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); }))()) == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
-        // An implicitly typed local keeps the object result for extension methods.
+        // An implicitly typed local keeps the object result for extension methods, while an implicitly typed or object local whose
+        // every reference needs the element type of the source, as a typed consumer or a cast to a typed sequence does, takes that result.
         [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { var values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return values.Count(); }))() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { var values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return Enumerable.Sum(values); }))() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { object values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return Enumerable.Sum((IEnumerable<int>)values); }))() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<int>)(() => { object values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return ((IEnumerable<object>)values).Count(); }))() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A local that is also read as objects keeps the object result for all its references, also for a type test.
+        [RavenData("Enumerable.Count(item.Tags, tag => ((Func<bool>)(() => { var values = Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }); return values is IEnumerable<object> && values.Count() == 2; }))()) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         // The overload is chosen at runtime by the element type of the source, as the call written in the index did,
         // also when an overload taking objects binds at compile time.
         [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -1356,6 +1367,9 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) is IEnumerable<long> values && values.Sum() == 3) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is not IEnumerable<int>) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is not (IEnumerable<int>)) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        // Each branch of a conditional takes the type test of the conditional, and keeps the object result for an extension method.
+        [RavenData("Enumerable.Count(item.Tags, tag => (tag == \"alpha\" ? Enumerable.Distinct((dynamic)new[] { 3 }) : Enumerable.Distinct((dynamic)new[] { 1, 2 })) is IEnumerable<int>) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => (tag == \"alpha\" ? Enumerable.Distinct((dynamic)new[] { 3 }) : Enumerable.Distinct((dynamic)new[] { 1, 2 })).Count() == (tag == \"alpha\" ? 1 : 2)) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         public void DistinctInsideRewrittenCallsKeepsDynamicResultForTypedContexts(Options options, string expression)
         {
             AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
