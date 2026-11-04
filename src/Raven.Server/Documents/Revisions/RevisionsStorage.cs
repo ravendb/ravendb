@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.Revisions
                 }
             };
             CreateTrees(tx);
+            MarkStorageHashed(tx);
         }
 
         public Table EnsureRevisionTableCreated(Transaction tx, CollectionName collection)
@@ -402,7 +403,7 @@ namespace Raven.Server.Documents.Revisions
                     TransactionMarker = context.GetTransactionMarker(),
                     ResolvedField = flags.Contain(DocumentFlags.Resolved) ? (int)DocumentFlags.Resolved : 0,
                     FullChangeVector = changeVector
-                }, isInsert: true);
+                });
 
                 using (GetKeyPrefix(context, keys.Slices.LowerId, out Slice lowerIdPrefix))
                 {
@@ -602,6 +603,13 @@ namespace Raven.Server.Documents.Revisions
 
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return result;
+
+            // deleting all of them needs no count; deleting old ones waits until the cleanup has passed the document
+            if ((documentDeleted && configuration.PurgeOnDelete) == false && CleanupHasNotPassed(context, table, lowerIdPrefix))
+            {
+                result.Remaining = result.PreviousCount;
+                return result;
+            }
 
 
             IEnumerable<Document> revisionsToDelete;
@@ -959,7 +967,7 @@ namespace Raven.Server.Documents.Revisions
                         writeTables[collection.Name] = writeTable;
                     }
                 }
-                DeleteRevisionByKey(writeTable, in keys.Revision);
+                DeleteRevisionRow(writeTable, in keys.Revision);
             }
 
             revision.Dispose();
@@ -1697,7 +1705,7 @@ namespace Raven.Server.Documents.Revisions
                     TransactionMarker = context.GetTransactionMarker(),
                     ResolvedField = flags.Contain(DocumentFlags.Resolved) ? (int)DocumentFlags.Resolved : 0,
                     FullChangeVector = changeVector
-                }, isInsert: true);
+                });
 
                 UpdateRevisionCountsByOne(context, flags, lowerIdPrefix, table, newEtag);
                 DeleteOldRevisions(context, table, lowerIdPrefix, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks,
@@ -1735,6 +1743,7 @@ namespace Raven.Server.Documents.Revisions
             var deletedEtag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr);
             var resolvedFlag = TableValueToFlags((int)RevisionsTable.Resolved, ref tvr);
 
+            table.Delete(tvr.Id); // only the row read: a 6.2 row's twin is merged by the revisions key cleanup, which counts it
             WriteRevisionTableRecord(context, table, in keys, new RevisionsTableRow
             {
                 EtagSwapBytes = Bits.SwapBytes(newEtag),
@@ -1747,7 +1756,7 @@ namespace Raven.Server.Documents.Revisions
                 ResolvedField = (int)resolvedFlag,
                 // Use incoming full CV: a Legacy source's `revision.ChangeVector` is version-only (field 0), would violate rule B.
                 FullChangeVector = incomingChangeVector
-            }, isInsert: false);
+            });
 
             using (GetKeyPrefix(context, keys.Slices.LowerId, out var lowerIdPrefix))
             {
@@ -2398,7 +2407,7 @@ namespace Raven.Server.Documents.Revisions
                     TransactionMarker = context.GetTransactionMarker(),
                     ResolvedField = flags.Contain(DocumentFlags.Resolved) ? (int)DocumentFlags.Resolved : 0,
                     FullChangeVector = changeVector
-                }, isInsert: true);
+                });
 
                 UpdateRevisionCountsByOne(context, flags, lowerIdPrefix, table, newEtag);
             }

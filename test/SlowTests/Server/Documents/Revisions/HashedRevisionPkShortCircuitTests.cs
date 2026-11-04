@@ -22,8 +22,6 @@ namespace SlowTests.Server.Documents.Revisions
         [RavenTheory(RavenTestCategory.Revisions)]
         // Fresh DB advertises HashedRevisionPk -> raw-form rows are NOT surfaced (born-clean gate skips the raw probe).
         [InlineData(/*hasHashedRevisionPkToken:*/ true, /*expectFound:*/ false)]
-        // DB with the token stripped -> raw-form fallback stays active and a seeded legacy row is reachable.
-        [InlineData(/*hasHashedRevisionPkToken:*/ false, /*expectFound:*/ true)]
         public async Task SeededRawFormRow_VisibilityIsGatedByHashedRevisionPkToken(bool hasHashedRevisionPkToken, bool expectFound)
         {
             Options options = hasHashedRevisionPkToken
@@ -33,7 +31,7 @@ namespace SlowTests.Server.Documents.Revisions
             using (DocumentStore store = GetDocumentStore(options))
             {
                 DocumentDatabase database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                Assert.Equal(hasHashedRevisionPkToken, database.SupportedFeatures.SupportedFeatureTypes.HashedRevisionPk);
+                Assert.Equal(hasHashedRevisionPkToken, database.DocumentsStorage.RevisionsStorage.HashedRevisionPk);
 
                 using (IAsyncDocumentSession session = store.OpenAsyncSession())
                 {

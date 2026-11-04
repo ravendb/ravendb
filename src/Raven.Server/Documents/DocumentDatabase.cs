@@ -35,6 +35,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Smuggler;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -214,6 +215,7 @@ namespace Raven.Server.Documents
                 });
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 CountersRepairTask = new CountersRepairTask(this, DatabaseShutdown);
+                RevisionsKeyCleaner = new RevisionsKeyCleaner(this, DatabaseShutdown);
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
                 CdcSinkLoader = new CdcSinkLoader(this, serverStore);
                 _proxyRequestExecutor = CreateRequestExecutor();
@@ -375,6 +377,8 @@ namespace Raven.Server.Documents
 
         public CountersRepairTask CountersRepairTask { get; private set; }
 
+        public RevisionsKeyCleaner RevisionsKeyCleaner { get; private set; }
+
         public CompareExchangeStorage CompareExchangeStorage { get; private set; }
 
         public EmbeddingsGenerator EmbeddingsGeneratorQueries { get; private set; }
@@ -517,6 +521,9 @@ namespace Raven.Server.Documents
                     var lastCounterFixed = DocumentsStorage.ReadLastFixedCounterKey(ctx.Transaction.InnerTransaction);
                     if (lastCounterFixed != CountersRepairTask.Completed)
                         _ = Task.Run(() => CountersRepairTask.Start(lastCounterFixed));
+
+                    if (DocumentsStorage.RevisionsStorage.HashedRevisionPk == false)
+                        _ = Task.Run(() => RevisionsKeyCleaner.Start());
                 }
 
                 _ = Task.Run(async () =>
