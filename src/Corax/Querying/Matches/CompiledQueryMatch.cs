@@ -285,6 +285,13 @@ public class CompiledQueryMatch(
             Bitmaps[i] = new RoaringBitmap(allocator);
         }
 
+        int scoringGroupCount = CompiledPlan.Template.ScoringGroupCount;
+        if (scoringGroupCount > 0)
+        {
+            ScoringGroups = ArrayPool<RoaringBitmap>.Shared.Rent(scoringGroupCount);
+            ScoringGroups.AsSpan(0, scoringGroupCount).Clear();
+        }
+
         Llt = Searcher.Transaction.LowLevelTransaction;
 
         Timings = wantTimings ? new long[opCount] : null;
@@ -317,8 +324,13 @@ public class CompiledQueryMatch(
     {
         _iterator.Dispose();
         _bitmapData.Dispose();
-        foreach (var group in ScoringGroups ?? [])
-            group.Dispose();
+        if (ScoringGroups != null)
+        {
+            for (int i = 0; i < CompiledPlan.Template.ScoringGroupCount; i++)
+                ScoringGroups[i].Dispose();
+            ArrayPool<RoaringBitmap>.Shared.Return(ScoringGroups, clearArray: true);
+            ScoringGroups = null;
+        }
         Llt = null; // release transaction reference so it is not kept alive longer than needed
     }
 

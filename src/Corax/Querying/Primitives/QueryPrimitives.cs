@@ -57,7 +57,6 @@ public static class QueryPrimitives
 
     public static void CtxSaveScoringGroup(Matches.CompiledQueryMatch ctx, int bitmapSlot, int groupIndex)
     {
-        Array.Resize(ref ctx.ScoringGroups, Math.Max(groupIndex + 1, ctx.ScoringGroups?.Length ?? 0));
         ctx.ScoringGroups[groupIndex] = ctx.Bitmaps[bitmapSlot].Clone();
     }
 
