@@ -1476,6 +1476,62 @@ namespace FastTests.Client
             }
         }
 
+        private class ExtensibleBase
+        {
+        }
+
+        private class ExtensibleDerived : ExtensibleBase
+        {
+            public string Name { get; set; }
+
+            [JsonExtensionData]
+            public Dictionary<string, object> Extra { get; set; }
+        }
+
+        private class NewtonsoftExtensibleDerived : ExtensibleBase
+        {
+            public string Name { get; set; }
+
+            [Newtonsoft.Json.JsonExtensionData]
+            public IDictionary<string, object> Extra { get; set; }
+        }
+
+        private class HoldsExtensible
+        {
+            public ExtensibleBase Item { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PolymorphicValuesWithExtensionDataKeepTheirTypeAcrossRoundTrips(bool newtonsoftExtensionData)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var holder = new HoldsExtensible
+            {
+                Item = newtonsoftExtensionData ? new NewtonsoftExtensibleDerived { Name = "name" } : new ExtensibleDerived { Name = "name" }
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(holder, context))
+                        holder = conventions.Serialization.DefaultConverter.FromBlittable<HoldsExtensible>(json);
+                }
+            }
+
+            IDictionary<string, object> extra = holder.Item switch
+            {
+                ExtensibleDerived derived => derived.Extra,
+                NewtonsoftExtensibleDerived derived => derived.Extra,
+                _ => throw new InvalidOperationException($"Expected a derived item but got {holder.Item?.GetType()}")
+            };
+
+            Assert.Equal("name", newtonsoftExtensionData ? ((NewtonsoftExtensibleDerived)holder.Item).Name : ((ExtensibleDerived)holder.Item).Name);
+            Assert.False(extra?.ContainsKey("$type") ?? false);
+        }
+
         [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
         public void VectorSearchFieldNamesFollowStoreConventions()
         {
