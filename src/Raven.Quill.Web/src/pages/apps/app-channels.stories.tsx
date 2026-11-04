@@ -9,7 +9,7 @@ const meta = {
     title: "Apps/Channels",
     component: AppChannels,
     parameters: {
-        page: { title: "Channels" },
+        page: {},
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
     },
 } satisfies Meta<typeof AppChannels>;

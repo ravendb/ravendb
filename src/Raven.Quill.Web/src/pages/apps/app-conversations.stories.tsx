@@ -5,7 +5,7 @@ const meta = {
     title: "Apps/Conversations",
     component: AppConversations,
     parameters: {
-        page: { title: "Conversations" },
+        page: {},
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
     },
 } satisfies Meta<typeof AppConversations>;

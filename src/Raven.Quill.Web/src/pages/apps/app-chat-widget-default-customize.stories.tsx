@@ -7,7 +7,7 @@ const meta = {
     title: "Apps/Default chat widget appearance",
     component: AppChatWidgetDefaultCustomize,
     parameters: {
-        page: { title: "Default chat widget appearance" },
+        page: {},
         router: {
             initialPath: "/apps/demo/chat-widget/default-customize",
             path: "/apps/:slug/chat-widget/default-customize",

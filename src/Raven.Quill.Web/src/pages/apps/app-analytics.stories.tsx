@@ -8,7 +8,7 @@ const meta = {
     title: "Apps/Analytics",
     component: AppAnalytics,
     parameters: {
-        page: { title: "Analytics" },
+        page: {},
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
     },
 } satisfies Meta<typeof AppAnalytics>;
