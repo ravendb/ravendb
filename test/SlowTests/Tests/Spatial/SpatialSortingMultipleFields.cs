@@ -16,6 +16,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
+using static Raven.Server.Documents.Indexes.IndexDefinitionBaseServerSide;
 
 namespace SlowTests.Tests.Spatial
 {
@@ -124,7 +125,7 @@ namespace SlowTests.Tests.Spatial
                 Indexes.WaitForIndexing(store);
 
                 var database = await GetDatabase(store.Database);
-                Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72, database.IndexStore.GetIndex(index.IndexName).Definition.Version);
+                Assert.True(IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(database.IndexStore.GetIndex(index.IndexName).Definition.Version));
 
                 var terms = await store.Maintenance.SendAsync(new GetTermsOperation(index.IndexName, "Branches_spatial(centers)", fromValue: null));
 
@@ -189,7 +190,7 @@ namespace SlowTests.Tests.Spatial
                     foreach (var indexName in new[] { shopsIndex.IndexName, peopleIndex.IndexName })
                     {
                         var version = WaitForValue(() => database.IndexStore.GetIndex(indexName)?.Definition.Version, IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72);
-                        Assert.Equal(IndexDefinitionBaseServerSide.IndexVersion.SpatialSortByNearestPoint_72, version);
+                        Assert.True(IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported((long)version));
                     }
 
                     Indexes.WaitForIndexing(store, databaseName);
