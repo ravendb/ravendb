@@ -207,7 +207,7 @@ internal static partial class QueryPlanBuilder
                 eqBuf[eqCount++] = i;
             }
 
-            if (orderByPrimaryField is null || c.FieldName != orderByPrimaryField)
+            if (orderByPrimaryField is null || (c.ResolvedFieldName ?? c.FieldName) != orderByPrimaryField)
                 continue;
 
             if (c.ClauseType is not (

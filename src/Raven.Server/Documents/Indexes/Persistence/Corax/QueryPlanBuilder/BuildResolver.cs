@@ -329,7 +329,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         var clause = exec.Clause;
         // Single-valued ⟺ the field holds at most one term per entry. Can avoid a while(FindNext()) loop.
         // Folded into the structural plan key, so a single→multi flip re-plans instead of reusing this template.
-        bool singleValued = clause.FieldName is { } fieldName && _indexSearcher.HasMultipleTermsInField(fieldName) == false;
+        bool singleValued = (clause.ResolvedFieldName ?? clause.FieldName) is { } fieldName && _indexSearcher.HasMultipleTermsInField(fieldName) == false;
 
         // The residual-scan IL only encodes negation for IN / ALL IN and not equality. everything else is not supported
         if (exec.IsNegated && exec.ClauseType is not (ClauseType.In or ClauseType.AllIn or ClauseType.NotEquals))
@@ -590,7 +590,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
 
         _builder.Append((byte)e.ClauseType, 8);
 
-        bool singleValued = e.Clause.FieldName is { } fieldName && _indexSearcher.HasMultipleTermsInField(fieldName) == false;
+        bool singleValued = (e.Clause.ResolvedFieldName ?? e.Clause.FieldName) is { } fieldName && _indexSearcher.HasMultipleTermsInField(fieldName) == false;
         int bits = (e.IsNegated ? 0b0001 : 0b0000)
                    | (singleValued ? 0b0010 : 0b0000)
                    | (e.PackedParamValue.ValueType << 2); // value-type dispatch: Long/Double/String/None
