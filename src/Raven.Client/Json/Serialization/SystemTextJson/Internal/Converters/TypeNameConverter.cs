@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
@@ -348,9 +349,41 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             else if (type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type))
                 value = ReadWrappedCollection(ref reader, type, options);
             else
+            {
                 value = JsonSerializer.Deserialize(ref reader, type, options);
+                RemoveTypeNameFromExtensionData(value, options);
+            }
 
             return true;
+        }
+
+        private static void RemoveTypeNameFromExtensionData(object value, JsonSerializerOptions options)
+        {
+            if (value == null)
+                return;
+
+            JsonTypeInfo typeInfo = options.GetTypeInfo(value.GetType());
+            if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                return;
+
+            foreach (JsonPropertyInfo property in typeInfo.Properties)
+            {
+                if (property.IsExtensionData == false || property.Get == null)
+                    continue;
+
+                switch (property.Get(value))
+                {
+                    case IDictionary<string, object> objects:
+                        objects.Remove(TypePropertyName);
+                        break;
+                    case IDictionary<string, JsonElement> elements:
+                        elements.Remove(TypePropertyName);
+                        break;
+                    case JsonObject node:
+                        node.Remove(TypePropertyName);
+                        break;
+                }
+            }
         }
 
         private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type valueType, JsonSerializerOptions options)
