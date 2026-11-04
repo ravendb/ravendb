@@ -144,7 +144,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
                     sqlConfig.ForceQueryRecompile != ForceQueryRecompile ||
                     sqlConfig.QuoteTables != QuoteTables ||
                     sqlConfig.CommandTimeout != CommandTimeout ||
-                    EnumerableExtension.ContentEqualsIgnoringOrder(sqlConfig.SqlTables, SqlTables) == false)
+                    EnumerableExtension.ContentEquals(sqlConfig.SqlTables, SqlTables) == false)
                 {
                     diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
                 }

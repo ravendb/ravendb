@@ -46,7 +46,7 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
         if (config is SnowflakeEtlConfiguration snowflakeConfig)
         {
             if (snowflakeConfig.CommandTimeout != CommandTimeout ||
-                EnumerableExtension.ContentEqualsIgnoringOrder(snowflakeConfig.SnowflakeTables, SnowflakeTables) == false)
+                EnumerableExtension.ContentEquals(snowflakeConfig.SnowflakeTables, SnowflakeTables) == false)
             {
                 diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
             }

@@ -48,7 +48,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Etl)]
-        public async Task SqlEtl_keeps_running_process_when_tables_are_only_reordered()
+        public async Task SqlEtl_restarts_when_tables_are_only_reordered()
         {
             using (var store = GetDocumentStore())
             {
@@ -57,7 +57,9 @@ namespace SlowTests.Issues
                 var taskId = Etl.AddEtl(store, config, NewSqlConnectionString()).TaskId;
 
                 config.SqlTables.Reverse();
-                await UpdateAndAssertSameProcess(store, taskId, config);
+                var process = await UpdateAndWaitForNewProcess<SqlEtl, SqlConnectionString>(store, taskId, config);
+
+                Assert.Equal("Orders", process.Configuration.SqlTables[0].TableName);
             }
         }
 
@@ -138,14 +140,8 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var config = new SnowflakeEtlConfiguration
-                {
-                    Name = "snow",
-                    ConnectionStringName = "snow-cs",
-                    SnowflakeTables = { new SnowflakeEtlTable { TableName = "Users", DocumentIdColumn = "Id" } },
-                    Transforms = { NewTransformation() }
-                };
-                var taskId = Etl.AddEtl(store, config, new SnowflakeConnectionString { Name = "snow-cs", ConnectionString = "account=x;user=y;password=z;" }).TaskId;
+                var config = NewSnowflakeConfiguration();
+                var taskId = Etl.AddEtl(store, config, NewSnowflakeConnectionString()).TaskId;
 
                 config.SnowflakeTables.Add(new SnowflakeEtlTable { TableName = "Orders", DocumentIdColumn = "Id" });
                 config.CommandTimeout = 77;
@@ -153,6 +149,22 @@ namespace SlowTests.Issues
 
                 Assert.Equal(2, process.Configuration.SnowflakeTables.Count);
                 Assert.Equal(77, process.Configuration.CommandTimeout);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task SnowflakeEtl_restarts_when_tables_are_only_reordered()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = NewSnowflakeConfiguration();
+                config.SnowflakeTables.Add(new SnowflakeEtlTable { TableName = "Orders", DocumentIdColumn = "Id" });
+                var taskId = Etl.AddEtl(store, config, NewSnowflakeConnectionString()).TaskId;
+
+                config.SnowflakeTables.Reverse();
+                var process = await UpdateAndWaitForNewProcess<SnowflakeEtl, SnowflakeConnectionString>(store, taskId, config);
+
+                Assert.Equal("Orders", process.Configuration.SnowflakeTables[0].TableName);
             }
         }
 
@@ -222,6 +234,20 @@ namespace SlowTests.Issues
             Name = "sql-cs",
             ConnectionString = "Server=localhost;Database=x;",
             FactoryName = "Microsoft.Data.SqlClient"
+        };
+
+        private static SnowflakeEtlConfiguration NewSnowflakeConfiguration() => new SnowflakeEtlConfiguration
+        {
+            Name = "snow",
+            ConnectionStringName = "snow-cs",
+            SnowflakeTables = { new SnowflakeEtlTable { TableName = "Users", DocumentIdColumn = "Id" } },
+            Transforms = { NewTransformation() }
+        };
+
+        private static SnowflakeConnectionString NewSnowflakeConnectionString() => new SnowflakeConnectionString
+        {
+            Name = "snow-cs",
+            ConnectionString = "account=x;user=y;password=z;"
         };
 
         private static QueueEtlConfiguration NewQueueConfiguration(string name, QueueBrokerType brokerType) => new QueueEtlConfiguration
