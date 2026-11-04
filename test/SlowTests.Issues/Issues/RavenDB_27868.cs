@@ -64,6 +64,21 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Etl)]
+        public async Task SqlEtl_restarts_when_only_AllowEtlOnNonEncryptedChannel_changes()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = NewSqlConfiguration();
+                var taskId = Etl.AddEtl(store, config, NewSqlConnectionString()).TaskId;
+
+                config.AllowEtlOnNonEncryptedChannel = true;
+                var process = await UpdateAndWaitForNewProcess<SqlEtl, SqlConnectionString>(store, taskId, config);
+
+                Assert.True(process.Configuration.AllowEtlOnNonEncryptedChannel);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task ElasticSearchEtl_restarts_when_only_indexes_change()
         {
             using (var store = GetDocumentStore())
