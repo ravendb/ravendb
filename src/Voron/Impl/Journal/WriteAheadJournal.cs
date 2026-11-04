@@ -95,9 +95,9 @@ namespace Voron.Impl.Journal
             private readonly List<string> _paths = new();
             private readonly List<Guid> _journalIds = new();
             private int _linksDataSize;
-            private readonly Dictionary<string, long> _lastCreatedJournals = [];
-            // GetFoldersToSync runs under the write tx and MarkFoldersSynced under the flushing lock, they can overlap
-            private readonly Dictionary<string, long> _lastSyncedJournals = [];
+            private readonly Dictionary<string, long> _lastCreatedJournals = []; // write tx lock only
+            // marked under the flushing lock, read under the write tx lock, the two overlap (see _journalsToDelete)
+            private readonly ConcurrentDictionary<string, long> _lastSyncedJournals = new();
 
             public void Add(string relativePath, Guid journalId)
             {
@@ -114,17 +114,14 @@ namespace Voron.Impl.Journal
             public List<(string Path, long Journal)> GetFoldersToSync(long lastJournal)
             {
                 List<(string Path, long Journal)> folders = null;
-                lock (_lastSyncedJournals)
+                foreach ((string path, long created) in _lastCreatedJournals)
                 {
-                    foreach ((string path, long created) in _lastCreatedJournals)
-                    {
-                        long synced = _lastSyncedJournals.GetValueOrDefault(path, -1);
-                        if (synced >= created || synced >= lastJournal)
-                            continue;
+                    long synced = _lastSyncedJournals.GetValueOrDefault(path, -1);
+                    if (synced >= created || synced >= lastJournal)
+                        continue;
 
-                        folders ??= [];
-                        folders.Add((path, created));
-                    }
+                    folders ??= [];
+                    folders.Add((path, created));
                 }
                 return folders;
             }
@@ -132,12 +129,9 @@ namespace Voron.Impl.Journal
             // only after the folders were fsynced, a flush state may be replaced before its sync runs
             public void MarkFoldersSynced(List<(string Path, long Journal)> folders)
             {
-                lock (_lastSyncedJournals)
+                foreach ((string path, long journal) in folders)
                 {
-                    foreach ((string path, long journal) in folders)
-                    {
-                        _lastSyncedJournals[path] = Math.Max(_lastSyncedJournals.GetValueOrDefault(path, -1), journal);
-                    }
+                    _lastSyncedJournals[path] = journal; // syncs run one at a time, each with a newer flush state, so this never goes backwards
                 }
             }
             
