@@ -17,7 +17,7 @@ const meta = {
     title: "Apps/Data source",
     component: AppDataSource,
     parameters: {
-        page: { title: "Data source" },
+        page: {},
         // The detail mock only resolves known slugs, so start on a sample app.
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
         msw: mockHandlers({

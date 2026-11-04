@@ -21,7 +21,7 @@ const meta = {
     title: "Apps/Channel detail",
     component: AppChannelDetail,
     parameters: {
-        page: { title: "Channel" },
+        page: {},
         router: {
             initialPath: `/apps/demo/channels/${SAMPLE_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
