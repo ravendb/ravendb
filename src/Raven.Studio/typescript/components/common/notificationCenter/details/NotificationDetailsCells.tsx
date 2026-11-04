@@ -16,6 +16,14 @@ export function CellDetailsValue({ getValue }: ValueCellProps) {
         return <CellNotAvailable />;
     }
 
+    if (typeof value === "string") {
+        return (
+            <CellWithCopy value={value} previewCode={value} previewLanguage="plaintext">
+                <CellValue value={value} />
+            </CellWithCopy>
+        );
+    }
+
     return <CellWithCopyWrapper getValue={getValue} />;
 }
 

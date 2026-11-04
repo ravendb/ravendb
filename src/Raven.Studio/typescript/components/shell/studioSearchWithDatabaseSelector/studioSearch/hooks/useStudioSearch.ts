@@ -72,6 +72,7 @@ export function useStudioSearch(menuItems: menuItem[]) {
         studioSearchInputId,
         results,
         activeItem,
+        isDropdownOpen: isSearchDropdownOpen,
         setIsDropdownOpen,
         setActiveItem,
         handleAskAi,
