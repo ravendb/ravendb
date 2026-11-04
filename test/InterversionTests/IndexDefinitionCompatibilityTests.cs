@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using InterversionTests.IndexDefinitionCompatibility;
 using Tests.Infrastructure;
 using Xunit;
@@ -74,6 +77,126 @@ namespace InterversionTests
             {
                 await AssertDefinitionsRoundTrip(baselineStore, candidateStore, baseline.Definitions, candidate.Definitions);
             }
+        }
+
+        private const string CurrentServer = "current";
+        private const string PinnedIndexingEngine = "Lucene";
+
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Indexes, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData(BaselineServerVersion, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int>", 1)]
+        [InlineData(CurrentServer, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int>", 1)]
+        [InlineData(BaselineServerVersion, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> { }", 1)]
+        [InlineData(CurrentServer, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> { }", 1)]
+        [InlineData(BaselineServerVersion, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> or IEnumerable<long>", 1)]
+        [InlineData(CurrentServer, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> or IEnumerable<long>", 1)]
+        [InlineData(BaselineServerVersion, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> and not null", 1)]
+        [InlineData(CurrentServer, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> and not null", 1)]
+        [InlineData(BaselineServerVersion, "(Enumerable.Distinct((dynamic)new[] { 1, 2 }) switch { IEnumerable<int> values => values.Sum() == 3, _ => false })", 1)]
+        [InlineData(CurrentServer, "(Enumerable.Distinct((dynamic)new[] { 1, 2 }) switch { IEnumerable<int> values => values.Sum() == 3, _ => false })", 1)]
+        [InlineData(BaselineServerVersion, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<object> or IEnumerable<long>", 0)]
+        [InlineData(CurrentServer, "Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<object> or IEnumerable<long>", 0)]
+        public async Task NestedDistinctInsideCountPredicateStoresOneOnReleasedAndCurrentServers(string server, string predicate, int expected)
+        {
+            const string indexName = "DynamicEnumerableCompatibility/NestedDistinctElementType";
+            string map = "from item in docs.Items select new { N = Enumerable.Count(item.Tags, tag => " + predicate + ") }";
+            using DocumentStore store = await OpenStoreWithPinnedEngineAsync(server);
+            await store.Maintenance.SendAsync(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { map },
+                Fields = { ["N"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            Assert.Equal(map, Assert.Single((await store.Maintenance.SendAsync(new GetIndexOperation(indexName))).Maps));
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Item { Tags = new[] { "only" } }, "items/1");
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store, allowErrors: true);
+            IndexStats stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(indexName));
+            IndexingError[] errors = (await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }))).Single().Errors;
+            List<StoredCountRow> rows;
+            using (var session = store.OpenSession())
+                rows = session.Advanced.RawQuery<StoredCountRow>($"from index '{indexName}' select N").ToList();
+
+            string observed = $"[{server}] predicate={predicate} expected={expected} map={map} document=items/1 {{ Tags = [\"only\"] }} MapAttempts={stats.MapAttempts} MapErrors={stats.MapErrors} EntriesCount={stats.EntriesCount} " +
+                              $"errors=[{string.Join(" | ", errors.Select(x => x.Error))}] rows={rows.Count} N=[{string.Join(", ", rows.Select(x => x.N))}]";
+            _output.WriteLine(observed);
+            Assert.True(errors.Length == 0, "Expected no index errors. " + observed);
+            Assert.True(rows.Count == 1, "Expected exactly one stored row. " + observed);
+            Assert.True(rows[0].N == expected, $"Expected N == {expected}. " + observed);
+        }
+
+        [RavenMultiplatformTheory(RavenTestCategory.Interversion | RavenTestCategory.Indexes, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [InlineData(BaselineServerVersion, "Enumerable.Contains(d.Age, 5)")]
+        [InlineData(CurrentServer, "Enumerable.Contains(d.Age, 5)")]
+        [InlineData(BaselineServerVersion, "Enumerable.SequenceEqual(d.Tags, d.Age)")]
+        [InlineData(CurrentServer, "Enumerable.SequenceEqual(d.Tags, d.Age)")]
+        public async Task ScalarSequenceOperandFailsIndexingOnReleasedAndCurrentServers(string server, string expression)
+        {
+            const string indexName = "DynamicEnumerableCompatibility/ScalarSequenceOperand";
+            string map = "from d in docs select new { Has = " + expression + " }";
+            using DocumentStore store = await OpenStoreWithPinnedEngineAsync(server);
+            await store.Maintenance.SendAsync(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { map },
+                Fields = { ["Has"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            Assert.Equal(map, Assert.Single((await store.Maintenance.SendAsync(new GetIndexOperation(indexName))).Maps));
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Person { Age = 5L, Tags = new[] { "a" } }, "people/1");
+                await session.SaveChangesAsync();
+            }
+
+            await Indexes.WaitForIndexingAsync(store, allowErrors: true);
+            IndexStats stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(indexName));
+            IndexingError[] errors = (await store.Maintenance.SendAsync(new GetIndexErrorsOperation(new[] { indexName }))).Single().Errors;
+
+            string observed = $"[{server}] map={map} document=people/1 {{ Age = 5L, Tags = [\"a\"] }} MapAttempts={stats.MapAttempts} MapErrors={stats.MapErrors} EntriesCount={stats.EntriesCount} IsStale={stats.IsStale} State={stats.State} " +
+                              $"errors=[{string.Join(" | ", errors.Select(x => $"{x.Action} {x.Document}: {x.Error}"))}]";
+            _output.WriteLine(observed);
+            Assert.True(stats.MapErrors == 1, "Expected MapErrors == 1. " + observed);
+            Assert.True(stats.EntriesCount == 0, "Expected EntriesCount == 0. " + observed);
+            IndexingError error = Assert.Single(errors);
+            Assert.Equal("people/1", error.Document);
+            Assert.Contains("RuntimeBinderException", error.Error);
+        }
+
+        private async Task<DocumentStore> OpenStoreWithPinnedEngineAsync(string server, [CallerMemberName] string caller = null)
+        {
+            string engineKey = RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType);
+            DocumentStore store = server == CurrentServer
+                ? GetDocumentStore(new Options { ModifyDatabaseRecord = record => record.Settings[engineKey] = PinnedIndexingEngine }, caller: caller)
+                : await GetDocumentStoreAsync(server, new InterversionTestOptions { ModifyDatabaseRecord = record => record.Settings[engineKey] = PinnedIndexingEngine }, database: caller);
+
+            BuildNumber build = await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation());
+            _output.WriteLine($"[{server}] server at {store.Urls[0]}: FullVersion={build.FullVersion} ProductVersion={build.ProductVersion} BuildVersion={build.BuildVersion} CommitHash={build.CommitHash} engine={PinnedIndexingEngine}");
+            if (server == CurrentServer)
+                Assert.False(build.FullVersion.StartsWith(BaselineServerVersion, StringComparison.Ordinal), $"The current server reported the baseline version {build.FullVersion}.");
+            else
+                Assert.StartsWith(server, build.FullVersion, StringComparison.Ordinal);
+
+            return store;
+        }
+
+        private sealed class Item
+        {
+            public string[] Tags { get; set; }
+        }
+
+        private sealed class Person
+        {
+            public long Age { get; set; }
+
+            public string[] Tags { get; set; }
+        }
+
+        private sealed class StoredCountRow
+        {
+            public int N { get; set; }
         }
 
         private static async Task<GeneratorOutput> RunGenerator(string generatorPath)

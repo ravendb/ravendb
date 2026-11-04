@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
                 return array.Contains(value);
 
             if (source is not IEnumerable enumerable)
-                return false;
+                // ReSharper disable once CanReplaceCastWithTypeArgument
+                return Enumerable.Contains((dynamic)source, (dynamic)value);
 
             var values = enumerable.Cast<object>();
             if (NeedsTextOrNullComparison(value) && UsesDefaultCollectionEquality(values))
@@ -84,7 +85,8 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
                 return array.Contains(value, comparer);
 
             if (source is not IEnumerable enumerable)
-                return false;
+                // ReSharper disable once CanReplaceCastWithTypeArgument
+                return Enumerable.Contains((dynamic)source, (dynamic)value, (dynamic)comparer);
 
             if (comparer == null)
             {

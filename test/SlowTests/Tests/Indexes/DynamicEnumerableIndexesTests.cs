@@ -1345,7 +1345,35 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         // the object result.
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<int, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<dynamic, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A type test or a typed pattern on the result sees the element type of the source, while a var pattern keeps the object result.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int>) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) as IEnumerable<int> != null) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<object>) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<long>) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { \"a\" }) is IEnumerable<object>) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) is var values && values.Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) is IEnumerable<int> values && values.Sum() == 3) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }) is IEnumerable<long> values && values.Sum() == 3) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is not IEnumerable<int>) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is not (IEnumerable<int>)) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
         public void DistinctInsideRewrittenCallsKeepsDynamicResultForTypedContexts(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        // A property pattern, a combined type pattern or a switch expression on the result sees the element type of the source,
+        // the same as the plain type test above.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> { }) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> or IEnumerable<long>) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int> and not null) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => (Enumerable.Distinct((dynamic)new[] { 1, 2 }) switch { IEnumerable<int> values => values.Sum() == 3, _ => false })) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<object> or IEnumerable<long>) == 0", SearchEngineMode = RavenSearchEngineMode.All)]
+        // A var pattern in a combined pattern or in a switch arm keeps the object result, which its capture binds to.
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is var values and not IEnumerable<long> && values.Count() == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => (Enumerable.Distinct((dynamic)new[] { 1, 2 }) switch { IEnumerable<long> => false, var values => values.Count() == 2 })) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NestedDistinctComplexTypePatternsKeepRuntimeElementType(Options options, string expression)
         {
             AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
                 new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
@@ -1356,6 +1384,7 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         [RavenData("Enumerable.Count(item.Tags, tag => Overloads.Pick(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 })) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (IEqualityComparer<int>)EqualityComparer<int>.Default)) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Count<int>(Enumerable.Distinct((dynamic)new[] { 1, 1, 2 }), (Func<int, bool>)(x => x > 1)) == 1) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => Enumerable.Distinct((dynamic)new[] { 1, 2 }) is IEnumerable<int>) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
         public void DistinctTypedContextsExecuteInReduce(Options options, string expression)
         {
             AssertReduceExpression(options, expression, new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
@@ -2334,6 +2363,74 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         private sealed class StoredTagsResult
         {
             public string[] Values { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Contains(d.Age, 5)", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Contains(d.Age, 5, EqualityComparer<object>.Default)", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.SequenceEqual(d.Tags, d.Age)", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.SequenceEqual(d.Age, d.Tags)", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ScalarSequenceOperandFailsOnlyItsDocumentInsteadOfStoringFalse(Options options, string expression)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "ScalarOperands/StaticSequenceCall";
+            const string scalarAgeId = "ScalarOperandItems/scalar-age";
+            const string nullAgeId = "ScalarOperandItems/null-age";
+            string map = "from d in docs.ScalarOperandItems select new { d.Name, Has = " + expression + " }";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { map },
+                Fields = { ["Name"] = new IndexFieldOptions { Storage = FieldStorage.Yes }, ["Has"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            Assert.Equal(map, Assert.Single(store.Maintenance.Send(new GetIndexesOperation(0, 10)).Single().Maps));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new ScalarOperandItem { Name = "scalar-age", Age = 5L, Tags = new[] { "a" } }, scalarAgeId);
+                session.Store(new ScalarOperandItem { Name = "null-age", Age = null, Tags = new[] { "a" } }, nullAgeId);
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            IndexStats stats = store.Maintenance.Send(new GetIndexStatisticsOperation(indexName));
+            IndexingError[] errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            List<ScalarOperandResult> rows;
+            using (var session = store.OpenSession())
+                rows = session.Advanced.RawQuery<ScalarOperandResult>($"from index '{indexName}' select Name, Has").ToList();
+
+            string observed = $"attempts={stats.MapAttempts} errors={stats.MapErrors} entries={stats.EntriesCount} " +
+                              $"failed=[{string.Join(", ", errors.OrderBy(x => x.Document).Select(x => x.Document + ":" + (x.Error.Contains("RuntimeBinderException") ? "RuntimeBinderException" : x.Error)))}] " +
+                              $"rows=[{string.Join(", ", rows.OrderBy(x => x.Name).Select(x => x.Name + ":" + x.Has))}]";
+            Output.WriteLine(expression + " => " + observed);
+            Assert.Equal($"attempts=2 errors=1 entries=1 failed=[{scalarAgeId}:RuntimeBinderException] rows=[null-age:False]", observed);
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.Contains((dynamic)null, null))) == \"RuntimeBinderException\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("ErrorProbe.ExceptionType((Func<bool>)(() => Enumerable.SequenceEqual((dynamic)null, (dynamic)null))) == \"RuntimeBinderException\"", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.Contains(item.MissingTags, \"a\", StringComparer.Ordinal)", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.SequenceEqual(item.MissingTags, new[] { 1L })", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.SequenceEqual(new[] { 1L }, item.MissingTags)", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ScalarSequenceOperandGuardKeepsNullAndMissingBehavior(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "a" } },
+                new Dictionary<string, string> { ["NestedSequences.cs"] = NestedSequenceSources });
+        }
+
+        private sealed class ScalarOperandItem
+        {
+            public string Name { get; set; }
+
+            public long? Age { get; set; }
+
+            public string[] Tags { get; set; }
+        }
+
+        private sealed class ScalarOperandResult
+        {
+            public string Name { get; set; }
+
+            public bool Has { get; set; }
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]

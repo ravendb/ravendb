@@ -364,6 +364,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             {
                 case CastExpressionSyntax cast:
                     return IsTypedSequence(semanticModel.GetTypeInfo(cast.Type).Type) ? Demand.Certain : Demand.None;
+                case BinaryExpressionSyntax binary when binary.IsKind(SyntaxKind.IsExpression) || binary.IsKind(SyntaxKind.AsExpression):
+                    return binary.Left == result ? Demand.Certain : Demand.None;
+                case IsPatternExpressionSyntax isPattern when isPattern.Expression == result:
+                    return IsTypeTest(isPattern.Pattern) ? Demand.Certain : Demand.None;
+                case SwitchExpressionSyntax switchExpression when switchExpression.GoverningExpression == result:
+                    return switchExpression.Arms.All(arm => IsEligiblePattern(arm.Pattern)) && switchExpression.Arms.Any(arm => IsTypeTest(arm.Pattern))
+                        ? Demand.Certain
+                        : Demand.None;
                 // The compiler resolves the conversion to the declared type, also when the object result does not convert to it.
                 case EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax }:
                 case AssignmentExpressionSyntax assignment when assignment.IsKind(SyntaxKind.SimpleAssignmentExpression) && assignment.Right == result:
@@ -384,6 +392,27 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 default:
                     return Demand.None;
             }
+        }
+
+        private static bool IsTypeTest(PatternSyntax pattern)
+        {
+            return IsEligiblePattern(pattern) &&
+                   pattern.DescendantNodesAndSelf().Any(node => node is TypePatternSyntax or DeclarationPatternSyntax or RecursivePatternSyntax { Type: not null });
+        }
+
+        // A pattern whose bindings do not depend on the static type of the tested value. A var pattern or a recursive pattern without a type
+        // binds to that type, so the object result is kept for it; a recursive pattern with a type binds its subpatterns to that type.
+        private static bool IsEligiblePattern(PatternSyntax pattern)
+        {
+            return pattern switch
+            {
+                ParenthesizedPatternSyntax parenthesized => IsEligiblePattern(parenthesized.Pattern),
+                UnaryPatternSyntax unary when unary.OperatorToken.IsKind(SyntaxKind.NotKeyword) => IsEligiblePattern(unary.Pattern),
+                BinaryPatternSyntax binary => IsEligiblePattern(binary.Left) && IsEligiblePattern(binary.Right),
+                TypePatternSyntax or DeclarationPatternSyntax or RecursivePatternSyntax { Type: not null } or DiscardPatternSyntax => true,
+                ConstantPatternSyntax { Expression: LiteralExpressionSyntax literal } => literal.IsKind(SyntaxKind.NullLiteralExpression),
+                _ => false
+            };
         }
 
         private static ArgumentSyntax GetConsumerArgument(HashSet<InvocationExpressionSyntax> generated, ExpressionSyntax expression)

@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
         public static bool SequenceEqual(object first, object second)
         {
             if (first is not IEnumerable firstEnumerable || second is not IEnumerable secondEnumerable)
-                return false;
+                return Enumerable.SequenceEqual((dynamic)first, (dynamic)second);
 
             if (first is DynamicArray array)
                 return array.SequenceEqual(secondEnumerable);
