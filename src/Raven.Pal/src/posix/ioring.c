@@ -83,7 +83,8 @@ struct worker
 
 struct worker g_worker = {.eventfd = -1, .ring = {.ring_fd = -1}};
 
-#define FSYNC_STAGE_TAG ((uintptr_t)1) // low bit of user_data, workitems are pointer aligned
+// marks the fsync half of a dir sync (fsync hard-linked to close): it records its error, only the close completes the item
+#define NON_FINAL_STAGE_TAG ((uintptr_t)1) // low bit of user_data, workitems are pointer aligned
 
 // Every SQE we use posts exactly one CQE, so capping in-flight SQEs at the CQ size means the CQ never
 // overflows. On overflow, 5.10 - 5.12 fail submits with -EBUSY and newer kernels may drop CQEs.
@@ -133,13 +134,13 @@ void fail_unsubmitted_sqes(struct io_uring *ring, int rc)
         struct io_uring_sqe *sqe = &ring->sq.sqes[head & ring->sq.ring_mask];
         struct workitem *work = (struct workitem *)(uintptr_t)sqe->user_data;
         g_worker.inflight--;
-        if (work != NULL && !((uintptr_t)work & FSYNC_STAGE_TAG)) // the tagged fsync's linked close fails the work
+        if (work != NULL && !((uintptr_t)work & NON_FINAL_STAGE_TAG)) // its final stage fails the work
             fail_work(work, rc);
     }
 }
 
-// Closing the ring with ops in flight would leave their callers waiting forever, so we wait for all of them.
-// They are file ops that finish on their own, so we don't cancel (IORING_ASYNC_CANCEL_ANY needs 5.19 anyway).
+// Waits for every in-flight op and fails it: they are file ops that complete on their own, and closing the ring
+// under them would leave their callers waiting forever (no cancel, IORING_ASYNC_CANCEL_ANY needs 5.19).
 void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
 {
     while (g_worker.inflight > 0)
@@ -148,13 +149,14 @@ void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
         if (io_uring_peek_cqe(ring, &cqe))
         {
             eventfd_t v;
-            eventfd_read(g_worker.eventfd, &v); // signaled on every CQE
+            // the eventfd, not io_uring_wait_cqe: io_uring_enter may be what just failed, the kernel signals the eventfd regardless
+            eventfd_read(g_worker.eventfd, &v);
             continue;
         }
         g_worker.inflight--;
         struct workitem *work = io_uring_cqe_get_data(cqe);
         io_uring_cqe_seen(ring, cqe);
-        if (work != NULL && !((uintptr_t)work & FSYNC_STAGE_TAG))
+        if (work != NULL && !((uintptr_t)work & NON_FINAL_STAGE_TAG))
             fail_work(work, rc);
     }
 }
@@ -235,7 +237,7 @@ void *do_ring_work(void *arg)
                     }
                     // a hard link runs the close even when the fsync fails, the tagged fsync CQE only records its error
                     io_uring_prep_fsync(sqe, work->op.folder_sync.folderid, 0);
-                    io_uring_sqe_set_data64(sqe, (uintptr_t)work | FSYNC_STAGE_TAG);
+                    io_uring_sqe_set_data64(sqe, (uintptr_t)work | NON_FINAL_STAGE_TAG);
                     sqe->flags |= IOSQE_IO_HARDLINK;
                     io_uring_prep_close(sqe2, work->op.folder_sync.folderid);
                     io_uring_sqe_set_data(sqe2, work);
@@ -281,9 +283,9 @@ void *do_ring_work(void *arg)
                     continue;
                 }
 
-                if ((uintptr_t)cur & FSYNC_STAGE_TAG)
+                if ((uintptr_t)cur & NON_FINAL_STAGE_TAG)
                 {
-                    cur = (struct workitem *)((uintptr_t)cur & ~(uintptr_t)FSYNC_STAGE_TAG);
+                    cur = (struct workitem *)((uintptr_t)cur & ~(uintptr_t)NON_FINAL_STAGE_TAG);
                     if (cqe->res != 0)
                     {
                         cur->submittion->error = true;
@@ -374,7 +376,6 @@ error:
     g_worker.result = rc;
     atomic_store(&g_worker.errored, true);
     close_ring_with_error(ring, rc);
-    __atomic_store_n(&g_worker.ring.ring_fd, -1, __ATOMIC_RELEASE);
     // Submitters that raced the error may still queue work and write to the eventfd, so we
     // keep both the eventfd and this thread alive and fail all such work from now on.
     while (true)
@@ -394,7 +395,6 @@ error:
             work = next;
         }
     }
-    return 0;
 }
 
 bool _io_ring_supported()
@@ -418,10 +418,6 @@ bool wake_ring_worker(int32_t *detailed_error_code)
     if (eventfd_write(g_worker.eventfd, 1))
     {
         *detailed_error_code = errno;
-        // this means that the ring is probably dead, which is a catastrophic error
-        // need to wait for the relevant thread to complete, to ensure we aren't
-        // using the values we submitted to the ring
-        pthread_join(g_worker.thread, NULL);
         return false;
     }
     return true;
@@ -720,7 +716,7 @@ error:
 
 int io_ring_setup_successful()
 {
-    return __atomic_load_n(&g_worker.ring.ring_fd, __ATOMIC_ACQUIRE) != -1;
+    return g_worker.ring.ring_fd != -1; // set once at init, a dead ring keeps it and fails every request instead
 }
 
 PRIVATE int32_t

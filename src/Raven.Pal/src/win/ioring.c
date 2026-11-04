@@ -149,7 +149,6 @@ void close_ring_with_error(HRESULT hr)
         }
     }
     IoRing.CloseIoRing(IoRing.io_ring);
-    InterlockedExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL);
 }
 
 DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
@@ -453,6 +452,6 @@ error:
 
 int io_ring_setup_successful()
 {
-    return InterlockedCompareExchangePointer((PVOID volatile *)&IoRing.io_ring, NULL, NULL) != NULL;
+    return IoRing.io_ring != NULL; // set once at init, a dead ring keeps it and fails every request instead
 }
 
