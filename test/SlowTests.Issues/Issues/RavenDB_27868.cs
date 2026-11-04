@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -11,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.OLAP;
@@ -19,6 +21,8 @@ using Raven.Server.Documents.ETL.Providers.Queue.Kafka;
 using Raven.Server.Documents.ETL.Providers.Queue.RabbitMq;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -127,6 +131,19 @@ namespace SlowTests.Issues
                 var taskId = Etl.AddEtl(store, config, connectionString).TaskId;
 
                 await UpdateAndAssertSameProcess(store, taskId, config);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public void KafkaConnectionSettings_equality_ignores_option_key_case_with_both_deserializers()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var fromSparrow = JsonDeserializationClient.GenerateJsonDeserializationRoutine<KafkaConnectionSettings>()(ReadKafkaConnectionSettings(context, "Client.Id"));
+                var fromNewtonsoft = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<KafkaConnectionSettings>(ReadKafkaConnectionSettings(context, "client.id"));
+
+                Assert.True(fromSparrow.Equals(fromNewtonsoft));
+                Assert.True(fromNewtonsoft.Equals(fromSparrow));
             }
         }
 
@@ -280,6 +297,12 @@ namespace SlowTests.Issues
             BrokerType = QueueBrokerType.Kafka,
             KafkaConnectionSettings = new KafkaConnectionSettings { BootstrapServers = "localhost:1234" }
         };
+
+        private static BlittableJsonReaderObject ReadKafkaConnectionSettings(JsonOperationContext context, string optionKey) => context.ReadObject(new DynamicJsonValue
+        {
+            [nameof(KafkaConnectionSettings.BootstrapServers)] = "localhost:1234",
+            [nameof(KafkaConnectionSettings.ConnectionOptions)] = new DynamicJsonValue { [optionKey] = "raven" }
+        }, "kafka");
 
         private async Task<TProcess> UpdateAndWaitForNewProcess<TProcess, TConnectionString>(DocumentStore store, long taskId, EtlConfiguration<TConnectionString> configuration)
             where TProcess : EtlProcess

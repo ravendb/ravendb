@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Extensions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL.Queue;
@@ -8,7 +9,8 @@ namespace Raven.Client.Documents.Operations.ETL.Queue;
 public sealed class KafkaConnectionSettings
 {
     public string BootstrapServers { get; set; }
-        
+
+    [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
     public Dictionary<string, string> ConnectionOptions { get; set; }
 
     public bool UseRavenCertificate { get; set; }
