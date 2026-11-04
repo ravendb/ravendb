@@ -182,6 +182,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyNewtonsoftMemberSerialization(typeInfo);
             NewtonsoftExtensionData extensionData = ApplyNewtonsoftExtensionData(typeInfo);
             ApplyStringDictionaryComparers(typeInfo);
+            KeepInitializedDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
             ApplyPropertyRenames(typeInfo);
             ApplyPropertyNameConverter(typeInfo);
@@ -1385,6 +1386,42 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     set(target, value);
                 };
             }
+        }
+
+        private static void KeepInitializedDictionaryComparers(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.Get == null || property.Set == null || property.IsExtensionData ||
+                    (typeof(IDictionary).IsAssignableFrom(property.PropertyType) == false && IsGenericDictionary(property.PropertyType) == false))
+                    continue;
+
+                Func<object, object> get = property.Get;
+                Action<object, object> set = property.Set;
+                property.Set = (target, value) => set(target, WithComparerOf(get(target), value));
+            }
+        }
+
+        private static object WithComparerOf(object existing, object value)
+        {
+            if (existing == null || value == null || existing.GetType() != value.GetType())
+                return value;
+
+            Type type = value.GetType();
+            if (type.IsGenericType == false || type.GetGenericTypeDefinition() != typeof(Dictionary<,>))
+                return value;
+
+            PropertyInfo comparerProperty = type.GetProperty(nameof(Dictionary<object, object>.Comparer));
+            object comparer = comparerProperty.GetValue(existing);
+            if (Equals(comparer, comparerProperty.GetValue(value)))
+                return value;
+
+            var dictionary = (IDictionary)Activator.CreateInstance(type, comparer);
+            foreach (DictionaryEntry entry in (IDictionary)value)
+                dictionary[entry.Key] = entry.Value;
+
+            return dictionary;
         }
 
         private static Type GetStringDictionaryType(Type type)

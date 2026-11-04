@@ -831,6 +831,27 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class HoldsCaseInsensitiveMap
+    {
+        public Dictionary<string, int> Map { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonKeepsTheComparerOfInitializedDictionariesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Map\":{\"key\":1}}", "map"))
+        {
+            foreach (DocumentConventions conventions in new[] { Newtonsoft, SystemTextJson })
+            {
+                var holder = conventions.Serialization.DefaultConverter.FromBlittable<HoldsCaseInsensitiveMap>(json);
+
+                Assert.Same(StringComparer.OrdinalIgnoreCase, holder.Map.Comparer);
+                Assert.Equal(1, holder.Map["KEY"]);
+            }
+        }
+    }
+
     private class HiddenBase
     {
         public double[] Max;
