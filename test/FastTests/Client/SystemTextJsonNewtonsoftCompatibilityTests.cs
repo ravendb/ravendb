@@ -925,6 +925,48 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class WithMatrices
+    {
+        public double[,] Matrix { get; set; }
+
+        public int[,,] Cube { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void MultidimensionalArraysRoundTripLikeNewtonsoft(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+        var matrices = new WithMatrices
+        {
+            Matrix = new double[,] { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+            Cube = new int[,,] { { { 1, 2 }, { 3, 4 } }, { { 5, 6 }, { 7, 8 } } }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(matrices, context))
+        using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(matrices, context))
+        {
+            Assert.Equal(expected.ToString(), json.ToString());
+
+            var read = conventions.Serialization.DefaultConverter.FromBlittable<WithMatrices>(json);
+            Assert.Equal(matrices.Matrix, read.Matrix);
+            Assert.Equal(matrices.Cube, read.Cube);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void JaggedJsonIsRejectedForMultidimensionalArrays()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Matrix\":[[1,2],[3]]}", "jagged"))
+        {
+            var exception = Assert.Throws<InvalidOperationException>(() => SystemTextJson.Serialization.DefaultConverter.FromBlittable<WithMatrices>(json));
+            Assert.IsType<System.Text.Json.JsonException>(exception.InnerException);
+        }
+    }
+
     private class WithServiceConstructor
     {
         public WithServiceConstructor(string name, int age, IServiceProvider services)
