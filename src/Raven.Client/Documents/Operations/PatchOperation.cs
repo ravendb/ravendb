@@ -97,8 +97,8 @@ namespace Raven.Client.Documents.Operations
             public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfChangeVectorMismatch, bool returnDebugInformation, bool test)
             : this(conventions, id, changeVector, context.ReadObject(new DynamicJsonValue
             {
-                [nameof(PatchCommandData.Patch)] = patch?.ToJson(conventions, context),
-                [nameof(PatchCommandData.PatchIfMissing)] = patchIfMissing?.ToJson(conventions, context)
+                [nameof(PatchCommandData.Patch)] = patch?.ToJson(conventions, context, writeTypeNames: true),
+                [nameof(PatchCommandData.PatchIfMissing)] = patchIfMissing?.ToJson(conventions, context, writeTypeNames: true)
             }, "patch"), skipPatchIfChangeVectorMismatch, returnDebugInformation, test)
             {
                 if (patch == null)
