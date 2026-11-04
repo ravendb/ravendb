@@ -72,6 +72,9 @@ public sealed class PlanTemplate
     /// <summary>Number of value-bearing bindings (literal / query-parameter / deferred-method) for this query.</summary>
     public int ValueOrdinalCount;
 
+    /// <summary>Number of AND groups under an OR of a scored plan, i.e. the size of <c>CompiledQueryMatch.ScoringGroups</c>.</summary>
+    public int ScoringGroupCount;
+
     /// <summary>Pre-computed sort-metadata template. Everything we need to handle sorting properly.</summary>
     public SortMetadataTemplate SortMetadataTemplate;
 }
