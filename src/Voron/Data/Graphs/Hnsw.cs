@@ -992,6 +992,10 @@ public unsafe partial class Hnsw
         {
             internal bool SimulateConcurrentRealloc;
 
+            // LLT thread, around the rewrite of an overfull list from its dispatch snapshot: state, node index and level.
+            internal Action<SearchState, int, int> BeforeEdgesReplaced;
+            internal Action<SearchState, int, int> AfterEdgesReplaced;
+
             // Latched once the matching buffer was actually moved while the worker was parked, so a test
             // can fail loudly if the race window was never exercised.
             internal volatile bool VictimSelected;

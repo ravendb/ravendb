@@ -158,6 +158,7 @@ public partial class Hnsw
             private readonly SearchState _searchState = parent._searchState;
             private readonly List<int> _candidates = [];
             private readonly List<int> _nearestIndexes = [];
+            private readonly List<int> _liveIndexes = [];
             private readonly List<int> _indexes = [];
             private readonly List<int> _requiresEdgeFiltering = [];
             private readonly List<int> _pruned = [];
@@ -387,8 +388,9 @@ public partial class Hnsw
                         _requiresEdgeFiltering.Add(edgeIdx);
                     }
 
-                    foreach (var edgeIdx in _requiresEdgeFiltering)
+                    for (var filtered = 0; filtered < _requiresEdgeFiltering.Count; filtered++)
                     {
+                        var edgeIdx = _requiresEdgeFiltering[filtered];
                         UnmanagedSpan vector;
                         {
                             ref Node edge = ref _searchState.GetNodeByIndex(edgeIdx);
@@ -401,29 +403,68 @@ public partial class Hnsw
                         yield return _filterEdgesWorker;
                         
                         PortableExceptions.ThrowIf<InvalidOperationException>(_candidates.Count == 0 , "Cannot add a node to the graph without any edges after heuristic");
-                        {
-                            ref Node edge = ref _searchState.GetNodeByIndex(edgeIdx);
-                            ref var edgeList = ref edge.EdgesPerLevel[level];
-                            edgeList.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
-                            foreach (var idx in _candidates)
-                            {
-                                edgeList.AddUnsafe(_searchState.GetNodeByIndex(idx).NodeId);
-                            }
-
-                            // _candidates already holds node indexes, so we can rewrite the
-                            // mirrored cache directly without touching the node id table.
-                            if (edge.EdgesIndexesPerLevel.Count > level)
-                            {
-                                ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
-                                edgeIndexes.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
-                                foreach (var idx in _candidates)
-                                {
-                                    edgeIndexes.AddUnsafe(idx);
-                                }
-                            }
-                        }
+                        ReplaceEdges(edgeIdx, level);
                     }
                 }
+            }
+
+            /// <summary>
+            /// Rewrites the list of a node at a level to the heuristic selection in <see cref="_candidates"/>, which was made from the
+            /// snapshot taken when the work was dispatched. Ids that other placements appended since then are kept, and the list is
+            /// selected again when they put it over the cap.
+            /// </summary>
+            private void ReplaceEdges(int nodeIndex, int level)
+            {
+                parent._forTestingPurposes?.BeforeEdgesReplaced?.Invoke(_searchState, nodeIndex, level);
+                _liveIndexes.Clear();
+                ref Node live = ref _searchState.GetNodeByIndex(nodeIndex);
+                var ids = live.EdgesPerLevel[level].ToSpan();
+                // PERF: An index list that holds as many entries as the id list mirrors it, so the live list is read without a lookup per id.
+                if (live.EdgesIndexesPerLevel.Count > level && live.EdgesIndexesPerLevel[level].Count == ids.Length)
+                {
+                    _liveIndexes.AddRange(live.EdgesIndexesPerLevel[level].ToSpan());
+                }
+                else
+                {
+                    foreach (var id in ids)
+                        _liveIndexes.Add(_searchState.GetNodeIndexById(id));
+                }
+
+                var selected = _candidates.Count;
+                // Marking one list in the bitmap of the task finds what the other list lacks in one pass over each.
+                ClearVisited();
+                foreach (var idx in _edgeIndexSnapshot)
+                    MarkVisited(idx);
+                foreach (var idx in _liveIndexes)
+                {
+                    if (MarkVisited(idx))
+                        _candidates.Add(idx);
+                }
+
+                var keptBackLinks = _candidates.Count > selected;
+
+                ref Node node = ref _searchState.GetNodeByIndex(nodeIndex);
+                ref var list = ref node.EdgesPerLevel[level];
+                list.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
+                foreach (var idx in _candidates)
+                {
+                    list.AddUnsafe(_searchState.GetNodeByIndex(idx).NodeId);
+                }
+
+                // PERF: The candidates are node indexes, so the list of edge indexes is rewritten from them without a lookup in the node id table.
+                if (node.EdgesIndexesPerLevel.Count > level)
+                {
+                    ref var edgeIndexes = ref node.EdgesIndexesPerLevel[level];
+                    edgeIndexes.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
+                    foreach (var idx in _candidates)
+                    {
+                        edgeIndexes.AddUnsafe(idx);
+                    }
+                }
+
+                if (keptBackLinks && _candidates.Count > _searchState.Options.MaxEdgesAtLevel(level))
+                    _requiresEdgeFiltering.Add(nodeIndex);
+                parent._forTestingPurposes?.AfterEdgesReplaced?.Invoke(_searchState, nodeIndex, level);
             }
 
             private void AddEdgesFromInFlightNodes(ref Node n, int createdNodeIndex)
