@@ -6,6 +6,7 @@ import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 interface ServerResponse {
     status: 200 | 304;
     etag?: string;
+    requestTime?: string;
     body?: Partial<Raven.Client.Documents.Queries.QueryResult<any[], any>>;
 }
 
@@ -17,13 +18,13 @@ describe("queryCommand", () => {
 
     function mockServer(...responses: ServerResponse[]) {
         ajax = jest.spyOn($, "ajax");
-        responses.forEach(({ status, etag, body }) =>
+        responses.forEach(({ status, etag, requestTime, body }) =>
             ajax.mockImplementationOnce(() =>
                 $.Deferred()
                     .resolve(body, status === 304 ? "notmodified" : "success", {
                         status,
                         responseText: JSON.stringify(body),
-                        getResponseHeader: () => etag,
+                        getResponseHeader: (name: string) => (name === "Request-Time" ? requestTime : etag),
                     })
                     .promise()
             )
@@ -45,17 +46,16 @@ describe("queryCommand", () => {
     });
 
     it("reuses the previous results when the server answers 304", async () => {
-        mockServer({ status: 200, etag: '"5"', body: ordersResult }, { status: 304 });
+        mockServer({ status: 200, etag: '"5"', body: ordersResult }, { status: 304, requestTime: "3" });
 
         const first = await runQuery("from Orders where Freight > 10");
-        first.additionalResultInfo.DurationInMs = 1;
         const second = await runQuery("from Orders where Freight > 10");
 
         expect(sentEtags()).toEqual([undefined, "5"]);
         expect(first.fromCache).toBeFalse();
         expect(second.fromCache).toBeTrue();
         expect(second.items.map((x) => x.toDto())).toEqual(ordersResult.Results);
-        expect(second.additionalResultInfo.DurationInMs).toBe(120);
+        expect(second.additionalResultInfo.DurationInMs).toBe(3);
     });
 
     it("does not send the etag when the cache is disabled", async () => {
@@ -68,13 +68,15 @@ describe("queryCommand", () => {
         expect(second.fromCache).toBeFalse();
     });
 
-    it("does not cache results fetched with the cache disabled", async () => {
-        mockServer({ status: 200, etag: "9", body: ordersResult }, { status: 200, etag: "9", body: ordersResult });
+    it("reuses results fetched with the cache disabled once the cache is enabled", async () => {
+        mockServer({ status: 200, etag: "9", body: ordersResult }, { status: 304, requestTime: "2" });
 
         await runQuery("from Orders where Freight > 40", false);
-        await runQuery("from Orders where Freight > 40");
+        const second = await runQuery("from Orders where Freight > 40");
 
-        expect(sentEtags()).toEqual([undefined, undefined]);
+        expect(sentEtags()).toEqual([undefined, "9"]);
+        expect(second.fromCache).toBeTrue();
+        expect(second.items.map((x) => x.toDto())).toEqual(ordersResult.Results);
     });
 
     it("does not send the etag of a different query", async () => {

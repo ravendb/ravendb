@@ -61,12 +61,12 @@ class queryCommand extends commandBase {
         return this.post<pagedResultExtended<document>>(url, payload, this.props.db, options)
             .then((results: QueryResult, status: string, xhr: JQueryXHR) => {
                 if (xhr.status === 304) {
-                    return selector(JSON.parse(cachedResult.responseText), true);
+                    const cachedResults: QueryResult = JSON.parse(cachedResult.responseText);
+                    cachedResults.DurationInMs = Number(xhr.getResponseHeader("Request-Time"));
+                    return selector(cachedResults, true);
                 }
 
-                if (this.props.cacheEnabled) {
-                    queryCommand.cacheResults(cacheKey, this.extractEtag(xhr), xhr.responseText);
-                }
+                queryCommand.cacheResults(cacheKey, this.extractEtag(xhr), xhr.responseText);
                 return selector(results, false);
             })
             .fail((response: JQueryXHR) => {
