@@ -110,8 +110,7 @@ internal static partial class QueryPlanBuilder
         AssignParameterSlots(walkerCtx.SpatialClauses, slots);
         AssignParameterSlots(walkerCtx.VectorClauses, slots);
 
-        if (p.HasBoost)
-            AssignScoringGroups(walkerCtx.Clauses, walkerCtx.IsOr, count: 0);
+        int scoringGroupCount = p.HasBoost ? AssignScoringGroups(walkerCtx.Clauses, walkerCtx.IsOr, count: 0) : 0;
 
         string[] parameterSlots = slots.Keys.ToArray();
         p.Metadata.CachedSlotBindings = walkerCtx.SlotBindings.ToArray();
@@ -137,6 +136,7 @@ internal static partial class QueryPlanBuilder
             SortSeekHintTemplateIdx = sortSeekHintIdx,
             SortSeekUseParam2 = sortSeekUseParam2,
             ValueOrdinalCount = walkerCtx.SlotBindings.Count,
+            ScoringGroupCount = scoringGroupCount,
         };
     }
 
