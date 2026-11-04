@@ -856,7 +856,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         return GetChangeVectorFor(sink, "items/include/1");
     }
 
-    private static async Task SetupFilteredHubToSinkPullReplicationAsync(DocumentStore hub, DocumentStore sink, X509Certificate2 pullCert)
+    internal static async Task SetupFilteredHubToSinkPullReplicationAsync(DocumentStore hub, DocumentStore sink, X509Certificate2 pullCert)
     {
         await SetupHubToSinkPullReplicationAsync(hub, sink, pullCert, FilteredPullName, withFiltering: true, allowedHubToSinkPaths: [IncludedItemsPath]);
     }
@@ -915,7 +915,7 @@ public sealed class FilteredReplicationTestsPullReplicationCompositeChangeVector
         });
     }
 
-    private static X509Certificate2 ExportCertificate(X509Certificate2 certificate)
+    internal static X509Certificate2 ExportCertificate(X509Certificate2 certificate)
     {
 #pragma warning disable SYSLIB0057
         return new X509Certificate2(certificate.Export(X509ContentType.Pfx), (string)null, X509KeyStorageFlags.Exportable);
