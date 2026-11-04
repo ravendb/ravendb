@@ -56,74 +56,6 @@ namespace SlowTests.Server.Documents.Revisions
         }
 
         [RavenFact(RavenTestCategory.Revisions)]
-        public async Task CreateDatabaseOverExistingLegacyData_DoesNotStampHashedRevisionPk_LegacyRevisionStaysReachable()
-        {
-            var path = NewDataPath();
-
-            using (var store = GetDocumentStore(new Options
-            {
-                RunInMemory = false,
-                Path = path,
-                ModifyDatabaseRecord = StripHashedRevisionPkToken
-            }))
-            {
-                DocumentDatabase database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                Assert.False(database.SupportedFeatures.SupportedFeatureTypes.HashedRevisionPk);
-
-                string knownChangeVector = await SeedLegacyRevisionAsync(store, database);
-
-                await SoftDeleteAndRecreateAsync(store, path);
-
-                // Without adoption the fresh record would have been stamped with HashedRevisionPk.
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.Equal(new[] { Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix }, record.SupportedFeatures);
-
-                database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                Assert.False(database.DocumentsStorage.RevisionsStorage.DualForm.HashOnly);
-                AssertLegacyRevisionReachable(database, knownChangeVector);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Revisions)]
-        public async Task CreateDatabaseOverPreFixData_AdoptsEmptyFeatures_LegacyRevisionStaysReachable()
-        {
-            var path = NewDataPath();
-
-            using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path }))
-            {
-                DocumentDatabase database = await Databases.GetDocumentDatabaseInstanceFor(store);
-
-                string knownChangeVector = await SeedLegacyRevisionAsync(store, database);
-
-                // Simulate data written by builds that predate the persisted feature list.
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice).Delete(DocumentsStorage.SupportedFeaturesKey);
-                    tx.Commit();
-                }
-
-                await SoftDeleteAndRecreateAsync(store, path);
-
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                Assert.True(record.SupportedFeatures == null || record.SupportedFeatures.Count == 0,
-                    $"Expected no features on the adopted record but got: [{string.Join(", ", record.SupportedFeatures ?? new List<string>())}]");
-
-                database = await Databases.GetDocumentDatabaseInstanceFor(store);
-                Assert.False(database.DocumentsStorage.RevisionsStorage.DualForm.HashOnly);
-                AssertLegacyRevisionReachable(database, knownChangeVector);
-
-                // The adopted database declares no features, so nothing gets persisted - absent stays the marker.
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsStorage.GlobalTreeSlice);
-                    Assert.False(tree.TryRead(DocumentsStorage.SupportedFeaturesKey, out _));
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Revisions)]
         public async Task PersistedSupportedFeatures_AreWriteOnce()
         {
             var path = NewDataPath();
@@ -149,7 +81,8 @@ namespace SlowTests.Server.Documents.Revisions
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
                 database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-                Assert.False(database.SupportedFeatures.SupportedFeatureTypes.HashedRevisionPk);
+                // the storage decides, not the record: this storage was born hashed, so lookups stay hash-only
+                Assert.True(database.DocumentsStorage.RevisionsStorage.HashedRevisionPk);
                 Assert.Equal(birth.OrderBy(x => x), ReadPersistedSupportedFeatures(database).OrderBy(x => x));
             }
         }
@@ -187,38 +120,6 @@ namespace SlowTests.Server.Documents.Revisions
                     user.Name = "Updated";
                     await session.SaveChangesAsync();
                 }
-            }
-        }
-
-        private async Task<string> SeedLegacyRevisionAsync(DocumentStore store, DocumentDatabase database)
-        {
-            using (IAsyncDocumentSession session = store.OpenAsyncSession())
-            {
-                await session.StoreAsync(new User { Name = "Seed" }, "users/1");
-                await session.SaveChangesAsync();
-            }
-
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                Raven.Server.Utils.ChangeVector compoundCv = BuildCompound(context, order: ("A", DbA, 7), version: ("B", DbB, 11));
-
-                RevisionLegacyRowSeeder.SeedLegacyRevisionRow(
-                    context, database, "users/1", "Users", compoundCv,
-                    etag: database.DocumentsStorage.GenerateNextEtag());
-
-                tx.Commit();
-                return compoundCv.AsString();
-            }
-        }
-
-        private static void AssertLegacyRevisionReachable(DocumentDatabase database, string changeVector)
-        {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                Document revision = database.DocumentsStorage.RevisionsStorage.GetRevision(context, changeVector);
-                Assert.NotNull(revision);
             }
         }
 

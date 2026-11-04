@@ -23,7 +23,8 @@ namespace SlowTests.Server.Documents.Revisions
             string id,
             string collection,
             Raven.Server.Utils.ChangeVector compoundCv,
-            long etag)
+            long etag,
+            DocumentFlags flags = DocumentFlags.Revision)
         {
             CollectionName collectionName = database.DocumentsStorage.ExtractCollectionName(context, collection);
             Table table = database.DocumentsStorage.RevisionsStorage.EnsureRevisionTableCreated(
@@ -40,7 +41,7 @@ namespace SlowTests.Server.Documents.Revisions
                 tvb.Add(Bits.SwapBytes(etag));                                  // 3
                 tvb.Add(idSlice);                                               // 4
                 tvb.Add(docBlittable.BasePointer, docBlittable.Size);           // 5
-                tvb.Add((int)DocumentFlags.Revision);                           // 6
+                tvb.Add((int)flags);                                            // 6
                 tvb.Add(0L);                                                    // 7 NotDeletedRevisionMarker
                 long ticks = DateTime.UtcNow.Ticks;
                 tvb.Add(ticks);                                                 // 8
