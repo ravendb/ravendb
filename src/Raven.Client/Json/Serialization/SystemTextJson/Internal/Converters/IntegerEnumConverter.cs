@@ -45,11 +45,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     case JsonTokenType.Number:
                         return (T)Enum.ToObject(typeof(T), _unsigned ? reader.GetUInt64() : reader.GetInt64());
                     case JsonTokenType.String:
-                        string text = reader.GetString();
-                        if (_enumMemberValues.TryGetValue(text, out T value) || Enum.TryParse(text, ignoreCase: true, out value))
-                            return value;
-
-                        throw new JsonException($"The JSON value '{text}' could not be converted to {typeof(T)}.");
+                        return Parse(reader.GetString());
                     default:
                         throw new JsonException($"Expected a number or a string for '{typeof(T).FullName}' but got {reader.TokenType}.");
                 }
@@ -61,6 +57,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     writer.WriteNumberValue(Convert.ToUInt64(value));
                 else
                     writer.WriteNumberValue(Convert.ToInt64(value));
+            }
+
+            public override T ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return Parse(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(value.ToString());
+            }
+
+            private T Parse(string text)
+            {
+                if (_enumMemberValues.TryGetValue(text, out T value) || Enum.TryParse(text, ignoreCase: true, out value))
+                    return value;
+
+                throw new JsonException($"The JSON value '{text}' could not be converted to {typeof(T)}.");
             }
         }
     }
