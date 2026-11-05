@@ -2485,6 +2485,57 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    public enum PaintColor
+    {
+        DarkRed,
+        LightBlue
+    }
+
+    private class Paint
+    {
+        public PaintColor Color { get; set; }
+
+        public DateTime When { get; set; }
+    }
+
+    private sealed class DayTextConverter : System.Text.Json.Serialization.JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) =>
+            DateTime.ParseExact(reader.GetString(), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTime value, System.Text.Json.JsonSerializerOptions options) =>
+            writer.WriteStringValue(value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonUsesConvertersAddedThroughCustomizeJsonSerializerOptions()
+    {
+        var conventions = new DocumentConventions
+        {
+            Serialization = new SystemTextJsonSerializationConventions
+            {
+                CustomizeJsonSerializerOptions = options =>
+                {
+                    options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+                    options.Converters.Add(new DayTextConverter());
+                }
+            }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new Paint { Color = PaintColor.DarkRed, When = new DateTime(2020, 1, 2) }, context))
+        {
+            Assert.True(json.TryGet(nameof(Paint.Color), out string color));
+            Assert.Equal("darkRed", color);
+            Assert.True(json.TryGet(nameof(Paint.When), out string when));
+            Assert.Equal("2020-01-02", when);
+
+            Paint read = conventions.Serialization.DefaultConverter.FromBlittable<Paint>(json);
+            Assert.Equal(PaintColor.DarkRed, read.Color);
+            Assert.Equal(new DateTime(2020, 1, 2), read.When);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
