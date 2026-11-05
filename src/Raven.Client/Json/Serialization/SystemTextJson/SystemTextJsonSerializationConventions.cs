@@ -284,12 +284,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             foreach (var kvp in metadata)
             {
                 writer.WritePropertyName(kvp.Key);
-                WriteMetadataValue(writer, kvp.Value);
+                WriteMetadataValue(writer, kvp.Key, kvp.Value);
             }
             writer.WriteEndObject();
         }
 
-        internal static void WriteMetadataValue(Utf8JsonWriter writer, object value)
+        internal static void WriteMetadataValue(Utf8JsonWriter writer, string key, object value)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -298,11 +298,41 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 case string s:
                     writer.WriteStringValue(s);
                     break;
+                case LazyStringValue s:
+                    writer.WriteStringValue(s.ToString());
+                    break;
+                case LazyCompressedStringValue s:
+                    writer.WriteStringValue(s.ToString());
+                    break;
+                case char c:
+                    writer.WriteStringValue(c.ToString());
+                    break;
                 case long l:
                     writer.WriteNumberValue(l);
                     break;
                 case int i:
                     writer.WriteNumberValue(i);
+                    break;
+                case short s:
+                    writer.WriteNumberValue(s);
+                    break;
+                case byte b:
+                    writer.WriteNumberValue(b);
+                    break;
+                case sbyte sb:
+                    writer.WriteNumberValue(sb);
+                    break;
+                case ushort us:
+                    writer.WriteNumberValue(us);
+                    break;
+                case uint ui:
+                    writer.WriteNumberValue(ui);
+                    break;
+                case ulong ul:
+                    writer.WriteNumberValue(ul);
+                    break;
+                case LazyNumberValue ln:
+                    writer.WriteRawValue(ln.ToString(), skipInputValidation: true);
                     break;
                 case bool b:
                     writer.WriteBooleanValue(b);
@@ -349,20 +379,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     writer.WriteStartObject();
                     foreach (DictionaryEntry entry in dictionary)
                     {
-                        writer.WritePropertyName(entry.Key.ToString());
-                        WriteMetadataValue(writer, entry.Value);
+                        string entryKey = entry.Key.ToString();
+                        writer.WritePropertyName(entryKey);
+                        WriteMetadataValue(writer, entryKey, entry.Value);
                     }
                     writer.WriteEndObject();
                     break;
                 case IEnumerable items:
                     writer.WriteStartArray();
                     foreach (object item in items)
-                        WriteMetadataValue(writer, item);
+                        WriteMetadataValue(writer, key, item);
                     writer.WriteEndArray();
                     break;
                 default:
-                    JsonSerializer.Serialize(writer, value);
-                    break;
+                    throw new NotSupportedException($"The value type {value.GetType().FullName} of key {key} is not supported in the metadata");
             }
         }
 
