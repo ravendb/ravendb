@@ -26,6 +26,29 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
 
+        private static readonly ConcurrentDictionary<Type, MethodInfo> _immutableFactories = new();
+
+        private static readonly Dictionary<string, string> ImmutableInterfaceImplementations = new(StringComparer.Ordinal)
+        {
+            ["System.Collections.Immutable.IImmutableList`1"] = "System.Collections.Immutable.ImmutableList`1",
+            ["System.Collections.Immutable.IImmutableQueue`1"] = "System.Collections.Immutable.ImmutableQueue`1",
+            ["System.Collections.Immutable.IImmutableStack`1"] = "System.Collections.Immutable.ImmutableStack`1",
+            ["System.Collections.Immutable.IImmutableSet`1"] = "System.Collections.Immutable.ImmutableHashSet`1",
+            ["System.Collections.Immutable.IImmutableDictionary`2"] = "System.Collections.Immutable.ImmutableDictionary`2"
+        };
+
+        private static readonly Dictionary<string, string> ImmutableFactories = new(StringComparer.Ordinal)
+        {
+            ["System.Collections.Immutable.ImmutableArray`1"] = "System.Collections.Immutable.ImmutableArray",
+            ["System.Collections.Immutable.ImmutableList`1"] = "System.Collections.Immutable.ImmutableList",
+            ["System.Collections.Immutable.ImmutableQueue`1"] = "System.Collections.Immutable.ImmutableQueue",
+            ["System.Collections.Immutable.ImmutableStack`1"] = "System.Collections.Immutable.ImmutableStack",
+            ["System.Collections.Immutable.ImmutableHashSet`1"] = "System.Collections.Immutable.ImmutableHashSet",
+            ["System.Collections.Immutable.ImmutableSortedSet`1"] = "System.Collections.Immutable.ImmutableSortedSet",
+            ["System.Collections.Immutable.ImmutableDictionary`2"] = "System.Collections.Immutable.ImmutableDictionary",
+            ["System.Collections.Immutable.ImmutableSortedDictionary`2"] = "System.Collections.Immutable.ImmutableSortedDictionary"
+        };
+
         public static JsonConverter TryCreate(Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
         {
             if (typeNameHandling == TypeNameHandling.None || declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
@@ -107,7 +130,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             Type dictionaryInterface = type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(IDictionary<,>) || type.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))
                 ? type
-                : type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>));
+                : type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IDictionary<,>)) ??
+                  type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>));
 
             if (dictionaryInterface == null)
             {
@@ -432,8 +456,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             Type createdType = GetCreatedType(dictionaryType);
             Type bufferType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
             ConstructorInfo dictionaryConstructor = null;
+            MethodInfo immutableFactory = GetImmutableFactory(createdType);
 
-            if (createdType.IsInterface || createdType.IsAbstract)
+            if (immutableFactory != null || createdType.IsInterface || createdType.IsAbstract)
             {
                 createdType = bufferType;
             }
@@ -468,7 +493,33 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     indexer.SetValue(dictionary, value, [key]);
             }
 
+            if (immutableFactory != null)
+                return immutableFactory.Invoke(null, [dictionary]);
+
             return dictionaryConstructor == null ? dictionary : dictionaryConstructor.Invoke([dictionary]);
+        }
+
+        private static MethodInfo GetImmutableFactory(Type type)
+        {
+            return _immutableFactories.GetOrAdd(type, static t =>
+            {
+                if (t.IsGenericType == false)
+                    return null;
+
+                string definitionName = t.GetGenericTypeDefinition().FullName;
+                if (ImmutableInterfaceImplementations.TryGetValue(definitionName, out string implementationName))
+                    definitionName = implementationName;
+
+                if (ImmutableFactories.TryGetValue(definitionName, out string factoryName) == false)
+                    return null;
+
+                Type[] arguments = t.GetGenericArguments();
+                MethodInfo createRange = t.Assembly.GetType(factoryName)?
+                    .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                    .FirstOrDefault(m => m.Name == "CreateRange" && m.IsGenericMethodDefinition && m.GetGenericArguments().Length == arguments.Length && m.GetParameters().Length == 1);
+
+                return createRange?.MakeGenericMethod(arguments);
+            });
         }
 
         private static object ReadWrappedCollection(ref Utf8JsonReader reader, Type collectionType, JsonSerializerOptions options)
@@ -506,6 +557,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             if (collectionType.IsAssignableFrom(items.GetType()))
                 return items;
+
+            MethodInfo immutableFactory = GetImmutableFactory(collectionType);
+            if (immutableFactory != null)
+                return immutableFactory.Invoke(null, [items]);
 
             if (collectionType.IsInterface || collectionType.IsAbstract)
             {
