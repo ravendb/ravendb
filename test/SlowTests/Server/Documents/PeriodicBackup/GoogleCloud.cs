@@ -171,6 +171,52 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        // the length of the upload is unknown until the end of the stream, so sizes on a chunk boundary are the interesting ones
+        [GoogleCloudRetryTheory]
+        [InlineData(0)]
+        [InlineData(256 * 1024)]
+        [InlineData(4 * 256 * 1024)]
+        [InlineData(4 * 256 * 1024 + 1)]
+        public async Task direct_upload_handles_sizes_on_chunk_boundaries(int size)
+        {
+            var fileName = $"{nameof(GoogleStorage)}-{Guid.NewGuid()}";
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudRetryFactAttribute.GoogleCloudSettings, DefaultConfiguration, cancellationToken: cts.Token))
+            {
+                client.DirectUploadChunkSize = new Size(256, SizeUnit.Kilobytes);
+
+                try
+                {
+                    var uploader = client.GetUploader(fileName, new Dictionary<string, string>());
+                    uploader.Initialize();
+
+                    var data = new byte[size];
+                    Random.Shared.NextBytes(data);
+
+                    if (size > 0)
+                    {
+                        using (var part = new MemoryStream(data))
+                            await uploader.UploadPartAsync(part);
+                    }
+
+                    await uploader.CompleteUploadAsync();
+
+                    var obj = await client.GetObjectAsync(fileName);
+                    Assert.Equal((ulong)size, obj.Size);
+
+                    var downloaded = new MemoryStream();
+                    await using (var stream = client.DownloadObject(fileName))
+                        await stream.CopyToAsync(downloaded, cts.Token);
+
+                    Assert.Equal(data, downloaded.ToArray());
+                }
+                finally
+                {
+                    await DeleteIfExistsAsync(client, fileName);
+                }
+            }
+        }
+
         [GoogleCloudRetryFact]
         public async Task direct_upload_streams_unaligned_parts_into_a_single_object()
         {

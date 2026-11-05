@@ -158,6 +158,62 @@ namespace FastTests.Issues
             await uploader.AbortAsync().WaitAsync(Timeout);
         }
 
+        // the DirectUploadStream aborts without waiting for the part that is in flight. that part might be blocked on the back pressure
+        // of the pipe (the network is slower than the backup), the abort must release it and wait for it to finish
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task Abort_releases_a_part_that_waits_for_the_upload_to_consume_it(bool async)
+        {
+            var client = new FakeStorageClient { StallUntilCancelled = true };
+            var uploader = new GoogleCloudMultiPartUploader(client, "bucket", "key", new Dictionary<string, string>(), ChunkSize, progress: null, CancellationToken.None);
+
+            uploader.Initialize();
+
+            using var part = new MemoryStream(RandomBytes(16 * ChunkSize));
+            var partTask = uploader.UploadPartAsync(part);
+
+            await Task.Delay(100);
+            Assert.False(partTask.IsCompleted, "the part should wait for the stalled upload to consume the pipe");
+
+            if (async)
+                await uploader.AbortAsync().WaitAsync(Timeout);
+            else
+                await Task.Run(uploader.Abort).WaitAsync(Timeout);
+
+            Assert.True(partTask.IsCompleted, "the abort must wait for the part that was in flight");
+            Assert.False(partTask.IsCompletedSuccessfully);
+            Assert.False(client.SawEndOfStream);
+            Assert.False(client.Finalized);
+        }
+
+        // cancelling the backup task cancels the upload: the waiting part fails instead of hanging, and the abort that follows is clean
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task Cancelling_the_backup_fails_the_part_upload_and_does_not_create_the_object()
+        {
+            using var cts = new CancellationTokenSource();
+            var client = new FakeStorageClient { StallUntilCancelled = true };
+            var uploader = new GoogleCloudMultiPartUploader(client, "bucket", "key", new Dictionary<string, string>(), ChunkSize, progress: null, cts.Token);
+
+            uploader.Initialize();
+
+            using var part = new MemoryStream(RandomBytes(16 * ChunkSize));
+            var partTask = uploader.UploadPartAsync(part);
+
+            await Task.Delay(100);
+            Assert.False(partTask.IsCompleted, "the part should wait for the stalled upload to consume the pipe");
+
+            await cts.CancelAsync();
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => partTask.WaitAsync(Timeout));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => uploader.CompleteUploadAsync().WaitAsync(Timeout));
+
+            await uploader.AbortAsync().WaitAsync(Timeout);
+
+            Assert.False(client.SawEndOfStream);
+            Assert.False(client.Finalized);
+        }
+
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public void Chunk_size_must_be_a_multiple_of_256_KiB()
         {
@@ -371,6 +427,9 @@ namespace FastTests.Issues
             public long FailAfterBytes;
             public Exception FailOnFinalize;
 
+            // a stalled network: nothing is consumed until the upload is cancelled
+            public bool StallUntilCancelled;
+
             public override async Task<Object> UploadObjectAsync(Object destination, Stream source, UploadObjectOptions options = null,
                 CancellationToken cancellationToken = default, IProgress<IUploadProgress> progress = null)
             {
@@ -381,6 +440,9 @@ namespace FastTests.Issues
                 var buffer = new byte[64 * 1024];
                 try
                 {
+                    if (StallUntilCancelled)
+                        await Task.Delay(System.Threading.Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+
                     while (true)
                     {
                         var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);

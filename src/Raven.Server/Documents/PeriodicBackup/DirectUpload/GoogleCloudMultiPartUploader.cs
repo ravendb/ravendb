@@ -36,6 +36,7 @@ public sealed class GoogleCloudMultiPartUploader : IMultiPartUploader
     private Pipe _pipe;
     private CancellationTokenSource _uploadCts;
     private Task _uploadTask;
+    private Task _partTask;
 
     public GoogleCloudMultiPartUploader(StorageClient client, string bucketName, string key, Dictionary<string, string> metadata, int chunkSize,
         Progress progress, CancellationToken cancellationToken)
@@ -118,9 +119,17 @@ public sealed class GoogleCloudMultiPartUploader : IMultiPartUploader
         AsyncHelpers.RunSync(() => UploadPartAsync(stream));
     }
 
-    public async Task UploadPartAsync(Stream stream)
+    public Task UploadPartAsync(Stream stream)
+    {
+        // the DirectUploadStream doesn't wait for the part that is in flight when it aborts, the abort does
+        return _partTask = UploadPartInternalAsync(stream);
+    }
+
+    private async Task UploadPartInternalAsync(Stream stream)
     {
         AssertInitialized();
+
+        var token = _uploadCts.Token;
 
         if (_uploadTask.IsCompleted)
             await ThrowUploadEndedPrematurelyAsync().ConfigureAwait(false);
@@ -130,13 +139,13 @@ public sealed class GoogleCloudMultiPartUploader : IMultiPartUploader
         while (true)
         {
             var memory = writer.GetMemory(WriteBufferSizeHint);
-            var read = await stream.ReadAsync(memory, _uploadCts.Token).ConfigureAwait(false);
+            var read = await stream.ReadAsync(memory, token).ConfigureAwait(false);
             if (read == 0)
                 break;
 
             writer.Advance(read);
 
-            var result = await writer.FlushAsync(_uploadCts.Token).ConfigureAwait(false);
+            var result = await writer.FlushAsync(token).ConfigureAwait(false);
             if (result.IsCompleted || result.IsCanceled)
                 await ThrowUploadEndedPrematurelyAsync().ConfigureAwait(false);
         }
@@ -179,22 +188,32 @@ public sealed class GoogleCloudMultiPartUploader : IMultiPartUploader
 
         // the object is created only by the last request of the session, so an unfinished session leaves nothing behind
         // and it expires on its own. cancelling also releases a part upload that might still wait for the pipe to drain
-        if (_uploadTask.IsCompleted == false)
+        if (_uploadTask.IsCompleted == false || _partTask is { IsCompleted: false })
             await _uploadCts.CancelAsync().ConfigureAwait(false);
 
         // the reader must never see a clean end of the stream, otherwise the SDK would create a truncated object
         await _pipe.Writer.CompleteAsync(new OperationCanceledException("The upload to Google Cloud was aborted")).ConfigureAwait(false);
 
+        // expected to fail, the upload was aborted or it has already failed
+        await IgnoreFailureAsync(_partTask).ConfigureAwait(false);
+        await IgnoreFailureAsync(_uploadTask).ConfigureAwait(false);
+
+        _uploadCts.Dispose();
+    }
+
+    private static async Task IgnoreFailureAsync(Task task)
+    {
+        if (task == null)
+            return;
+
         try
         {
-            await _uploadTask.ConfigureAwait(false);
+            await task.ConfigureAwait(false);
         }
         catch
         {
-            // expected, the upload was aborted or it has already failed
+            // ignored
         }
-
-        _uploadCts.Dispose();
     }
 
     private async Task ThrowUploadEndedPrematurelyAsync()
