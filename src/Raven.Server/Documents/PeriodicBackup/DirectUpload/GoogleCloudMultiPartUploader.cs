@@ -63,9 +63,10 @@ public sealed class GoogleCloudMultiPartUploader : IMultiPartUploader
             throw new InvalidOperationException("The upload was already initialized");
 
         _uploadCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
+        // up to one chunk is buffered while the SDK sends the previous one
         _pipe = new Pipe(new PipeOptions(
-            pauseWriterThreshold: 2L * _chunkSize,
-            resumeWriterThreshold: _chunkSize,
+            pauseWriterThreshold: _chunkSize,
+            resumeWriterThreshold: _chunkSize / 2,
             useSynchronizationContext: false));
 
         // the upload runs on the thread pool, outside of the backup's synchronization context (RavenDB-26903)

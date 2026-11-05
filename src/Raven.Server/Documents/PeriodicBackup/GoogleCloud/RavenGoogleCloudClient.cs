@@ -22,8 +22,10 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
     {
         private static readonly Size DownloadChunkSize = new Size(1, SizeUnit.Megabytes);
 
-        // the amount of data the direct upload stream buffers before handing it over to the uploader
-        internal Size DirectUploadPartSize = new Size(32, SizeUnit.Megabytes);
+        // the amount of data the direct upload stream buffers before handing it over to the uploader. the uploader only copies a part
+        // into its pipe (the requests are sized by DirectUploadChunkSize), so a small part is enough, and it keeps the memory of the
+        // stream low: it double buffers the parts in memory streams, each growing up to twice the part size
+        internal Size DirectUploadPartSize = new Size(4, SizeUnit.Megabytes);
 
         // the size of a single request of the resumable upload session, must be a multiple of 256 KiB
         internal Size DirectUploadChunkSize = new Size(16, SizeUnit.Megabytes);

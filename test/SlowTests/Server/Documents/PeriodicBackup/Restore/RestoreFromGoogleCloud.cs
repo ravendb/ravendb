@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -264,6 +268,79 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }
                 }
             }
+        }
+
+        // a direct upload streams the backup to Google Cloud, so nothing of it may be written to the disk. the default upload mode
+        // writes the backup file to the temp folder first, which also shows that the watcher sees such writes
+        [GoogleCloudRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupType.Backup)]
+        [InlineData(BackupType.Snapshot)]
+        public async Task direct_upload_does_not_write_the_backup_to_disk(BackupType backupType)
+        {
+            await using (CleanupAsync())
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await GetDatabase(store.Database);
+                BackupUtils.GetBackupTempPath(database.Configuration, "unused", out var tempBasePath);
+
+                var writtenWithDefaultUpload = await RunBackupAndGetBackupFilesWrittenToDiskAsync(BackupUploadMode.Default);
+                Assert.NotEmpty(writtenWithDefaultUpload);
+
+                var writtenWithDirectUpload = await RunBackupAndGetBackupFilesWrittenToDiskAsync(BackupUploadMode.DirectUpload);
+                Assert.Empty(writtenWithDirectUpload);
+
+                async Task<List<string>> RunBackupAndGetBackupFilesWrittenToDiskAsync(BackupUploadMode backupUploadMode)
+                {
+                    var written = new ConcurrentQueue<string>();
+
+                    using (WatchFileWrites(tempBasePath.FullPath, includeSubdirectories: true, written))
+                    using (WatchFileWrites(Path.GetTempPath(), includeSubdirectories: false, written))
+                    {
+                        var config = Backup.CreateBackupConfiguration(backupType: backupType, googleCloudSettings: GetGoogleCloudSettings(), backupUploadMode: backupUploadMode);
+                        var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+                        var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
+                        AssertUploadedToGoogleCloud(status.UploadToGoogleCloud, backupUploadMode);
+
+                        // let the watchers deliver the last events
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                    }
+
+                    return written.Where(IsBackupFile).Distinct().ToList();
+                }
+            }
+
+            static bool IsBackupFile(string path)
+            {
+                var name = Path.GetFileName(path);
+                return name.Contains(".ravendb-", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".in-progress", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        private static FileSystemWatcher WatchFileWrites(string path, bool includeSubdirectories, ConcurrentQueue<string> written)
+        {
+            Directory.CreateDirectory(path);
+
+            var watcher = new FileSystemWatcher(path)
+            {
+                IncludeSubdirectories = includeSubdirectories,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.Size | NotifyFilters.LastWrite,
+                InternalBufferSize = 64 * 1024
+            };
+
+            watcher.Created += (_, e) => written.Enqueue(e.FullPath);
+            watcher.Changed += (_, e) => written.Enqueue(e.FullPath);
+            watcher.Renamed += (_, e) => written.Enqueue(e.FullPath);
+            watcher.EnableRaisingEvents = true;
+
+            return watcher;
         }
 
         private static void AssertUploadedToGoogleCloud(UploadToGoogleCloud uploadStatus, BackupUploadMode backupUploadMode)
