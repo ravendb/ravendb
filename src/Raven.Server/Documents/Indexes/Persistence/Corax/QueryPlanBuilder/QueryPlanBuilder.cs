@@ -183,6 +183,10 @@ internal static partial class QueryPlanBuilder
         if (walkerCtx.IsOr)
             return flags;
 
+        // Only the bitmap pipeline applies the spatial / vector post-filters - the sorted and compound scans would drop them.
+        if ((walkerCtx.SpatialClauses ?? walkerCtx.VectorClauses) is not null)
+            return flags;
+
         // Collect non-negated, non-boosted Equals clause indices for compound lookups.
         const int maxStackAllocSize = 128;
         Span<int> eqBuf = clauses.Count <= maxStackAllocSize ? stackalloc int[maxStackAllocSize] : new int[clauses.Count];
@@ -282,7 +286,7 @@ internal static partial class QueryPlanBuilder
             {
                 if (i == walkerCtx.CompoundFieldDrivingClause) continue;
                 ClauseInfo c = clauses[i];
-                if (c.FieldName != walkerCtx.CompoundFieldSortName) continue;
+                if (c.IsNegated || c.FieldName != walkerCtx.CompoundFieldSortName) continue;
                 if (c.ClauseType is ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual
                     or ClauseType.LessThan or ClauseType.LessThanOrEqual or ClauseType.Between)
                 {
@@ -445,12 +449,11 @@ internal static partial class QueryPlanBuilder
             {
                 clauses.Add(new ClauseInfo
                 {
-                    ClauseType = expr is BooleanOp.True ? ClauseType.MatchAll : ClauseType.MatchNothing,
-                    OriginalIndex = clauses.Count
+                    ClauseType = expr is BooleanOp.True ? ClauseType.MatchAll : ClauseType.MatchNothing
                 });
             }
 
-            ClauseInfo clauseInfo = new() { ClauseType = clauseType, OriginalIndex = walkerCtx.Clauses.Count, SubClauses = clauses };
+            ClauseInfo clauseInfo = new() { ClauseType = clauseType, SubClauses = clauses };
 
             walkerCtx.Clauses.Add(clauseInfo);
             return expr;
@@ -471,7 +474,6 @@ internal static partial class QueryPlanBuilder
             FieldName = fieldName,
             ClauseType = isNotEqual ? ClauseType.NotEquals : ClauseType.Equals,
             IsNegated = isNotEqual,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [CreateBinding(be.Right, walkerCtx)]
         });
     }
@@ -495,8 +497,7 @@ internal static partial class QueryPlanBuilder
                 OperatorType.LessThan => ClauseType.LessThan,
                 OperatorType.LessThanEqual => ClauseType.LessThanOrEqual,
                 _ => ClauseType.Equals
-            },
-            OriginalIndex = walkerCtx.Clauses.Count
+            }
         });
     }
 
@@ -530,7 +531,6 @@ internal static partial class QueryPlanBuilder
         {
             FieldName = resolvedFieldName,
             ClauseType = ClauseType.Between,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [minBinding, maxBinding]
         });
     }
@@ -562,7 +562,6 @@ internal static partial class QueryPlanBuilder
         {
             FieldName = resolvedFieldName,
             ClauseType = inExpr.All ? ClauseType.AllIn : ClauseType.In,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = inBindings.ToArray()
         });
     }
@@ -689,8 +688,7 @@ internal static partial class QueryPlanBuilder
         walkerCtx.Clauses.Add(new ClauseInfo
         {
             FieldName = existsFieldName,
-            ClauseType = ClauseType.Exists,
-            OriginalIndex = walkerCtx.Clauses.Count
+            ClauseType = ClauseType.Exists
         });
         return BooleanOp.Leaf;
     }
@@ -715,7 +713,6 @@ internal static partial class QueryPlanBuilder
         {
             FieldName = fieldName,
             ClauseType = clauseType,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [CreateBinding(method.Arguments[1], walkerCtx)]
         });
         return BooleanOp.Leaf;
@@ -751,7 +748,6 @@ internal static partial class QueryPlanBuilder
             FieldName = fieldName,
             ClauseType = ClauseType.Search,
             SearchOperator = searchOp,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [CreateBinding(method.Arguments[1], walkerCtx)]
         });
         return BooleanOp.Leaf;
@@ -776,11 +772,9 @@ internal static partial class QueryPlanBuilder
         List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, count);
         walkerCtx.Clauses.RemoveRange(beforeCount, count);
 
-        // sub-clause OriginalIndex stays parent-relative, not 0-based like HandleGroup's - unread today
         walkerCtx.Clauses.Add(new ClauseInfo
         {
             ClauseType = innerOp is BooleanOp.Or ? ClauseType.OrGroup : ClauseType.AndGroup,
-            OriginalIndex = beforeCount,
             SubClauses = inner
         });
     }
@@ -915,7 +909,6 @@ internal static partial class QueryPlanBuilder
             FieldName = spatialFieldName,
             ClauseType = ClauseType.Spatial,
             SpatialMethodType = ToSpatialOp(methodType),
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = spatialBindings.ToArray()
         });
         return BooleanOp.Leaf;
@@ -966,7 +959,6 @@ internal static partial class QueryPlanBuilder
         {
             FieldName = vectorFieldName,
             ClauseType = ClauseType.Vector,
-            OriginalIndex = walkerCtx.Clauses.Count,
             Bindings = [vectorValueBinding, minimumMatchBinding, numberOfCandidatesBinding, aiTaskBinding],
             VectorMethod = vecMethod,
             VectorSourceFieldName = walkerCtx.Metadata.GetVectorSourceFieldName(vectorFieldName, method, walkerCtx.QueryParameters)

@@ -31,8 +31,6 @@ public sealed class ClauseInfo
 
     public ClauseType ClauseType { get; init; }
 
-    public int OriginalIndex { get; init; }
-
     public bool IsNegated { get; set; }
 
     public bool IsExact { get; set; }

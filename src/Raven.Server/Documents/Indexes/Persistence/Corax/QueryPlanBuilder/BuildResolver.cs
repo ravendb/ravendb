@@ -158,8 +158,9 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
         QueryExecution queryExecution = new();
         // no filter left means match everything, so the top level takes the AND identity whatever IsOr says
         bool enclosingIsOr = template.IsOr && WholeWhereVanishes() == false;
-        foreach (var cached in template.Clauses)
+        for (int i = 0; i < template.Clauses.Count; i++)
         {
+            var cached = template.Clauses[i];
             var exec = QueryPlanBuilder.CreateExecution(cached);
             ApplyFate(exec, cached, enclosingIsOr);
             if (exec.IsSentinel == false)
@@ -173,7 +174,7 @@ ref struct BuildResolver(PlanTemplate template, PlanParameters planParams, Query
                     exec.Cardinality = CardinalityEstimator.Estimate(exec, _indexSearcher, _writer, walkerCtx);
             }
             AppendSentinelCodes(exec);
-            queryExecution.SetKnownClause(exec, template);
+            queryExecution.SetKnownClause(exec, template, i);
             execList.Add(exec);
         }
 
