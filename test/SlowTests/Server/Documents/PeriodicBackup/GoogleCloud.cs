@@ -171,6 +171,50 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        // the regular upload (a temp file, used by the default upload mode and by OLAP ETL) sends requests of UploadChunkSize as well
+        [GoogleCloudRetryTheory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task regular_upload_spanning_several_requests(bool async)
+        {
+            var fileName = $"{nameof(GoogleStorage)}-{Guid.NewGuid()}";
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+            using (var client = new RavenGoogleCloudClient(GoogleCloudRetryFactAttribute.GoogleCloudSettings, DefaultConfiguration, cancellationToken: cts.Token))
+            {
+                // the smallest request size, so the upload takes 13 requests
+                client.UploadChunkSize = new Size(256, SizeUnit.Kilobytes);
+
+                try
+                {
+                    var data = new byte[3 * 1024 * 1024 + 13];
+                    Random.Shared.NextBytes(data);
+                    var metadata = new Dictionary<string, string> { { "Description", "Full backup" } };
+
+                    using (var source = new MemoryStream(data))
+                    {
+                        if (async)
+                            await client.UploadObjectAsync(fileName, source, metadata);
+                        else
+                            client.UploadObject(fileName, source, metadata);
+                    }
+
+                    var obj = await client.GetObjectAsync(fileName);
+                    Assert.Equal("Full backup", obj.Metadata["Description"]);
+                    Assert.Equal((ulong)data.Length, obj.Size);
+
+                    var downloaded = new MemoryStream();
+                    await using (var stream = client.DownloadObject(fileName))
+                        await stream.CopyToAsync(downloaded, cts.Token);
+
+                    Assert.Equal(data, downloaded.ToArray());
+                }
+                finally
+                {
+                    await DeleteIfExistsAsync(client, fileName);
+                }
+            }
+        }
+
         // the length of the upload is unknown until the end of the stream, so sizes on a chunk boundary are the interesting ones
         [GoogleCloudRetryTheory]
         [InlineData(0)]
@@ -183,7 +227,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var client = new RavenGoogleCloudClient(GoogleCloudRetryFactAttribute.GoogleCloudSettings, DefaultConfiguration, cancellationToken: cts.Token))
             {
-                client.DirectUploadChunkSize = new Size(256, SizeUnit.Kilobytes);
+                client.UploadChunkSize = new Size(256, SizeUnit.Kilobytes);
 
                 try
                 {
@@ -225,7 +269,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var client = new RavenGoogleCloudClient(GoogleCloudRetryFactAttribute.GoogleCloudSettings, DefaultConfiguration, cancellationToken: cts.Token))
             {
                 // the smallest chunk size, so every part spans several requests of the resumable upload
-                client.DirectUploadChunkSize = new Size(256, SizeUnit.Kilobytes);
+                client.UploadChunkSize = new Size(256, SizeUnit.Kilobytes);
 
                 try
                 {
@@ -269,7 +313,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var client = new RavenGoogleCloudClient(GoogleCloudRetryFactAttribute.GoogleCloudSettings, DefaultConfiguration, cancellationToken: cts.Token))
             {
-                client.DirectUploadChunkSize = new Size(256, SizeUnit.Kilobytes);
+                client.UploadChunkSize = new Size(256, SizeUnit.Kilobytes);
 
                 try
                 {

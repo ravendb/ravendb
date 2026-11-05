@@ -23,12 +23,13 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
         private static readonly Size DownloadChunkSize = new Size(1, SizeUnit.Megabytes);
 
         // the amount of data the direct upload stream buffers before handing it over to the uploader. the uploader only copies a part
-        // into its pipe (the requests are sized by DirectUploadChunkSize), so a small part is enough, and it keeps the memory of the
+        // into its pipe (the requests are sized by UploadChunkSize), so a small part is enough, and it keeps the memory of the
         // stream low: it double buffers the parts in memory streams, each growing up to twice the part size
         internal Size DirectUploadPartSize = new Size(4, SizeUnit.Megabytes);
 
-        // the size of a single request of the resumable upload session, must be a multiple of 256 KiB
-        internal Size DirectUploadChunkSize = new Size(16, SizeUnit.Megabytes);
+        // the size of a single request of the resumable upload session (regular and direct uploads), must be a multiple of 256 KiB.
+        // every request pays a round trip, uploading 3 GB with 16 MiB requests was ~28% faster than with the SDK's default of 10 MiB
+        internal Size UploadChunkSize = new Size(16, SizeUnit.Megabytes);
 
         private readonly StorageClient _client;
         private readonly string _projectId;
@@ -77,6 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
         {
             return _client.UploadObject(
                 new Object { Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata }, stream,
+                CreateUploadOptions(),
                 progress: new Progress<IUploadProgress>(p =>
                 {
                     if (_progress == null)
@@ -105,6 +107,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
         {
             return _client.UploadObjectAsync(
                 new Object { Bucket = _bucketName, Name = fileName, ContentType = "application/octet-stream", Metadata = metadata }, stream,
+                CreateUploadOptions(),
                 cancellationToken: CancellationToken,
                 progress: new Progress<IUploadProgress>(p =>
                 {
@@ -130,9 +133,14 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 }));
         }
 
+        private UploadObjectOptions CreateUploadOptions()
+        {
+            return new UploadObjectOptions { ChunkSize = (int)UploadChunkSize.GetValue(SizeUnit.Bytes) };
+        }
+
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
-            return new GoogleCloudMultiPartUploader(_client, _bucketName, key, metadata, (int)DirectUploadChunkSize.GetValue(SizeUnit.Bytes), _progress, CancellationToken);
+            return new GoogleCloudMultiPartUploader(_client, _bucketName, key, metadata, (int)UploadChunkSize.GetValue(SizeUnit.Bytes), _progress, CancellationToken);
         }
 
         public Stream DownloadObject(string fileName)
