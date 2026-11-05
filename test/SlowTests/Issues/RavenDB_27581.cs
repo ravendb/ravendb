@@ -30,6 +30,7 @@ namespace SlowTests.Issues
         [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData("S3")]
         [InlineData("Azure")]
+        [InlineData("GoogleCloud")]
         public async Task ServerWideDirectUploadWithConfigurationScriptShouldAddDatabaseNameToRemoteFolder(string destination)
         {
             using var store = GetDocumentStore();
@@ -42,6 +43,11 @@ namespace SlowTests.Issues
             {
                 scriptPath = GenerateConfigurationScript(new S3Settings { BucketName = "bucket", AwsRegionName = "us-east-1", RemoteFolderName = RemoteFolderFromScript }, out string command);
                 configuration.S3Settings = new S3Settings { GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath } };
+            }
+            else if (destination == "GoogleCloud")
+            {
+                scriptPath = GenerateConfigurationScript(new GoogleCloudSettings { BucketName = "bucket", GoogleCredentialsJson = "{}", RemoteFolderName = RemoteFolderFromScript }, out string command);
+                configuration.GoogleCloudSettings = new GoogleCloudSettings { GetBackupConfigurationScript = new GetBackupConfigurationScript { Exec = command, Arguments = scriptPath } };
             }
             else
             {
@@ -60,6 +66,12 @@ namespace SlowTests.Issues
                 {
                     Assert.Equal(expectedRemoteFolder, uploaderSettings.S3Settings.RemoteFolderName);
                     Assert.Null(configuration.S3Settings.RemoteFolderName);
+                }
+                else if (destination == "GoogleCloud")
+                {
+                    Assert.Equal(BackupConfiguration.BackupDestination.GoogleCloud, uploaderSettings.Destination);
+                    Assert.Equal(expectedRemoteFolder, uploaderSettings.GoogleCloudSettings.RemoteFolderName);
+                    Assert.Null(configuration.GoogleCloudSettings.RemoteFolderName);
                 }
                 else
                 {

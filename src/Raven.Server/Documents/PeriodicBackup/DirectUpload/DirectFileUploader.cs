@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.ServerWide;
 using Sparrow.Server.Logging;
@@ -36,6 +37,11 @@ public class DirectFileUploader : FileUploaderBase
                 return new AzureDirectUploadStream(GetDirectUploadParameters(
                     progress => RavenAzureClient.Create(_settings.AzureSettings, database.Configuration.Backup, progress, TaskCancelToken.Token),
                     _settings.AzureSettings.RemoteFolderName, folderName, fileName, _backupResult.AzureBackup));
+
+            case BackupConfiguration.BackupDestination.GoogleCloud:
+                return new GoogleCloudDirectUploadStream(GetDirectUploadParameters(
+                    progress => new RavenGoogleCloudClient(_settings.GoogleCloudSettings, database.Configuration.Backup, progress, TaskCancelToken.Token),
+                    _settings.GoogleCloudSettings.RemoteFolderName, folderName, fileName, _backupResult.GoogleCloudBackup));
 
             default:
                 throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
