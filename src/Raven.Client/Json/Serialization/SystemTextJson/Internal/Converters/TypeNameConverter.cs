@@ -610,7 +610,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return collection;
         }
 
-        private static bool TryPeekTypeName(Utf8JsonReader reader, out string typeName)
+        internal static bool TryPeekTypeName(Utf8JsonReader reader, out string typeName)
         {
             typeName = null;
             if (reader.Read() == false || reader.TokenType != JsonTokenType.PropertyName || reader.ValueTextEquals(TypePropertyName) == false)

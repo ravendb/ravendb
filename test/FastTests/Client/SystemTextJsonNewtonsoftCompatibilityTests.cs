@@ -2652,6 +2652,69 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    public interface ITimeoutSettings
+    {
+        int Timeout { get; set; }
+
+        string Mode { get; set; }
+    }
+
+    private class TimeoutSettings : ITimeoutSettings
+    {
+        public int Timeout { get; set; } = 5;
+
+        public string Mode { get; set; } = "fast";
+
+        public int Retries { get; set; } = 3;
+    }
+
+    private abstract class LevelOptions
+    {
+        public int Level { get; set; } = 1;
+    }
+
+    private class NamedOptions : LevelOptions
+    {
+        public string Name { get; set; } = "init";
+    }
+
+    private class HoldsGetOnlyAbstractions
+    {
+        public ITimeoutSettings Settings { get; } = new TimeoutSettings();
+
+        public LevelOptions Options { get; } = new NamedOptions();
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPopulatesGetOnlyInterfaceAndAbstractMembersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Settings\":{\"Timeout\":7},\"Options\":{\"Name\":\"loaded\"}}", "abstractions"))
+        {
+            foreach (DocumentConventions conventions in new[] { Newtonsoft, SystemTextJson })
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<HoldsGetOnlyAbstractions>(json);
+
+                var settings = Assert.IsType<TimeoutSettings>(read.Settings);
+                Assert.Equal(7, settings.Timeout);
+                Assert.Equal("fast", settings.Mode);
+                Assert.Equal(3, settings.Retries);
+
+                var options = Assert.IsType<NamedOptions>(read.Options);
+                Assert.Equal(1, options.Level);
+                Assert.Equal("loaded", options.Name);
+            }
+        }
+
+        var source = new HoldsGetOnlyAbstractions();
+        ((TimeoutSettings)source.Settings).Retries = 9;
+        ((NamedOptions)source.Options).Name = "stored";
+
+        var roundTrip = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(source);
+        Assert.Equal(9, Assert.IsType<TimeoutSettings>(roundTrip.Settings).Retries);
+        Assert.Equal("stored", Assert.IsType<NamedOptions>(roundTrip.Options).Name);
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

@@ -60,6 +60,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> _caseSensitiveOptions = new();
 
+        [ThreadStatic]
+        private static (JsonConverter Converter, JsonElement Json, HashSet<string> Present) _capturedMember;
+
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
 
         private static readonly object[] _callbackArguments = { new StreamingContext(StreamingContextStates.All) };
@@ -1299,24 +1302,58 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     continue;
 
                 Func<object, object> get = property.Get;
-                property.Set = (target, value) => PopulateExisting(get(target), value, options);
+                JsonConverter tracker = property.PropertyType != typeof(object) && isCollection == false ? TrackPresentMembers(property) : null;
+                property.Set = (target, value) =>
+                {
+                    object existing = get(target);
+                    if (value == null && TryTakeCapturedJson(tracker, out JsonElement json, out HashSet<string> present))
+                        value = existing == null ? null : ReadCapturedJson(json, existing.GetType(), present, options);
 
-                if (property.PropertyType != typeof(object) && isCollection == false)
-                    TrackPresentMembers(property);
+                    PopulateExisting(existing, value, options);
+                };
             }
         }
 
-        private static void TrackPresentMembers(JsonPropertyInfo property)
+        private static JsonConverter TrackPresentMembers(JsonPropertyInfo property)
         {
             if (property.CustomConverter != null && typeof(JsonConverter<>).MakeGenericType(property.PropertyType).IsInstanceOfType(property.CustomConverter) == false)
-                return;
+                return null;
 
             Type converterType = typeof(PresentMembersConverter<>).MakeGenericType(property.PropertyType);
             property.CustomConverter = (JsonConverter)Activator.CreateInstance(converterType, property.CustomConverter);
+            return property.CustomConverter;
+        }
+
+        private static bool TryTakeCapturedJson(JsonConverter converter, out JsonElement json, out HashSet<string> present)
+        {
+            (JsonConverter owner, json, present) = _capturedMember;
+            if (converter == null || ReferenceEquals(owner, converter) == false)
+            {
+                json = default;
+                present = null;
+                return false;
+            }
+
+            _capturedMember = default;
+            return true;
+        }
+
+        private static object ReadCapturedJson(JsonElement json, Type type, HashSet<string> present, JsonSerializerOptions options)
+        {
+            object value = json.Deserialize(type, options);
+            if (value != null && present != null)
+            {
+                _presentMembers.Remove(value);
+                _presentMembers.Add(value, present);
+            }
+
+            return value;
         }
 
         private sealed class PresentMembersConverter<T> : JsonConverter<T>
         {
+            private static readonly bool ReadsIntoExisting = typeof(T).IsInterface || typeof(T).IsAbstract;
+
             private readonly JsonConverter<T> _inner;
 
             public PresentMembersConverter(JsonConverter<T> inner)
@@ -1327,6 +1364,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 HashSet<string> present = ReadPropertyNames(reader, options);
+                if (ReadsIntoExisting && present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false)
+                {
+                    using (JsonDocument document = JsonDocument.ParseValue(ref reader))
+                        _capturedMember = (this, document.RootElement.Clone(), present);
+
+                    return default;
+                }
+
                 T value = _inner != null ? _inner.Read(ref reader, typeToConvert, options) : JsonSerializer.Deserialize<T>(ref reader, options);
 
                 if (value != null && present != null)
