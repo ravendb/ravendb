@@ -797,13 +797,19 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 Action<object, object> set = property.Set;
                 if (set != null)
                 {
+                    JsonConverter converter = property.CustomConverter;
                     property.Set = (target, value) =>
                     {
-                        if (value != null)
+                        if (value != null || HasCapturedJson(converter))
                             set(target, value);
                     };
                 }
             }
+        }
+
+        private static bool HasCapturedJson(JsonConverter converter)
+        {
+            return converter != null && ReferenceEquals(_capturedMember.Converter, converter);
         }
 
         private static bool IsNullValueIgnored(object jsonPropertyAttribute)
@@ -836,9 +842,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 Action<object, object> set = property.Set;
                 if (set != null && (handling & NewtonsoftDefaultValueHandlingPopulate) == 0)
                 {
+                    JsonConverter converter = property.CustomConverter;
                     property.Set = (target, value) =>
                     {
-                        if (IsNewtonsoftDefaultValue(value, defaultValue) == false)
+                        if (IsNewtonsoftDefaultValue(value, defaultValue) == false || HasCapturedJson(converter))
                             set(target, value);
                     };
                 }
