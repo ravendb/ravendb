@@ -35,6 +35,12 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         /// <inheritdoc />
+        public ILazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        {
+            return Include(path.ToPropertyPath(_session.Conventions));
+        }
+
+        /// <inheritdoc />
         public ILazyLoaderWithInclude<T> Include(Expression<Func<T, IEnumerable<string>>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
@@ -123,6 +129,12 @@ namespace Raven.Client.Documents.Session.Loaders
 
         /// <inheritdoc />
         public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, string>> path)
+        {
+            return Include(path.ToPropertyPath(_session.Conventions));
+        }
+
+        /// <inheritdoc />
+        public IAsyncLazyLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
         {
             return Include(path.ToPropertyPath(_session.Conventions));
         }

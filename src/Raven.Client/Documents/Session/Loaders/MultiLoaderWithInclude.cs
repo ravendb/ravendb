@@ -34,6 +34,12 @@ namespace Raven.Client.Documents.Session.Loaders
             return Include(path.ToPropertyPath(_session.Conventions));
         }
 
+        /// <inheritdoc />
+        public ILoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        {
+            return Include(path.ToPropertyPath(_session.Conventions));
+        }
+
         /// <summary>
         /// Includes the specified path.
         /// </summary>

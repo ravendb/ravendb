@@ -18,6 +18,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, string>> path);
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
+        AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path);
+
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TResult}(Expression{Func{T, string}})"/>
         /// <typeparam name="TResult">Type of included document.</typeparam>
         AsyncMultiLoaderWithInclude<T> Include<TResult>(Expression<Func<T, string>> path);

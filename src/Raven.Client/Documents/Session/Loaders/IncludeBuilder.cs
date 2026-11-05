@@ -34,6 +34,9 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="path">Path to the property which contains id of document to include.</param>
         TBuilder IncludeDocuments(Expression<Func<T, string>> path);
 
+        /// <inheritdoc cref="IncludeDocuments(Expression{Func{T, string}})"/>
+        TBuilder IncludeDocuments(Expression<Func<T, object>> path);
+
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}"/>
         /// <param name="path">Path to the property which contains ids of documents to include.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.Includes"/>
@@ -373,6 +376,13 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         /// <inheritdoc />
+        ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, object>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath(_conventions));
+            return this;
+        }
+
+        /// <inheritdoc />
         ISubscriptionIncludeBuilder<T> IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, IEnumerable<string>>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
@@ -402,6 +412,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
         /// <inheritdoc />
         IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath(_conventions));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IQueryIncludeBuilder<T> IDocumentIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, object>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;
@@ -465,6 +482,13 @@ namespace Raven.Client.Documents.Session.Loaders
 
         /// <inheritdoc />
         IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, string>> path)
+        {
+            IncludeDocuments(path.ToPropertyPath(_conventions));
+            return this;
+        }
+
+        /// <inheritdoc />
+        IIncludeBuilder<T> IDocumentIncludeBuilder<T, IIncludeBuilder<T>>.IncludeDocuments(Expression<Func<T, object>> path)
         {
             IncludeDocuments(path.ToPropertyPath(_conventions));
             return this;

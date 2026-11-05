@@ -30,6 +30,12 @@ namespace Raven.Client.Documents.Session.Loaders
         }
 
         /// <inheritdoc />
+        public AsyncMultiLoaderWithInclude<T> Include(Expression<Func<T, object>> path)
+        {
+            return Include(path.ToPropertyPath(_session.Conventions));
+        }
+
+        /// <inheritdoc />
         public AsyncMultiLoaderWithInclude<T> Include<TInclude>(Expression<Func<T, string>> path)
         {
             return Include(IncludesUtil.GetPrefixedIncludePath<TInclude>(path.ToPropertyPath(_session.Conventions), _session.Conventions));
