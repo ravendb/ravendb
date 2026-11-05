@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -26,6 +29,8 @@ namespace Raven.Client.Json
         }
 
         private static readonly TypeCache<BlittableSupportedReturnType> _supportedTypeCache = new(512);
+
+        private static readonly ConditionalWeakTable<ISerializationConventions, ConcurrentDictionary<object, string>> _enumNames = new();
 
         private static BlittableSupportedReturnType DoBlittableSupportedTypeInternal(Type type, object value)
         {
@@ -138,8 +143,17 @@ namespace Raven.Client.Json
             if (conventions.SaveEnumsAsIntegers)
                 return value.ToString();
 
+            ConcurrentDictionary<object, string> names = _enumNames.GetValue(conventions.Serialization, static _ => new ConcurrentDictionary<object, string>());
+            if (names.TryGetValue(value, out string name))
+                return name;
+
             object serialized = Serialize(value, conventions, context, writeTypeNames: false);
-            return serialized is LazyStringValue text ? text.ToString() : serialized;
+            if (serialized is not LazyStringValue text)
+                return serialized;
+
+            name = text.ToString();
+            names.TryAdd(value, name);
+            return name;
         }
 
         private static object Serialize(object value, DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames)
