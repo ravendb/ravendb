@@ -2794,6 +2794,43 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class CountsIdAssignments
+    {
+        private string _id;
+
+        public string Id
+        {
+            get => _id;
+            set
+            {
+                _id = value;
+                Assignments++;
+            }
+        }
+
+        public string Name { get; set; }
+
+        [JsonIgnore]
+        public int Assignments { get; private set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSetsTheIdentityOfLoadedEntitiesOnceLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"name\",\"@metadata\":{\"@id\":\"items/1\"}}", "identity"))
+        {
+            foreach (DocumentConventions conventions in new[] { Newtonsoft, SystemTextJson })
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<CountsIdAssignments>(json, "items/1");
+
+                Assert.Equal("items/1", read.Id);
+                Assert.Equal("name", read.Name);
+                Assert.Equal(1, read.Assignments);
+            }
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

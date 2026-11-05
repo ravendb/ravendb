@@ -1140,6 +1140,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             typeInfo.Properties.Add(topLevelId);
         }
 
+        internal static bool ReadsMetadataIdentity(JsonSerializerOptions options, Type type)
+        {
+            JsonTypeInfo typeInfo = GetObjectTypeInfo(options, type);
+            if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                return false;
+
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                if (typeInfo.Properties[i].CustomConverter is MetadataIdentityConverter)
+                    return true;
+            }
+
+            return false;
+        }
+
         private sealed class MetadataIdentity
         {
             public string Id;
