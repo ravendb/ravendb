@@ -73,7 +73,7 @@ internal sealed class ScanParamExtractor(QueryExecution exec, IndexSearcher inde
         if (pred.CompareOp is ScanCompareOp.AlwaysTrue or ScanCompareOp.AlwaysFalse)
             return;
 
-        _roots.Add(indexSearcher.FieldCache.GetLookupRootPage(cur.Clause.FieldName));
+        _roots.Add(indexSearcher.FieldCache.GetLookupRootPage(cur.Clause.ResolvedFieldName ?? cur.Clause.FieldName));
 
         if (pred.CompareOp is ScanCompareOp.In or ScanCompareOp.AllIn)
         {
