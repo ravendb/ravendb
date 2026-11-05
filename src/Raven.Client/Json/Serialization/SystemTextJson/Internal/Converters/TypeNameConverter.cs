@@ -24,6 +24,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static readonly ConcurrentDictionary<string, Type> _types = new();
 
+        private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
+
         public static JsonConverter TryCreate(Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
         {
             if (typeNameHandling == TypeNameHandling.None || declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
@@ -47,8 +49,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (IsSparrowType(declaredType) || HasConverter(declaredType, options))
                 return false;
 
-            if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType))
-                return IsStringKeyed(keyType) && (IsOpen(declaredType) || IsItemCandidate(valueType, options));
+            if (TryGetDictionaryTypes(declaredType, out _, out Type valueType))
+                return IsOpen(declaredType) || IsItemCandidate(valueType, options);
 
             if (typeof(IEnumerable).IsAssignableFrom(declaredType))
                 return IsItemCandidate(GetItemType(declaredType), options);
@@ -125,8 +127,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return true;
         }
 
-        private static bool IsStringKeyed(Type keyType) => keyType == typeof(string) || keyType == typeof(object);
-
         private static Type GetItemType(Type type)
         {
             if (type.IsArray)
@@ -182,8 +182,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             if (TryGetDictionaryTypes(runtimeType, out Type keyType, out Type valueType))
             {
-                if (IsStringKeyed(keyType) && value is IDictionary dictionary)
-                    WriteDictionary(writer, dictionary, runtimeType, valueType, writeTypeName, alwaysWriteObjectTypeName, options);
+                if (value is IDictionary dictionary)
+                    WriteDictionary(writer, dictionary, runtimeType, keyType, valueType, writeTypeName, alwaysWriteObjectTypeName, options);
                 else
                     WriteObject(writer, value, runtimeType, writeTypeName, options);
 
@@ -199,7 +199,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             WriteObject(writer, value, runtimeType, writeTypeName, options);
         }
 
-        private static void WriteDictionary(Utf8JsonWriter writer, IDictionary dictionary, Type runtimeType, Type valueType, bool writeTypeName, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
+        private static void WriteDictionary(Utf8JsonWriter writer, IDictionary dictionary, Type runtimeType, Type keyType, Type valueType, bool writeTypeName, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
             if (writeTypeName)
@@ -207,11 +207,52 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             foreach (DictionaryEntry entry in dictionary)
             {
-                writer.WritePropertyName(entry.Key as string ?? Convert.ToString(entry.Key, CultureInfo.InvariantCulture));
+                WriteKey(writer, entry.Key, keyType, options);
                 WriteValue(writer, entry.Value, valueType, alwaysWriteObjectTypeName, options);
             }
 
             writer.WriteEndObject();
+        }
+
+        private static void WriteKey(Utf8JsonWriter writer, object key, Type keyType, JsonSerializerOptions options)
+        {
+            if (key is string text)
+                writer.WritePropertyName(text);
+            else if (keyType == typeof(object))
+                writer.WritePropertyName(Convert.ToString(key, CultureInfo.InvariantCulture));
+            else
+                GetDictionaryKey(keyType).Write(writer, key, options);
+        }
+
+        private static object ReadKey(ref Utf8JsonReader reader, Type keyType, JsonSerializerOptions options)
+        {
+            if (keyType == typeof(string) || keyType == typeof(object))
+                return reader.GetString();
+
+            return GetDictionaryKey(keyType).Read(ref reader, options);
+        }
+
+        private static DictionaryKey GetDictionaryKey(Type keyType)
+        {
+            return _dictionaryKeys.GetOrAdd(keyType, static t => (DictionaryKey)Activator.CreateInstance(typeof(DictionaryKey<>).MakeGenericType(t)));
+        }
+
+        private abstract class DictionaryKey
+        {
+            public abstract void Write(Utf8JsonWriter writer, object key, JsonSerializerOptions options);
+
+            public abstract object Read(ref Utf8JsonReader reader, JsonSerializerOptions options);
+        }
+
+        private sealed class DictionaryKey<TKey> : DictionaryKey
+        {
+            public override void Write(Utf8JsonWriter writer, object key, JsonSerializerOptions options) =>
+                GetConverter(options).WriteAsPropertyName(writer, (TKey)key, options);
+
+            public override object Read(ref Utf8JsonReader reader, JsonSerializerOptions options) =>
+                GetConverter(options).ReadAsPropertyName(ref reader, typeof(TKey), options);
+
+            private static JsonConverter<TKey> GetConverter(JsonSerializerOptions options) => (JsonConverter<TKey>)options.GetConverter(typeof(TKey));
         }
 
         private static Type GetCreatedType(Type declaredType)
@@ -322,8 +363,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (TryReadTypedObject(ref reader, declaredType, options, out object typed))
                     return typed;
 
-                if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType) && IsStringKeyed(keyType))
-                    return ReadDictionary(ref reader, declaredType, valueType, options);
+                if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType))
+                    return ReadDictionary(ref reader, declaredType, keyType, valueType, options);
 
                 return JsonSerializer.Deserialize(ref reader, declaredType, options);
             }
@@ -344,8 +385,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             Type type = ResolveType(typeName, declaredType);
 
-            if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType) && IsStringKeyed(keyType))
-                value = ReadDictionary(ref reader, type, valueType, options);
+            if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType))
+                value = ReadDictionary(ref reader, type, keyType, valueType, options);
             else if (type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type))
                 value = ReadWrappedCollection(ref reader, type, options);
             else
@@ -386,10 +427,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
         }
 
-        private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type valueType, JsonSerializerOptions options)
+        private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type keyType, Type valueType, JsonSerializerOptions options)
         {
             Type createdType = GetCreatedType(dictionaryType);
-            Type bufferType = typeof(Dictionary<,>).MakeGenericType(typeof(string), valueType);
+            Type bufferType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
             ConstructorInfo dictionaryConstructor = null;
 
             if (createdType.IsInterface || createdType.IsAbstract)
@@ -406,16 +447,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             object dictionary = Activator.CreateInstance(createdType);
 
-            PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(typeof(string), valueType).GetProperty("Item");
+            PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(keyType, valueType).GetProperty("Item");
 
             bool leading = true;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
-                string key = reader.GetString();
+                bool isTypeName = leading && reader.ValueTextEquals(TypePropertyName);
+                leading = false;
+
+                object key = isTypeName ? null : ReadKey(ref reader, keyType, options);
                 reader.Read();
 
-                bool isTypeName = leading && key == TypePropertyName;
-                leading = false;
                 if (isTypeName)
                     continue;
 

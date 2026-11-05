@@ -381,7 +381,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             options.Converters.Add(GuidConverter.Instance);
             options.Converters.Add(VersionConverter.Instance);
             options.Converters.Add(UIntPtrConverter.Instance);
-            options.Converters.Add(DictionaryDateTimeKeysConverter.Instance);
             options.Converters.Add(new ParametersConverter(() => GetOptions(TypeNameHandling.None)));
             options.Converters.Add(LinqEnumerableConverter.Instance);
             options.Converters.Add(MetadataDictionaryConverter.Instance);
