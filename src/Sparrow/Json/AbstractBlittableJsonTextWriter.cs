@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
@@ -26,6 +27,13 @@ namespace Sparrow.Json
         public static ReadOnlySpan<byte> NaNBuffer => "\"NaN\""u8;
         public static ReadOnlySpan<byte> PositiveInfinityBuffer => "\"Infinity\""u8;
         public static ReadOnlySpan<byte> NegativeInfinityBuffer => "\"-Infinity\""u8;
+
+        private const string UnicodeEscapePrefix = "\\u00";
+        internal static readonly byte[] EscapedNaNBuffer = Encoding.ASCII.GetBytes("\"" + UnicodeEscapePrefix + "4EaN\"");
+        internal static readonly byte[] EscapedPositiveInfinityBuffer = Encoding.ASCII.GetBytes("\"" + UnicodeEscapePrefix + "49nfinity\"");
+        internal static readonly byte[] EscapedNegativeInfinityBuffer = Encoding.ASCII.GetBytes("\"-" + UnicodeEscapePrefix + "49nfinity\"");
+
+        internal bool EscapeNamedFloatingPointLiterals { get; set; }
 
         public static readonly byte[] NullBuffer = "null"u8.ToArray();
         public static readonly byte[] TrueBuffer = "true"u8.ToArray();
@@ -916,19 +924,19 @@ namespace Sparrow.Json
         {
             if (val.IsNaN())
             {
-                WriteBufferFor(NaNBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
                 return;
             }
 
             if (val.IsPositiveInfinity())
             {
-                WriteBufferFor(PositiveInfinityBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
                 return;
             }
 
             if (val.IsNegativeInfinity())
             {
-                WriteBufferFor(NegativeInfinityBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
                 return;
             }
 
@@ -951,19 +959,19 @@ namespace Sparrow.Json
         {
             if (double.IsNaN(val))
             {
-                WriteBufferFor(NaNBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
                 return;
             }
 
             if (double.IsPositiveInfinity(val))
             {
-                WriteBufferFor(PositiveInfinityBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
                 return;
             }
 
             if (double.IsNegativeInfinity(val))
             {
-                WriteBufferFor(NegativeInfinityBuffer);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
                 return;
             }
 
