@@ -4,13 +4,15 @@ using System.Runtime.InteropServices;
 namespace Corax.Utils.Spatial;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct SpatialResult : IComparable
+public struct SpatialResult : IComparable, IComparable<SpatialResult>
 {
     public double Distance;
     public double Latitude;
     public double Longitude;
 
     public static readonly SpatialResult Invalid = new() {Distance = double.NaN, Latitude = double.NaN, Longitude = double.NaN};
+
+    public int CompareTo(SpatialResult other) => Distance.CompareTo(other.Distance);
 
     public int CompareTo(object other)
     {

@@ -76,7 +76,7 @@ internal static class HeapSorterBuilder
     }
 
     public static unsafe NumericalMaxHeapSorter<TTermType, SkipSecondaryComparer> BuildSingleNumericalSorter<TTermType>(Span<int> documents, Span<TTermType> terms,
-        bool descending, bool nullIsSmallest) where TTermType : unmanaged, IComparable
+        bool descending, bool nullIsSmallest) where TTermType : unmanaged, IComparable<TTermType>
     {
         static int Ascending(ref NumericalMaxHeapSorter<TTermType, SkipSecondaryComparer> sorter, TTermType termA, int posA, TTermType termB, int posB)
         {
@@ -96,7 +96,7 @@ internal static class HeapSorterBuilder
     public static unsafe NumericalMaxHeapSorter<TTermType, TSecondaryCmp> BuildCompoundNumericalSorter<TTermType, TSecondaryCmp>(Span<int> documents,
         Span<TTermType> terms, bool descending, TSecondaryCmp secondaryCmp, bool nullIsSmallest)
         where TSecondaryCmp : IComparer<int>
-        where TTermType : unmanaged, IComparable
+        where TTermType : unmanaged, IComparable<TTermType>
     {
         static int Ascending(ref NumericalMaxHeapSorter<TTermType, TSecondaryCmp> sorter, TTermType termA, int posA, TTermType termB, int posB)
         {
