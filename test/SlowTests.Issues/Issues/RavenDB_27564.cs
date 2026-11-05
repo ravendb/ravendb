@@ -93,6 +93,7 @@ public class RavenDB_27564 : RavenTestBase
 
         Assert.Equal(new[] { "items/1", "items/2" }, Ids(store, "from index 'Items/ByTag' order by Tag limit 2"));
         Assert.Equal(new[] { "items/2", "items/1" }, Ids(store, "from index 'Items/ByTag' order by Tag desc limit 2"));
+        Assert.Equal(new[] { "items/1", "items/2" }, Ids(store, "from index 'Items/ByTag' order by Tag limit 2", statistics: true));
     }
 
     // the scan itself survives the added conditions - this does not see the cap, which leaves no trace in the plan
@@ -123,14 +124,17 @@ public class RavenDB_27564 : RavenTestBase
         Assert.Equal(new[] { "items/1", "items/2" }, results.Select(x => x.Id).ToArray());
 
         var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
-        Assert.True(PlanContains(plan, "TermNumericRangeProvider"), PlanOperations(plan));
+        Assert.True(PlanContains(plan, "DirectScan"), PlanOperations(plan));
         Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
     }
 
-    private static string[] Ids(IDocumentStore store, string rql)
+    private static string[] Ids(IDocumentStore store, string rql, bool statistics = false)
     {
         using var session = store.OpenSession();
-        return session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray();
+        var query = session.Advanced.RawQuery<Item>(rql);
+        if (statistics)
+            query = query.Statistics(out _);
+        return query.ToList().Select(x => x.Id).ToArray();
     }
 
     private static bool PlanContains(QueryInspectionNode node, string operation)

@@ -30,15 +30,15 @@ public class ScoreSorting(ITestOutputHelper output) : RavenTestBase(output)
         [
             ("from index 'ItemsIndex' where Tags = 't-common' order by score()", 3000, 7355500367956253991UL),
             ("from index 'ItemsIndex' where Tags = 't-common' order by score() desc", 3000, 3861429251504011161UL),
-            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score()", 3360, 4610245765269366717UL),
-            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score() limit 10", 10, 7310777009750505053UL),
-            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score() limit 2000", 2000, 9626466598007701386UL),
+            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score()", 3360, 4173117651625144841UL),
+            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score() limit 10", 10, 10353905067677488253UL),
+            ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score() limit 2000", 2000, 9907909877946132742UL),
             ("from index 'ItemsIndex' where Tags = 't-common' or startsWith(Tags, 't-rare-1') order by score() limit 20 offset 3000", 20, 9750801567049317820UL),
-            ("from index 'ItemsIndex' where exact(vector.search(Vector, $vector, 0, 10000)) order by score()", 6000, 7702092843344769729UL),
+            ("from index 'ItemsIndex' where exact(vector.search(Vector, $vector, 0, 10000)) order by score()", 6000, 948452180347901566UL),
             ("from index 'ItemsIndex' where exact(vector.search(Vector, $vector, 0, 10000)) order by score() desc", 6000, 8190511138698627195UL),
             ("from index 'BoostedItemsIndex' where exact(vector.search(Vector, $vector, 0, 10000)) order by score()", 6000, 8235958692031983682UL),
             ("from index 'BoostedItemsIndex' where exact(vector.search(Vector, $vector, 0, 10000)) order by score() desc", 6000, 17701206790820302678UL),
-            ("from index 'ItemsIndex' where exact(vector.search(Vector, $zero, 0, 10000)) order by score()", 6000, 6910106147959475921UL),
+            ("from index 'ItemsIndex' where exact(vector.search(Vector, $zero, 0, 10000)) order by score()", 6000, 5534128043326154411UL),
             ("from index 'ItemsIndex' where exact(vector.search(Vector, $zero, 0, 10000)) order by score() desc", 6000, 9449393181387349001UL)
         ];
 

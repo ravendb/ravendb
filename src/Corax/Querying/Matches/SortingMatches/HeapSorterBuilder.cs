@@ -34,6 +34,25 @@ internal static class HeapSorterBuilder
     }
 
 
+    public static unsafe NumericalMaxHeapSorter<UnmanagedSpan, SkipSecondaryComparer> BuildSingleCompactKeySorter(Span<int> documents,
+        Span<UnmanagedSpan> terms, bool descending, bool nullIsSmallest)
+    {
+        static int Ascending(ref NumericalMaxHeapSorter<UnmanagedSpan, SkipSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
+        {
+            return CompactKeyComparer.Compare(termA, termB, sorter._nullResult);
+        }
+
+        static int Descending(ref NumericalMaxHeapSorter<UnmanagedSpan, SkipSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
+        {
+            return CompactKeyComparer.Compare(termB, termA, sorter._nullResult);
+        }
+
+        var sorter = new NumericalMaxHeapSorter<UnmanagedSpan, SkipSecondaryComparer>();
+        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, default, nullIsSmallest);
+        return sorter;
+    }
+
+
     public static unsafe TextualMaxHeapSorter<SkipSecondaryComparer> BuildSingleAlphanumericalSorter(Span<int> documents, Span<ByteString> terms,
         ByteStringContext allocator, bool descending, bool nullIsSmallest)
     {

@@ -55,7 +55,8 @@ public unsafe partial class Hnsw
             _ => throw new InvalidOperationException($"Unexpected value of {nameof(VectorEmbeddingType)}: {embeddingType}")
         };
 
-        // VectorEmbeddingType.Single is stored in the NormalizedTensor layout: unit vector followed by a trailing float L2 norm. Callers pass the raw payload size (dims * sizeof(float)); the trailing-norm bytes are added here so callers do not need to know about the layout.
+        // Single uses the NormalizedTensor layout (unit vector + trailing float L2 norm). Callers pass the
+        // raw payload size; the trailing-norm bytes are added here so callers stay unaware of the layout.
         if (embeddingType == VectorEmbeddingType.Single)
             vectorSizeBytes += MagnitudeSizeInBytes;
 
@@ -530,7 +531,7 @@ public unsafe partial class Hnsw
             _nodeIdToLocations.GetFor(keys, keys, -1);
 
             var spans = Buffers.GetSpans(keys.Length);
-            Container.GetAll(Llt, keys, spans, -1, Llt.PageLocator);
+            Container.GetAllSortedByPage(Llt, keys, spans, Llt.PageLocator);
             for (int i = 0; i < keys.Length; i++)
             {
                 var buf = spans[i].ToSpan();
@@ -880,8 +881,7 @@ public unsafe partial class Hnsw
                indexesOfIds = indexesOfIds[..idsToLoadIdx];
            
                _nodeIdToLocations.GetFor(idsToLoad, idsToLoad, -1);
-               idsToLoad.Sort(indexesOfIds);
-               Container.GetAll(Llt, idsToLoad, spans, -1, Llt.PageLocator);
+               Container.GetAllSortedByPage(Llt, idsToLoad, spans, Llt.PageLocator);
                for (int i = 0; i < indexesOfIds.Length; i++)
                {
                    var buf = spans[i].ToSpan();
@@ -898,8 +898,7 @@ public unsafe partial class Hnsw
 
            vectorIdsToLoad = vectorIdsToLoad[..vectorsToLoadIdx];
            nodeIndexes = nodeIndexes[..vectorsToLoadIdx];
-           vectorIdsToLoad.Sort(nodeIndexes);
-           Container.GetAll(Llt, vectorIdsToLoad, spans, -1, Llt.PageLocator);
+           Container.GetAllSortedByPage(Llt, vectorIdsToLoad, spans, Llt.PageLocator);
            for (int i = 0; i < vectorIdsToLoad.Length; i++)
            {
                // note, small vectors (where multiple can fit in a single page), will be 

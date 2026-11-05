@@ -50,6 +50,46 @@ public class RavenDB_27507 : RavenTestBase
         Assert.Equal("closer", scores[0].Name);
     }
 
+    // An AND lifts the spatial clause to a post-filter, and it must add its distance score once, like on its own.
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void ASpatialPostFilterMustScoreItsEntriesOnce(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Place { Name = "hit", Lat = 22.5, Lng = 40.0 });
+            session.Store(new Place { Name = "hit", Lat = 40.0, Lng = 10.0 });
+            session.SaveChanges();
+        }
+
+        new Places_Score().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        const string within = "spatial.within(p.Coordinates, spatial.wkt('POLYGON((-1 -1, 46 -1, 46 46, -1 46, -1 -1))'))";
+
+        var spatialOnly = ScoreSpread(store, $"where {within}");
+        var withTerm = ScoreSpread(store, $"where boost(p.Name = 'hit', 2) and {within}");
+
+        Assert.NotEqual(0, spatialOnly, 6);
+        Assert.Equal(spatialOnly, withTerm, 4);
+    }
+
+    private static double ScoreSpread(IDocumentStore store, string where)
+    {
+        using var session = store.OpenSession();
+        var scores = session.Advanced
+            .RawQuery<Row>($@"from index 'Places/Score' as p
+                              {where}
+                              order by score()
+                              select {{ Name: p.Name, Score: getMetadata(p)[""@index-score""] }}")
+            .ToList();
+
+        Assert.Equal(2, scores.Count);
+        return scores[0].Score - scores[1].Score;
+    }
+
     private class Row
     {
         public string Name { get; set; }

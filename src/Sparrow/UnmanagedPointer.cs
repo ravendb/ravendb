@@ -9,14 +9,9 @@ using Sparrow.Json;
 
 namespace Sparrow
 {
-    public readonly unsafe struct UnmanagedPointer
+    public readonly unsafe struct UnmanagedPointer(byte* address)
     {
-        public readonly byte* Address;
-
-        public UnmanagedPointer(byte* address)
-        {
-            Address = address;
-        }
+        public readonly byte* Address = address;
 
         public static UnmanagedPointer operator +(UnmanagedPointer pointer, int offset) => new UnmanagedPointer(pointer.Address + offset);
     }

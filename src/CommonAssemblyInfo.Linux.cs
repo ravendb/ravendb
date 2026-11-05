@@ -12,6 +12,7 @@
 [assembly: InternalsVisibleTo("rvn")]
 [assembly: InternalsVisibleTo("Raven.TestDriver")]
 [assembly: InternalsVisibleTo("Tryouts")]
+[assembly: InternalsVisibleTo("Corax.QueryCatalog")]
 [assembly: InternalsVisibleTo("LicenseTests")]
 [assembly: InternalsVisibleTo("Subscriptions.Benchmark")]
 [assembly: InternalsVisibleTo("Regression.Benchmark")]

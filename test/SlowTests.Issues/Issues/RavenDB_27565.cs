@@ -1,8 +1,10 @@
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Timings;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -104,59 +106,37 @@ public class RavenDB_27565 : RavenTestBase
             Ids(store, "from index 'Items/ByTag' where exists(Tag) order by Tag desc"));
     }
 
-    private class Items_ByTags : AbstractIndexCreationTask<Item>
+    // the snapshot holds an index built by 7.2.6, before the marker was recorded per entry
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    public void IndexBuiltBeforeThePerEntryMarkerScansEveryTermOfAField()
     {
-        public Items_ByTags()
+        var backupPath = NewDataPath(forceCreateDir: true);
+        using (var file = File.Create(Path.Combine(backupPath, "RavenDB_27565.ravendb-snapshot")))
+        using (var stream = typeof(RavenDB_27565).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_27565.RavenDB_27565.ravendb-snapshot"))
         {
-            Map = items => from i in items
-                           select new
-                           {
-                               i.Tags
-                           };
+            Assert.NotNull(stream);
+            stream.CopyTo(file);
+        }
+
+        var databaseName = GetDatabaseName();
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName }))
+        {
+            using var session = store.OpenSession(databaseName);
+
+            Assert.Equal(new[] { "items/1" }, session.Advanced
+                .RawQuery<Item>("from index 'Items/ByCategoryAndTag' where Category = 'x' and Tag = 'z'")
+                .AddParameter("rvn_corax_entry_scan", 1L)
+                .ToList().Select(x => x.Id).ToArray());
         }
     }
 
-    // the marker means several terms on ONE entry, so a field that is always a one element array keeps the
-    // streaming optimization and only a genuinely multi-termed one gives it up
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void OnlySeveralTermsOnOneEntryMakeAFieldMultiTermed(Options options)
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
+    public void OnlyIndexesFromVersion80OnAreTrustedToRecordTheMarkerPerEntry()
     {
-        Assert.False(FallsBackToSorting(options, new[] { "a" }, new[] { "m" }));
-        Assert.True(FallsBackToSorting(options, new[] { "a", "z" }, new[] { "m" }));
-    }
-
-    private bool FallsBackToSorting(Options options, params string[][] tagsPerDocument)
-    {
-        using var store = GetDocumentStore(options);
-
-        using (var session = store.OpenSession())
-        {
-            for (var i = 0; i < tagsPerDocument.Length; i++)
-                session.Store(new Item { Id = $"items/{i + 1}", Tags = tagsPerDocument[i] });
-
-            session.SaveChanges();
-        }
-
-        store.ExecuteIndex(new Items_ByTags());
-        Indexes.WaitForIndexing(store);
-
-        using var session2 = store.OpenSession();
-
-        session2.Advanced
-            .RawQuery<Item>("from index 'Items/ByTags' where exists(Tags) order by Tags include timings()")
-            .Timings(out var timings)
-            .ToList();
-
-        return PlanContains(Assert.IsType<QueryInspectionNode>(timings.QueryPlan), "SortingMatch");
-    }
-
-    private static bool PlanContains(QueryInspectionNode node, string operation)
-    {
-        if (node.Operation.Contains(operation))
-            return true;
-
-        return node.Children != null && node.Children.Any(child => PlanContains(child, operation));
+        Assert.False(IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(IndexDefinitionBaseServerSide.IndexVersion.CoraxPerEntryMultipleTermsMarker_72));
+        Assert.False(IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(IndexDefinitionBaseServerSide.IndexVersion.CoraxCharAsString_72));
+        Assert.True(IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(IndexDefinitionBaseServerSide.IndexVersion.Base80Version));
     }
 
     private static string[] Ids(IDocumentStore store, string rql)

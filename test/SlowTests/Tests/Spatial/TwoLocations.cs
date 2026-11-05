@@ -67,7 +67,6 @@ namespace SlowTests.Tests.Spatial
                         .ToList();
 
                     RavenTestHelper.AssertNoIndexErrors(store);
-WaitForUserToContinueTheTest(store);
                     Assert.NotEmpty(list);
                 }
 
