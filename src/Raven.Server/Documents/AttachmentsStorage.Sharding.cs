@@ -50,10 +50,7 @@ namespace Raven.Server.Documents
 
         private static ByteStringContext.Scope GenerateBucketAndHash(Transaction tx, int keyIndex, int hashIndex, ref TableValueReader tvr, out Slice slice)
         {
-            var docsCtx = tx.Owner as DocumentsOperationContext;
-            var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(docsCtx!.DocumentDatabase);
-
-            var bucket = GetBucketFromAttachmentKey(keyIndex, tvr, database);
+            var bucket = GetBucketFromAttachmentKey(tx, keyIndex, tvr);
             bucket = Bits.SwapBytes(bucket);
 
             var hashPtr = tvr.Read(hashIndex, out var hashSize);
@@ -67,12 +64,11 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        private static int GetBucketFromAttachmentKey(int keyIndex, TableValueReader tvr, ShardedDocumentDatabase database)
+        private static int GetBucketFromAttachmentKey(Transaction tx, int keyIndex, TableValueReader tvr)
         {
             var keyPtr = tvr.Read(keyIndex, out var keySize);
             int sizeOfDocId = AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(keyPtr, keySize));
-            var keySpan = new ReadOnlySpan<byte>(keyPtr, sizeOfDocId);
-            return ShardHelper.GetBucketFor(database.ShardingConfiguration, keySpan);
+            return ShardedDocumentsStorage.GetBucketFor(tx, new ReadOnlySpan<byte>(keyPtr, sizeOfDocId));
         }
 
         public (long TotalSize, int UniqueAttachmets) GetStreamInfoForBucket(Transaction tx, int bucket)
