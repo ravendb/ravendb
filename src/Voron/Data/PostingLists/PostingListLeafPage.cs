@@ -288,6 +288,8 @@ public readonly unsafe struct PostingListLeafPage
             reqSize = encoder.Encode(mergedList.RawItems, mergedList.Count);
             if (reqSize >= Constants.Storage.PageSize - PageHeader.SizeOf)
             {
+                encoder.Dispose();
+                mergedList.Dispose();
                 scope.Dispose();
                 return false;
             }
@@ -297,6 +299,7 @@ public readonly unsafe struct PostingListLeafPage
 
         newHeader->SizeUsed = (ushort)reqSize;
         newHeader->NumberOfEntries =  mergedList.Count;
+        encoder.Dispose();
         mergedList.Dispose();
 
         Memory.Set((byte*)dest + PageHeader.SizeOf + dest->SizeUsed, 0,
