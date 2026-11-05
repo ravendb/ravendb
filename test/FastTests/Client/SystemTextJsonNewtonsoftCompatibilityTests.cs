@@ -798,6 +798,67 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class SettingsOwner
+    {
+        public Settings Settings { get; set; }
+    }
+
+    private class ViewOfUnboundOwner
+    {
+        private readonly SettingsOwner _owner;
+
+        public ViewOfUnboundOwner(SettingsOwner source)
+        {
+            _owner = source;
+        }
+
+        public Settings Derived => _owner.Settings;
+
+        public Settings Settings { get; } = new() { Timeout = 5 };
+
+        public List<string> Tags { get; } = ["a"];
+    }
+
+    private class ViewOfBoundName
+    {
+        public ViewOfBoundName(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+
+        public Settings Settings { get; } = new() { Timeout = 5 };
+
+        public List<string> Tags { get; } = ["a"];
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPopulatesOnlyReadOnlyCollectionsOfTypesConstructedWithParametersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
+                   "{\"Name\":\"n\",\"Derived\":{\"Timeout\":1},\"Settings\":{\"Timeout\":2},\"Tags\":[\"b\"]}", "view"))
+        {
+            var expectedUnbound = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ViewOfUnboundOwner>(json);
+            var actualUnbound = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ViewOfUnboundOwner>(json);
+
+            Assert.Equal(5, actualUnbound.Settings.Timeout);
+            Assert.Equal(expectedUnbound.Settings.Timeout, actualUnbound.Settings.Timeout);
+            Assert.Equal(new[] { "a", "b" }, actualUnbound.Tags);
+            Assert.Equal(expectedUnbound.Tags, actualUnbound.Tags);
+
+            var expectedBound = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ViewOfBoundName>(json);
+            var actualBound = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ViewOfBoundName>(json);
+
+            Assert.Equal("n", actualBound.Name);
+            Assert.Equal(5, actualBound.Settings.Timeout);
+            Assert.Equal(expectedBound.Settings.Timeout, actualBound.Settings.Timeout);
+            Assert.Equal(new[] { "a", "b" }, actualBound.Tags);
+            Assert.Equal(expectedBound.Tags, actualBound.Tags);
+        }
+    }
+
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonReadsCovariantArrayItemsWrittenByNewtonsoft()
     {

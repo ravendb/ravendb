@@ -188,8 +188,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyPropertyNameConverter(typeInfo);
             AddMetadataIdentityProperties(typeInfo, extensionData);
             SetupNonPublicConstructor(typeInfo);
+            bool constructedWithParameters = typeInfo.CreateObject == null;
             SetupUnboundParameterizedConstructor(typeInfo);
-            PopulateReadOnlyMembers(typeInfo);
+            PopulateReadOnlyMembers(typeInfo, constructedWithParameters);
             ApplyNewtonsoftReadOnlyFieldSetters(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             ApplyNewtonsoftMemberOrder(typeInfo);
@@ -1184,7 +1185,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return true;
         }
 
-        private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo)
+        private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo, bool constructedWithParameters)
         {
             JsonSerializerOptions options = typeInfo.Options;
             for (int i = 0; i < typeInfo.Properties.Count; i++)
@@ -1193,10 +1194,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (property.Set != null || property.Get == null || property.PropertyType.IsValueType || property.PropertyType == typeof(string))
                     continue;
 
+                bool isCollection = typeof(IEnumerable).IsAssignableFrom(property.PropertyType);
+                if (constructedWithParameters && isCollection == false)
+                    continue;
+
                 Func<object, object> get = property.Get;
                 property.Set = (target, value) => PopulateExisting(get(target), value, options);
 
-                if (property.PropertyType != typeof(object) && typeof(IEnumerable).IsAssignableFrom(property.PropertyType) == false)
+                if (property.PropertyType != typeof(object) && isCollection == false)
                     TrackPresentMembers(property);
             }
         }
