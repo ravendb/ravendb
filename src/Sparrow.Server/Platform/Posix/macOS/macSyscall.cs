@@ -16,7 +16,7 @@ namespace Sparrow.Server.Platform.Posix.macOS
         public static extern int mach_host_self();
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int host_page_size(int machHost, uint* pageSize);
+        public static extern int host_page_size(int machHost, ulong* pageSize); // vm_size_t: 8 bytes
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int host_statistics64(int machHost, int flavor, void* hostInfoT, int* hostInfoCount);
