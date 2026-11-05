@@ -2715,6 +2715,50 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         Assert.Equal("stored", Assert.IsType<NamedOptions>(roundTrip.Options).Name);
     }
 
+    private class HoldsGetOnlyObjects
+    {
+        public object Settings { get; } = new TimeoutSettings();
+
+        public object Tags { get; } = new List<string> { "seed" };
+
+        public object Text { get; } = "initial";
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPopulatesGetOnlyObjectMembersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Settings\":{\"Timeout\":7},\"Tags\":[\"a\",\"b\"],\"Text\":\"loaded\"}", "objects"))
+        {
+            foreach (DocumentConventions conventions in new[] { Newtonsoft, SystemTextJson })
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<HoldsGetOnlyObjects>(json);
+
+                var settings = Assert.IsType<TimeoutSettings>(read.Settings);
+                Assert.Equal(7, settings.Timeout);
+                Assert.Equal("fast", settings.Mode);
+                Assert.Equal(3, settings.Retries);
+                Assert.Equal(["seed", "a", "b"], Assert.IsType<List<string>>(read.Tags));
+                Assert.Equal("initial", read.Text);
+            }
+        }
+
+        var source = new HoldsGetOnlyObjects();
+        ((TimeoutSettings)source.Settings).Retries = 9;
+        ((List<string>)source.Tags).Add("b");
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(source, context))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsGetOnlyObjects>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsGetOnlyObjects>(json);
+
+            Assert.Equal(9, Assert.IsType<TimeoutSettings>(expected.Settings).Retries);
+            Assert.Equal(9, Assert.IsType<TimeoutSettings>(actual.Settings).Retries);
+            Assert.Equal((List<string>)expected.Tags, Assert.IsType<List<string>>(actual.Tags));
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
