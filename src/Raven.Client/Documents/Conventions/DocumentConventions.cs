@@ -241,22 +241,32 @@ namespace Raven.Client.Documents.Conventions
 #endif
 
 #if NETCOREAPP3_1_OR_GREATER
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ||
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && (RuntimeInformation.ProcessArchitecture == Architecture.Arm || RuntimeInformation.ProcessArchitecture == Architecture.Arm64)))
             {
-                try
-                {
-                    ZstdLib.GetMaxCompression(1);
-                }
-                catch
-                {
+                if (IsZstdAvailable() == false)
                     DefaultDisableTcpCompression = true;
-                }
             }
 #endif
 
             Default.Freeze();
             DefaultForServer.Freeze();
         }
+
+#if NETCOREAPP3_1_OR_GREATER
+        private static bool IsZstdAvailable()
+        {
+            try
+            {
+                ZstdLib.GetMaxCompression(1);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+#endif
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
