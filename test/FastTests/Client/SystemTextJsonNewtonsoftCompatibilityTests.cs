@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Dynamic;
@@ -2422,6 +2423,65 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.Equal(value.ByMoment.Keys.OrderBy(key => key), fromNewtonsoft.ByMoment.Keys.OrderBy(key => key));
             Assert.Equal(1, fromNewtonsoft.Sorted[date]);
             Assert.Equal(2, fromNewtonsoft.Sorted[local]);
+        }
+    }
+
+    private class ImmutableCollections
+    {
+        public ImmutableList<Animal> List { get; set; }
+
+        public IImmutableList<Animal> InterfaceList { get; set; }
+
+        public ImmutableHashSet<Animal> Set { get; set; }
+
+        public ImmutableQueue<Animal> Queue { get; set; }
+
+        public IImmutableList<object> Objects { get; set; }
+
+        public ImmutableDictionary<string, Animal> Dictionary { get; set; }
+
+        public ImmutableSortedDictionary<int, Animal> SortedDictionary { get; set; }
+    }
+
+    private class ImmutableDictionaryInterface
+    {
+        public IImmutableDictionary<string, Animal> Animals { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsImmutableCollectionsOfPolymorphicItemsLikeNewtonsoft()
+    {
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ImmutableCollections
+        {
+            List = ImmutableList.Create<Animal>(new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }),
+            InterfaceList = ImmutableList.Create<Animal>(new Dog { Name = "Max", Barks = true }),
+            Set = ImmutableHashSet.Create<Animal>(new Dog { Name = "Bolt", Barks = true }),
+            Queue = ImmutableQueue.Create<Animal>(new Dog { Name = "Fido", Barks = true }, new Animal { Name = "Nemo" }),
+            Objects = ImmutableList.Create<object>("text", new Dog { Name = "Spot", Barks = true }),
+            Dictionary = ImmutableDictionary<string, Animal>.Empty.Add("rex", new Dog { Name = "Rex", Barks = true }),
+            SortedDictionary = ImmutableSortedDictionary<int, Animal>.Empty.Add(1, new Dog { Name = "Bolt", Barks = true })
+        });
+
+        Assert.True(Assert.IsType<Dog>(read.List[0]).Barks);
+        Assert.IsType<Animal>(read.List[1]);
+        Assert.True(Assert.IsType<Dog>(Assert.Single(Assert.IsType<ImmutableList<Animal>>(read.InterfaceList))).Barks);
+        Assert.True(Assert.IsType<Dog>(Assert.Single(read.Set)).Barks);
+        Assert.Equal(["Fido", "Nemo"], read.Queue.Select(animal => animal.Name));
+        Assert.IsType<Dog>(read.Queue.Peek());
+        Assert.Equal("Spot", Assert.IsType<Dog>(read.Objects[1]).Name);
+        Assert.True(Assert.IsType<Dog>(read.Dictionary["rex"]).Barks);
+        Assert.True(Assert.IsType<Dog>(read.SortedDictionary[1]).Barks);
+
+        var value = new ImmutableDictionaryInterface { Animals = ImmutableDictionary<string, Animal>.Empty.Add("max", new Dog { Name = "Max", Barks = true }) };
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject systemTextJson = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject newtonsoft = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            foreach (BlittableJsonReaderObject json in new[] { systemTextJson, newtonsoft })
+            {
+                var animals = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ImmutableDictionaryInterface>(json).Animals;
+                Assert.True(Assert.IsType<Dog>(Assert.IsType<ImmutableDictionary<string, Animal>>(animals)["max"]).Barks);
+            }
         }
     }
 
