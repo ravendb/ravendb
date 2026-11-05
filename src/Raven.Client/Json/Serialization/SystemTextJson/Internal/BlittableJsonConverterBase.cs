@@ -68,11 +68,23 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             Dictionary<string, JsonPropertyInfo> properties = Conventions.GetJsonProperties(type);
             foreach (string propertyName in json.GetPropertyNames())
             {
-                if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null || property.AttributeProvider is PropertyInfo { SetMethod: null })
+                if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null)
                     continue;
 
-                Action<object, object> setter = property.Set ?? GetMemberSetter(property.AttributeProvider);
-                setter?.Invoke(entity, property.Get(newInstance));
+                GetPopulateSetter(property)?.Invoke(entity, property.Get(newInstance));
+            }
+        }
+
+        private static Action<object, object> GetPopulateSetter(JsonPropertyInfo property)
+        {
+            switch (property.AttributeProvider)
+            {
+                case PropertyInfo { SetMethod: null }:
+                    return null;
+                case FieldInfo { IsInitOnly: true } field:
+                    return RavenJsonTypeInfoResolver.HasNewtonsoftMemberAttribute(field) ? field.SetValue : null;
+                default:
+                    return property.Set ?? GetMemberSetter(property.AttributeProvider);
             }
         }
 

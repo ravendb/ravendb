@@ -2536,6 +2536,41 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class ReadOnlyFieldCollections
+    {
+        public readonly List<string> Tags = new();
+
+        [JsonProperty]
+        public readonly List<string> Marked = new();
+
+        public List<string> Settable { get; set; } = new();
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPopulatesReadOnlyFieldsLikeNewtonsoft()
+    {
+        var source = new ReadOnlyFieldCollections { Settable = ["s"] };
+        source.Tags.Add("a");
+        source.Marked.Add("m");
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(source, context))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ReadOnlyFieldCollections>(json);
+            Newtonsoft.Serialization.DefaultConverter.PopulateEntity(expected, json);
+
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ReadOnlyFieldCollections>(json);
+            SystemTextJson.Serialization.DefaultConverter.PopulateEntity(actual, json);
+
+            Assert.Equal(["a"], expected.Tags);
+            Assert.Equal(expected.Tags, actual.Tags);
+            Assert.Equal(["m"], expected.Marked);
+            Assert.Equal(expected.Marked, actual.Marked);
+            Assert.Equal(["s"], expected.Settable);
+            Assert.Equal(expected.Settable, actual.Settable);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
