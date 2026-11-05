@@ -362,7 +362,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (value == null)
                 return;
 
-            JsonTypeInfo typeInfo = options.GetTypeInfo(value.GetType());
+            JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(options, value.GetType());
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return;
 
