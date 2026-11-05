@@ -157,10 +157,13 @@ public partial class IndexSearcher
     }
 
     /// <summary>
-    /// Average byte length of the field's terms, 0 when it is unknown (the ratio is then 1).
+    /// Average byte length of the field's terms, 0 when the field is not scored or it is unknown (the ratio is then 1).
     /// </summary>
     internal double GetAverageTermLength(in FieldMetadata field, CompactTree tree)
     {
+        if (field.HasBoost == false)
+            return 0;
+
         var totalTerms = tree.NumberOfEntries;
         long totalSum = totalTerms;
         if (_metadataTree.TryRead(field.TermLengthSumName, out var totalSumReader))

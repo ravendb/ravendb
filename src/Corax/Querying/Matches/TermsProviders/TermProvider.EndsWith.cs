@@ -28,7 +28,7 @@ namespace Corax.Querying.Matches.TermsProviders
             _endsWith = endsWith;
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
             var suffix = _endsWith.Decoded();
             int count = 0;
@@ -44,6 +44,8 @@ namespace Corax.Querying.Matches.TermsProviders
                 if (!key.Decoded().EndsWith(suffix))
                     continue;
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = key.Decoded().Length;
                 postingListIds[count++] = postingListId;
             }
 

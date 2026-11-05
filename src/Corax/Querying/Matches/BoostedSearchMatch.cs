@@ -13,7 +13,7 @@ namespace Corax.Querying.Matches;
 /// A boosted `search()` over several terms combined with OR, relevance is preserved by retaining each per-term scored
 /// so we can sum their BM25 contributions properly.
 /// </summary>
-public sealed class BoostedSearchMatch(ByteStringContext allocator, TermMatch[] terms, CancellationToken token = default) : IBitmapQueryMatch, IDisposable
+public sealed class BoostedSearchMatch(ByteStringContext allocator, IQueryMatch[] terms, CancellationToken token = default) : IBitmapQueryMatch, IDisposable
 {
     private RoaringBitmap _bitmap;
     private RoaringBitmapIterator _iterator;

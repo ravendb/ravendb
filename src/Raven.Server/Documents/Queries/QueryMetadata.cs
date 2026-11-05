@@ -63,12 +63,13 @@ namespace Raven.Server.Documents.Queries
         /// </summary>
         public ParameterBinding[] CachedSlotBindings { get; set; }
 
-        public sealed class PlanMemo(long planCacheGeneration, PlanCache.PerQueryPlans bucket)
+        public sealed class PlanMemo(long planCacheGeneration, bool hasBoost, PlanCache.PerQueryPlans bucket)
         {
             /// <summary>
-            /// Generations change when the index is reset, or a field HasMultipleTermsInField() is changed, etc. 
+            /// Generations change when the index is reset, or a field HasMultipleTermsInField() is changed, etc.
             /// </summary>
             public readonly long PlanCacheGeneration = planCacheGeneration;
+            public readonly bool HasBoost = hasBoost;
             public readonly WeakReference<PlanCache.PerQueryPlans> Bucket = new(bucket);
         }
 

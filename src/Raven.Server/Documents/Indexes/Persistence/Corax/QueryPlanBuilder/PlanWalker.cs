@@ -110,12 +110,12 @@ internal static class PlanWalker
         {
             foreach (var t in pending.InnerClauses)
             {
-                Apply(t, pending.Factor);
+                Apply(t, pending.Factor, ctx.HasBoost);
             }
         }
 
         // a group has no Bindings of its own - carry the factor down to the leaves
-        static void Apply(ClauseInfo clause, ParameterBinding factor)
+        static void Apply(ClauseInfo clause, ParameterBinding factor, bool isScored)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
             if (clause.ClauseType == ClauseType.Vector)
@@ -125,14 +125,14 @@ internal static class PlanWalker
             {
                 foreach (var sub in subClauses)
                 {
-                    Apply(sub, factor);
+                    Apply(sub, factor, isScored);
                 }
 
                 return;
             }
 
-            clause.Bindings = [..clause.Bindings ?? [], factor];
-            clause.HasBoost = true;
+            clause.BoostBinding = factor;
+            clause.HasBoost = isScored;
         }
     }
 

@@ -16,6 +16,7 @@ internal sealed class ResolutionContext
     public readonly QueryMetadata Metadata;
     public readonly IndexSearcher IndexSearcher;
     public readonly QueryBuilderParameters BuilderParams;
+    public readonly bool HasBoost;
     public int WhenCount;
     public bool IsOr;
     // connective of the expression being parsed; null at the root
@@ -36,12 +37,14 @@ internal sealed class ResolutionContext
     public ResolutionContext(PlanParameters p)
         : this(p.QueryParameters, p.Metadata, p.IndexSearcher)
     {
+        HasBoost = p.HasBoost;
     }
 
     public ResolutionContext(QueryBuilderParameters b)
         : this(b.QueryParameters, b.Metadata, b.IndexSearcher)
     {
         BuilderParams = b;
+        HasBoost = b.HasBoost;
     }
 
     private ResolutionContext(BlittableJsonReaderObject queryParameters, QueryMetadata metadata, IndexSearcher indexSearcher)

@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Querying.Matches.Meta;
@@ -56,6 +57,8 @@ public class CompiledQueryMatch(
     private long _count = -1;
 
     public RoaringBitmap[] Bitmaps;
+
+    public RoaringBitmap[] ScoringGroups;
 
     public LowLevelTransaction Llt;
 
@@ -153,25 +156,72 @@ public class CompiledQueryMatch(
         return _iterator.Fill(ref _bitmapData, matches);
     }
 
-    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor, sorted: false);
+
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor, sorted: true);
+
+    private void Score(Span<long> matches, Span<float> scores, float boostFactor, bool sorted)
     {
-        foreach (var it in ResolvedMatches ?? [])
+        int slot = 0;
+        ScoreClauses(Exec.Executions ?? [], matches, scores, boostFactor, sorted, ref slot);
+    }
+
+    // The slots of ResolvedMatches follow the depth-first order of the executions, see QueryPlanBuilder.ResolveAllSlots
+    private void ScoreClauses(List<ClauseExecution> executions, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        foreach (var exec in executions)
         {
-            if (it is IPostFilterMatch { IsPostFilter: true }) // the PostFilterMatch around this one scores it
-                continue;
-            it?.Score(matches, scores, boostFactor);
+            if (exec.IsNegated) // the excluded side of a negation is never scored
+                slot += SlotCount(exec);
+            else if (exec.ClauseType is not (ClauseType.OrGroup or ClauseType.AndGroup))
+            {
+                for (int end = slot + SlotCount(exec); slot < end; slot++)
+                    ScoreSlot(slot, matches, scores, boostFactor, sorted);
+            }
+            else if (exec.Clause.ScoringGroupIndex >= 0)
+                ScoreGroup(exec, ScoringGroups[exec.Clause.ScoringGroupIndex], matches, scores, boostFactor, sorted, ref slot);
+            else
+                ScoreClauses(exec.SubExecutions, matches, scores, boostFactor, sorted, ref slot);
         }
     }
 
-    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor)
+    private void ScoreGroup(ClauseExecution exec, in RoaringBitmap group, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot)
     {
-        foreach (var it in ResolvedMatches ?? [])
+        var buffer = ArrayPool<float>.Shared.Rent(matches.Length);
+        var groupScores = buffer.AsSpan(0, matches.Length);
+        groupScores.Clear();
+
+        ScoreClauses(exec.SubExecutions, matches, groupScores, boostFactor, sorted, ref slot);
+
+        for (int i = 0; i < matches.Length; i++)
         {
-            if (it is IPostFilterMatch { IsPostFilter: true })
-                continue;
-            it?.ScoreSorted(matches, scores, boostFactor);
+            if (group.Contains(matches[i]))
+                scores[i] += groupScores[i];
         }
+
+        ArrayPool<float>.Shared.Return(buffer);
     }
+
+    private void ScoreSlot(int slot, Span<long> matches, Span<float> scores, float boostFactor, bool sorted)
+    {
+        var match = ResolvedMatches[slot];
+        if (match is null or IPostFilterMatch { IsPostFilter: true }) // the PostFilterMatch around this one scores it
+            return;
+
+        if (sorted)
+            match.ScoreSorted(matches, scores, boostFactor);
+        else
+            match.Score(matches, scores, boostFactor);
+    }
+
+    private static int SlotCount(ClauseExecution exec) => exec.ClauseType switch
+    {
+        ClauseType.MatchAll or ClauseType.MatchNothing => 0,
+        ClauseType.OrGroup or ClauseType.AndGroup => exec.SubExecutions.Sum(SlotCount),
+        ClauseType.In or ClauseType.AllIn => exec.InTermCount + 1,
+        _ => 1
+    };
 
     public void GetTelemetry(out long[] timings, out long[] resultCounts, out int entryScanTakenAtOp)
     {
@@ -235,6 +285,13 @@ public class CompiledQueryMatch(
             Bitmaps[i] = new RoaringBitmap(allocator);
         }
 
+        int scoringGroupCount = CompiledPlan.Template.ScoringGroupCount;
+        if (scoringGroupCount > 0)
+        {
+            ScoringGroups = ArrayPool<RoaringBitmap>.Shared.Rent(scoringGroupCount);
+            ScoringGroups.AsSpan(0, scoringGroupCount).Clear();
+        }
+
         Llt = Searcher.Transaction.LowLevelTransaction;
 
         Timings = wantTimings ? new long[opCount] : null;
@@ -267,6 +324,13 @@ public class CompiledQueryMatch(
     {
         _iterator.Dispose();
         _bitmapData.Dispose();
+        if (ScoringGroups != null)
+        {
+            for (int i = 0; i < CompiledPlan.Template.ScoringGroupCount; i++)
+                ScoringGroups[i].Dispose();
+            ArrayPool<RoaringBitmap>.Shared.Return(ScoringGroups, clearArray: true);
+            ScoringGroups = null;
+        }
         Llt = null; // release transaction reference so it is not kept alive longer than needed
     }
 

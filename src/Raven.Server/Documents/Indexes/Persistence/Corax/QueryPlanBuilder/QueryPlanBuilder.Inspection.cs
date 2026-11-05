@@ -82,7 +82,7 @@ internal static partial class QueryPlanBuilder
                 var packed = clauseExec.PackedParamValue;
                 int inTermCount = clauseExec.InTermCount;
 
-                if (clauseExec.Clause.HasBoost || clauseExec.BoostFactor > 0)
+                if (clauseExec.Clause.BoostBinding != null)
                     parameters["Boost"] = clauseExec.BoostFactor.ToString(CultureInfo.InvariantCulture);
 
                 var term = FormatValueFromPlan(packed, exec, packed.Param1);
@@ -434,7 +434,7 @@ internal static partial class QueryPlanBuilder
                         or PlanOpKind.AndNotFromTreeScan => "TreeScan",
                     // MaybeEntryScan is a control-flow branch, not a match dispatch — leave Dispatch unset 
                     PlanOpKind.MaybeEntryScan or PlanOpKind.AndBitmaps or PlanOpKind.AndNotBitmaps
-                        or PlanOpKind.LazyOrBitmaps or PlanOpKind.ClearBitmap or PlanOpKind.FillAllEntries => null,
+                        or PlanOpKind.LazyOrBitmaps or PlanOpKind.ClearBitmap or PlanOpKind.FillAllEntries or PlanOpKind.SaveScoringGroup => null,
                     _ => "Match"
                 },
                 OpIndex = i,

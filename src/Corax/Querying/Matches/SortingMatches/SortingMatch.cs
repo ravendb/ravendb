@@ -752,13 +752,11 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
     {
         // Draining the inner match (Count + the Fill loop) is the inner query's execution, not sort work,
         // so it is deliberately left untimed here — only the SortResults call below is charged to the sort.
-        using var scope = SortingHelpers.DrainMatch(ref match._inner, match._searcher.Allocator, out var allMatches);
+        using var scope = SortingHelpers.DrainMatch(ref match._inner, match._searcher.Allocator, out var allMatches, out match.CandidatesAreSorted);
 
         match.TotalResults = allMatches.Length;
         if (match.TotalResults == 0)
             return;
-
-        match.CandidatesAreSorted = true;
 
         long sortStart = Stopwatch.GetTimestamp();
         SortResults<TEntryComparer>(match, allMatches);

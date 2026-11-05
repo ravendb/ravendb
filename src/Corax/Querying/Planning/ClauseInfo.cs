@@ -61,13 +61,19 @@ public sealed class ClauseInfo
 
     public List<ClauseInfo> SubClauses { get; init; }
 
-    /// <summary>Parameter bindings indexed by <see cref="BindingIndex"/> constants.
-    /// If <see cref="HasBoost"/> is true, the last entry is the boost factor binding.</summary>
+    /// <summary>Parameter bindings indexed by <see cref="BindingIndex"/> constants.</summary>
     public ParameterBinding[] Bindings { get; set; }
 
-    /// <summary>True if this clause is wrapped in boost(). When set, Bindings[^1] is the
-    /// boost factor binding and exec.BoostFactor is resolved from it per-execution.</summary>
+    /// <summary>The factor of the boost() this clause is wrapped in, null when it is not boosted.
+    /// exec.BoostFactor is resolved from it per-execution.</summary>
+    public ParameterBinding BoostBinding { get; set; }
+
+    /// <summary>True if the boost() of this clause contributes to the score. Only a scored plan computes scores,
+    /// in an unscored one the clause is planned as if it was not boosted.</summary>
     public bool HasBoost { get; set; }
+
+    /// <summary>Index into <c>CompiledQueryMatch.ScoringGroups</c> of an AND group under an OR of a scored plan, which scores only the documents it matched; -1 otherwise.</summary>
+    public int ScoringGroupIndex { get; set; } = -1;
 
     /// <summary>Optional WHEN condition delegate, called with the query's BlittableJsonReaderObject parameters; returns false to eliminate the clause.</summary>
     public Func<BlittableJsonReaderObject, bool> WhenCondition { get; set; }

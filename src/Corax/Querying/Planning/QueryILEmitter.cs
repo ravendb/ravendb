@@ -188,6 +188,10 @@ public static class QueryIlEmitter
                     needsLazyRepair = true;
                     break;
 
+                case PlanOpKind.SaveScoringGroup:
+                    d.EmitSaveScoringGroup(op.BitmapLocal, op.ParamIndex);
+                    break;
+
                 case PlanOpKind.GotoDoneIfEmpty:
                     // Dead when terminal: `if (empty) goto Done;` falls straight through to the Done label, let's skip it then
                     if (isLastEffectiveOp is false)

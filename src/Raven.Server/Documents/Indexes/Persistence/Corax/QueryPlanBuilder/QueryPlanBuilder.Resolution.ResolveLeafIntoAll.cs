@@ -37,7 +37,7 @@ internal static partial class QueryPlanBuilder
             }
             default:
             {
-                AddDefaultSlot(planHasBoost ? MatchDispatch.QueryMatch : GetDispatch(clauseExec));
+                AddDefaultSlot(planHasBoost ? MatchDispatch.QueryMatch : GetDispatch(clauseExec, planHasBoost: false));
                 break;
             }
         }
@@ -138,7 +138,7 @@ internal static partial class QueryPlanBuilder
             }
         }
 
-        IQueryMatch Boosted(IQueryMatch match) => clauseExec.BoostFactor is not 0 ? walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor) : match;
+        IQueryMatch Boosted(IQueryMatch match) => clauseExec.Clause.HasBoost && clauseExec.BoostFactor is not 0 ? walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor) : match;
 
         static bool IsCalibratedRangeClause(ClauseType type) => type switch
         {
