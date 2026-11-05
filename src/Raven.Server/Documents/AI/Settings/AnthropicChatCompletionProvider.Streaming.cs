@@ -142,6 +142,9 @@ internal sealed partial class AnthropicChatCompletionProvider
                 if (lengthTruncated && text.Length == 0)
                     throw OutOfRoom(state.StopReason, response);
 
+                if (text.Length == 0)
+                    throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
+
                 return new AiResponse(AiResponseType.Result)
                 {
                     Result = text,
