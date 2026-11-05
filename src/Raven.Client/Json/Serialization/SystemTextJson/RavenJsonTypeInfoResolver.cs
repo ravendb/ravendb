@@ -617,7 +617,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
-        private static bool HasNewtonsoftMemberAttribute(MemberInfo member)
+        internal static bool HasNewtonsoftMemberAttribute(MemberInfo member)
         {
             return (member.IsDefined(typeof(DataMemberAttribute), inherit: true) && HasDataContract(member.DeclaringType)) ||
                    GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName) != null ||
