@@ -1553,7 +1553,7 @@ namespace Raven.Server.Documents.Revisions
             if (increment)
                 AddConflictRevision(context, table, lowerIdPrefix, etag);
             else
-                RemoveConflictRevision(context, table, lowerIdPrefix, etag);
+                RemoveConflictRevision(context, lowerIdPrefix, etag);
         }
 
         private void AddConflictRevision(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long etag)
@@ -1564,10 +1564,8 @@ namespace Raven.Server.Documents.Revisions
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiAdd(prefixedLowerId, etagSlice);
         }
 
-        private void RemoveConflictRevision(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long etag)
+        private void RemoveConflictRevision(DocumentsOperationContext context, Slice prefixedLowerId, long etag)
         {
-            ListConflictRevisionsOnce(context, table, prefixedLowerId);
-
             using (DocumentsStorage.GetEtagAsSlice(context, etag, out var etagSlice))
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiDelete(prefixedLowerId, etagSlice);
         }
@@ -1740,7 +1738,7 @@ namespace Raven.Server.Documents.Revisions
 
             using (GetKeyPrefix(context, keys.Slices.LowerId, out var lowerIdPrefix))
             {
-                RemoveConflictRevision(context, table, lowerIdPrefix, revision.Etag);
+                RemoveConflictRevision(context, lowerIdPrefix, revision.Etag);
                 AddConflictRevision(context, table, lowerIdPrefix, newEtag);
             }
         }
