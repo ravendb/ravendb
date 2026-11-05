@@ -1,7 +1,6 @@
-﻿﻿using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -9,6 +8,7 @@ using Raven.Client.Http;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using JsonPatchDocument = Raven.Client.Documents.Operations.JsonPatchDocument;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 
 namespace FastTests.Client;

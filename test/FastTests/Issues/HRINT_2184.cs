@@ -1,4 +1,5 @@
-﻿﻿using System;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -48,7 +49,10 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Core)]
         public void Clear_BlittableJsonReader_Stack_On_Init_To_Avoid_MaxDepth_Exception()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions()
+            }))
             {
                 var serializer = new NewtonsoftJsonBlittableEntitySerializer(store.Conventions.Serialization);
 

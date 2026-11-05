@@ -1,8 +1,8 @@
 using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Server.Utils.Metrics;
 using Xunit;
 using Tests.Infrastructure;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -17,11 +17,11 @@ namespace SlowTests.Issues
         {
             var meter = new MeterValue("name", 1, 2.0, 3.0, 4.0, 15.0);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
             {
                 using (var session = store.OpenSession())
                 {
-                    var json = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(meter, session.Advanced.Context);
+                    var json = store.Conventions.Serialization.DefaultConverter.ToBlittable(meter, session.Advanced.Context);
                     var parsed = (MeterValue)session.Advanced.JsonConverter.FromBlittable(typeof(MeterValue), ref json, "meter", trackEntity: true);
 
                     Assert.Equal(meter.Name, parsed.Name);

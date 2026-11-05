@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FastTests;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
@@ -17,6 +16,7 @@ using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
@@ -187,7 +187,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
             //Assert if value is in embedding cache
             var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(inputValue);
             var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
-            var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
+            var embeddingCacheDocument = session.Load<BlittableJsonReaderObject>(embeddingsDocumentId);
             Assert.NotNull(embeddingCacheDocument);
 
             var attachmentsInEmbeddingCache = session.Advanced.Attachments.Get(embeddingsDocumentId, hashOfInput);
@@ -196,15 +196,15 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
 
             //Assert if embeddings document exists
             var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(docId);
-            var documentEmbeddings = session.Load<object>(documentEmbeddingsId) as JObject;
+            var documentEmbeddings = session.Load<BlittableJsonReaderObject>(documentEmbeddingsId);
             Assert.NotNull(documentEmbeddings);
 
             // Assert if contains current ETL result
-            var currentEtlObject = documentEmbeddings[integrationIdentifier.Value];
+            documentEmbeddings.TryGet(integrationIdentifier.Value, out BlittableJsonReaderObject currentEtlObject);
             Assert.NotNull(currentEtlObject);
 
             // Assert if ETL result contains current path
-            var currentPathObject = currentEtlObject[path] as JArray;
+            currentEtlObject.TryGet(path, out BlittableJsonReaderArray currentPathObject);
             Assert.NotNull(currentPathObject);
 
             var attachmentExistsInEmbeddingsDocument = session.Advanced.Attachments.Exists(documentEmbeddingsId, hashContentHash);

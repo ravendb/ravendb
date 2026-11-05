@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using FastTests;
-using Microsoft.AspNetCore.JsonPatch;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -21,6 +20,15 @@ namespace SlowTests.Client
     {
         public JsonPatchTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        private static void ApplyLocally(JsonPatchDocument patch, object target)
+        {
+            var microsoftPatch = new Microsoft.AspNetCore.JsonPatch.JsonPatchDocument();
+            foreach (JsonPatchDocument.OperationEntry operation in patch.Operations)
+                microsoftPatch.Operations.Add(new Microsoft.AspNetCore.JsonPatch.Operations.Operation(operation.Op, operation.Path, operation.From, operation.Value));
+
+            microsoftPatch.ApplyTo(target);
         }
 
         [RavenFact(RavenTestCategory.Patching)]
@@ -70,7 +78,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     IDictionary<string, object> dbCompany = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(originalCompany2);
+                    ApplyLocally(jpd, originalCompany2);
                     AssertExpandosEqual(originalCompany2, (dynamic)dbCompany);
                 }
             }
@@ -100,7 +108,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     var dbCompany = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(originalCompany);
+                    ApplyLocally(jpd, originalCompany);
 
                     AssertExpandosEqual(originalCompany, dbCompany);
                 }
@@ -157,7 +165,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     dynamic dbCompany = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(originalCompany);
+                    ApplyLocally(jpd, originalCompany);
 
                     AssertExpandosEqual((dynamic)originalCompany, dbCompany);
                 }
@@ -191,7 +199,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     dynamic dbCompany = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(originalCompany);
+                    ApplyLocally(jpd, originalCompany);
 
                     AssertExpandosEqual(originalCompany, dbCompany);
                 }
@@ -290,7 +298,7 @@ namespace SlowTests.Client
                 {
                     dynamic dbCompany = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(originalCompany);
+                    ApplyLocally(jpd, originalCompany);
 
                     AssertExpandosEqual(originalCompany, dbCompany);
                 }
@@ -357,7 +365,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(testObject);
+                    ApplyLocally(jpd, testObject);
 
                     AssertExpandosEqual(testObject, dbObject);
                 }
@@ -394,7 +402,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(testObject);
+                    ApplyLocally(jpd, testObject);
 
                     AssertExpandosEqual(testObject, dbObject);
                 }
@@ -428,7 +436,7 @@ namespace SlowTests.Client
 
                 var jpd = new JsonPatchDocument();
                 jpd.Add("/MyArray/2/1", 100);
-                jpd.ApplyTo(myClass);
+                ApplyLocally(jpd, myClass);
 
                 store.Operations.Send(new JsonPatchOperation(documentId, jpd));
 
@@ -466,7 +474,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(testObject);
+                    ApplyLocally(jpd, testObject);
 
                     AssertExpandosEqual(testObject, dbObject);
                 }
@@ -504,7 +512,7 @@ namespace SlowTests.Client
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(testObject);
+                    ApplyLocally(jpd, testObject);
 
                     AssertExpandosEqual(testObject, dbObject);
                 }
@@ -535,7 +543,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<ExpandoObject>(documentId);
-                    jpd.ApplyTo(originalCompany);
+                    ApplyLocally(jpd, originalCompany);
 
                     AssertExpandosEqual(originalCompany, company);
                 }
@@ -601,7 +609,7 @@ namespace SlowTests.Client
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(obj);
+                    ApplyLocally(jpd, obj);
 
                     AssertExpandosEqual(obj, dbObject);
                 }
@@ -635,7 +643,7 @@ namespace SlowTests.Client
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
                     var dictionary = (IDictionary<string, object>)dbObject;
-                    jpd.ApplyTo(obj);
+                    ApplyLocally(jpd, obj);
 
                     AssertExpandosEqual(obj, dbObject);
                     Assert.Equal(obj.NewPropName, dictionary["NewPropName"]);
@@ -667,7 +675,7 @@ namespace SlowTests.Client
 
                 Assert.ThrowsAny<RavenException>(() => store.Operations.Send(new JsonPatchOperation(documentId, jpd)));
 
-                Assert.ThrowsAny<Exception>(() => jpd.ApplyTo(obj));
+                Assert.ThrowsAny<Exception>(() => ApplyLocally(jpd, obj));
 
             }
         }
@@ -691,7 +699,7 @@ namespace SlowTests.Client
                     jpd.Move("/MyArray/0", "/MyArray/2");
                     jpd.Move("/MyArray/0", "/MyArray/3");
 
-                    jpd.ApplyTo(originalObject);
+                    ApplyLocally(jpd, originalObject);
 
                     store.Operations.Send(new JsonPatchOperation(documentId, jpd));
 
@@ -736,7 +744,7 @@ namespace SlowTests.Client
                 {
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(obj);
+                    ApplyLocally(jpd, obj);
 
                     AssertExpandosEqual(obj, dbObject);
                 }
@@ -772,7 +780,7 @@ namespace SlowTests.Client
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
                     var dictionary = (IDictionary<string, object>)dbObject;
 
-                    jpd.ApplyTo(obj);
+                    ApplyLocally(jpd, obj);
 
                     Assert.True(dictionary.ContainsKey("Name") == false);
                 }
@@ -909,7 +917,7 @@ namespace SlowTests.Client
 
                     jpdLocal.Replace("/MyArray/1", innerArrObject);
                     jpdLocal.Replace("/MyArray/1/City", "Hadera");
-                    jpdLocal.ApplyTo(originalObject);
+                    ApplyLocally(jpdLocal, originalObject);
 
                     jpd.Replace("/MyArray/1", innerArrObject);
                     jpd.Replace("/MyArray/1/City", "Hadera");
@@ -944,7 +952,7 @@ namespace SlowTests.Client
                     var jpd = new JsonPatchDocument();
 
                     jpdLocal.Replace("/MyArray/1", innerArrObject);
-                    jpdLocal.ApplyTo(originalObject);
+                    ApplyLocally(jpdLocal, originalObject);
 
                     jpd.Replace("/MyArray/1", innerArrObject);
                     jpd.Replace("/MyArray/1/City", "Hadera");
@@ -993,7 +1001,7 @@ namespace SlowTests.Client
 
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(originalObject);
+                    ApplyLocally(jpd, originalObject);
 
                     AssertExpandosEqual(originalObject, dbObject);
                 }
@@ -1034,7 +1042,7 @@ namespace SlowTests.Client
 
                     dynamic dbObject = session.Load<ExpandoObject>(documentId);
 
-                    jpd.ApplyTo(originalObject2);
+                    ApplyLocally(jpd, originalObject2);
 
                     AssertExpandosEqual(originalObject2, dbObject);
                 }

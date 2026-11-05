@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -262,7 +261,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             Values = new double[mapping.Count * 6];
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues First
         {
             get
@@ -277,7 +276,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _first = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Last
         {
             get
@@ -292,7 +291,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _last = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Min
         {
             get
@@ -307,7 +306,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _min = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Max
         {
             get
@@ -322,7 +321,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _max = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Sum
         {
             get
@@ -337,7 +336,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _sum = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Count
         {
             get
@@ -352,7 +351,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             set => _count = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public TValues Average
         {
             get

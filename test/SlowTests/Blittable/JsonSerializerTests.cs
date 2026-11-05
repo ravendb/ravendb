@@ -49,7 +49,7 @@ namespace SlowTests.Blittable
                 {
                     var jsonSerializer = new JsonSerializer
                     {
-                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     };
                     jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
                     jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
@@ -85,12 +85,12 @@ namespace SlowTests.Blittable
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
                     var data = new { Property = new[] { "Value1", "Value2" } };
-                    var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, readContext);
+                    var readerObject = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, readContext);
                     readerObject.TryGet(nameof(data.Property), out expected);
 
                     var jsonSerializer = new JsonSerializer
                     {
-                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     };
                     jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
                     jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
@@ -120,12 +120,12 @@ namespace SlowTests.Blittable
             {
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                 };
                 jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
 
                 var data = new { SomeProperty = "SomeValue" };
-                var expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
+                var expected = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, context);
                 var command = new Command { BlittableObject = expected };
 
                 //Serialize
@@ -192,7 +192,7 @@ namespace SlowTests.Blittable
                     expected = readContext.GetLazyString("Some Lazy String");
                     var jsonSerializer = new JsonSerializer
                     {
-                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                         ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                     };
 
@@ -225,10 +225,10 @@ namespace SlowTests.Blittable
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
                     var data = new { Property = "Value" };
-                    expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, readContext);
+                    expected = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, readContext);
                     var jsonSerializer = new JsonSerializer
                     {
-                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                        ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     };
 
                     jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
@@ -259,7 +259,7 @@ namespace SlowTests.Blittable
 
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
@@ -282,10 +282,10 @@ namespace SlowTests.Blittable
             using (var writer = new BlittableJsonWriter(context))
             {
                 var data = new { Property = "Value" };
-                var expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
+                var expected = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, context);
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
@@ -312,7 +312,7 @@ namespace SlowTests.Blittable
 
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
@@ -335,11 +335,11 @@ namespace SlowTests.Blittable
             using (var writer = new BlittableJsonWriter(context2))
             {
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
-                var parentBlittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
+                var parentBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, context);
                 parentBlittable.TryGet(nameof(data.ParentProperty), out BlittableJsonReaderObject expected);
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 
@@ -366,11 +366,11 @@ namespace SlowTests.Blittable
                 {
                     ["Property"] = "Value"
                 };
-                var blittableData = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
+                var blittableData = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(data, context);
 
                 var jsonSerializer = new JsonSerializer
                 {
-                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default.Serialization),
+                    ContractResolver = new DefaultRavenContractResolver(DocumentConventions.DefaultForServer.Serialization),
                     ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 };
 

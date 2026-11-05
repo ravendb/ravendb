@@ -1,0 +1,254 @@
+using System;
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Sparrow;
+using Sparrow.Extensions;
+
+namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
+{
+    internal sealed class DateTimeISO8601Converter : JsonConverterFactory
+    {
+        public static readonly DateTimeISO8601Converter Instance = new();
+
+        private DateTimeISO8601Converter()
+        {
+        }
+
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert == typeof(DateTime)
+                || typeToConvert == typeof(DateTime?)
+                || typeToConvert == typeof(DateTimeOffset)
+                || typeToConvert == typeof(DateTimeOffset?);
+        }
+
+        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (typeToConvert == typeof(DateTime))
+                return DateTimeConverterInner.Instance;
+            if (typeToConvert == typeof(DateTime?))
+                return NullableDateTimeConverterInner.Instance;
+            if (typeToConvert == typeof(DateTimeOffset))
+                return DateTimeOffsetConverterInner.Instance;
+            return NullableDateTimeOffsetConverterInner.Instance;
+        }
+
+        private static void ThrowUnparseable(string value, Type type) =>
+            throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
+
+        private static DateTime ReadDateTimeKey(string value)
+        {
+            if (DateTime.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime key) == false)
+                throw new JsonException($"Could not parse date time from '{value}'");
+
+            return key.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(key, DateTimeKind.Local) : key;
+        }
+
+        private static string FormatDateTimeKey(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Unspecified)
+                value = DateTime.SpecifyKind(value, DateTimeKind.Local);
+
+            return value.GetDefaultRavenFormat();
+        }
+
+        private static DateTimeOffset ReadDateTimeOffsetKey(string value)
+        {
+            if (DateTimeOffset.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset key) == false)
+                throw new JsonException($"Could not parse date time offset from '{value}'");
+
+            return key;
+        }
+
+        private static string FormatDateTimeOffsetKey(DateTimeOffset value)
+        {
+            return value.Offset == TimeSpan.Zero
+                ? value.UtcDateTime.GetDefaultRavenFormat(isUtc: true)
+                : value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
+        }
+
+        private sealed class DateTimeConverterInner : JsonConverter<DateTime>
+        {
+            public static readonly DateTimeConverterInner Instance = new();
+
+            public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                string s = reader.GetString();
+                if (s != null)
+                {
+                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time))
+                    {
+                        if (s.EndsWith("+00:00"))
+                            return time.ToUniversalTime();
+                        return time;
+                    }
+
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
+                    if (lucene != default)
+                        return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
+
+                    ThrowUnparseable(s, typeToConvert);
+                }
+
+                return default;
+            }
+
+            public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+            {
+                if (value.Kind == DateTimeKind.Unspecified)
+                    value = DateTime.SpecifyKind(value, DateTimeKind.Local);
+                writer.WriteStringValue(value.GetDefaultRavenFormat());
+            }
+
+            public override DateTime ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeKey(value));
+            }
+        }
+
+        private sealed class NullableDateTimeConverterInner : JsonConverter<DateTime?>
+        {
+            public static readonly NullableDateTimeConverterInner Instance = new();
+
+            public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                if (reader.TokenType == JsonTokenType.Null)
+                    return null;
+
+                string s = reader.GetString();
+                if (s != null)
+                {
+                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time))
+                    {
+                        if (s.EndsWith("+00:00"))
+                            return time.ToUniversalTime();
+                        return time;
+                    }
+
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
+                    if (lucene != default)
+                        return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
+
+                    ThrowUnparseable(s, typeToConvert);
+                }
+
+                return null;
+            }
+
+            public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+            {
+                if (value == null)
+                {
+                    writer.WriteNullValue();
+                    return;
+                }
+
+                DateTime dt = value.Value;
+                if (dt.Kind == DateTimeKind.Unspecified)
+                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Local);
+                writer.WriteStringValue(dt.GetDefaultRavenFormat());
+            }
+
+            public override DateTime? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeKey(value.Value));
+            }
+        }
+
+        private sealed class DateTimeOffsetConverterInner : JsonConverter<DateTimeOffset>
+        {
+            public static readonly DateTimeOffsetConverterInner Instance = new();
+
+            public override DateTimeOffset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                string s = reader.GetString();
+                if (s != null)
+                {
+                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
+                        return time;
+
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
+                    if (lucene != default)
+                        return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
+
+                    ThrowUnparseable(s, typeToConvert);
+                }
+
+                return default;
+            }
+
+            public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+            {
+                writer.WriteStringValue(value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+            }
+
+            public override DateTimeOffset ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeOffsetKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeOffsetKey(value));
+            }
+        }
+
+        private sealed class NullableDateTimeOffsetConverterInner : JsonConverter<DateTimeOffset?>
+        {
+            public static readonly NullableDateTimeOffsetConverterInner Instance = new();
+
+            public override DateTimeOffset? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                if (reader.TokenType == JsonTokenType.Null)
+                    return null;
+
+                string s = reader.GetString();
+                if (s != null)
+                {
+                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
+                        return time;
+
+                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
+                    if (lucene != default)
+                        return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
+
+                    ThrowUnparseable(s, typeToConvert);
+                }
+
+                return null;
+            }
+
+            public override void Write(Utf8JsonWriter writer, DateTimeOffset? value, JsonSerializerOptions options)
+            {
+                if (value == null)
+                {
+                    writer.WriteNullValue();
+                    return;
+                }
+
+                writer.WriteStringValue(value.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+            }
+
+            public override DateTimeOffset? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeOffsetKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTimeOffset? value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeOffsetKey(value.Value));
+            }
+        }
+    }
+}

@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
         {
             if (parameters.DocumentIds.Count == 1)
             {
-                var cmd = new DeleteRevisionsCommand(DocumentConventions.Default, parameters);
+                var cmd = new DeleteRevisionsCommand(DocumentConventions.DefaultForServer, parameters);
                 int shardNumber;
 
                 var config = RequestHandler.DatabaseContext.DatabaseRecord.Sharding;
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
             foreach (var (shard, ids) in shardsToDocs)
             {
                 var shardParameters = parameters.Clone(ids.Ids.ToList());
-                cmds[shard] = new DeleteRevisionsCommand(DocumentConventions.Default, shardParameters);
+                cmds[shard] = new DeleteRevisionsCommand(DocumentConventions.DefaultForServer, shardParameters);
             }
             
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shardsToDocs.Keys.ToArray(), new ShardedDeleteRevisionsOperation(RequestHandler.HttpContext, cmds), token.Token);

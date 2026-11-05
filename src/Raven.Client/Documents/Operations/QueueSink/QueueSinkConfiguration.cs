@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -63,7 +63,7 @@ public class QueueSinkConfiguration : IDynamicJson, IDatabaseTask
     public List<QueueSinkScript> Scripts { get; set; } = new();
 
     [JsonDeserializationIgnore]
-    [JsonIgnore]
+    [IgnoreDataMember]
     internal QueueConnectionString Connection { get; set; }
 
     public void Initialize(QueueConnectionString connectionString)

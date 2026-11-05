@@ -1,0 +1,438 @@
+using System;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
+using Sparrow;
+using Sparrow.Extensions;
+using Sparrow.Json;
+
+namespace Raven.Client.Json.Serialization.SystemTextJson
+{
+    public class SystemTextJsonSerializationConventions : ISerializationConventions, IJsonPropertyNameResolver
+    {
+        internal static readonly JsonWriterOptions WriterOptions = new() { Encoder = SupplementaryPlaneJavaScriptEncoder.Instance };
+
+        internal static readonly JsonWriterOptions MetadataWriterOptions = new() { Encoder = SupplementaryPlaneJavaScriptEncoder.Instance, SkipValidation = true };
+
+        private readonly BlittableJsonConverter _defaultConverter;
+        private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
+        private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+        private bool _ignoreByRefMembers;
+        private bool _ignoreUnsafeMembers;
+        private JsonSerializerContext _sourceGenerationContext;
+        private readonly JsonSerializerOptions[] _options = new JsonSerializerOptions[3];
+
+        public DocumentConventions Conventions { get; private set; }
+
+        public SystemTextJsonSerializationConventions()
+        {
+            _defaultConverter = new BlittableJsonConverter(this);
+            _ignoreByRefMembers = false;
+            _ignoreUnsafeMembers = false;
+            CustomizeJsonSerializerOptions = _ => { };
+        }
+
+        /// <summary>
+        ///     Register an action to customize the JsonSerializerOptions used by the DocumentStore.
+        /// </summary>
+        public Action<JsonSerializerOptions> CustomizeJsonSerializerOptions
+        {
+            get => _customizeJsonSerializerOptions;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _customizeJsonSerializerOptions = value;
+            }
+        }
+
+        public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable
+        {
+            get => _deserializeEntityFromBlittable;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _deserializeEntityFromBlittable = value;
+            }
+        }
+
+        public bool IgnoreByRefMembers
+        {
+            get => _ignoreByRefMembers;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _ignoreByRefMembers = value;
+            }
+        }
+
+        public bool IgnoreUnsafeMembers
+        {
+            get => _ignoreUnsafeMembers;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _ignoreUnsafeMembers = value;
+            }
+        }
+
+        /// <summary>
+        ///     Set a source-generated <see cref="JsonSerializerContext"/>
+        ///     to avoid runtime reflection. Types included in the context use compile-time
+        ///     generated metadata; types not in the context fall back to reflection.
+        /// </summary>
+        public JsonSerializerContext SourceGenerationContext
+        {
+            get => _sourceGenerationContext;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _sourceGenerationContext = value;
+            }
+        }
+
+        internal JsonSerializerOptions Options => GetOptions(TypeNameHandling.Auto);
+
+        private JsonSerializerOptions GetOptions(TypeNameHandling typeNameHandling)
+        {
+            JsonSerializerOptions options = _options[(int)typeNameHandling];
+            if (options != null)
+                return options;
+
+            options = CreateJsonSerializerOptions(typeNameHandling);
+            _options[(int)typeNameHandling] = options;
+            return options;
+        }
+
+        void ISerializationConventions.Initialize(DocumentConventions conventions)
+        {
+            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+
+            if (_deserializeEntityFromBlittable == null)
+                _deserializeEntityFromBlittable = new SystemTextJsonBlittableEntitySerializer(this).EntityFromJsonStream;
+        }
+
+        IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
+
+        public ISubscriptionsBlittableJsonConverter CreateConverter<T>(SubscriptionBatch<T> batch)
+        {
+            return new SubscriptionBlittableJsonConverter(this);
+        }
+
+        ISessionBlittableJsonConverter ISerializationConventions.CreateConverter(InMemoryDocumentSessionOperations session)
+        {
+            return new SessionBlittableJsonConverter(session);
+        }
+
+        IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
+        {
+            TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
+        }
+
+        IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
+        {
+            TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
+        }
+
+        IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
+        {
+            return new SystemTextJsonBlittableWriter(context);
+        }
+
+        object ISerializationConventions.DeserializeEntityFromBlittable(Type type, BlittableJsonReaderObject json)
+        {
+            return DeserializeEntityFromBlittable(type, json);
+        }
+
+        T ISerializationConventions.DeserializeEntityFromBlittable<T>(BlittableJsonReaderObject json)
+        {
+            return (T)DeserializeEntityFromBlittable(typeof(T), json);
+        }
+
+        string IJsonPropertyNameResolver.GetJsonPropertyName(MemberInfo member)
+        {
+            return JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member);
+        }
+
+        internal Dictionary<string, JsonPropertyInfo> GetJsonProperties(Type type)
+        {
+            return _jsonProperties.GetOrAdd(type, t =>
+            {
+                JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t);
+                StringComparer comparer = typeInfo.Options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                var properties = new Dictionary<string, JsonPropertyInfo>(comparer);
+
+                if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                    return properties;
+
+                foreach (JsonPropertyInfo property in typeInfo.Properties)
+                {
+                    if (property.AttributeProvider == null && property.Get == null)
+                        continue;
+
+                    properties[property.Name] = property;
+                }
+
+                return properties;
+            });
+        }
+
+        private JsonSerializerOptions CreateJsonSerializerOptions(TypeNameHandling typeNameHandling)
+        {
+            var ravenResolver = new RavenJsonTypeInfoResolver(this, typeNameHandling);
+
+            var options = new JsonSerializerOptions
+            {
+                TypeInfoResolver = _sourceGenerationContext != null
+                    ? ravenResolver.WithSourceGenerationContext(_sourceGenerationContext)
+                    : ravenResolver,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString,
+                Encoder = SupplementaryPlaneJavaScriptEncoder.Instance,
+                IncludeFields = true,
+                PropertyNameCaseInsensitive = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.Never
+            };
+
+            CustomizeJsonSerializerOptions(options);
+            InitializeConverters(options, typeNameHandling);
+
+            if (options.PropertyNamingPolicy != null && Conventions?.PropertyNameConverter == null)
+                ThrowPropertyNamingPolicyNotSupported();
+
+            return options;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowPropertyNamingPolicyNotSupported() =>
+            throw new NotSupportedException(
+                $"{nameof(JsonSerializerOptions)}.{nameof(JsonSerializerOptions.PropertyNamingPolicy)} renames document fields, while queries, indexes and patches address them by member name. " +
+                $"Set {nameof(DocumentConventions)}.{nameof(DocumentConventions.PropertyNameConverter)} instead, which RavenDB applies to both.");
+
+        internal bool TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
+        {
+            if (entity is IDynamicMetaObjectProvider)
+                return false;
+
+            var options = ((SystemTextJsonJsonSerializer)serializer).Options;
+            Type type = entity.GetType();
+            bool hasIdentityProperty = Conventions.GetIdentityProperty(type) != null;
+            long start = stream.Position;
+
+            RavenJsonTypeInfoResolver.RootEntity = hasIdentityProperty ? entity : null;
+            RavenJsonTypeInfoResolver.RootDocument = entity;
+            RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
+            try
+            {
+                JsonSerializer.Serialize(stream, entity, type, options);
+            }
+            finally
+            {
+                RavenJsonTypeInfoResolver.RootEntity = null;
+                RavenJsonTypeInfoResolver.RootDocument = null;
+                RavenJsonTypeInfoResolver.ClearSerializing();
+            }
+
+            if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
+            {
+                stream.SetLength(start);
+                stream.Position = start;
+                return false;
+            }
+
+            if (metadata != null && metadata.Count > 0)
+            {
+                long end = stream.Position;
+                stream.Position = end - 1;
+                if (stream.ReadByte() != '}')
+                    throw new InvalidOperationException($"Entity of type '{type}' must serialize to a JSON object.");
+
+                bool hasProperties = end - start > 2;
+                stream.SetLength(end - 1);
+                stream.Position = end - 1;
+                if (hasProperties)
+                    stream.WriteByte((byte)',');
+
+                using (var writer = new Utf8JsonWriter(stream, MetadataWriterOptions))
+                {
+                    writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                    WriteMetadata(writer, metadata);
+                }
+
+                stream.WriteByte((byte)'}');
+            }
+
+            return true;
+        }
+
+        internal static void WriteMetadata(Utf8JsonWriter writer, IEnumerable<KeyValuePair<string, object>> metadata)
+        {
+            writer.WriteStartObject();
+            foreach (var kvp in metadata)
+            {
+                writer.WritePropertyName(kvp.Key);
+                WriteMetadataValue(writer, kvp.Key, kvp.Value);
+            }
+            writer.WriteEndObject();
+        }
+
+        internal static void WriteMetadataValue(Utf8JsonWriter writer, string key, object value)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            switch (value)
+            {
+                case string s:
+                    writer.WriteStringValue(s);
+                    break;
+                case LazyStringValue s:
+                    writer.WriteStringValue(s.ToString());
+                    break;
+                case LazyCompressedStringValue s:
+                    writer.WriteStringValue(s.ToString());
+                    break;
+                case char c:
+                    writer.WriteStringValue(c.ToString());
+                    break;
+                case long l:
+                    writer.WriteNumberValue(l);
+                    break;
+                case int i:
+                    writer.WriteNumberValue(i);
+                    break;
+                case short s:
+                    writer.WriteNumberValue(s);
+                    break;
+                case byte b:
+                    writer.WriteNumberValue(b);
+                    break;
+                case sbyte sb:
+                    writer.WriteNumberValue(sb);
+                    break;
+                case ushort us:
+                    writer.WriteNumberValue(us);
+                    break;
+                case uint ui:
+                    writer.WriteNumberValue(ui);
+                    break;
+                case ulong ul:
+                    writer.WriteNumberValue(ul);
+                    break;
+                case LazyNumberValue ln:
+                    writer.WriteRawValue(ln.ToString(), skipInputValidation: true);
+                    break;
+                case bool b:
+                    writer.WriteBooleanValue(b);
+                    break;
+                case double d when double.IsNaN(d) || double.IsInfinity(d):
+                    writer.WriteRawValue(d.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
+                    break;
+                case double d:
+                    writer.WriteNumberValue(d);
+                    break;
+                case float f when float.IsNaN(f) || float.IsInfinity(f):
+                    writer.WriteRawValue(f.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
+                    break;
+                case float f:
+                    writer.WriteNumberValue(f);
+                    break;
+                case decimal dec:
+                    writer.WriteNumberValue(dec);
+                    break;
+                case DateTime dt:
+                    writer.WriteStringValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
+                    break;
+                case DateTimeOffset dto:
+                    writer.WriteStringValue(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+                    break;
+                case TimeSpan ts:
+                    writer.WriteStringValue(ts.ToString("c"));
+                    break;
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+                case DateOnly @do:
+                    writer.WriteStringValue(@do.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    break;
+                case TimeOnly to:
+                    writer.WriteStringValue(to.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                    break;
+#endif
+                case null:
+                    writer.WriteNullValue();
+                    break;
+                case IDictionary<string, object> dictionary:
+                    WriteMetadata(writer, dictionary);
+                    break;
+                case IDictionary dictionary:
+                    writer.WriteStartObject();
+                    foreach (DictionaryEntry entry in dictionary)
+                    {
+                        string entryKey = entry.Key.ToString();
+                        writer.WritePropertyName(entryKey);
+                        WriteMetadataValue(writer, entryKey, entry.Value);
+                    }
+                    writer.WriteEndObject();
+                    break;
+                case IEnumerable items:
+                    writer.WriteStartArray();
+                    foreach (object item in items)
+                        WriteMetadataValue(writer, key, item);
+                    writer.WriteEndArray();
+                    break;
+                default:
+                    throw new NotSupportedException($"The value type {value.GetType().FullName} of key {key} is not supported in the metadata");
+            }
+        }
+
+        private void InitializeConverters(JsonSerializerOptions options, TypeNameHandling typeNameHandling)
+        {
+            if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
+                options.Converters.Add(EnumMemberStringEnumConverter.Instance);
+            else
+                options.Converters.Add(IntegerEnumConverter.Instance);
+
+            foreach (JsonConverter converter in IntegralNumberConverters.All)
+                options.Converters.Add(converter);
+
+            options.Converters.Add(CharConverter.Instance);
+            options.Converters.Add(StringConverter.Instance);
+            options.Converters.Add(BooleanConverter.Instance);
+
+            options.Converters.Add(FloatingPointConverters.Double);
+            options.Converters.Add(FloatingPointConverters.Single);
+            options.Converters.Add(FloatingPointConverters.Decimal);
+            options.Converters.Add(DateTimeISO8601Converter.Instance);
+            options.Converters.Add(GuidConverter.Instance);
+            options.Converters.Add(VersionConverter.Instance);
+            options.Converters.Add(UIntPtrConverter.Instance);
+            options.Converters.Add(new ParametersConverter(() => GetOptions(TypeNameHandling.None)));
+            options.Converters.Add(LinqEnumerableConverter.Instance);
+            options.Converters.Add(MetadataDictionaryConverter.Instance);
+            options.Converters.Add(SizeConverter.Instance);
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            options.Converters.Add(DateOnlyConverter.Instance);
+            options.Converters.Add(TimeOnlyConverter.Instance);
+#endif
+            options.Converters.Add(VectorConverter.Instance);
+            options.Converters.Add(EnumerableConstructorConverter.Instance);
+            options.Converters.Add(MultidimensionalArrayConverter.Instance);
+            options.Converters.Add(JsonDynamicConverters.Value);
+            options.Converters.Add(BigIntegerConverter.Instance);
+            options.Converters.Add(StringContractConverterFactory.Instance);
+            options.Converters.Add(new ObjectConverter(typeNameHandling));
+        }
+    }
+}

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.ETL
         internal bool TestMode { get; set; }
 
         [JsonDeserializationIgnore]
-        [JsonIgnore]
+        [IgnoreDataMember]
         internal T Connection { get; set; }
 
         public virtual void Initialize(T connectionString)

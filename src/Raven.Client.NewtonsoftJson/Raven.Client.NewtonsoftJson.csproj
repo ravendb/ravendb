@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version></Version>
+    <Description>Newtonsoft.Json serialization conventions for the RavenDB Client</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>RavenDB</Authors>
+    <TargetFrameworks>net10.0;net8.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Raven.Client.NewtonsoftJson</AssemblyName>
+    <RootNamespace>Raven.Client.Json.Serialization.NewtonsoftJson</RootNamespace>
+    <PackageId>RavenDB.Client.NewtonsoftJson</PackageId>
+    <PackageTags>ravendb;client;database;nosql;doc db;json;newtonsoft</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Product>RavenDB Client Newtonsoft.Json</Product>
+    <Title>RavenDB Client Newtonsoft.Json</Title>
+    <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
+    <Configurations>Debug;Release;Validate</Configurations>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Validate'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <Compile Remove="Properties\AssemblyInfo.Linux.cs" />
+    <Compile Include="..\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+    <Compile Remove="Properties\AssemblyInfo.Windows.cs" />
+    <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="Microsoft.CSharp" />
+  </ItemGroup>
+</Project>

@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using FastTests;
-using Microsoft.AspNetCore.JsonPatch;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;

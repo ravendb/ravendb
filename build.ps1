@@ -76,6 +76,8 @@ $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
 
+$CLIENT_NEWTONSOFTJSON_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client.NewtonsoftJson")
+
 $TESTDRIVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver")
 $TESTDRIVER_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver", "bin", "Release")
 
@@ -180,9 +182,11 @@ DownloadDependencies
 if ($JustStudio -eq $False -and (-not $Quill)) {
     BuildSparrow $SPARROW_SRC_DIR
     BuildClient $CLIENT_SRC_DIR
+    BuildClient $CLIENT_NEWTONSOFTJSON_SRC_DIR
     BuildTestDriver $TESTDRIVER_SRC_DIR
 
     CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+    CreateNugetPackage $CLIENT_NEWTONSOFTJSON_SRC_DIR $RELEASE_DIR $versionSuffix
     CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
 }
 

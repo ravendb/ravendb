@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
-using Microsoft.AspNetCore.JsonPatch;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
@@ -138,11 +137,7 @@ namespace Raven.Client.Documents.Session
         public void AddOrPatch<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU value)
         {
             var patchScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
-            var valueToUse = AddTypeNameToValueIfNeeded(path.Body.Type, value);
-            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
-            {
-                valueToUse = Convert.ToInt32(value);
-            }
+            var valueToUse = ConvertEnumForPatch(AddTypeNameToValueIfNeeded(path.Body.Type, value));
 
             var patchRequest = new PatchRequest
             {
@@ -191,7 +186,7 @@ namespace Raven.Client.Documents.Session
                 && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var jpd = new JsonPatchDocument();
-                var convertedValue = ConvertValueForJsonPatch(value);
+                var convertedValue = ConvertEnumForPatch(value);
 
                 // Match the old JavaScript "this.x = value" semantics: assigning to a named
                 // member creates it when absent (JsonPatch "add" creates-or-replaces an object
@@ -208,11 +203,7 @@ namespace Raven.Client.Documents.Session
             }
 
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
-            var valueForJs = AddTypeNameToValueIfNeeded(path.Body.Type, value);
-            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
-            {
-                valueForJs = Convert.ToInt32(value);
-            }
+            var valueForJs = ConvertEnumForPatch(AddTypeNameToValueIfNeeded(path.Body.Type, value));
 
             var patchRequest = new PatchRequest { Script = $"this.{pathScript} = args.val_{_valsCount};", Values = { [$"val_{_valsCount}"] = valueForJs } };
 
@@ -293,7 +284,7 @@ namespace Raven.Client.Documents.Session
                                 var escapedKey = EscapeJsonPointerSegment(keyString);
                                 var jpd = new JsonPatchDocument();
 
-                                jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(value));
+                                jpd.Add($"{jsonPointer}/{escapedKey}", ConvertEnumForPatch(value));
 
                                 DeferJsonPatchIfNotMerged(id, jpd);
 
@@ -323,12 +314,7 @@ namespace Raven.Client.Documents.Session
                 case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                     var formattedKey = FormatKeyForJavaScript(key);
                     patchRequest.Script = $"this.{pathScript}[{formattedKey}] = args.val_{_valsCount};";
-                    if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
-                    {
-                        value = Convert.ToInt32(value);
-                    }
-
-                    patchRequest.Values[$"val_{_valsCount}"] = value;
+                    patchRequest.Values[$"val_{_valsCount}"] = ConvertEnumForPatch(value);
                     _valsCount++;
                     break;
                 case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
@@ -612,14 +598,15 @@ namespace Raven.Client.Documents.Session
             return DeferredCommandsDictionary.ContainsKey((id, CommandType.PATCH, null));
         }
 
-        private object ConvertValueForJsonPatch(object value)
+        private object ConvertEnumForPatch(object value)
         {
             if (value is not Enum)
                 return value;
 
-            return DocumentStore.Conventions.SaveEnumsAsIntegersForPatching
-                ? Convert.ToInt32(value)
-                : value.ToString();
+            if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching)
+                return Convert.ToInt32(value);
+
+            return TypeConverter.ConvertEnum(value, Conventions, Context);
         }
 
         private bool TryCreateArrayJsonPatch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
@@ -644,7 +631,7 @@ namespace Raven.Client.Documents.Session
                             if (ShouldUseJsonPatch(val) == false)
                                 return false;
 
-                            jpd.Add($"{jsonPointer}/-", ConvertValueForJsonPatch(val));
+                            jpd.Add($"{jsonPointer}/-", ConvertEnumForPatch(val));
                         }
 
                         break;

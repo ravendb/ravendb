@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Raven.Client")]
+[assembly: InternalsVisibleTo("Raven.Client.NewtonsoftJson")]
 [assembly: InternalsVisibleTo("Raven.Server")]
 [assembly: InternalsVisibleTo("Raven.Quill")]
 [assembly: InternalsVisibleTo("Raven.TestDriver")]

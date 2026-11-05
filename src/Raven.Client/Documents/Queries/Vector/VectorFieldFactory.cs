@@ -87,20 +87,24 @@ public interface IVectorEmbeddingFieldFactoryAccessor
     internal VectorEmbeddingType DestinationQuantizationType { get; set; } 
     internal bool IsBase64Encoded { get; set; }
     internal string EmbeddingsGenerationTaskIdentifier { get; set; }
+    internal string GetFieldName(DocumentConventions conventions);
 }
 
 internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, IVectorField, IVectorEmbeddingField, IVectorEmbeddingTextField, IVectorEmbeddingFieldFactoryAccessor
 {
     private bool _byFieldMethodUsed;
+    private Expression<Func<T, object>> _propertySelector;
     public string FieldName { get; set; }
     public VectorEmbeddingType SourceQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     public VectorEmbeddingType DestinationQuantizationType { get; set; } = Constants.VectorSearch.DefaultEmbeddingType;
     public bool IsBase64Encoded { get; set; }
     public string EmbeddingsGenerationTaskIdentifier { get; set; }
-    
+
+    public string GetFieldName(DocumentConventions conventions) => _propertySelector?.ToPropertyPath(conventions) ?? FieldName;
+
     IVectorEmbeddingTextField IVectorFieldFactory<T>.WithText(Expression<Func<T, object>> propertySelector)
     {
-        FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
+        _propertySelector = propertySelector;
         SourceQuantizationType = VectorEmbeddingType.Text;
         DestinationQuantizationType = Constants.VectorSearch.DefaultEmbeddingType;
         
@@ -127,7 +131,7 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
 
     IVectorEmbeddingField IVectorFieldFactory<T>.WithEmbedding(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization)
     {
-        FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
+        _propertySelector = propertySelector;
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
         
@@ -146,7 +150,7 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
 
     IVectorEmbeddingField IVectorFieldFactory<T>.WithBase64(Expression<Func<T, object>> propertySelector, VectorEmbeddingType storedEmbeddingQuantization)
     {
-        FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
+        _propertySelector = propertySelector;
         SourceQuantizationType = storedEmbeddingQuantization;
         DestinationQuantizationType = SourceQuantizationType;
         IsBase64Encoded = true;
@@ -163,7 +167,7 @@ internal sealed class VectorEmbeddingFieldFactory<T> : IVectorFieldFactory<T>, I
 
     IVectorField IVectorFieldFactory<T>.WithField(Expression<Func<T, object>> propertySelector)
     {
-        FieldName = propertySelector.ToPropertyPath(DocumentConventions.Default);
+        _propertySelector = propertySelector;
         _byFieldMethodUsed = true;
         return this;
     }

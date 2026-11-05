@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -165,10 +165,10 @@ namespace Raven.Client.ServerWide
 
         public HashSet<string> UnusedDatabaseIds = [];
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         public bool IsSharded => Sharding?.Shards?.Count > 0;
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
         {
             get

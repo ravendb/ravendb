@@ -96,11 +96,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" />
-    <PackageReference Include="Microsoft.AspNetCore.JsonPatch" />
     <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" />
-    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1'">
     <PackageReference Include="Microsoft.CSharp" />

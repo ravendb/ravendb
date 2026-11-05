@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
                         bjro.TryGet("Value", out BlittableJsonReaderObject valueBjro))
                     {
                         var key = ReplicationHelper.GetReplicationNodeByType(keyBjro);
-                        var value = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ConnectionShutdownInfo>(valueBjro, "ConnectionShutdownInfo");
+                        var value = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConnectionShutdownInfo>(valueBjro, "ConnectionShutdownInfo");
 
                         Stats.Add(key, value);
                     }

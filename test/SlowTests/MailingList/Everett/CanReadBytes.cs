@@ -35,7 +35,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+                var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -64,7 +64,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+                var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -104,7 +104,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+                var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -127,7 +127,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore(options))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+                var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -149,7 +149,7 @@ namespace SlowTests.MailingList.Everett
         public void FromText()
         {
             var json = GetResourceText("DocumentWithBytes.txt");
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
             var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
         }
 

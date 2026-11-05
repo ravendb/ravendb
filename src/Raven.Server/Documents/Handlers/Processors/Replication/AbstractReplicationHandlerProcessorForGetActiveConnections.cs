@@ -43,8 +43,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var incomingConnection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<IncomingConnectionInfo>>(bjro, "IncomingConnection");
-                    incomingConnection.Connection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<IncomingConnectionInfo>(bjro, "IncomingConnectionInfo");
+                    var incomingConnection = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<IncomingConnectionInfo>>(bjro, "IncomingConnection");
+                    incomingConnection.Connection = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<IncomingConnectionInfo>(bjro, "IncomingConnectionInfo");
                     IncomingConnections.Add(incomingConnection);
                 }
             }
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
             {
                 foreach (BlittableJsonReaderObject bjro in bjra)
                 {
-                    var outgoingConnection = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<ReplicationNode>>(bjro, "OutgoingConnection");
+                    var outgoingConnection = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ReplicationActiveConnectionInfo<ReplicationNode>>(bjro, "OutgoingConnection");
                     outgoingConnection.Connection = ReplicationHelper.GetReplicationNodeByType(bjro);
                     OutgoingConnections.Add(outgoingConnection);
                 }

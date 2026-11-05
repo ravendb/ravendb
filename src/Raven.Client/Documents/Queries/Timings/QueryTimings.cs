@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Queries.Timings
         /// </summary>
         public IDictionary<string, QueryTimings> Timings { get; set; }
         
-        [JsonIgnore]
+        [IgnoreDataMember]
         public IDynamicJson QueryPlan { get; set; }
 
         internal bool ShouldBeIncluded { get; set; }

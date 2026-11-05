@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -14,6 +15,8 @@ namespace Raven.Client.Documents.Identity
         private readonly DocumentConventions _conventions;
         private readonly Func<object, string> _generateId;
         private readonly Func<object, Task<string>> _generateIdAsync;
+
+        private static readonly ConcurrentDictionary<(Type, string), FieldInfo> _backingFieldCache = new();
 
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
         {
@@ -171,9 +174,13 @@ namespace Raven.Client.Documents.Identity
             }
             else
             {
-                const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
-                var fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
-                                entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
+                var key = (entityType, identityProperty.Name);
+                var fieldInfo = _backingFieldCache.GetOrAdd(key, static k =>
+                {
+                    const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
+                    return k.Item1.GetField("<" + k.Item2 + ">i__Field", privateInstanceField) ??
+                           k.Item1.GetField("<" + k.Item2 + ">k__BackingField", privateInstanceField);
+                });
 
                 if (fieldInfo == null)
                     return;

@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json.Serialization;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -26,6 +29,8 @@ namespace Raven.Client.Json
         }
 
         private static readonly TypeCache<BlittableSupportedReturnType> _supportedTypeCache = new(512);
+
+        private static readonly ConditionalWeakTable<ISerializationConventions, ConcurrentDictionary<object, string>> _enumNames = new();
 
         private static BlittableSupportedReturnType DoBlittableSupportedTypeInternal(Type type, object value)
         {
@@ -62,7 +67,7 @@ namespace Raven.Client.Json
         }
 
 
-        public static object ToBlittableSupportedType(object value, DocumentConventions conventions, JsonOperationContext context)
+        public static object ToBlittableSupportedType(object value, DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames = false)
         {
             if (value == null)
                 return null;
@@ -83,7 +88,7 @@ namespace Raven.Client.Json
                 case BlittableSupportedReturnType.Null:
                     return null;
                 case BlittableSupportedReturnType.String:
-                    return value.ToString();
+                    return ConvertEnum(value, conventions, context);
                 case BlittableSupportedReturnType.Enumerable:
                     {
                         if (value is byte[] bytes)
@@ -94,7 +99,7 @@ namespace Raven.Client.Json
                         var enumerable = (IEnumerable)value;
                         foreach (var x in enumerable)
                         {
-                            dja.Add(ToBlittableSupportedType(x, conventions, context));
+                            dja.Add(ToBlittableSupportedType(x, conventions, context, writeTypeNames));
                         }
 
                         return dja;
@@ -107,7 +112,7 @@ namespace Raven.Client.Json
                         foreach (var key in dictionary.Keys)
                         {
                             var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                            @object[keyAsString] = ToBlittableSupportedType(dictionary[key], conventions, context);
+                            @object[keyAsString] = ToBlittableSupportedType(dictionary[key], conventions, context, writeTypeNames);
                         }
 
                         return @object;
@@ -120,7 +125,7 @@ namespace Raven.Client.Json
                         foreach (var key in dDictionary.Keys)
                         {
                             var keyAsString = KeyAsString(key: ToBlittableSupportedType(key, conventions, context));
-                            @object[keyAsString] = ToBlittableSupportedType(dDictionary[key], conventions, context);
+                            @object[keyAsString] = ToBlittableSupportedType(dDictionary[key], conventions, context, writeTypeNames);
                         }
 
                         return @object;
@@ -130,6 +135,29 @@ namespace Raven.Client.Json
             if (value is Guid guid)
                 return guid.ToString("D");
 
+            return Serialize(value, conventions, context, writeTypeNames);
+        }
+
+        internal static object ConvertEnum(object value, DocumentConventions conventions, JsonOperationContext context)
+        {
+            if (conventions.SaveEnumsAsIntegers)
+                return value.ToString();
+
+            ConcurrentDictionary<object, string> names = _enumNames.GetValue(conventions.Serialization, static _ => new ConcurrentDictionary<object, string>());
+            if (names.TryGetValue(value, out string name))
+                return name;
+
+            object serialized = Serialize(value, conventions, context, writeTypeNames: false);
+            if (serialized is not LazyStringValue text)
+                return serialized;
+
+            name = text.ToString();
+            names.TryAdd(value, name);
+            return name;
+        }
+
+        private static object Serialize(object value, DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames)
+        {
             using (var writer = conventions.Serialization.CreateWriter(context))
             {
                 var serializer = conventions.Serialization.CreateSerializer();
@@ -137,7 +165,10 @@ namespace Raven.Client.Json
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");
 
-                serializer.Serialize(writer, value);
+                if (writeTypeNames)
+                    serializer.Serialize(writer, value, typeof(object));
+                else
+                    serializer.Serialize(writer, value);
 
                 writer.WriteEndObject();
 
