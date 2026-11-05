@@ -307,8 +307,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 case bool b:
                     writer.WriteBooleanValue(b);
                     break;
+                case double d when double.IsNaN(d) || double.IsInfinity(d):
+                    writer.WriteRawValue(d.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
+                    break;
                 case double d:
                     writer.WriteNumberValue(d);
+                    break;
+                case float f when float.IsNaN(f) || float.IsInfinity(f):
+                    writer.WriteRawValue(f.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
                     break;
                 case float f:
                     writer.WriteNumberValue(f);
