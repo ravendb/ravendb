@@ -1302,12 +1302,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     continue;
 
                 Func<object, object> get = property.Get;
-                JsonConverter tracker = property.PropertyType != typeof(object) && isCollection == false ? TrackPresentMembers(property) : null;
+                JsonConverter tracker = isCollection == false ? TrackPresentMembers(property) : null;
                 property.Set = (target, value) =>
                 {
                     object existing = get(target);
                     if (value == null && TryTakeCapturedJson(tracker, out JsonElement json, out HashSet<string> present))
-                        value = existing == null ? null : ReadCapturedJson(json, existing.GetType(), present, options);
+                        value = existing == null || existing is string || existing.GetType().IsValueType ? null : ReadCapturedJson(json, existing.GetType(), present, options);
 
                     PopulateExisting(existing, value, options);
                 };
@@ -1352,7 +1352,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private sealed class PresentMembersConverter<T> : JsonConverter<T>
         {
-            private static readonly bool ReadsIntoExisting = typeof(T).IsInterface || typeof(T).IsAbstract;
+            private static readonly bool ReadsIntoExisting = typeof(T).IsInterface || typeof(T).IsAbstract || typeof(T) == typeof(object);
 
             private readonly JsonConverter<T> _inner;
 
@@ -1364,7 +1364,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 HashSet<string> present = ReadPropertyNames(reader, options);
-                if (ReadsIntoExisting && present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false)
+                if (ReadsIntoExisting && (reader.TokenType == JsonTokenType.StartArray || present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false))
                 {
                     using (JsonDocument document = JsonDocument.ParseValue(ref reader))
                         _capturedMember = (this, document.RootElement.Clone(), present);
