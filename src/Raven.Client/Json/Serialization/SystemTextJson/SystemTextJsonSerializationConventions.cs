@@ -173,11 +173,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             return _jsonProperties.GetOrAdd(type, t =>
             {
-                JsonSerializerOptions options = Options;
-                StringComparer comparer = options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t);
+                StringComparer comparer = typeInfo.Options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
                 var properties = new Dictionary<string, JsonPropertyInfo>(comparer);
 
-                JsonTypeInfo typeInfo = options.GetTypeInfo(t);
                 if (typeInfo.Kind != JsonTypeInfoKind.Object)
                     return properties;
 

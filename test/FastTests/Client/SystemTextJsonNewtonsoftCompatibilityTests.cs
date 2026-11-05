@@ -2302,6 +2302,49 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         Assert.Equal("name", read.Name);
     }
 
+    private class CaseOnlyDifferentNames
+    {
+        public string Name { get; set; }
+
+        public string NAME { get; set; }
+
+        private string url { get; set; }
+
+        public string Url { get; set; }
+
+        public Animal Pet { get; set; }
+
+        public string GetUrl() => url;
+
+        public void SetUrl(string value) => url = value;
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesAndReadsMembersWhoseNamesDifferOnlyByCaseLikeNewtonsoft()
+    {
+        var value = new CaseOnlyDifferentNames { Name = "lower", NAME = "upper", Url = "public", Pet = new Dog { Name = "Rex", Barks = true } };
+        value.SetUrl("private");
+
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(value);
+        Assert.Equal("lower", read.Name);
+        Assert.Equal("upper", read.NAME);
+        Assert.Equal("public", read.Url);
+        Assert.Equal("private", read.GetUrl());
+        Assert.True(Assert.IsType<Dog>(read.Pet).Barks);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            var populated = new CaseOnlyDifferentNames();
+            SystemTextJson.Serialization.DefaultConverter.PopulateEntity(populated, json);
+
+            Assert.Equal("lower", populated.Name);
+            Assert.Equal("upper", populated.NAME);
+            Assert.Equal("public", populated.Url);
+            Assert.Equal("private", populated.GetUrl());
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
