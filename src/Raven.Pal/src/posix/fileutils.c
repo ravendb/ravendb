@@ -239,3 +239,25 @@ error_cleanup:
     *detailed_error_code = errno;
     return rc;
 }
+
+PRIVATE char*
+_dirname_in_place(char *path)
+{
+    size_t len = strlen(path);
+
+    /* trailing slashes do not belong to the name of the last component */
+    while (len > 1 && path[len - 1] == '/')
+        path[--len] = '\0';
+
+    while (len > 0 && path[len - 1] != '/')
+        len--;
+
+    if (len == 0)
+        return ".";
+
+    while (len > 1 && path[len - 1] == '/')
+        len--;
+
+    path[len] = '\0';
+    return path;
+}

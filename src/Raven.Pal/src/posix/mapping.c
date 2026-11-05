@@ -67,7 +67,7 @@ rvn_create_and_mmap64_file(
         rc = FAIL_NOMEM;
         goto error_cleanup;
     }
-    char *directory = dirname(dup_path);
+    char *directory = _dirname_in_place(dup_path);
     rc = _ensure_path_exists(directory, detailed_error_code);
     free(dup_path);
     if (rc != SUCCESS) 

@@ -110,7 +110,7 @@ _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
         *detailed_error_code = errno;
         return FAIL_NOMEM;
     }
-    char *dir_path = dirname(file_path_copy);
+    char *dir_path = _dirname_in_place(file_path_copy);
 
     int32_t rc = _sync_directory_maybe_symblink(dir_path, detailed_error_code);
 
