@@ -18,18 +18,16 @@ public partial class Hnsw
             private ContextBoundNativeList<int> _candidates;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
+            private readonly int _numberOfCandidates;
             private long _vectorReadCounter = 0;
-            private bool _initialized;
-            
+
             public ExactSearcher(SearchState searchState, Memory<byte> vector, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
                 _searchState = searchState;
                 _vector = vector;
-                NumberOfCandidates = numberOfCandidates;
+                _numberOfCandidates = numberOfCandidates;
                 _nodesToScan = nodesToScan;
-
-                var candidatesCapacity = Math.Min(numberOfCandidates, (int)searchState.Options.CountOfVectors);
-                _candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator, candidatesCapacity);
+                _candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
             }
 
             public void Dispose()
@@ -39,31 +37,7 @@ public partial class Hnsw
                 _candidates.Dispose();
             }
 
-            public bool MoveNextBatch()
-            {
-                if (_initialized == false)
-                {
-                    Initialize();
-                    _initialized = true;
-                }
-
-                if (_pq.Count == 0)
-                {
-                    _candidates.Count = 0;
-                    return false;
-                }
-
-                _candidates.Count = 0;
-                while (_candidates.Count < NumberOfCandidates && _pq.TryDequeue(out var nodeId, out _))
-                {
-                    _candidates.AddByRefUnsafe() = _searchState.GetNodeIndexById(nodeId);
-                }
-
-                _candidates.Inner.Reverse();
-                return true;
-            }
-
-            private void Initialize()
+            public ContextBoundNativeList<int> Search()
             {
                 // Reset the visited set for this traversal and record the query vector so the
                 // per-node QueryDistance cache is either reused (same vector) or invalidated
@@ -83,6 +57,13 @@ public partial class Hnsw
                     for (long nodeId = 1; nodeId <= count; nodeId++)
                         ScanNode(nodeId);
                 }
+
+                _candidates.EnsureCapacityFor(_pq.Count);
+                while (_pq.TryDequeue(out var nodeId, out _))
+                    _candidates.AddUnsafe(_searchState.GetNodeIndexById(nodeId));
+
+                _candidates.Inner.Reverse();
+                return _candidates;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -95,36 +76,13 @@ public partial class Hnsw
 
                 var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
                 // The queue keeps the nearest candidates with the farthest on top.
-                if (_pq.Count < NumberOfCandidates)
+                if (_pq.Count < _numberOfCandidates)
                     _pq.Enqueue(nodeId, -distance);
                 else
                     _pq.EnqueueDequeue(nodeId, -distance);
             }
 
-            public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
-            {
-                if (_candidates.Count == 0)
-                {
-                    Unsafe.SkipInit(out candidates);
-                    return false;
-                }
-
-                candidates = _candidates;
-                return candidates.Count > 0;
-            }
-
-            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
-            {
-            }
-
-            public long CandidatesProcessed { get; set; }
-            
-            public bool ShouldContinueSearch(long filterDocsCount)
-            {
-                return _pq is {Count: > 0};
-            }
-
-            public int NumberOfCandidates { get; init; }
+            public long CandidatesProcessed { get; private set; }
         }
     }
 }

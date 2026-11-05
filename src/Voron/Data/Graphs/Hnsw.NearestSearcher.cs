@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Sparrow.Server.Collections;
 using Voron.Global;
 using Voron.Util;
 
@@ -17,131 +19,172 @@ public unsafe partial class Hnsw
             private readonly SearchState _searchState;
             private readonly Memory<byte> _vector;
             private readonly int _level;
+            private readonly int _numberOfCandidates;
 
-            // Actual number of candidates currently being processed. It may differ from the caller's NumberOfCandidates
-            // because we may need to over-fetch to satisfy the filter clause.
+            // The working set size: the requested candidates, and with a filter, grown before every walk.
             private int _internalNumberOfCandidates;
 
             private ContextBoundNativeList<int> _candidates;
             private readonly NearestEdgesFlags _flags;
-            private readonly bool _hasFilterMatch;
             private NativeList<int> _indexes;
             private NativeList<long> _nodeIds;
-            private readonly HashSet<int> _alreadyReturnedEdges;
             private long _vectorReadCounter = 0;
             private readonly int _startingPointIndex;
+            // With a filter, the walk restarts with a larger working set until its working sets have held the requested number of the filter's nodes, or
+            // it has read as many vectors as the filter's size allows. The results are the nearest of the filter's nodes among every vector it read.
+            private readonly GrowableBitArray? _filter;
+            // The read budget of a filtered search: half the filter's matches, at most a fifth of the graph. A walk that reads as many vectors as
+            // the filter has matches already costs about an exact scan of them. On sparse filters this budget, not ef, bounds recall (RavenDB-27918).
+            // Corax scans filters under its scanning threshold, 1024 matches by default, so the doubled budget below that size applies only when the
+            // threshold is lowered.
+            private readonly long _readLimit;
+            // What a filtered search knows about each node index, rented from the pool for the search.
+            private NodeState[] _nodeStates;
 
-            // Traversal state carried across MoveNextBatch calls so the caller can consume
-            // one batch at a time. _needsRestart triggers a fresh InitState; _isDone short-circuits
-            // further work once the outer traversal has finished.
-            private float _lowerBound;
-            private int _visitedCounter;
-            private bool _needsRestart = true;
-            private bool _isDone;
-            
-            public long CandidatesProcessed { get => _vectorReadCounter; }
-            public int NumberOfCandidates { get; init; }
+            [Flags]
+            private enum NodeState : byte
+            {
+                // In the working set of an earlier walk, so a later walk keeps it out of its working set.
+                Walked = 1,
+                // Checking the filter can decode the posting list of the node, so the search checks it once.
+                FilterChecked = 2,
+                InFilter = 4
+            }
+
+            public long CandidatesProcessed => _vectorReadCounter;
 
             public NearestSearcher(SearchState searchState, int startingPointIndex, Memory<byte> vector,
                 int level, int numberOfCandidates,
                 ContextBoundNativeList<int> candidates,
                 NearestEdgesFlags flags,
-                bool hasFilterMatch)
+                GrowableBitArray? filter)
             {
                 _searchState = searchState;
                 _startingPointIndex = startingPointIndex;
                 _vector = vector;
                 _level = level;
-                NumberOfCandidates = numberOfCandidates;
+                _numberOfCandidates = numberOfCandidates;
+                _internalNumberOfCandidates = numberOfCandidates;
+                _filter = filter;
+                if (filter.HasValue)
+                {
+                    searchState._admittedQ ??= new();
+                    var filterCount = filter.Value.Count;
+                    _readLimit = filterCount < 1024 ? 2 * filterCount : Math.Min(filterCount / 2, searchState.Options.CountOfVectors / 5);
+                    _internalNumberOfCandidates = GrowWithinBudget(numberOfCandidates);
+                    _nodeStates = ArrayPool<NodeState>.Shared.Rent(Math.Max(1024, searchState.Nodes.Length * 2));
+                    Array.Clear(_nodeStates);
+                }
 
-                _internalNumberOfCandidates = hasFilterMatch == false
-                    ? numberOfCandidates
-                    : numberOfCandidates + GetPrefetchExtendSize(numberOfCandidates);
                 _candidates = candidates;
                 _flags = flags;
-                _hasFilterMatch = hasFilterMatch;
                 _indexes = new NativeList<int>();
                 _nodeIds = new NativeList<long>();
-                if (_hasFilterMatch)
-                {
-                    _alreadyReturnedEdges = new();
-                }
             }
 
-            private void InitState(out float lowerBound, out int visitedCounter)
+            // The working set grows by half, but not past the reads left in the budget, which a walk could not fill. It grows by at least one,
+            // because a walk that reads no new vector with the same working set would repeat the last one.
+            private int GrowWithinBudget(int size) =>
+                (int)Math.Min(int.MaxValue, Math.Max(size + 1L, Math.Min(size + size / 2L, _readLimit - _vectorReadCounter)));
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private ref NodeState StateOf(int nodeIndex)
+            {
+                if (nodeIndex >= _nodeStates.Length)
+                    GrowNodeStates(nodeIndex);
+                return ref _nodeStates[nodeIndex];
+            }
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            private void GrowNodeStates(int nodeIndex)
+            {
+                var larger = ArrayPool<NodeState>.Shared.Rent(Math.Max(nodeIndex + 1, _nodeStates.Length * 2));
+                _nodeStates.CopyTo(larger, 0);
+                Array.Clear(larger, _nodeStates.Length, larger.Length - _nodeStates.Length);
+                ArrayPool<NodeState>.Shared.Return(_nodeStates);
+                _nodeStates = larger;
+            }
+
+            public ContextBoundNativeList<int> Search()
+            {
+                var nearestEdgesQ = _searchState._nearestEdgesQ;
+                if (_filter.HasValue == false)
+                {
+                    Walk();
+                    ProcessResults(nearestEdgesQ);
+                    return _candidates;
+                }
+
+                // A node is admitted when the search first reads its vector, so the search starts with no distance that an earlier search cached.
+                ++_searchState._queryVectorVersion;
+                var held = 0;
+                while (true)
+                {
+                    var reachedEveryNode = Walk() == false;
+                    foreach (var (nodeIndex, _) in nearestEdgesQ.UnorderedItems)
+                    {
+                        if ((StateOf(nodeIndex) & NodeState.Walked) == 0 && IsAdmitted(nodeIndex, _searchState.GetNodeByIndex(nodeIndex).PostingListId))
+                            held++;
+                    }
+
+                    if (reachedEveryNode || held >= _numberOfCandidates || _vectorReadCounter >= _readLimit)
+                        break;
+
+                    foreach (var (nodeIndex, _) in nearestEdgesQ.UnorderedItems)
+                        StateOf(nodeIndex) |= NodeState.Walked;
+                    nearestEdgesQ.Clear();
+                    _internalNumberOfCandidates = GrowWithinBudget(_internalNumberOfCandidates);
+                }
+
+                nearestEdgesQ.Clear();
+                ProcessResults(_searchState._admittedQ);
+                return _candidates;
+            }
+
+            // A walk from the starting point that ends once the nearest unexpanded node is farther than a full working set's farthest node, and returns
+            // false when it ran out of nodes to expand first. A later walk reads no vector the earlier ones read, their distances stay cached in SearchState.
+            private bool Walk()
             {
                 var candidatesQ = _searchState._candidatesQ;
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
-                var allocator = _searchState.Llt.Allocator;
 
                 Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
                 Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
 
-                visitedCounter = ++_searchState._visitsCounter;
+                var visitedCounter = ++_searchState._visitsCounter;
                 _searchState.OnQueryVector(_vector);
-                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
+                var read = _vectorReadCounter;
+                var lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
+                ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
+                startingPoint.Visited = visitedCounter;
+                if (_vectorReadCounter != read)
+                    Admit(_startingPointIndex, startingPoint.PostingListId, lowerBound);
+                // The candidates queue is sorted by distance, so the lowest distance will always pop first.
+                // The nearest-edges queue is sorted by reversed distance, so a full queue pops the one with the largest distance.
+                candidatesQ.Enqueue(_startingPointIndex, -lowerBound);
+                if (_flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) &&
+                    ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone
+                     || _flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
                 {
-                    ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
-                    startingPoint.Visited = visitedCounter;
-                    // The candidates queue is sorted by distance, so the lowest distance
-                    // will always pop first.
-                    // The nearest-edges queue is sorted by reversed distance, so when we add a
-                    // new item to the queue, we'll pop the one with the largest distance.
-
-                    candidatesQ.Enqueue(_startingPointIndex, -lowerBound);
-                    if (_flags.HasFlag(NearestEdgesFlags.StartingPointAsEdge) &&
-                        ((startingPoint.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) != Constants.Graphs.VectorId.Tombstone
-                         || _flags.HasFlag(NearestEdgesFlags.FilterNodesWithEmptyPostingLists) is false))
-                    {
-                        nearestEdgesQ.Enqueue(_startingPointIndex, lowerBound);
-                    }
-                }
-            }
-
-            public bool MoveNextBatch()
-            {
-                if (_isDone)
-                    return false;
-
-                var candidatesQ = _searchState._candidatesQ;
-                var nearestEdgesQ = _searchState._nearestEdgesQ;
-
-                if (_needsRestart)
-                {
-                    Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                    Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-                    InitState(out _lowerBound, out _visitedCounter);
-                    _needsRestart = false;
+                    nearestEdgesQ.Enqueue(_startingPointIndex, lowerBound);
                 }
 
                 while (candidatesQ.TryDequeue(out var cur, out var curDistance))
                 {
-                    if (-curDistance < _lowerBound &&
-                        nearestEdgesQ.Count == _internalNumberOfCandidates)
+                    if (-curDistance < lowerBound && nearestEdgesQ.Count == _internalNumberOfCandidates)
                     {
-                        ProcessResults();
-                        // Drain candidatesQ before yielding. Non-filtered queries consume only the
-                        // first batch and never resume; without this clear, a shared SearchState
-                        // (e.g. MultiVectorSearch sub-queries) carries far-from-the-old-vector
-                        // candidates into the next query and pollutes its priority queue. It also
-                        // satisfies InitState's empty-queue precondition on the restart path.
+                        // The queues belong to the SearchState, and the next walk on it starts from them empty.
                         candidatesQ.Clear();
-                        // Yield the current batch. Subsequent MoveNextBatch calls re-enter via InitState;
-                        // revisits are I/O-free because per-node distances remain cached in SearchState.
-                        // The caller is responsible for enforcing a stop condition: otherwise the search
-                        // may traverse the entire graph.
-                        _needsRestart = true;
                         return true;
                     }
 
-                    _searchState.GetNodeByIndex(cur).Visited = _visitedCounter;
+                    _searchState.GetNodeByIndex(cur).Visited = visitedCounter;
                     _searchState.ResolveEdgeIndexes(cur, _level, ref _nodeIds, ref _indexes);
 
                     // Pin loop locals: NativeList field reads through `this` force the JIT to
                     // reload the storage pointer on every candidate.
                     int indexesCount = _indexes.Count;
                     int* indexesPtr = _indexes.RawItems;
-                    int visitedCounter = _visitedCounter;
                     for (int i = 0; i < indexesCount; i++)
                     {
                         var nextIndex = indexesPtr[i];
@@ -155,9 +198,13 @@ public unsafe partial class Hnsw
                         PrefetchNextNeighborVector(indexesPtr, indexesCount, i + 1, visitedCounter);
 
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
-                                        || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
+                                        || (_nodeStates != null && (StateOf(nextIndex) & NodeState.Walked) != 0);
 
+                        read = _vectorReadCounter;
                         float nextDist = -_searchState.QueryDistance(_vector.Span, ref next, ref _vectorReadCounter);
+                        if (_vectorReadCounter != read)
+                            Admit(nextIndex, next.PostingListId, nextDist);
+
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -167,7 +214,7 @@ public unsafe partial class Hnsw
                                 nearestEdgesQ.Enqueue(nextIndex, nextDist);
                             }
                         }
-                        else if (_lowerBound < nextDist)
+                        else if (lowerBound < nextDist)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
 
@@ -182,75 +229,55 @@ public unsafe partial class Hnsw
                         }
 
                         Debug.Assert(candidatesQ.Count > 0);
-                        nearestEdgesQ.TryPeek(out _, out _lowerBound);
+                        nearestEdgesQ.TryPeek(out _, out lowerBound);
                     }
                 }
 
-                // Nothing more to visit. Move the current results into the candidates list and finish.
-                ProcessResults();
-                candidatesQ.Clear();
-                _isDone = true;
-                return _candidates.Count > 0;
+                return false;
             }
 
-            public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
+            // Keeps the requested number of the filter's nearest nodes among every vector read, inside or outside the working set. Only a node nearer than
+            // the farthest one kept needs the membership check.
+            private void Admit(int nodeIndex, long postingListId, float negatedDistance)
             {
-                candidates = _candidates;
-                return candidates.Count > 0;
+                if (_filter.HasValue == false)
+                    return;
+
+                var admittedQ = _searchState._admittedQ;
+                if (admittedQ.Count == _numberOfCandidates && admittedQ.TryPeek(out _, out var farthest) && negatedDistance <= farthest)
+                    return;
+
+                if (IsAdmitted(nodeIndex, postingListId) == false)
+                    return;
+
+                if (admittedQ.Count < _numberOfCandidates)
+                    admittedQ.Enqueue(nodeIndex, negatedDistance);
+                else
+                    admittedQ.EnqueueDequeue(nodeIndex, negatedDistance);
             }
 
-            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
+            private bool IsAdmitted(int nodeIndex, long postingListId)
             {
-                Reset();
-                _internalNumberOfCandidates += GetPrefetchExtendSize(_internalNumberOfCandidates);
-                // The next MoveNextBatch call will InitState from the starting points again.
-                _needsRestart = true;
-                _isDone = false;
-            }
-
-            // Reset the NearestSearcher state; however, it does not clear the data already stored inside SearchState.
-            // This is important because it allows us to reduce I/O pressure during over-fetching and when restarting the query.
-            // Node.Visited uses version-based invalidation keyed on SearchState._visitsCounter
-            // (incremented in InitState), and Node.QueryDistanceVersion uses a separate version
-            // keyed on the query vector, so neither needs a per-node reset here.
-            private void Reset()
-            {
-                _searchState._candidatesQ.Clear();
-                _searchState._nearestEdgesQ.Clear();
-                _candidates.Clear();
-                _nodeIds.Clear();
-                _indexes.Clear();
-            }
-
-            private void ProcessResults()
-            {
-                _candidates.Clear();
-                _candidates.EnsureCapacityFor(_searchState._nearestEdgesQ.Count);
-
-                while (_searchState._nearestEdgesQ.TryDequeue(out var edgeId, out var d))
+                ref var state = ref StateOf(nodeIndex);
+                if ((state & NodeState.FilterChecked) == 0)
                 {
-                    if (_hasFilterMatch && _alreadyReturnedEdges!.Add(edgeId) == false)
-                        continue;
-
-                    _candidates.AddUnsafe(edgeId);
+                    state |= NodeState.FilterChecked;
+                    if (_searchState.HasEntryInFilter(postingListId, _filter.Value))
+                        state |= NodeState.InFilter;
                 }
 
-                _candidates.Inner.Reverse();
+                return (state & NodeState.InFilter) != 0;
             }
-            
-            public bool ShouldContinueSearch(long filterDocsCount)
-            {
-                if (_hasFilterMatch == false)
-                    return false;
 
-                var max = filterDocsCount switch
-                {
-                    < 1024 => 2 * filterDocsCount, // It's hard to determine right number here. For smaller graphs it may be an issue.
-                    // However, for small filter set (for 1K we will force exact search anyway, therefore, this probably will be used only for testing purposes.
-                    _ => Math.Min(filterDocsCount / 2, _searchState.Options.CountOfVectors / 5)
-                };
-                
-                return _vectorReadCounter < max;
+            private void ProcessResults(PriorityQueue<int, float> resultsQ)
+            {
+                _candidates.Clear();
+                _candidates.EnsureCapacityFor(resultsQ.Count);
+
+                while (resultsQ.TryDequeue(out var edgeId, out _))
+                    _candidates.AddUnsafe(edgeId);
+
+                _candidates.Inner.Reverse();
             }
 
             /// <summary>
@@ -280,18 +307,20 @@ public unsafe partial class Hnsw
                 }
             }
 
-            private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch
-            {
-                <= 131_072 =>  numberOfCandidates / 2,
-                _ => (int)Math.Sqrt(131_072L * numberOfCandidates)
-            };
-
             public void Dispose()
             {
                 _candidates.Dispose();
                 _nodeIds.Dispose(_searchState.Llt.Allocator);
                 _indexes.Dispose(_searchState.Llt.Allocator);
+                // A search that throws leaves its queues filled, and the next search on the SearchState expects them empty.
                 _searchState._candidatesQ.Clear();
+                _searchState._nearestEdgesQ.Clear();
+                _searchState._admittedQ?.Clear();
+                if (_nodeStates != null)
+                {
+                    ArrayPool<NodeState>.Shared.Return(_nodeStates);
+                    _nodeStates = null;
+                }
             }
         }
     }

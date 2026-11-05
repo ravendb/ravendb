@@ -131,11 +131,12 @@ public struct VectorSearchMatch : IQueryMatch
         
         var searchState = _indexSearcher.GetOrCreateVectorSearchState(fieldName);
 
+        var filter = _filterQuery != null ? _filterResults : null;
         _vectorSearchRetriever = _isExact switch
         {
             _ when _scanningQuery => Hnsw.ExactNearest(searchState, _numberOfCandidates, vector, _minimumMatch, nodesToScan: nodesIdsToScan),
             true => Hnsw.ExactNearest(searchState, _numberOfCandidates, vector, _minimumMatch),
-                _ => Hnsw.ApproximateNearest(searchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
+            _ => Hnsw.ApproximateNearest(searchState, _numberOfCandidates, vector, _minimumMatch, filter),
         };
         
 
@@ -248,11 +249,7 @@ public struct VectorSearchMatch : IQueryMatch
             distances.Truncate(matchesCount);
             matches.Truncate(matchesCount);
         }
-        else if (_vectorSearchRetriever.IsSortedByDistance == false)
-        {
-            distances.Results.Sort(matches.Results);
-        }
-        
+
         Dispose();
     }
     

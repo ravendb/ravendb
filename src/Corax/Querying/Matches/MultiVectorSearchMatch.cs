@@ -155,11 +155,12 @@ public struct MultiVectorSearchMatch : IQueryMatch
             sharedSearchState.AssertSharedQueuesClean();
 
             var vector = _vectorsToSearch[i].GetEmbeddingMemory();
+            var filter = _filterQuery != null ? _filterResults : null;
             var vectorSearcher = (_isExact) switch
             {
                 _ when _scanningQuery => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, nodesToScan: _nodesIdsToScan),
                 true => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch),
-                false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
+                false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, filter),
             };
 
             if (i == 0)
