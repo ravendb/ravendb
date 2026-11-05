@@ -1,10 +1,11 @@
-import { Column, RowData, SortDirection } from "@tanstack/react-table";
+import { Column, filterFns, RowData, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
 import { ChangeEvent, useMemo, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
+import { DropdownMenuProps } from "react-bootstrap/DropdownMenu";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import { FormLabel } from "components/common/Form";
 
@@ -13,6 +14,8 @@ declare module "@tanstack/react-table" {
     interface ColumnMeta<TData extends RowData, TValue> {
         // shown in the column filter input, e.g. to hint at server-side prefix (startsWith) filtering
         filterPlaceholder?: string;
+        relativeWidth?: number;
+        exportHeader?: string;
     }
 }
 
@@ -20,6 +23,28 @@ interface VirtualTableColumnSettingsProps<T> {
     column: Column<T, unknown>;
     isCompact?: boolean;
 }
+
+const filterMenuPopperConfig: DropdownMenuProps["popperConfig"] = {
+    strategy: "fixed",
+    modifiers: [
+        {
+            name: "updateOnTableResize",
+            enabled: true,
+            phase: "main",
+            fn: () => undefined,
+            effect: ({ state, instance }) => {
+                const table = (state.elements.reference as Element).closest(".virtual-table");
+                if (!table) {
+                    return;
+                }
+
+                const resizeObserver = new ResizeObserver(() => instance.update());
+                resizeObserver.observe(table);
+                return () => resizeObserver.disconnect();
+            },
+        },
+    ],
+};
 
 export default function VirtualTableColumnSettings<T>({ column, isCompact }: VirtualTableColumnSettingsProps<T>) {
     const [localFilter, setLocalFilter] = useState((column.getFilterValue() as string) ?? "");
@@ -68,6 +93,9 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
         return null;
     }
 
+    const isNumberColumn = column.getAutoFilterFn() === filterFns.inNumberRange;
+    const defaultPlaceholder = isNumberColumn ? "e.g. > 100 or 10..20" : "Search...";
+
     return (
         <div className="hstack flex-shrink-0">
             {column.getCanSort() && (
@@ -114,14 +142,14 @@ export default function VirtualTableColumnSettings<T>({ column, isCompact }: Vir
                     >
                         <Icon icon="filter" margin="m-0" />
                     </Dropdown.Toggle>
-                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
+                    <Dropdown.Menu renderOnMount popperConfig={filterMenuPopperConfig}>
                         <div className="px-2 pb-1">
                             <FormLabel className="small-label">Filter column</FormLabel>
                             <div className="clearable-input">
                                 <Form.Control
                                     ref={filterInputRef}
                                     type="text"
-                                    placeholder={column.columnDef.meta?.filterPlaceholder ?? "Search..."}
+                                    placeholder={column.columnDef.meta?.filterPlaceholder ?? defaultPlaceholder}
                                     value={localFilter}
                                     onChange={(e: ChangeEvent<HTMLInputElement>) => handleFilterChange(e.target.value)}
                                     className="pe-4"

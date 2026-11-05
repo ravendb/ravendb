@@ -1,0 +1,39 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.notification-details {
+    .notification-details-message {
+        font-size: 1.1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .notification-details-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+
+    .notification-details-list {
+        display: grid;
+        grid-template-columns: minmax(120px, max-content) 1fr;
+        gap: sizes.$gutter-xxs sizes.$gutter-sm;
+        margin: 0;
+        padding: sizes.$gutter-xs;
+        border-radius: sizes.$gutter-xs;
+        background-color: colors.$panel-bg-2-var;
+
+        dt {
+            font-weight: normal;
+            color: colors.$text-muted-var;
+        }
+
+        dd {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+    }
+
+    .notification-details-code {
+        max-height: 250px;
+        overflow: auto;
+    }
+}

@@ -27,6 +27,7 @@ abstract class abstractNotification {
 
     displayDate: KnockoutComputed<moment.Moment>;
 
+    severityColor: KnockoutComputed<"danger" | "warning" | "success" | "info">;
     headerClass: KnockoutComputed<string>;
     headerIconClass: KnockoutComputed<string>;
     cssClass: KnockoutComputed<string>;
@@ -37,41 +38,28 @@ abstract class abstractNotification {
         this.type = dto.Type;
         this.readOnly = !accessManager.canHandleOperation(db ? "DatabaseReadWrite" : "Operator", this.databaseName);
 
-        this.headerClass = ko.pureComputed(() => {
+        this.severityColor = ko.pureComputed(() => {
             const severity = this.severity();
 
             switch (severity) {
                 case "Error":
-                    return "text-danger";
+                    return "danger";
                 case "Warning":
-                    return "text-warning";
+                    return "warning";
                 case "Success":
-                    return "text-success";
+                    return "success";
                 case "Info":
-                    return "text-info";
+                    return "info";
                 default:
-                    return "";
+                    return null;
             }
         });
-        
+
+        this.headerClass = ko.pureComputed(() => this.severityColor() ? "text-" + this.severityColor() : "");
+
         this.headerIconClass = ko.pureComputed(() => this.databaseName ? "icon-database-cutout" : "icon-global-cutout");
 
-        this.cssClass = ko.pureComputed(() => {
-            const severity = this.severity();
-
-            switch (severity) {
-                case "Error":
-                    return "notification-danger";
-                case "Warning":
-                    return "notification-warning";
-                case "Success":
-                    return "notification-success";
-                case "Info":
-                    return "notification-info";
-                default:
-                    return "";
-            }
-        });
+        this.cssClass = ko.pureComputed(() => this.severityColor() ? "notification-" + this.severityColor() : "");
 
         this.canBePostponed = ko.pureComputed(() => this.isPersistent() && !this.readOnly);
 
