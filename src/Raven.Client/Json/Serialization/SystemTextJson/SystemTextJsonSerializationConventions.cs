@@ -208,8 +208,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
             };
 
-            InitializeConverters(options, typeNameHandling);
             CustomizeJsonSerializerOptions(options);
+            InitializeConverters(options, typeNameHandling);
 
             if (options.PropertyNamingPolicy != null && Conventions?.PropertyNameConverter == null)
                 ThrowPropertyNamingPolicyNotSupported();
