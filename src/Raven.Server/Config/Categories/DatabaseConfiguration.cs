@@ -169,10 +169,12 @@ namespace Raven.Server.Config.Categories
         /// </summary>
         [Description("EXPERT: A command or executable to run on the leader node when an entire database is deleted from the cluster. " +
                      "RavenDB will execute: command [user-arg-1] ... [user-arg-n] -- <database-name> <database-name-base64> <hard|soft> <raft-index>. " +
-                     "The raft index identifies the deletion: retries of one event carry the same index, while a later deletion of a database " +
-                     "re-created under the same name carries a higher one, so deduplicate on the index rather than on the name. " +
+                     "The raft index identifies the deletion: a later deletion of a database re-created under the same name carries a higher " +
+                     "index, so deduplicate on the index rather than on the name. " +
                      "The hook fires when the deletion starts, not when it completes, and it can neither delay nor prevent the deletion. " +
-                     "Delivery is best-effort: the event may be delivered more than once (retries, or a repeated delete request) and may be " +
+                     "It is executed once and never retried: a script that fails or does not exit within the timeout raises an alert, and a " +
+                     "script still running when the server shuts down is left running. " +
+                     "Delivery is best-effort: the event may be delivered more than once (a repeated delete request) and may be " +
                      "lost if cluster leadership changes while it is being dispatched, so the script must be idempotent. " +
                      "Some removal paths raise no event at all - a replication factor reduction, and a database whose topology references " +
                      "nodes that are no longer cluster members, whose record is removed in the same cluster transaction. " +
@@ -194,26 +196,13 @@ namespace Raven.Server.Config.Categories
         public string OnDatabaseDeleteExecArguments { get; set; }
 
         /// <summary>
-        /// EXPERT: The number of seconds to wait for a single execution of the 'Databases.OnDatabaseDelete.Exec' executable to exit.
+        /// EXPERT: The number of seconds to wait for the 'Databases.OnDatabaseDelete.Exec' executable to exit before it is killed.
         /// </summary>
-        [Description("EXPERT: The number of seconds to wait for a single execution of the 'Databases.OnDatabaseDelete.Exec' executable to exit. Default: 30 seconds")]
+        [Description("EXPERT: The number of seconds to wait for the 'Databases.OnDatabaseDelete.Exec' executable to exit before it is killed. Default: 30 seconds")]
         [DefaultValue(30)]
         [MinValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting OnDatabaseDeleteExecTimeout { get; set; }
-
-        /// <summary>
-        /// EXPERT: The total number of seconds available to all attempts of the 'Databases.OnDatabaseDelete.Exec' executable,
-        /// including the delays between retries. A failing script is attempted up to 3 times.
-        /// </summary>
-        [Description("EXPERT: The total number of seconds available to all attempts of the 'Databases.OnDatabaseDelete.Exec' executable, " +
-                     "including the delays between retries. A failing script is attempted up to 3 times; a failure that cannot resolve on " +
-                     "retry, such as a missing executable, is attempted once. Default: 90 seconds")]
-        [DefaultValue(90)]
-        [MinValue(1)]
-        [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.MaxRetryDurationInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting OnDatabaseDeleteExecMaxRetryDuration { get; set; }
     }
 }

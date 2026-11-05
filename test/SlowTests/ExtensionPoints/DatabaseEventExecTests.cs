@@ -66,11 +66,14 @@ param([string]$outputPath)
 Add-Content $outputPath ""attempt""
 exit 3");
 
+        /// <summary>
+        /// Writes its own process id and then sleeps well past any timeout the tests configure.
+        /// </summary>
         private static string HangingScript => Script(
-            posix: "#!/bin/bash\necho attempt >> \"$1\"\nsleep 30\n",
+            posix: "#!/bin/bash\necho $$ >> \"$1\"\nsleep 30\n",
             windows: @"
 param([string]$outputPath)
-Add-Content $outputPath ""attempt""
+Add-Content $outputPath $PID
 Start-Sleep -Seconds 30");
 
         private static IDictionary<string, string> ConfigureHook(string scriptFile, string outputFile, string script)
@@ -83,31 +86,25 @@ Start-Sleep -Seconds 30");
         }
 
         /// <summary>
-        /// Counts how many times the script was attempted and how many hook runs have finished, through
-        /// the landlord test hooks.
+        /// Counts how many hook runs have finished, and records the first one's error, through the landlord test hook.
         /// </summary>
         private sealed class HookTracker
         {
-            private int _attempts;
             private int _completions;
-            private readonly TaskCompletionSource<object> _firstCompletion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            private readonly TaskCompletionSource<Exception> _firstCompletion = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             public HookTracker(DatabasesLandlord landlord)
             {
-                DatabasesLandlord.TestingStuff testing = landlord.ForTestingPurposesOnly();
-                testing.OnDatabaseDeleteExecAttempt = _ => Interlocked.Increment(ref _attempts);
-                testing.OnDatabaseDeleteExecCompleted = (_, _) =>
+                landlord.ForTestingPurposesOnly().OnDatabaseDeleteExecCompleted = (_, error) =>
                 {
                     Interlocked.Increment(ref _completions);
-                    _firstCompletion.TrySetResult(null);
+                    _firstCompletion.TrySetResult(error);
                 };
             }
 
-            public int Attempts => Volatile.Read(ref _attempts);
-
             public int Completions => Volatile.Read(ref _completions);
 
-            public Task FirstCompletion => _firstCompletion.Task;
+            public Task<Exception> FirstCompletion => _firstCompletion.Task;
         }
 
         private HookTracker TrackHook() => new HookTracker(Server.ServerStore.DatabasesLandlord);
@@ -211,7 +208,7 @@ Start-Sleep -Seconds 30");
                 Assert.Equal(databaseName, arguments[0]);
                 Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName)), arguments[1]);
                 Assert.Equal("soft", arguments[2]);
-                Assert.Equal(1, tracker.Attempts);
+                Assert.Equal(1, tracker.Completions);
             }
             finally
             {
@@ -251,7 +248,7 @@ Start-Sleep -Seconds 30");
                 Assert.Equal(dashedName, arguments[0]);
                 Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes(dashedName)), arguments[1]);
                 Assert.Equal("hard", arguments[2]);
-                Assert.Equal(1, tracker.Attempts);
+                Assert.Equal(1, tracker.Completions);
             }
             finally
             {
@@ -290,7 +287,7 @@ Start-Sleep -Seconds 30");
                 Assert.Equal(databaseName, arguments[0]);
                 Assert.DoesNotContain("$", arguments[0]);
                 Assert.Equal("hard", arguments[2]);
-                Assert.Equal(1, tracker.Attempts);
+                Assert.Equal(1, tracker.Completions);
             }
             finally
             {
@@ -309,7 +306,6 @@ Start-Sleep -Seconds 30");
                 // a script that is still running long after the deletion has been acknowledged
                 IDictionary<string, string> customSettings = ConfigureHook(scriptFile, outputFile, HangingScript);
                 customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecTimeout)] = "120";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecMaxRetryDuration)] = "300";
 
                 UseNewLocalServer(customSettings: customSettings);
 
@@ -324,7 +320,7 @@ Start-Sleep -Seconds 30");
                     // acknowledged once the script had exited, and the hook would be complete by now
                     Assert.False(tracker.FirstCompletion.IsCompleted, "The deletion was acknowledged only after the hook had finished - the hook must be fire-and-forget.");
 
-                    Assert.Equal(1, await WaitForValueAsync(() => tracker.Attempts, 1));
+                    Assert.True(await WaitForValueAsync(() => File.Exists(outputFile), true), "The deletion hook was not started.");
                     Assert.False(tracker.FirstCompletion.IsCompleted, "The hook should still be in flight after the deletion was acknowledged.");
 
                     await AssertDatabaseDeletedAsync(store, databaseName);
@@ -337,7 +333,7 @@ Start-Sleep -Seconds 30");
         }
 
         [RavenFact(RavenTestCategory.Configuration)]
-        public async Task OnDatabaseDelete_WhenScriptExitsNonZero_IsRetriedThreeTimes_AndDeletionStillCompletes()
+        public async Task OnDatabaseDelete_WhenScriptExitsNonZero_IsNotRetried_RaisesAnAlert_AndDeletionStillCompletes()
         {
             string scriptFile = NewScriptPath();
             string outputFile = NewOutputPath();
@@ -346,7 +342,6 @@ Start-Sleep -Seconds 30");
             {
                 IDictionary<string, string> customSettings = ConfigureHook(scriptFile, outputFile, FailingScript);
                 customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecTimeout)] = "10";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecMaxRetryDuration)] = "120";
 
                 UseNewLocalServer(customSettings: customSettings);
 
@@ -361,11 +356,13 @@ Start-Sleep -Seconds 30");
                     // the deletion must not wait for the hook, nor be affected by its failure
                     await AssertDatabaseDeletedAsync(store, databaseName);
 
-                    Assert.True(await WaitForHookAsync(tracker.FirstCompletion), "The deletion hook did not give up in time.");
+                    Assert.True(await WaitForHookAsync(tracker.FirstCompletion), "The deletion hook did not complete in time.");
                 }
 
-                Assert.Equal(3, tracker.Attempts);
-                Assert.Equal(3, File.ReadAllLines(outputFile).Count(x => x.Trim() == "attempt"));
+                Exception error = await tracker.FirstCompletion;
+                Assert.NotNull(error);
+                Assert.Contains("Exit code: 3", error.Message);
+                Assert.Equal(1, File.ReadAllLines(outputFile).Count(x => x.Trim() == "attempt"));
                 AssertFailureAlert(databaseName);
             }
             finally
@@ -375,7 +372,7 @@ Start-Sleep -Seconds 30");
         }
 
         [RavenFact(RavenTestCategory.Configuration)]
-        public async Task OnDatabaseDelete_WhenExecutableIsMissing_IsAttemptedOnce_AndRaisesOneAlertPerDatabase()
+        public async Task OnDatabaseDelete_WhenExecutableIsMissing_RaisesOneAlertPerDatabase()
         {
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
             customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] =
@@ -403,15 +400,12 @@ Start-Sleep -Seconds 30");
 
             Assert.Equal(2, await WaitForValueAsync(() => tracker.Completions, 2, timeout: HookTimeoutInSeconds * 1000));
 
-            // a missing executable cannot resolve on retry, so it must not be attempted again
-            Assert.Equal(2, tracker.Attempts);
-
             foreach (string databaseName in databaseNames)
                 AssertFailureAlert(databaseName);
         }
 
         [RavenFact(RavenTestCategory.Configuration)]
-        public async Task OnDatabaseDelete_WhenScriptTimesOut_DeletionStillCompletes()
+        public async Task OnDatabaseDelete_WhenScriptTimesOut_IsKilled_RaisesAnAlert_AndDeletionStillCompletes()
         {
             string scriptFile = NewScriptPath();
             string outputFile = NewOutputPath();
@@ -420,15 +414,15 @@ Start-Sleep -Seconds 30");
             {
                 IDictionary<string, string> customSettings = ConfigureHook(scriptFile, outputFile, HangingScript);
                 customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecTimeout)] = "1";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecMaxRetryDuration)] = "5";
 
                 UseNewLocalServer(customSettings: customSettings);
 
                 HookTracker tracker = TrackHook();
 
+                string databaseName;
                 using (var store = GetDocumentStore())
                 {
-                    string databaseName = store.Database;
+                    databaseName = store.Database;
                     await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, hardDelete: true));
 
                     await AssertDatabaseDeletedAsync(store, databaseName);
@@ -436,7 +430,13 @@ Start-Sleep -Seconds 30");
                     Assert.True(await WaitForHookAsync(tracker.FirstCompletion), "The deletion hook did not give up in time - a timed out script must never block the hook indefinitely.");
                 }
 
-                Assert.True(tracker.Attempts >= 1, "The script should have been attempted at least once.");
+                Exception error = await tracker.FirstCompletion;
+                Assert.NotNull(error);
+                Assert.Contains("didn't exit", error.Message);
+                AssertFailureAlert(databaseName);
+
+                int pid = int.Parse(ReadLines(outputFile).Single());
+                Assert.False(IsAlive(pid), $"The timed out script (pid {pid}) is still running - it must be killed on timeout.");
             }
             finally
             {
@@ -460,7 +460,6 @@ Start-Sleep -Seconds 30");
             }
 
             Assert.False(await WaitForHookAsync(tracker.FirstCompletion, timeoutInSeconds: 5), "No hook should have run when the exec setting is not configured.");
-            Assert.Equal(0, tracker.Attempts);
         }
     }
 }
