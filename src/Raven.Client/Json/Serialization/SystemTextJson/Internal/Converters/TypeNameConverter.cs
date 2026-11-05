@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Raven.Client.Util;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
@@ -25,6 +26,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static readonly ConcurrentDictionary<string, Type> _types = new();
 
         private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
+
+        [ThreadStatic]
+        private static HashSet<object> _writingWithTypeName;
 
         private static readonly ConcurrentDictionary<Type, MethodInfo> _immutableFactories = new();
 
@@ -340,13 +344,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return;
             }
 
-            byte[] valueJson;
-            using (var valueStream = new MemoryStream())
-            {
-                using (var valueWriter = new Utf8JsonWriter(valueStream, SystemTextJsonSerializationConventions.WriterOptions))
-                    JsonSerializer.Serialize(valueWriter, value, runtimeType, options);
+            HashSet<object> writing = _writingWithTypeName ??= new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+            if (writing.Add(value) == false)
+                throw new JsonException($"Self referencing loop detected for type '{runtimeType.FullName}'.");
 
-                valueJson = valueStream.ToArray();
+            byte[] valueJson;
+            try
+            {
+                using (var valueStream = new MemoryStream())
+                {
+                    using (var valueWriter = new Utf8JsonWriter(valueStream, SystemTextJsonSerializationConventions.WriterOptions))
+                        JsonSerializer.Serialize(valueWriter, value, runtimeType, options);
+
+                    valueJson = valueStream.ToArray();
+                }
+            }
+            finally
+            {
+                writing.Remove(value);
             }
 
             if (valueJson.Length < 2 || valueJson[0] != (byte)'{')

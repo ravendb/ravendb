@@ -2620,6 +2620,38 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class FriendlyDog : Dog
+    {
+        public Animal Friend { get; set; }
+    }
+
+    private class Kennel
+    {
+        public Animal Resident { get; set; }
+
+        public Animal Neighbour { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsReferenceLoopsThroughPolymorphicMembersLikeNewtonsoft()
+    {
+        var dog = new FriendlyDog { Name = "Rex", Barks = true };
+        dog.Friend = dog;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            Assert.ThrowsAny<JsonSerializationException>(() => Newtonsoft.Serialization.DefaultConverter.ToBlittable(new Kennel { Resident = dog }, context));
+
+            var exception = Assert.ThrowsAny<System.Text.Json.JsonException>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(new Kennel { Resident = dog }, context));
+            Assert.Contains("Self referencing loop", exception.Message);
+
+            var shared = new FriendlyDog { Name = "Max", Barks = true, Friend = new Dog { Name = "Fido", Barks = true } };
+            var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new Kennel { Resident = shared, Neighbour = shared });
+            Assert.Equal("Fido", Assert.IsType<Dog>(Assert.IsType<FriendlyDog>(read.Resident).Friend).Name);
+            Assert.Equal("Fido", Assert.IsType<Dog>(Assert.IsType<FriendlyDog>(read.Neighbour).Friend).Name);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
