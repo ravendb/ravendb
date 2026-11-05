@@ -789,8 +789,21 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract TStatsScope CreateScope(EtlRunStats stats);
 
+        protected virtual void WaitBeforeFirstRun()
+        {
+        }
+
         public void Run()
         {
+            try
+            {
+                WaitBeforeFirstRun();
+            }
+            catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
+            {
+                return;
+            }
+
             var runStart = Database.Time.GetUtcNow();
 
             var cancellationAndForceRetryHandles = new[] { CancellationToken.WaitHandle, ForceBatchRetryEvent.WaitHandle };
@@ -1038,6 +1051,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateEtlProcessState(EtlProcessState state, DateTime? lastBatchTime = null)
         {
+            lastBatchTime ??= GetProcessState(Database, Configuration.Name, Transformation.Name).LastBatchTime;
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
                 _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);

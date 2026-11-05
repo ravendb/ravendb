@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -52,6 +53,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public override bool ShouldTrackCounters() => false;
 
         public override bool ShouldTrackTimeSeries() => false;
+
+        protected override void WaitBeforeFirstRun() => _waitForChanges.Wait(CancellationToken);
 
         public override void NotifyAboutWork(DatabaseChange change)
         {
@@ -129,6 +132,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
         {
+            if (_forTestingPurposes?.SimulateLoadFailure == true)
+                throw new InvalidOperationException(nameof(_forTestingPurposes.SimulateLoadFailure));
+
             var count = 0;
             var uploadedFiles = new List<UploadInfo>();
             var localFiles = new List<string>();
@@ -195,8 +201,19 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
-            if (Statistics.LastProcessedEtag > 0)
-                UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            if (Statistics.LastProcessedEtag > 0 && FallbackTime == null)
+            {
+                AsyncHelpers.RunSync(() => BackupHelper.RunWithRetriesAsync(maxRetries: 3, () =>
+                    {
+                        _forTestingPurposes?.BeforeSavingLastBatchTime?.Invoke();
+
+                        UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                        return Task.FromResult(0L);
+                    },
+                    infoMessage: "Saving the last batch time in the cluster",
+                    errorMessage: "Failed to save the last batch time in the cluster",
+                    smugglerResult: null, operationCancelToken: _operationCancelToken));
+            }
 
             UpdateTimer(lastBatchTime);
         }
@@ -358,5 +375,31 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal sealed class TestingStuff
+        {
+            private readonly OlapEtl _parent;
+
+            internal TestingStuff(OlapEtl parent)
+            {
+                _parent = parent;
+            }
+
+            internal Action BeforeSavingLastBatchTime;
+
+            internal bool SimulateLoadFailure;
+
+            internal void TriggerScheduledRun() => _parent._waitForChanges.Set();
+        }
     }
 }
