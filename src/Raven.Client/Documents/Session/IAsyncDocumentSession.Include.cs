@@ -26,6 +26,12 @@ namespace Raven.Client.Documents.Session
         ///     Begin a load while including the specified path
         /// </summary>
         /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
+        IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
+
+        /// <summary>
+        ///     Begin a load while including the specified path
+        /// </summary>
+        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
         IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path);
 
         /// <summary>

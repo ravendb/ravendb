@@ -16,6 +16,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         ILoaderWithInclude<T> Include<T>(Expression<Func<T, string>> path);
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
+        ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path);
+
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         ILoaderWithInclude<T> Include<T>(Expression<Func<T, IEnumerable<string>>> path);
 

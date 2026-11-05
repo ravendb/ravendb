@@ -18,6 +18,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         ILazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, string>> path);
 
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
+        ILazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, object>> path);
+
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         ILazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, IEnumerable<string>>> path);
 
@@ -87,6 +90,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
         IAsyncLazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, string>> path);
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, string}})"/>
+        IAsyncLazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, object>> path);
 
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments(Expression{Func{T, IEnumerable{string}}})"/>
         IAsyncLazyLoaderWithInclude<TResult> Include<TResult>(Expression<Func<TResult, IEnumerable<string>>> path);

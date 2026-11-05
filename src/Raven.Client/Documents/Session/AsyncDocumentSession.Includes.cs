@@ -23,6 +23,12 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc/>
+        public IAsyncLoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+        {
+            return new AsyncMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <inheritdoc/>
         public IAsyncLoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path)
         {
             return new AsyncMultiLoaderWithInclude<T>(this).Include<TInclude>(path);

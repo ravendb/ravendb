@@ -20,6 +20,12 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc/>
+        ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, object>> path)
+        {
+            return new LazyMultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <inheritdoc/>
         ILazyLoaderWithInclude<T> ILazySessionOperations.Include<T>(Expression<Func<T, IEnumerable<string>>> path)
         {
             return new LazyMultiLoaderWithInclude<T>(this).Include(path);

@@ -19,6 +19,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{System.Func{T,string}})"/>
         /// <typeparam name="T">Type of main loaded document</typeparam>
+        public ILoaderWithInclude<T> Include<T>(Expression<Func<T, object>> path)
+        {
+            return new MultiLoaderWithInclude<T>(this).Include(path);
+        }
+
+        /// <inheritdoc cref="IDocumentIncludeBuilder{T,TBuilder}.IncludeDocuments{TInclude}(Expression{System.Func{T,string}})"/>
+        /// <typeparam name="T">Type of main loaded document</typeparam>
         /// <typeparam name="TInclude">Type of included document</typeparam>
         public ILoaderWithInclude<T> Include<T, TInclude>(Expression<Func<T, string>> path)
         {
