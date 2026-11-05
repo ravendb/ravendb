@@ -246,10 +246,13 @@ internal static partial class QueryPlanBuilder
         if (eqCount >= 2) TryFindCompoundFieldEqualMatches(eqBuf);
 
         // CompoundKeyLookup collapses two WHERE A = $x AND B = $y into compound($x, $y) lookup
+        // The key holds only what the map wrote to A and B, so the two equalities must be the whole query: no spatial / vector clause (GroupCollapse
+        // moved them out of `clauses`), no when(), nothing scored (a boost, order by score()), no CreateField (it can add values to A or B)
         if (walkerCtx.CompoundExact.First >= 0 &&
             clauses.Count == 2 &&
-            clauses[walkerCtx.CompoundExact.First].WhenCondition is null &&
-            clauses[walkerCtx.CompoundExact.Second].WhenCondition is null)
+            walkerCtx.SpatialClauses is null && walkerCtx.VectorClauses is null &&
+            p.HasBoost == false && p.HasDynamics == false &&
+            walkerCtx.WhenCount == 0)
         {
             flags |= PlanOptimizationFlags.CompoundExactCandidate;
         }
