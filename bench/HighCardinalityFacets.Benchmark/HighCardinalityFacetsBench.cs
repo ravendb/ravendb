@@ -104,7 +104,7 @@ public class Harness : RavenTestBase
     {
         lock (SharedLock)
         {
-            _shared?.DisposeAsync().GetAwaiter().GetResult();
+            _shared?.DisposeAsync().AsTask().GetAwaiter().GetResult();
             _shared = null;
         }
     }

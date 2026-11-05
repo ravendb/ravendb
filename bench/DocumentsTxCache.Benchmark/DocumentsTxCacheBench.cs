@@ -52,7 +52,7 @@ public class DocumentsTxCacheBench
     [GlobalCleanup]
     public void Cleanup()
     {
-        _tests?.DisposeAsync().GetAwaiter().GetResult();
+        _tests?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _tests = null;
     }
 }
