@@ -2571,6 +2571,55 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class UntypedNamedFloatingPointValues
+    {
+        public object NaN { get; set; }
+
+        public object PositiveInfinity { get; set; }
+
+        public object NegativeInfinity { get; set; }
+
+        public object NaNText { get; set; }
+
+        public object InfinityText { get; set; }
+
+        public double TypedNaN { get; set; }
+
+        public string NaNAsString { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsUntypedNamedFloatingPointValuesLikeNewtonsoft()
+    {
+        var value = new UntypedNamedFloatingPointValues
+        {
+            NaN = double.NaN,
+            PositiveInfinity = double.PositiveInfinity,
+            NegativeInfinity = double.NegativeInfinity,
+            NaNText = "NaN",
+            InfinityText = "-Infinity",
+            TypedNaN = double.NaN,
+            NaNAsString = "NaN"
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            foreach (DocumentConventions conventions in new[] { Newtonsoft, SystemTextJson })
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<UntypedNamedFloatingPointValues>(json);
+
+                Assert.Equal(double.NaN, Assert.IsType<double>(read.NaN));
+                Assert.Equal(double.PositiveInfinity, Assert.IsType<double>(read.PositiveInfinity));
+                Assert.Equal(double.NegativeInfinity, Assert.IsType<double>(read.NegativeInfinity));
+                Assert.Equal("NaN", Assert.IsType<string>(read.NaNText));
+                Assert.Equal("-Infinity", Assert.IsType<string>(read.InfinityText));
+                Assert.Equal(double.NaN, read.TypedNaN);
+                Assert.Equal("NaN", read.NaNAsString);
+            }
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

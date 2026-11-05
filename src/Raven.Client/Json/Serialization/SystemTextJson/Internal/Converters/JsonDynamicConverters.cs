@@ -38,7 +38,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             switch (reader.TokenType)
             {
                 case JsonTokenType.String:
-                    return reader.GetString();
+                    return NamedFloatingPointLiterals.TryRead(ref reader, out double literal) ? literal : reader.GetString();
                 case JsonTokenType.Number:
                     if (reader.TryGetInt64(out long longValue))
                         return longValue;

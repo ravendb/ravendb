@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -20,77 +21,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 _buffer = new ContextMemoryBufferWriter(source._context, Math.Max(source.Size * 2, 512));
 
                 using (var stream = new BufferWriterStream(_buffer))
-                    source.WriteJsonTo(stream);
+                using (var writer = new BlittableJsonTextWriter(source._context, stream) { EscapeNamedFloatingPointLiterals = true })
+                    writer.WriteObject(source);
             }
-
-            QuoteNamedFloatingPointLiterals(blittable._context);
-        }
-
-        private static ReadOnlySpan<byte> NaN => "NaN"u8;
-
-        private static ReadOnlySpan<byte> Infinity => "Infinity"u8;
-
-        private void QuoteNamedFloatingPointLiterals(JsonOperationContext context)
-        {
-            ReadOnlySpan<byte> json = _buffer.WrittenSpan;
-            if (json.IndexOf(NaN) < 0 && json.IndexOf(Infinity) < 0)
-                return;
-
-            var quoted = new ContextMemoryBufferWriter(context, json.Length + 64);
-            bool inString = false;
-
-            for (int i = 0; i < json.Length; i++)
-            {
-                byte current = json[i];
-
-                if (inString)
-                {
-                    quoted.WriteByte(current);
-                    if (current == (byte)'\\')
-                        quoted.WriteByte(json[++i]);
-                    else if (current == (byte)'"')
-                        inString = false;
-
-                    continue;
-                }
-
-                if (current == (byte)'"')
-                {
-                    inString = true;
-                    quoted.WriteByte(current);
-                    continue;
-                }
-
-                int literalLength = GetNamedLiteralLength(json.Slice(i));
-                if (literalLength == 0)
-                {
-                    quoted.WriteByte(current);
-                    continue;
-                }
-
-                quoted.WriteByte((byte)'"');
-                json.Slice(i, literalLength).CopyTo(quoted.GetSpan(literalLength));
-                quoted.Advance(literalLength);
-                quoted.WriteByte((byte)'"');
-                i += literalLength - 1;
-            }
-
-            _buffer.Dispose();
-            _buffer = quoted;
-        }
-
-        private static int GetNamedLiteralLength(ReadOnlySpan<byte> json)
-        {
-            if (json.StartsWith(NaN))
-                return NaN.Length;
-
-            if (json.StartsWith(Infinity))
-                return Infinity.Length;
-
-            if (json.Length > 1 && json[0] == (byte)'-' && json.Slice(1).StartsWith(Infinity))
-                return Infinity.Length + 1;
-
-            return 0;
         }
 
         public ReadOnlySpan<byte> GetUtf8Json()
