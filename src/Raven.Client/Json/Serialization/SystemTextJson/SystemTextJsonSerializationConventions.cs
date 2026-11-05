@@ -244,6 +244,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             {
                 RavenJsonTypeInfoResolver.RootEntity = null;
                 RavenJsonTypeInfoResolver.RootDocument = null;
+                RavenJsonTypeInfoResolver.ClearSerializing();
             }
 
             if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
