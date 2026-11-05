@@ -2759,6 +2759,41 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class NoMembers
+    {
+    }
+
+    [System.Text.Json.Serialization.JsonConverter(typeof(TextMarkerConverter))]
+    private class TextMarker
+    {
+    }
+
+    private sealed class TextMarkerConverter : System.Text.Json.Serialization.JsonConverter<TextMarker>
+    {
+        public override TextMarker Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) => new();
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, TextMarker value, System.Text.Json.JsonSerializerOptions options) => writer.WriteStringValue("text-marker");
+    }
+
+    private class HoldsMarker
+    {
+        public object Marker { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesTypeNamesOfObjectsWithoutMembersLikeNewtonsoft()
+    {
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsMarker { Marker = new NoMembers() });
+        Assert.IsType<NoMembers>(read.Marker);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new HoldsMarker { Marker = new TextMarker() }, context))
+        {
+            Assert.True(json.TryGet(nameof(HoldsMarker.Marker), out string marker));
+            Assert.Equal("text-marker", marker);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

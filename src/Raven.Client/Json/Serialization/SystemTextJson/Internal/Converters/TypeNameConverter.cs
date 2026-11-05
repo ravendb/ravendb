@@ -25,6 +25,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static readonly ConcurrentDictionary<string, Type> _types = new();
 
+        private static readonly ConcurrentDictionary<Type, byte[]> _typeNamePrefixes = new();
+
         private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
 
         [ThreadStatic]
@@ -348,48 +350,55 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (writing.Add(value) == false)
                 throw new JsonException($"Self referencing loop detected for type '{runtimeType.FullName}'.");
 
-            byte[] valueJson;
-            try
+            byte[] prefix = GetTypeNamePrefix(runtimeType);
+            using (var buffer = new PooledByteBufferWriter(prefix.Length + 256))
             {
-                using (var valueStream = new MemoryStream())
+                buffer.Write(prefix);
+                try
                 {
-                    using (var valueWriter = new Utf8JsonWriter(valueStream, SystemTextJsonSerializationConventions.WriterOptions))
+                    using (var valueWriter = new Utf8JsonWriter(buffer, SystemTextJsonSerializationConventions.WriterOptions))
                         JsonSerializer.Serialize(valueWriter, value, runtimeType, options);
-
-                    valueJson = valueStream.ToArray();
                 }
-            }
-            finally
-            {
-                writing.Remove(value);
-            }
+                finally
+                {
+                    writing.Remove(value);
+                }
 
-            if (valueJson.Length < 2 || valueJson[0] != (byte)'{')
-            {
-                writer.WriteRawValue(valueJson, skipInputValidation: true);
-                return;
-            }
+                Span<byte> json = buffer.WrittenSpan;
+                Span<byte> body = json.Slice(prefix.Length);
+                if (body.Length < 2 || body[0] != (byte)'{')
+                {
+                    writer.WriteRawValue(body, skipInputValidation: true);
+                    return;
+                }
 
-            using (var stream = new MemoryStream())
+                RavenSerializationBinder.Instance.ValidateType(runtimeType);
+
+                if (body.Length == 2)
+                {
+                    body[0] = (byte)'}';
+                    writer.WriteRawValue(json.Slice(0, prefix.Length + 1), skipInputValidation: true);
+                    return;
+                }
+
+                body[0] = (byte)',';
+                writer.WriteRawValue(json, skipInputValidation: true);
+            }
+        }
+
+        private static byte[] GetTypeNamePrefix(Type type)
+        {
+            return _typeNamePrefixes.GetOrAdd(type, static t =>
             {
+                using var stream = new MemoryStream();
                 using (var typeWriter = new Utf8JsonWriter(stream, SystemTextJsonSerializationConventions.MetadataWriterOptions))
                 {
                     typeWriter.WriteStartObject();
-                    typeWriter.WriteString(TypePropertyName, GetTypeName(runtimeType));
+                    typeWriter.WriteString(TypePropertyName, t.GetTypeNameForSerialization());
                 }
 
-                if (valueJson.Length > 2)
-                {
-                    stream.WriteByte((byte)',');
-                    stream.Write(valueJson, 1, valueJson.Length - 1);
-                }
-                else
-                {
-                    stream.WriteByte((byte)'}');
-                }
-
-                writer.WriteRawValue(new ReadOnlySpan<byte>(stream.GetBuffer(), 0, (int)stream.Length), skipInputValidation: true);
-            }
+                return stream.ToArray();
+            });
         }
 
         private static object Read(ref Utf8JsonReader reader, Type declaredType, JsonSerializerOptions options)
