@@ -807,6 +807,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
+        internal static void ClearSerializing()
+        {
+            _serializing?.Clear();
+        }
+
         private static bool HasCapturedJson(JsonConverter converter)
         {
             return converter != null && ReferenceEquals(_capturedMember.Converter, converter);
