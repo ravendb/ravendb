@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditRemoteAttachmentsCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public const int CommandVersion = 72_000;
         public RemoteAttachmentsConfiguration Configuration;
 

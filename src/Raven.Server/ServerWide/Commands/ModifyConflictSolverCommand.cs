@@ -5,6 +5,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class ModifyConflictSolverCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Replication;
+
         public ConflictSolver Solver;
 
         public ModifyConflictSolverCommand()

@@ -14,6 +14,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
 {
     public abstract class AddEtlCommand<T, TConnectionString> : UpdateDatabaseRecordFeaturesCommand where T : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Etls;
+
         public T Configuration { get; protected set; }
 
         protected AddEtlCommand()

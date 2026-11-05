@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands;
 
 public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
 {
+    public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
     public SchemaValidationConfiguration Configuration;
 
     public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)

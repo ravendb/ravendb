@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public sealed class CreateNewShardCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public DatabaseTopology Topology;
         public DateTime At;
         public int ShardNumber;

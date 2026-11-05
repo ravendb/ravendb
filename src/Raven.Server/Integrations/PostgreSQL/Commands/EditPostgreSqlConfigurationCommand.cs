@@ -1,6 +1,7 @@
 ﻿using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Sparrow.Json.Parsing;
 
@@ -8,6 +9,8 @@ namespace Raven.Server.Integrations.PostgreSQL.Commands
 {
     public sealed class EditPostgreSqlConfigurationCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public PostgreSqlConfiguration Configuration;
 
         public EditPostgreSqlConfigurationCommand()

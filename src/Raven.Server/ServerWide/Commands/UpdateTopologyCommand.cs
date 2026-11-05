@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class UpdateTopologyCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public DatabaseTopology Topology;
         public DateTime At;
         public int? ShardNumber;

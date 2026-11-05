@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class EditDataArchivalCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public DataArchivalConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {

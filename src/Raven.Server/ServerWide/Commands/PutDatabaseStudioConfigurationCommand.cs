@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class PutDatabaseStudioConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public StudioConfiguration Configuration;
 
         public PutDatabaseStudioConfigurationCommand()

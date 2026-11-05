@@ -5,6 +5,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditLockModeCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public DatabaseLockMode LockMode;
 
         public EditLockModeCommand()

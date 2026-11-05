@@ -56,15 +56,18 @@ public partial class ShardedDatabaseContext
 
             ScriptRunnerCache = new ScriptRunnerCache(database: null, context.Configuration);
 
-            Update(context.DatabaseRecord, 0);
+            Update(context.DatabaseRecord, 0, out _);
         }
 
-        public void Update(RawDatabaseRecord record, long index)
+        /// <param name="anyErrors">true when some of the changes couldn't be applied (e.g. an analyzer that couldn't be compiled), the next call applies them again</param>
+        public void Update(RawDatabaseRecord record, long index, out bool anyErrors)
         {
+            anyErrors = false;
+
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Grisha, DevelopmentHelper.Severity.Normal, "RavenDB-19087 Add a test for updated configuration (for projections)");
             ScriptRunnerCache.UpdateConfiguration(DatabaseContext.Configuration);
 
-            UpdateAnalyzers(record, index);
+            UpdateAnalyzers(record, index, ref anyErrors);
 
             var indexes = new Dictionary<string, IndexInformationHolder>(StringComparer.OrdinalIgnoreCase);
 
@@ -146,7 +149,7 @@ public partial class ShardedDatabaseContext
         public IEnumerable<IndexInformationHolder> GetIndexes() => _indexes.Values;
 
 
-        private void UpdateAnalyzers(RawDatabaseRecord record, long index)
+        private void UpdateAnalyzers(RawDatabaseRecord record, long index, ref bool anyErrors)
         {
             try
             {
@@ -154,6 +157,7 @@ public partial class ShardedDatabaseContext
             }
             catch (Exception e)
             {
+                anyErrors = true;
                 DatabaseContext.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Could not update analyzers", e);

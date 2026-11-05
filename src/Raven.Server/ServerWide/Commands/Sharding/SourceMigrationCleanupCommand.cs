@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public sealed class SourceMigrationCleanupCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public int Bucket;
         public long MigrationIndex;
         public string Node;

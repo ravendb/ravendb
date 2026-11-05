@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class RevisionsBinConfigurationCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public RevisionsBinConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {

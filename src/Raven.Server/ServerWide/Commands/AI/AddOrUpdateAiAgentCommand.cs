@@ -18,6 +18,8 @@ namespace Raven.Server.ServerWide.Commands.AI
 {
     public class AddOrUpdateAiAgentCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public AiAgentConfiguration Configuration;
 
         public AddOrUpdateAiAgentCommand()

@@ -70,7 +70,8 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(55, fieldNames.Count);
+            // ClusterState is managed by the server and must not be exported nor restored
+            Assert.Equal(56, fieldNames.Count);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
