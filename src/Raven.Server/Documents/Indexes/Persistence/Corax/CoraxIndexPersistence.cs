@@ -312,6 +312,16 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         }
     }
 
+    internal bool TryReadHnswVectorSizeInBytes(string fieldName, out int vectorSizeInBytes)
+    {
+        using (var tx = _environment.ReadTransaction())
+        using (var searchState = new Hnsw.SearchState(tx.LowLevelTransaction, fieldName))
+        {
+            vectorSizeInBytes = searchState.Options.VectorSizeBytes;
+            return searchState.IsEmpty == false;
+        }
+    }
+
     private IndexTransactionCache BuildSnapshotWrapper()
     {
         return _hnswCaches is null

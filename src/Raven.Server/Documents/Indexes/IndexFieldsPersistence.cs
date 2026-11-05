@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 
@@ -51,6 +52,16 @@ namespace Raven.Server.Documents.Indexes
                 
                 if (fieldDimensions is not null)
                 {
+                    if (indexField.Vector.SourceEmbeddingType is VectorEmbeddingType.Single && indexField.Vector.DestinationEmbeddingType is VectorEmbeddingType.Binary)
+                    {
+                        // Dimensions counts the source floats, but before RavenDB-27700 only the byte count worked, so the first embedding sets the size (see SetFieldEmbeddingDimension).
+                        // Indexes built before that never stored the size, their HNSW graph holds it.
+                        if (_vectorFieldsDimensions.ContainsKey(indexField.Name) == false && _index.IndexPersistence is CoraxIndexPersistence coraxPersistence &&
+                            coraxPersistence.TryReadHnswVectorSizeInBytes(indexField.Name, out var vectorSizeInBytes))
+                            _vectorFieldsDimensions.Add(indexField.Name, vectorSizeInBytes);
+                        continue;
+                    }
+
                     var dimensionsToWrite = indexField.Vector.DestinationEmbeddingType switch
                     {
                         // In case of VectorEmbeddingType.Single the embedding length is multiplied by 4 (for every float we have 4 bytes), so to match this behavior we 
@@ -167,6 +178,11 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidDataException($"Attempted to index embedding with {originalDimensions} dimensions, but field {fieldName} already contains indexed embedding with {originalInputDimensions} dimensions, or was explicitly configured for embeddings with {originalInputDimensions} dimensions.");
             }
             
+            // only Single -> Binary gets here with explicit Dimensions, every other field got its size in Initialize
+            if (destinationEmbeddingType == VectorEmbeddingType.Binary && _index.Definition.IndexFields.TryGetValue(fieldName, out var indexField) && indexField.Vector?.Dimensions is { } dimensions &&
+                embeddingLengthInBytes != (dimensions + 7) / 8 && embeddingLengthInBytes != dimensions)
+                throw new InvalidDataException($"Attempted to index embedding of {embeddingLengthInBytes} bytes after binary quantization, but field {fieldName} was explicitly configured for embeddings with {dimensions} dimensions, which is {(dimensions + 7) / 8} bytes after binary quantization.");
+
             _vectorFieldsDimensionsToWrite.Add(fieldName, embeddingLengthInBytes);
         }
         
