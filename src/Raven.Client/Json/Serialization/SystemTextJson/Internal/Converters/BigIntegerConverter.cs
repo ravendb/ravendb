@@ -37,7 +37,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             throw new NotSupportedException(
                 $"'{typeof(BigInteger).FullName}' values have no JSON representation in RavenDB documents. " +
-                $"To store them, register a converter through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)} at index 0 of the converters list.");
+                $"To store them, register a converter through {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.CustomizeJsonSerializerOptions)}.");
         }
     }
 }
