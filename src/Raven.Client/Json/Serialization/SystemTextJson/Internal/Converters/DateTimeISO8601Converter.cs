@@ -37,6 +37,37 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static void ThrowUnparseable(string value, Type type) =>
             throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
 
+        private static DateTime ReadDateTimeKey(string value)
+        {
+            if (DateTime.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime key) == false)
+                throw new JsonException($"Could not parse date time from '{value}'");
+
+            return key.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(key, DateTimeKind.Local) : key;
+        }
+
+        private static string FormatDateTimeKey(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Unspecified)
+                value = DateTime.SpecifyKind(value, DateTimeKind.Local);
+
+            return value.GetDefaultRavenFormat();
+        }
+
+        private static DateTimeOffset ReadDateTimeOffsetKey(string value)
+        {
+            if (DateTimeOffset.TryParseExact(value, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset key) == false)
+                throw new JsonException($"Could not parse date time offset from '{value}'");
+
+            return key;
+        }
+
+        private static string FormatDateTimeOffsetKey(DateTimeOffset value)
+        {
+            return value.Offset == TimeSpan.Zero
+                ? value.UtcDateTime.GetDefaultRavenFormat(isUtc: true)
+                : value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture);
+        }
+
         private sealed class DateTimeConverterInner : JsonConverter<DateTime>
         {
             public static readonly DateTimeConverterInner Instance = new();
@@ -68,6 +99,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (value.Kind == DateTimeKind.Unspecified)
                     value = DateTime.SpecifyKind(value, DateTimeKind.Local);
                 writer.WriteStringValue(value.GetDefaultRavenFormat());
+            }
+
+            public override DateTime ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeKey(value));
             }
         }
 
@@ -113,6 +154,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     dt = DateTime.SpecifyKind(dt, DateTimeKind.Local);
                 writer.WriteStringValue(dt.GetDefaultRavenFormat());
             }
+
+            public override DateTime? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeKey(value.Value));
+            }
         }
 
         private sealed class DateTimeOffsetConverterInner : JsonConverter<DateTimeOffset>
@@ -140,6 +191,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
             {
                 writer.WriteStringValue(value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+            }
+
+            public override DateTimeOffset ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeOffsetKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeOffsetKey(value));
             }
         }
 
@@ -177,6 +238,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 }
 
                 writer.WriteStringValue(value.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+            }
+
+            public override DateTimeOffset? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                return ReadDateTimeOffsetKey(reader.GetString());
+            }
+
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTimeOffset? value, JsonSerializerOptions options)
+            {
+                writer.WritePropertyName(FormatDateTimeOffsetKey(value.Value));
             }
         }
     }
