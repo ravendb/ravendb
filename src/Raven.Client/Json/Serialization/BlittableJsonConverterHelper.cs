@@ -43,7 +43,7 @@ namespace Raven.Client.Json.Serialization
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             for (int i = 0; i < document.Count; i++)
             {
-                document.GetPropertyByIndex(i, ref prop);
+                document.GetPropertyByIndex(i, ref prop, addObjectToCache: true);
 
                 string propertyName = prop.Name;
                 var propertyType = GetPropertyType(propertyName, rootType);
