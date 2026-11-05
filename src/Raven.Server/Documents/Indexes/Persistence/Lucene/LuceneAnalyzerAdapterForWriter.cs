@@ -52,7 +52,11 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
                 int start = offset.StartOffset;
                 int length = offset.EndOffset - start;
                 if (length == 0)
-                    continue; // We skip any empty token. 
+                {
+                    // skip empty tokens, the next one must be read here
+                    continueWork = stream.IncrementToken();
+                    continue;
+                }
                 
 
                 ReadOnlySpan<char> termChars = term.TermBuffer();
