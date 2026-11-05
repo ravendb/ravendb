@@ -134,6 +134,9 @@ internal sealed partial class AnthropicChatCompletionProvider
         {
             if (state.StructuredOutput == false)
             {
+                if (text.Length == 0)
+                    throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
+
                 return new AiResponse(AiResponseType.Result)
                 {
                     Result = text,
