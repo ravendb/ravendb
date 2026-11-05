@@ -1573,8 +1573,15 @@ namespace Raven.Server.Documents.Revisions
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiDelete(prefixedLowerId, etagSlice);
         }
 
-        private void RemoveConflictRevisionsListing(DocumentsOperationContext context, Slice prefixedLowerId) =>
+        private void RemoveConflictRevisionsListing(DocumentsOperationContext context, Slice prefixedLowerId)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
+            var markerIsTheOnlyValue = tree.MultiCount(prefixedLowerId) == 1;
+            if (markerIsTheOnlyValue == false)
+                return;
+
             RemoveConflictRevision(context, prefixedLowerId, ListedMarkerEtag);
+        }
 
         // Etags start at 1; this marker makes a listed document's key exist even when it has no conflict revisions.
         private const long ListedMarkerEtag = -1;
