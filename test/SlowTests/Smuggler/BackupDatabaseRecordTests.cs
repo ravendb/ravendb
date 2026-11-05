@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1216,6 +1216,72 @@ namespace SlowTests.Smuggler
                     Assert.Equal("{\"properties\":{\"Prop\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObjs"].Schema);
                     Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObj2s"));
                     Assert.Equal("{\"properties\":{\"Prop2\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObj2s"].Schema);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Smuggler, LicenseRequired = true)]
+        public async Task ImportOfSchemaValidationWarnsOnlyAboutReplacedDefinitions()
+        {
+            const string schema = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}";
+            const string otherSchema = "{\"properties\":{\"Prop\":{\"maxLength\":5}}}";
+
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var source = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_source",
+                }))
+                using (var destination = GetDocumentStore(new Options
+                {
+                    ModifyDatabaseName = s => $"{s}_destination",
+                }))
+                {
+                    await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+                    {
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                        {
+                            { "Same", new SchemaDefinition { Schema = schema } },
+                            { "Different", new SchemaDefinition { Schema = otherSchema } }
+                        }
+                    }));
+
+                    await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+                    {
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                        {
+                            { "Same", new SchemaDefinition { Schema = schema } },
+                            { "Different", new SchemaDefinition { Schema = schema } },
+                            { "DestinationOnly", new SchemaDefinition { Schema = schema } }
+                        }
+                    }));
+
+                    var recordBeforeImport = await destination.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination.Database));
+
+                    var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await destination.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    var result = (SmugglerResult)await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // the definitions of 'Same' have different LastModifiedTime on both sides, but they are the same definition
+                    var warning = Assert.Single(result.Messages, x => x.Contains("WARNING") && x.Contains("Schema validation configuration"));
+                    Assert.Contains("'Different'", warning);
+                    Assert.Contains("The imported configuration replaced it.", warning);
+
+                    var record = await destination.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination.Database));
+                    var validators = record.SchemaValidation.ValidatorsPerCollection;
+
+                    Assert.Equal(3, validators.Count);
+                    Assert.Equal(schema, validators["Same"].Schema);
+                    Assert.Equal(recordBeforeImport.SchemaValidation.ValidatorsPerCollection["Same"].LastModifiedTime, validators["Same"].LastModifiedTime);
+                    Assert.Equal(otherSchema, validators["Different"].Schema);
+                    Assert.Equal(schema, validators["DestinationOnly"].Schema);
                 }
             }
             finally

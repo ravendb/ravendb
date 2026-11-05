@@ -1,10 +1,16 @@
-﻿using System.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using NJsonSchema;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.SchemaValidation;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -211,6 +217,75 @@ public class SchemaValidationBasicTests : RavenTestBase
                 Assert.Contains("The value '80' at 'Age' should be less than or equal to 67.0.", error.Message);
             }
         }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration, LicenseRequired = true)]
+    public async Task LastModifiedTimeDoesNotChangeOnUnrelatedDatabaseRecordUpdate()
+    {
+        using (var store = GetDocumentStore())
+        {
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    { "Users", new SchemaDefinition { Schema = JsonSchema.FromType<User>().ToJson() } }
+                }
+            }));
+
+            DateTime lastModifiedTime = await GetSchemaLastModifiedTimeAsync(store, "Users");
+            Assert.NotEqual(default, lastModifiedTime);
+
+            // putting an index updates the database record without touching the schema validation configuration
+            await store.Maintenance.SendAsync(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = "Users/ByAge",
+                Maps = { "from u in docs.Users select new { u.Age }" }
+            }));
+
+            Assert.Equal(lastModifiedTime, await GetSchemaLastModifiedTimeAsync(store, "Users"));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration, LicenseRequired = true)]
+    public async Task LastModifiedTimeChangesOnlyForModifiedDefinitions()
+    {
+        string schema = JsonSchema.FromType<User>().ToJson();
+
+        using (var store = GetDocumentStore())
+        {
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    { "Users", new SchemaDefinition { Schema = schema } },
+                    { "Companies", new SchemaDefinition { Schema = schema } }
+                }
+            }));
+
+            DateTime usersLastModifiedTime = await GetSchemaLastModifiedTimeAsync(store, "Users");
+            DateTime companiesLastModifiedTime = await GetSchemaLastModifiedTimeAsync(store, "Companies");
+
+            await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+            {
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
+                {
+                    { "Users", new SchemaDefinition { Schema = schema } },
+                    { "Companies", new SchemaDefinition { Schema = schema, Disabled = true } }
+                }
+            }));
+
+            Assert.Equal(usersLastModifiedTime, await GetSchemaLastModifiedTimeAsync(store, "Users"));
+
+            DateTime companiesLastModifiedTimeAfterChange = await GetSchemaLastModifiedTimeAsync(store, "Companies");
+            Assert.True(companiesLastModifiedTimeAfterChange > companiesLastModifiedTime,
+                $"Expected the last modified time of the changed definition to move forward, but it went from {companiesLastModifiedTime:O} to {companiesLastModifiedTimeAfterChange:O}.");
+        }
+    }
+
+    private static async Task<DateTime> GetSchemaLastModifiedTimeAsync(IDocumentStore store, string collection)
+    {
+        DatabaseRecordWithEtag record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        return record.SchemaValidation.ValidatorsPerCollection[collection].LastModifiedTime;
     }
 
     private class User
