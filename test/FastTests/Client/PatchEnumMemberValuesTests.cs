@@ -140,6 +140,40 @@ public class PatchEnumMemberValuesTests(ITestOutputHelper output) : RavenTestBas
         }
     }
 
+    [RavenFact(RavenTestCategory.Patching)]
+    public void PatchValuesUseTheEnumNamesOfTheirConventions()
+    {
+        var plain = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+        var camelCase = new DocumentConventions
+        {
+            Serialization = new SystemTextJsonSerializationConventions
+            {
+                CustomizeJsonSerializerOptions = options => options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase))
+            }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.Equal("in-progress", GetPatchValue(plain, Stage.InProgress, context));
+                Assert.Equal("Done", GetPatchValue(plain, Stage.Done, context));
+                Assert.Equal("done", GetPatchValue(camelCase, Stage.Done, context));
+            }
+        }
+    }
+
+    private static string GetPatchValue(DocumentConventions conventions, Stage stage, JsonOperationContext context)
+    {
+        var patch = new PatchRequest { Script = "this.Stage = args.stage", Values = { ["stage"] = stage } };
+        using (BlittableJsonReaderObject json = context.ReadObject(patch.ToJson(conventions, context), "patch"))
+        {
+            Assert.True(json.TryGet(nameof(PatchRequest.Values), out BlittableJsonReaderObject values));
+            Assert.True(values.TryGet("stage", out string value));
+            return value;
+        }
+    }
+
     private static Item CreateItem() => new()
     {
         Stage = Stage.NotStarted,
