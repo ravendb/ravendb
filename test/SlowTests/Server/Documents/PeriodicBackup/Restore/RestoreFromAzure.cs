@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -123,6 +123,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         var backupConfiguration = new BackupConfiguration
                         {
                             BackupType = BackupType.Backup,
+                            BackupUploadMode = backupUploadMode,
                             AzureSettings = holder.Settings,
                         };
 

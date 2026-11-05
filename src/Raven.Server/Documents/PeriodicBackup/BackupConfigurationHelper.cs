@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static void AssertDirectUpload(PeriodicBackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
+        private static void AssertDirectUpload(BackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
         {
             if (configuration.BackupUploadMode != BackupUploadMode.DirectUpload)
                 return;
@@ -243,6 +243,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             serverStore.LicenseManager.AssertCanAddPeriodicBackup(configuration);
 
             AssertBackupConfigurationInternal(configuration);
+            // reject an invalid direct upload when the backup is requested, not after it has already started
+            AssertDirectUpload(configuration, serverStore.Configuration.Backup);
             AssertDestinationAndRegionAreAllowed(configuration, serverStore);
             AssertOverrideConfigurationViaExternalScriptForNonClusterAdmin(configuration, serverStore, 
                 authConnection?.Status, previousBackupSettings: null);
