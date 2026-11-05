@@ -1047,6 +1047,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
+                    // the flag is inherited through the execution context, clear it so DrainRunningQueries takes the lock
+                    _isRunningQueriesWriteLockTaken.Value = false;
+
                     PoolOfThreads.LongRunningWork.CurrentPooledThread.SetThreadAffinity(
                         DocumentDatabase.Configuration.Server.NumberOfUnusedCoresByIndexes,
                         DocumentDatabase.Configuration.Server.IndexingAffinityMask);
