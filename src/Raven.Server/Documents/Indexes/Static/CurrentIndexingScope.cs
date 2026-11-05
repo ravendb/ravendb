@@ -17,8 +17,10 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Server;
 using Sparrow.Utils;
 using Voron;
+using Voron.Impl;
 using static Raven.Server.Documents.Indexes.IndexDefinitionBaseServerSide;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -246,36 +248,65 @@ namespace Raven.Server.Documents.Indexes.Static
                         return source;
                 }
 
-                if (TryGetKeySlice(keyLazy, keyString, out var keySlice) == false)
+                if (TryGetLoweredKey(keyLazy, keyString, out var keySlice, out var keyScope) == false)
                     return DynamicNullObject.Null;
 
-                // we intentionally don't dispose of the scope here, this is being tracked by the references
-                // and will be disposed there.
+                // documents read for a key are kept for the rest of the read transaction
+                var transaction = QueryContext.Documents.Transaction.InnerTransaction;
+                if (ReferenceEquals(transaction, _loadedDocumentsTransaction) == false)
+                {
+                    // the read transaction was renewed, drop what was read in the previous one
+                    _loadedDocuments?.Clear();
+                    _loadedDocumentsTransaction = transaction;
+                }
+
+                _loadedDocuments ??= new Dictionary<Slice, LoadedDocument>(SliceComparer.Instance);
+
+                if (_loadedDocuments.TryGetValue(keySlice, out var loaded))
+                {
+                    // the slice is already kept for the references of the batch
+                    keyScope.Dispose();
+                    keySlice = loaded.Key;
+                }
+                else
+                {
+                    // we intentionally don't dispose of the scope here, this is being tracked by the references
+                    // and will be disposed there.
+
+                    // when there is conflict, we need to apply same behavior as if the document would not exist
+                    // only the id and the data are read
+                    var read = _documentsStorage.Get(QueryContext.Documents, keySlice, DocumentFields.Id | DocumentFields.Data, throwOnConflict: false);
+
+                    string collection = null;
+                    if (read != null && read.TryGetMetadata(out var metadata))
+                        metadata.TryGet(Constants.Documents.Metadata.Collection, out collection);
+
+                    loaded = new LoadedDocument { Key = keySlice, Document = read, Collection = collection };
+                    _loadedDocuments[keySlice] = loaded;
+                }
 
                 var idSlice = GetIdSlice(id);
                 var references = GetReferencesForItem(idSlice);
 
-                references.Add(keySlice);
+                references.Add(loaded.Key);
 
                 LoadedItemsCount++;
 
-                // when there is conflict, we need to apply same behavior as if the document would not exist
-                var document = _documentsStorage.Get(QueryContext.Documents, keySlice, throwOnConflict: false);
-
+                var document = loaded.Document;
                 if (document == null)
                 {
                     return DynamicNullObject.Null;
                 }
 
-                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                if (loaded.Collection != null)
                 {
-                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
+                    if (string.Equals(loaded.Collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
 
                         if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
-                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, loaded.Collection);
                         }
 
                         return DynamicNullObject.Null;
@@ -289,6 +320,31 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
+            }
+        }
+
+        private sealed class LoadedDocument
+        {
+            public Slice Key;
+            public Document Document; // null: there is no such document (or it is in conflict)
+            public string Collection;
+        }
+
+        private Dictionary<Slice, LoadedDocument> _loadedDocuments;
+        private Voron.Impl.Transaction _loadedDocumentsTransaction;
+
+        /// <summary>
+        /// The change vector of a loaded document, read on demand.
+        /// </summary>
+        public string GetChangeVectorOfLoadedDocument(Document document)
+        {
+            if (document.ChangeVector != null || document.Id == null)
+                return document.ChangeVector;
+
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, document.Id, out var lowerId))
+            {
+                using (var full = _documentsStorage.Get(QueryContext.Documents, lowerId, DocumentFields.ChangeVector, throwOnConflict: false))
+                    return full?.ChangeVector;
             }
         }
 
@@ -390,6 +446,30 @@ namespace Raven.Server.Documents.Indexes.Static
                 throw new ArgumentException("Cannot execute Load. Source does not have a key.");
 
             return id;
+        }
+
+        private bool TryGetLoweredKey(LazyStringValue keyLazy, string keyString, out Slice keySlice, out ByteStringContext<ByteStringMemoryCache>.InternalScope scope)
+        {
+            keySlice = default;
+            scope = default;
+
+            // making sure that we normalize the case of the key so we'll be able to find
+            // it in case-insensitive manner
+            // In addition, special characters need to be escaped
+            if (keyLazy != null)
+            {
+                if (keyLazy.Length == 0)
+                    return false;
+
+                scope = DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, keyLazy, out keySlice);
+                return true;
+            }
+
+            if (keyString.Length == 0)
+                return false;
+
+            scope = DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, keyString, out keySlice);
+            return true;
         }
 
         private bool TryGetKeySlice(LazyStringValue keyLazy, string keyString, out Slice keySlice)

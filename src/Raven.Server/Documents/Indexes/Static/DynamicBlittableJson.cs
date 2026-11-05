@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (FastCompare(name, MetadataIdIndex))
                     result = _doc.Id;
                 else if (FastCompare(name, MetadataChangeVectorIndex))
-                    result = _doc.ChangeVector;
+                    result = _doc.ChangeVector ?? CurrentIndexingScope.Current?.GetChangeVectorOfLoadedDocument(_doc);
                 else if (FastCompare(name, MetadataEtagIndex))
                     result = _doc.Etag;
                 else if (FastCompare(name, MetadataLastModifiedIndex))
