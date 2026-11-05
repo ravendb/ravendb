@@ -30,6 +30,25 @@ namespace Voron
 
         public readonly BlockingCollection<PrefetchRanges> CommandQueue = new BlockingCollection<PrefetchRanges>(128);
 
+        private long _requestsQueued;
+        private long _requestsDropped;
+
+        internal long RequestsQueued => Interlocked.Read(ref _requestsQueued);
+
+        internal long RequestsDropped => Interlocked.Read(ref _requestsDropped);
+
+        internal bool TryQueue(in PrefetchRanges command)
+        {
+            if (CommandQueue.TryAdd(command, 0))
+            {
+                Interlocked.Increment(ref _requestsQueued);
+                return true;
+            }
+
+            Interlocked.Increment(ref _requestsDropped);
+            return false;
+        }
+
         private unsafe void VoronPrefetcher()
         {
             NativeMemory.EnsureRegistered();

@@ -115,7 +115,11 @@ namespace Voron.Impl.Paging
             if (CanPrefetch.Value && state != null)
             {
                 if (state.ShouldPrefetchSegment(pageNumber, out var virtualAddress, out var bytes))
-                    rvn_prefetch_virtual_memory(virtualAddress, bytes, out _); // ignore if unsuccessful
+                {
+                    // Prefetching is only an optimization: hand it to the prefetching thread, dropped when its queue is full.
+                    var command = new PalDefinitions.PrefetchRanges { VirtualAddress = virtualAddress, NumberOfBytes = new IntPtr(bytes) };
+                    GlobalPrefetchingBehavior.GlobalPrefetcher.Value.TryQueue(command);
+                }
             }
 
             return base.AcquirePagePointer(tx, pageNumber, state);
