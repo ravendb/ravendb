@@ -242,6 +242,53 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task NamedFloatingPointMetadataValuesAreWrittenLikeNewtonsoft()
+        {
+            var metadata = new Raven.Client.Json.MetadataAsDictionary
+            {
+                ["NaN"] = double.NaN,
+                ["PositiveInfinity"] = double.PositiveInfinity,
+                ["NegativeInfinity"] = float.NegativeInfinity,
+                ["Finite"] = 1.5
+            };
+
+            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
+            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject expected = newtonsoft.Serialization.DefaultConverter.ToBlittable(new User { Name = "user" }, metadata, context))
+            using (BlittableJsonReaderObject actual = systemTextJson.Serialization.DefaultConverter.ToBlittable(new User { Name = "user" }, metadata, context))
+            {
+                var expectedMetadata = (BlittableJsonReaderObject)expected[Raven.Client.Constants.Documents.Metadata.Key];
+                var actualMetadata = (BlittableJsonReaderObject)actual[Raven.Client.Constants.Documents.Metadata.Key];
+
+                foreach (string key in metadata.Keys)
+                {
+                    Assert.IsType<LazyNumberValue>(actualMetadata[key]);
+                    Assert.Equal(expectedMetadata[key].ToString(), actualMetadata[key].ToString());
+                }
+            }
+
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            await using (var bulkInsert = store.BulkInsert())
+                await bulkInsert.StoreAsync(new User { Name = "bulk" }, "users/bulk", metadata);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var stored = (BlittableJsonReaderObject)(await session.LoadAsync<BlittableJsonReaderObject>("users/bulk"))[Raven.Client.Constants.Documents.Metadata.Key];
+
+                Assert.Equal("NaN", stored["NaN"].ToString());
+                Assert.Equal("Infinity", stored["PositiveInfinity"].ToString());
+                Assert.Equal("-Infinity", stored["NegativeInfinity"].ToString());
+                Assert.Equal("1.5", stored["Finite"].ToString());
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void FloatingPointNumbersAreWrittenLikeNewtonsoft()
         {
