@@ -2345,6 +2345,86 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class PolymorphicValuesByNonStringKeys
+    {
+        public Dictionary<int, Animal> ByNumber { get; set; }
+
+        public Dictionary<Guid, Animal> ById { get; set; }
+
+        public IDictionary<DayOfWeek, Animal> ByDay { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonKeepsDerivedValuesOfDictionariesWithNonStringKeysLikeNewtonsoft()
+    {
+        var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
+        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new PolymorphicValuesByNonStringKeys
+        {
+            ByNumber = new Dictionary<int, Animal> { [1] = new Dog { Name = "Rex", Barks = true }, [2] = new Animal { Name = "Cat" } },
+            ById = new Dictionary<Guid, Animal> { [id] = new Dog { Name = "Max", Barks = true } },
+            ByDay = new Dictionary<DayOfWeek, Animal> { [DayOfWeek.Monday] = new Dog { Name = "Bolt", Barks = true } }
+        });
+
+        Assert.True(Assert.IsType<Dog>(read.ByNumber[1]).Barks);
+        Assert.IsType<Animal>(read.ByNumber[2]);
+        Assert.True(Assert.IsType<Dog>(read.ById[id]).Barks);
+        Assert.True(Assert.IsType<Dog>(read.ByDay[DayOfWeek.Monday]).Barks);
+    }
+
+    private class PolymorphicValuesByDates
+    {
+        public Dictionary<DateTime, Animal> ByDate { get; set; }
+
+        public IDictionary<DateTimeOffset, Animal> ByMoment { get; set; }
+
+        public IDictionary<DateTime, int> Sorted { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonKeepsDerivedValuesOfDateKeyedDictionariesAndWritesNewtonsoftKeys()
+    {
+        var date = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var local = new DateTime(2021, 6, 7, 8, 9, 10);
+        var moment = new DateTimeOffset(2020, 1, 2, 3, 4, 5, TimeSpan.FromHours(2));
+        var utcMoment = new DateTimeOffset(2022, 1, 2, 3, 4, 5, TimeSpan.Zero);
+        var value = new PolymorphicValuesByDates
+        {
+            ByDate = new Dictionary<DateTime, Animal> { [date] = new Dog { Name = "Rex", Barks = true }, [local] = new Animal { Name = "Cat" } },
+            ByMoment = new Dictionary<DateTimeOffset, Animal> { [moment] = new Dog { Name = "Max", Barks = true }, [utcMoment] = new Animal { Name = "Nemo" } },
+            Sorted = new SortedDictionary<DateTime, int> { [date] = 1, [local] = 2 }
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
+        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
+        {
+            foreach (string property in new[] { nameof(PolymorphicValuesByDates.ByDate), nameof(PolymorphicValuesByDates.ByMoment) })
+            {
+                Assert.True(expected.TryGet(property, out BlittableJsonReaderObject expectedDictionary));
+                Assert.True(actual.TryGet(property, out BlittableJsonReaderObject actualDictionary));
+                Assert.Equal(
+                    expectedDictionary.GetPropertyNames().Where(name => name != "$type").OrderBy(name => name, StringComparer.Ordinal),
+                    actualDictionary.GetPropertyNames().Where(name => name != "$type").OrderBy(name => name, StringComparer.Ordinal));
+            }
+
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<PolymorphicValuesByDates>(actual);
+            Assert.True(Assert.IsType<Dog>(read.ByDate[date]).Barks);
+            Assert.IsType<Animal>(read.ByDate[local]);
+            Assert.Equal(DateTimeKind.Local, read.ByDate.Keys.Single(key => key == local).Kind);
+            Assert.True(Assert.IsType<Dog>(read.ByMoment[moment]).Barks);
+            Assert.Equal(TimeSpan.FromHours(2), read.ByMoment.Keys.Single(key => key == moment).Offset);
+            Assert.IsType<Animal>(read.ByMoment[utcMoment]);
+            Assert.Equal(1, read.Sorted[date]);
+            Assert.Equal(2, read.Sorted[local]);
+
+            var fromNewtonsoft = SystemTextJson.Serialization.DefaultConverter.FromBlittable<PolymorphicValuesByDates>(expected);
+            Assert.Equal(value.ByDate.Keys.OrderBy(key => key), fromNewtonsoft.ByDate.Keys.OrderBy(key => key));
+            Assert.Equal(value.ByMoment.Keys.OrderBy(key => key), fromNewtonsoft.ByMoment.Keys.OrderBy(key => key));
+            Assert.Equal(1, fromNewtonsoft.Sorted[date]);
+            Assert.Equal(2, fromNewtonsoft.Sorted[local]);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
