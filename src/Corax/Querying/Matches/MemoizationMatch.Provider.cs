@@ -83,7 +83,8 @@ namespace Corax.Querying.Matches
             var maxItemsInBudget = _indexSearcher.MaxMemoizationSizeInBytes / sizeof(long);
             var initialSize = _inner.Confidence switch
             {
-                QueryCountConfidence.High => _inner.Count,
+                // the buffer grows when less than 1/16 of its capacity is free: leave that headroom
+                QueryCountConfidence.High => Math.Min(_inner.Count + _inner.Count / 15 + 16, Math.Max(_inner.Count, maxItemsInBudget)),
                 QueryCountConfidence.Normal => Math.Min(_inner.Count / 2, maxItemsInBudget),
                 _ => 16,
             };

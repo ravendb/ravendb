@@ -569,8 +569,9 @@ unsafe partial struct SortingMatch<TInner>
 
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
-            
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
+
+            // batchTermIds holds only heapSize / 2 + 1 longs (see SortResults): two int indexes in each
+            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds);
             using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
 

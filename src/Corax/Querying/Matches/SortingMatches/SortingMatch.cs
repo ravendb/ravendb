@@ -623,15 +623,31 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         var llt = match._searcher.Transaction.LowLevelTransaction;
         var allocator = match._searcher.Allocator;
 
-        var sizeToAllocate = batchResults.Length * (sizeof(long) + sizeof(UnmanagedSpan));
+        var termIdsLength = batchResults.Length;
+        var needsTerms = true;
+
+        // The spatial sort keeps only the nearest 'take' entries in a heap and never reads the terms:
+        // the term ids serve as the indexes of the heap, so the buffers are sized by the heap.
+        var isSpatial = typeof(TEntryComparer) == typeof(EntryComparerBySpatial);
+        if (isSpatial)
+        {
+            var heapSize = Math.Min(match._take, batchResults.Length);
+            if (heapSize < 0)
+                heapSize = batchResults.Length;
+
+            termIdsLength = heapSize / 2 + 1; // two int indexes in a long
+            needsTerms = false;
+        }
+
+        var sizeToAllocate = termIdsLength * sizeof(long) + (needsTerms ? batchResults.Length * sizeof(UnmanagedSpan) : 0);
 
         //OrderBySpatial relies on this order of data. If you change it, please review the spatial ordering to ensure that everything works fine: [[ids], [terms], [spatial_distances]].
-        if (match._sortingDataTransfer.IncludeDistances)
+        if (match._sortingDataTransfer.IncludeDistances && isSpatial == false)
             sizeToAllocate += batchResults.Length * sizeof(SpatialResult);
         
         var bufScope = allocator.Allocate(sizeToAllocate, out ByteString bs);
-        Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
+        Span<long> batchTermIds = new(bs.Ptr, termIdsLength);
+        UnmanagedSpan* termsPtr = needsTerms ? (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long)) : null;
 
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
