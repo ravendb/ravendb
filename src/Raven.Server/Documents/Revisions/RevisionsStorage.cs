@@ -1545,15 +1545,18 @@ namespace Raven.Server.Documents.Revisions
 
         private void UpdateRevisionCountsByOne(DocumentsOperationContext context, DocumentFlags flags, Slice lowerIdPrefix, Table table, long etag, bool increment = true)
         {
-            IncrementCountOfRevisions(context, lowerIdPrefix, increment ? 1 : -1);
+            var count = IncrementCountOfRevisions(context, lowerIdPrefix, increment ? 1 : -1);
 
-            if (flags.Contain(DocumentFlags.Conflicted) == false && flags.Contain(DocumentFlags.Resolved) == false)
-                return;
+            if (flags.Contain(DocumentFlags.Conflicted) || flags.Contain(DocumentFlags.Resolved))
+            {
+                if (increment)
+                    AddConflictRevision(context, table, lowerIdPrefix, etag);
+                else
+                    RemoveConflictRevision(context, lowerIdPrefix, etag);
+            }
 
-            if (increment)
-                AddConflictRevision(context, table, lowerIdPrefix, etag);
-            else
-                RemoveConflictRevision(context, lowerIdPrefix, etag);
+            if (increment == false && count == 0)
+                RemoveConflictRevisionsListing(context, lowerIdPrefix);
         }
 
         private void AddConflictRevision(DocumentsOperationContext context, Table table, Slice prefixedLowerId, long etag)
@@ -1569,6 +1572,9 @@ namespace Raven.Server.Documents.Revisions
             using (DocumentsStorage.GetEtagAsSlice(context, etag, out var etagSlice))
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiDelete(prefixedLowerId, etagSlice);
         }
+
+        private void RemoveConflictRevisionsListing(DocumentsOperationContext context, Slice prefixedLowerId) =>
+            RemoveConflictRevision(context, prefixedLowerId, ListedMarkerEtag);
 
         // Etags start at 1; this marker makes a listed document's key exist even when it has no conflict revisions.
         private const long ListedMarkerEtag = -1;
