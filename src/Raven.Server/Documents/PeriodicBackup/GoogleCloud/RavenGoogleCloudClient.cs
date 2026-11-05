@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -10,6 +10,7 @@ using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Sparrow;
 using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
@@ -17,9 +18,15 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 {
-    public sealed class RavenGoogleCloudClient : IDisposable
+    public sealed class RavenGoogleCloudClient : IDirectUploader
     {
         private static readonly Size DownloadChunkSize = new Size(1, SizeUnit.Megabytes);
+
+        // the amount of data the direct upload stream buffers before handing it over to the uploader
+        internal Size DirectUploadPartSize = new Size(32, SizeUnit.Megabytes);
+
+        // the size of a single request of the resumable upload session, must be a multiple of 256 KiB
+        internal Size DirectUploadChunkSize = new Size(16, SizeUnit.Megabytes);
 
         private readonly StorageClient _client;
         private readonly string _projectId;
@@ -119,6 +126,11 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                     _progress.UploadProgress.UploadedInBytes = p.BytesSent;
                     _progress.OnUploadProgress();
                 }));
+        }
+
+        public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
+        {
+            return new GoogleCloudMultiPartUploader(_client, _bucketName, key, metadata, (int)DirectUploadChunkSize.GetValue(SizeUnit.Bytes), _progress, CancellationToken);
         }
 
         public Stream DownloadObject(string fileName)

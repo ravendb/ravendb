@@ -191,6 +191,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return BackupConfiguration.BackupDestination.Azure;
             }
 
+            if (hasGoogleCloud)
+                return BackupConfiguration.BackupDestination.GoogleCloud;
+
             throw new NotSupportedException("No supported backup destination for direct upload was set.");
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,8 +57,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore()
+        [GoogleCloudRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public Task can_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: false);
+
+        [GoogleCloudRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public Task can_onetime_backup_and_restore(BackupUploadMode backupUploadMode) => can_backup_and_restore_internal(backupUploadMode, oneTimeBackup: true);
+
+        private async Task can_backup_and_restore_internal(BackupUploadMode backupUploadMode, bool oneTimeBackup)
         {
             await using (CleanupAsync())
             using (var store = GetDocumentStore())
@@ -71,13 +80,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var googleCloudSettings = GetGoogleCloudSettings();
-                var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                var id = await Backup.GetBackupOperationIdAsync(store, backupTaskId);
-                var backupResult = (await store.Maintenance.SendAsync(new GetOperationStateOperation(id))).Result as BackupResult;
-                Assert.NotNull(backupResult);
-                Assert.True(backupResult.Counters.Processed);
-                Assert.Equal(1, backupResult.Counters.ReadCount);
+                long backupTaskId = 0;
+                BackupResult backupResult;
+
+                if (oneTimeBackup == false)
+                {
+                    var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings, backupUploadMode: backupUploadMode);
+                    backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var id = await Backup.GetBackupOperationIdAsync(store, backupTaskId);
+                    backupResult = (await store.Maintenance.SendAsync(new GetOperationStateOperation(id))).Result as BackupResult;
+                    Assert.NotNull(backupResult);
+                    Assert.True(backupResult.Counters.Processed);
+                    Assert.Equal(1, backupResult.Counters.ReadCount);
+                }
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -87,13 +102,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     await session.SaveChangesAsync();
                 }
 
-                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                string backupFolderName;
+                if (oneTimeBackup)
+                {
+                    var backupConfiguration = new BackupConfiguration
+                    {
+                        BackupType = BackupType.Backup,
+                        BackupUploadMode = backupUploadMode,
+                        GoogleCloudSettings = googleCloudSettings
+                    };
+
+                    var operation = await store.Maintenance.SendAsync(new BackupOperation(backupConfiguration));
+                    backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
+                    Assert.Equal(2, backupResult.Counters.ReadCount);
+
+                    backupFolderName = backupResult.LocalBackup.BackupDirectory;
+                }
+                else
+                {
+                    var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                    var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                    AssertUploadedToGoogleCloud(status.UploadToGoogleCloud, backupUploadMode);
+
+                    backupFolderName = status.FolderName;
+                }
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(status.FolderName);
+                var subfolderGoogleCloudSettings = GetGoogleCloudSettings(backupFolderName);
 
                 var restoreFromGoogleCloudConfiguration = new RestoreFromGoogleCloudConfiguration
                 {
@@ -129,8 +167,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
-        public async Task can_backup_and_restore_snapshot()
+        [GoogleCloudRetryTheory, Trait("Category", "Smuggler")]
+        [InlineData(BackupUploadMode.Default)]
+        [InlineData(BackupUploadMode.DirectUpload)]
+        public async Task can_backup_and_restore_snapshot(BackupUploadMode backupUploadMode)
         {
             await using (CleanupAsync())
             using (var store = GetDocumentStore())
@@ -158,7 +198,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var googleCloudSettings = GetGoogleCloudSettings();
-                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, googleCloudSettings: googleCloudSettings);
+                var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, googleCloudSettings: googleCloudSettings, backupUploadMode: backupUploadMode);
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                 using (var session = store.OpenAsyncSession())
@@ -173,6 +213,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
                 var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                AssertUploadedToGoogleCloud(status.UploadToGoogleCloud, backupUploadMode);
+
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
@@ -214,6 +256,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     }
                 }
             }
+        }
+
+        private static void AssertUploadedToGoogleCloud(UploadToGoogleCloud uploadStatus, BackupUploadMode backupUploadMode)
+        {
+            Assert.NotNull(uploadStatus);
+            Assert.False(uploadStatus.Skipped, "the backup should have been uploaded to Google Cloud");
+
+            if (backupUploadMode != BackupUploadMode.DirectUpload)
+                return;
+
+            // the direct upload stream sets the final state once the object was created
+            Assert.Equal(UploadState.Done, uploadStatus.UploadProgress.UploadState);
+            Assert.True(uploadStatus.UploadProgress.UploadedInBytes > 0, "nothing was uploaded");
+            Assert.Equal(uploadStatus.UploadProgress.TotalInBytes, uploadStatus.UploadProgress.UploadedInBytes);
         }
 
         private GoogleCloudSettings GetGoogleCloudSettings(string subPath = null)
