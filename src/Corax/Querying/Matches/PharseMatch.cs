@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Data.CompactTrees;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -81,9 +82,10 @@ public struct PhraseMatch<TInner> : IQueryMatch
           ? stackalloc int[128]
           : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
         
+        var key = new CompactKey(); // shared by the readers of all the entries
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
-            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
+            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, key);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
             

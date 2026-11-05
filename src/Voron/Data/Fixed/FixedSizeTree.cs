@@ -400,6 +400,19 @@ namespace Voron.Data.Fixed
             return new FixedSizeTreePage<TVal>(readOnlyPage.Pointer, _entrySize, Constants.Storage.PageSize);
         }
 
+        // One page object is reused for all the levels of a lookup. Not for concurrent use.
+        private FixedSizeTreePage<TVal> _lookupPage;
+
+        private FixedSizeTreePage<TVal> GetReadOnlyPageForLookup(long pageNumber)
+        {
+            var readOnlyPage = _tx.GetPage(pageNumber);
+            if (_lookupPage == null)
+                return _lookupPage = new FixedSizeTreePage<TVal>(readOnlyPage.Pointer, _entrySize, Constants.Storage.PageSize);
+
+            _lookupPage.Reset(readOnlyPage.Pointer, _entrySize, Constants.Storage.PageSize);
+            return _lookupPage;
+        }
+
         internal FixedSizeTreePageHeader GetPageHeader(long pageNumber)
         {
             return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
@@ -1301,17 +1314,36 @@ namespace Voron.Data.Fixed
             }
         }
 
+        // In a read transaction the header cannot change, so it is looked up once.
+        private byte* _readHeader;
+        private bool _readHeaderLoaded;
+
+        private byte* GetHeaderForRead()
+        {
+            if (_tx.Flags != TransactionFlags.Read)
+                return _parent.DirectRead(_treeName);
+
+            if (_readHeaderLoaded == false)
+            {
+                _readHeader = _parent.DirectRead(_treeName);
+                _readHeaderLoaded = true;
+            }
+
+            return _readHeader;
+        }
+
         public byte* ReadPtr(TVal key, out int size)
         {
             byte* ptr;
-            switch (Type)
+            var treeHeader = GetHeaderForRead();
+            switch (treeHeader == null ? (RootObjectType?)null : ((FixedSizeTreeHeader.Embedded*)treeHeader)->RootObjectType)
             {
                 case null:
                     size = 0;
                     return null;
 
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    ptr = _parent.DirectRead(_treeName);
+                    ptr = treeHeader;
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
                     var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
@@ -1322,16 +1354,16 @@ namespace Voron.Data.Fixed
                     break;
 
                 case RootObjectType.FixedSizeTree:
-                    var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
+                    var largePtr = (FixedSizeTreeHeader.Large*)treeHeader;
 
-                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
+                    var page = GetReadOnlyPageForLookup(largePtr->RootPageNumber);
                     while (page.IsLeaf == false)
                     {
                         BinarySearch(page, key);
                         if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                             page.LastSearchPosition--;
                         var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                        page = GetReadOnlyPage(childPageNumber);
+                        page = GetReadOnlyPageForLookup(childPageNumber); // the same object: the parent is not needed anymore
                     }
                     dataStart = page.Pointer + page.StartPosition;
 
@@ -1343,7 +1375,7 @@ namespace Voron.Data.Fixed
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(Type?.ToString());
+                    throw new ArgumentOutOfRangeException(((FixedSizeTreeHeader.Embedded*)treeHeader)->RootObjectType.ToString());
             }
 
             size = _valSize;

@@ -56,6 +56,7 @@ namespace Corax.Indexing
         private HashSet<long> _newVectorRootPages;
 
         private CompactKeyCacheScope _compactKeyScope;
+        private CompactKey _entryTermsKey;
 
         /// <summary>
         /// Meta-tree that contains mapping Field -> EntryId -> TermId.
@@ -604,7 +605,9 @@ namespace Corax.Indexing
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
             HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages);
+            // one key for all the deleted entries
+            _entryTermsKey ??= new CompactKey();
+            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages, _entryTermsKey);
 
             reader.Reset();
             while (reader.MoveNextStoredField())
@@ -1591,6 +1594,7 @@ namespace Corax.Indexing
         public void Dispose()
         {
             _compactKeyScope.Dispose();
+            _entryTermsKey?.Dispose();
             _termsPerEntryId.Dispose(_entriesAllocator);
             _termsPerEntryIds.Dispose(_entriesAllocator);
             _pforDecoder.Dispose();

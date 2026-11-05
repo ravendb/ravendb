@@ -1,4 +1,5 @@
 ﻿using System;
+using Voron.Data.CompactTrees;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -466,12 +467,13 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             comparerFieldsRootPage = fieldRoot;
         }
         
+        var key = new CompactKey(); // shared by the readers of all the entries
         do
         {
             int currentMatchesIdx = 0;
             for (int docIdx = 0; docIdx < read; ++docIdx)
             {
-                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage);
+                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage, key);
                 var documentMatched = true;
                 
                 for (int comparerId = 0; comparerId < _comparers.Length; ++comparerId)

@@ -76,8 +76,7 @@ public partial class IndexSearcher
                 _indexSearcher = indexSearcher;
                 _filterResults = filterResults;
                 _random = random ?? Random.Shared;
-                _key = new();
-                _key.Initialize(indexSearcher._transaction.LowLevelTransaction);
+                _key = new(); // initialized by every entry terms reader, see MoveNext
                 var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
                 _vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
                 _nodesByVectorId = searchState.NodeIdsByVectorId;
@@ -102,7 +101,6 @@ public partial class IndexSearcher
                     _filterResults.Add(idX);
                 _current = -1;
                 _isDone = true;
-                _key.Dispose();
             }
 
             public bool MoveNext()
@@ -154,6 +152,9 @@ public partial class IndexSearcher
                         }
                     }
 
+                    // the next reader initializes the key again, so return its buffers first
+                    _key.Reset();
+
                     if (found)
                         return true;
 
@@ -196,10 +197,11 @@ public partial class IndexSearcher
             // and then filter the documents stored in the posting list of each node individually.
             // Ideally, each node represents only a single document.
             Page p = default;
+            var key = new CompactKey(); // one key for all the entries, see RandomNodesFromFilterEnumerator.MoveNext
             var it = filterResults.GetIterator(0);
             while (it.MoveNext())
             {
-                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p);
+                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p, key);
                 while (entryTermsReader.FindNextStored(vectorRootPage))
                 {
                     var vectorHash = entryTermsReader.StoredField.Value;
@@ -209,6 +211,8 @@ public partial class IndexSearcher
                             nodesIdsToScan.Add(nodeId);
                     }
                 }
+
+                key.Reset();
             }
 
             var uniqueCount = Sorting.SortAndRemoveDuplicates(nodesIdsToScan.ToSpan());

@@ -9,9 +9,9 @@ namespace Voron.Data.Fixed
     public sealed unsafe class FixedSizeTreePage<TVal>
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
-        private readonly byte* _ptr;
-        private readonly int _entrySize;
-        private readonly int _pageSize;
+        private byte* _ptr;
+        private int _entrySize;
+        private int _pageSize;
 
         public int LastMatch;
         public int LastSearchPosition;
@@ -19,8 +19,17 @@ namespace Voron.Data.Fixed
 
         public FixedSizeTreePage(byte* b, int entrySize, int pageSize)
         {
+            Reset(b, entrySize, pageSize);
+        }
+
+        /// <summary>Points this object to another page.</summary>
+        public void Reset(byte* b, int entrySize, int pageSize)
+        {
             _ptr = b;
             _pageSize = pageSize;
+            LastMatch = 0;
+            LastSearchPosition = 0;
+            Dirty = false;
 
             if (IsBranch)
                 _entrySize = FixedSizeTree<TVal>.BranchEntrySize;
