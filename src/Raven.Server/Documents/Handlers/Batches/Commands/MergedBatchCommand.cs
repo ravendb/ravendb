@@ -77,6 +77,13 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.PUT:
 
                     DocumentsStorage.PutOperationResults putResult;
+                    if (cmd.SkipOverwriteIfUnchanged && TryGetUnchangedDocument(context, cmd, out putResult))
+                    {
+                        AddPutResult(putResult);
+                        lastPutResult = putResult;
+                        break;
+                    }
+
                     try
                     {
                         var flags = DocumentFlags.None;
@@ -533,6 +540,34 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
             AttachmentStreams = AttachmentStreams,
             IncludeReply = IncludeReply
         };
+    }
+
+    private bool TryGetUnchangedDocument(DocumentsOperationContext context, BatchRequestParser.CommandData cmd, out DocumentsStorage.PutOperationResults result)
+    {
+        result = default;
+
+        if (cmd.ChangeVector != null || cmd.ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
+            return false;
+
+        Document existing = Database.DocumentsStorage.Get(context, cmd.Id, throwOnConflict: false);
+        if (existing == null)
+            return false;
+
+        DocumentCompareResult compareResult = DocumentCompare.IsEqualTo(existing.Data, cmd.Document, DocumentCompare.DocumentCompareOptions.MergeMetadataCompareDataArchivalMetadata);
+        if (compareResult.HasFlag(DocumentCompareResult.Equal) == false)
+            return false;
+
+        result = new DocumentsStorage.PutOperationResults
+        {
+            Id = existing.Id,
+            Etag = existing.Etag,
+            Collection = Database.DocumentsStorage.ExtractCollectionName(context, existing.Data),
+            LastModified = existing.LastModified,
+            ChangeVector = existing.ChangeVector,
+            Flags = existing.Flags
+        };
+
+        return true;
     }
 
     private string EtlGetDocIdFromPrefixIfNeeded(string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)

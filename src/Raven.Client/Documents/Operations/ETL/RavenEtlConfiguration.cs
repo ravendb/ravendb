@@ -10,6 +10,19 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public int? LoadRequestTimeoutInSec { get; set; }
 
+        /// <summary>
+        /// When enabled, the destination keeps a document as-is if the transformed result equals what it already stores,
+        /// so its etag doesn't change and nothing downstream (indexes, subscriptions, revisions, replication, ETL) is triggered.
+        /// </summary>
+        /// <remarks>
+        /// Applies only when the script loads into the same collection as the source document (or there is no script).
+        /// Loads into a different collection, and scripts calling addAttachment, addCounter or addTimeSeries,
+        /// delete the destination document before putting it, so those documents are always rewritten.
+        /// Changes to <c>@collection</c>, <c>@expires</c>, <c>@refresh</c>, <c>@archive-at</c> and <c>@archived</c> metadata
+        /// are still written; changes to other <c>@</c>-prefixed metadata alone are not.
+        /// </remarks>
+        public bool SkipOverwriteIfUnchanged { get; set; }
+
         public override EtlType EtlType => EtlType.Raven;
 
         public override string GetDestination()
@@ -42,6 +55,9 @@ namespace Raven.Client.Documents.Operations.ETL
             {
                 if (ravenConfig.LoadRequestTimeoutInSec != LoadRequestTimeoutInSec)
                     diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+
+                if (ravenConfig.SkipOverwriteIfUnchanged != SkipOverwriteIfUnchanged)
+                    diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
             }
 
             return diff;
@@ -52,6 +68,7 @@ namespace Raven.Client.Documents.Operations.ETL
             var result = base.ToJson();
 
             result[nameof(LoadRequestTimeoutInSec)] = LoadRequestTimeoutInSec;
+            result[nameof(SkipOverwriteIfUnchanged)] = SkipOverwriteIfUnchanged;
 
             return result;
         }

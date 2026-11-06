@@ -46,6 +46,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             public bool IdPrefixed;
             public long Index;
             public bool FromEtl;
+            public bool SkipOverwriteIfUnchanged;
             public bool ReturnDocument;
 
             public bool SeenCounters;
@@ -558,6 +559,18 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
+                    case CommandPropertyName.SkipOverwriteIfUnchanged:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.SkipOverwriteIfUnchanged = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -818,6 +831,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             #endregion RavenData
 
             FromEtl,
+            SkipOverwriteIfUnchanged,
 
             JsonPatch,
             TrackedEntities
@@ -945,6 +959,12 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     return CommandPropertyName.NoSuchProperty;
 
+
+                case 24:
+                    if ("SkipOverwriteIfUnchanged"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.SkipOverwriteIfUnchanged;
+
+                    return CommandPropertyName.NoSuchProperty;
 
                 case 29:
                     if ("ForceRevisionCreationStrategy"u8.IsEqualConstant(state.StringBuffer))
