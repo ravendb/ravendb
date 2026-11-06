@@ -177,6 +177,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (commands.Count == 0)
                 return 0;
 
+            if (Configuration.SkipOverwriteIfUnchanged)
+            {
+                foreach (ICommandData command in commands)
+                {
+                    if (command is PutCommandDataWithBlittableJson put)
+                        put.SkipOverwriteIfUnchanged = true;
+                }
+            }
+
             var requestTimeout = Configuration.LoadRequestTimeoutInSec != null
                 ? TimeSpan.FromSeconds(Configuration.LoadRequestTimeoutInSec.Value)
                 : Database.Configuration.Etl.RavenLoadRequestTimeout.AsTimeSpan;

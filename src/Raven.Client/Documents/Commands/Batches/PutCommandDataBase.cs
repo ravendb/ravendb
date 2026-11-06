@@ -73,6 +73,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public CommandType Type { get; } = CommandType.PUT;
         public ForceRevisionStrategy ForceRevisionCreationStrategy { get; }
 
+        internal bool SkipOverwriteIfUnchanged { get; set; }
+
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
             var json = new DynamicJsonValue
@@ -90,6 +92,11 @@ namespace Raven.Client.Documents.Commands.Batches
             if (ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
             {
                 json[nameof(ForceRevisionCreationStrategy)] = ForceRevisionCreationStrategy;
+            }
+
+            if (SkipOverwriteIfUnchanged)
+            {
+                json[nameof(SkipOverwriteIfUnchanged)] = true;
             }
 
             return json;
