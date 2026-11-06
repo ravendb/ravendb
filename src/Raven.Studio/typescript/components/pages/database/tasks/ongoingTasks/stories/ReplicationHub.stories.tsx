@@ -22,6 +22,7 @@ interface ReplicationHubProps {
     disabled: boolean;
     completed: boolean;
     withOutConnections: boolean;
+    sinksCount?: number;
     customizeTask: (x: OngoingTaskPullReplicationAsHub) => void;
     emptyScript: boolean;
     runtimeError: boolean;
@@ -48,7 +49,7 @@ export const Default: StoryObj<ReplicationHubProps> = {
                 definition.Disabled = args.disabled;
             });
             args.customizeTask?.(ongoingTask);
-            x.OngoingTasks = args.withOutConnections ? [] : [ongoingTask];
+            x.OngoingTasks = args.withOutConnections ? [] : getConnectedSinks(ongoingTask, args.sinksCount ?? 1);
             x.PullReplications = x.PullReplications.filter((x) =>
                 args.withOutConnections ? x.Name === "EmptyHub" : x.Name !== "EmptyHub"
             );
@@ -98,3 +99,58 @@ export const NoConnections: StoryObj<ReplicationHubProps> = {
         withOutConnections: true,
     },
 };
+
+export const ManySinks: StoryObj<ReplicationHubProps> = {
+    ...Default,
+    args: {
+        ...Default.args,
+        databaseType: "cluster",
+        sinksCount: 15,
+    },
+};
+
+const sinkSites = [
+    "Berlin",
+    "Paris",
+    "Tokyo",
+    "NewYork",
+    "SaoPaulo",
+    "Sydney",
+    "Toronto",
+    "Warsaw",
+    "CapeTown",
+    "Singapore",
+    "Reykjavik",
+    "BuenosAires",
+    "Mumbai",
+    "Oslo",
+    "SanFrancisco-Regional-Warehouse",
+];
+
+const sinkConnectionStatuses: OngoingTaskPullReplicationAsHub["TaskConnectionStatus"][] = [
+    "Active",
+    "Active",
+    "NotActive",
+    "Reconnect",
+];
+
+function getConnectedSinks(
+    template: OngoingTaskPullReplicationAsHub,
+    count: number
+): OngoingTaskPullReplicationAsHub[] {
+    if (count === 1) {
+        return [template];
+    }
+
+    return Array.from({ length: count }, (_, index) => {
+        const site = sinkSites[index % sinkSites.length];
+        return {
+            ...template,
+            HandlerId: index % 2 === 0 ? template.HandlerId : `hub-handler-${index}`,
+            DestinationDatabase: `Sink-${site}`,
+            DestinationUrl: `http://${site.toLowerCase()}.example.com:8080`,
+            TaskConnectionStatus: sinkConnectionStatuses[index % sinkConnectionStatuses.length],
+            Error: index % 5 === 4 ? "Unable to connect to the sink" : null,
+        };
+    });
+}
