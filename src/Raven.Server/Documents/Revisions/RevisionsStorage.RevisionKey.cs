@@ -6,18 +6,18 @@
 //
 // Dual-form PK. Revision rows are addressed by two PK shapes: the canonical
 // hash form (`Blake2b-128(cv.Version)`, 22 bytes) and the legacy raw `cv.Version`
-// bytes. Lookups probe hash first; the raw probe is skipped on born-clean
-// databases (`HashedRevisionPk` token). The full canonical CV travels into the
+// bytes. Lookups probe hash first; the raw probe is skipped once every revision
+// row of this storage is hashed (`DualForm`: the record's HashedRevisionPk, or the storage's). The full canonical CV travels into the
 // writer via `RevisionsTableRow.FullChangeVector` and is written to
 // `RevisionsTable.FullChangeVector` (field 12) on Hashed-form rows. Legacy
 // 12-field rows have no field 12; readers dispatch on `tvr.Count` and fall
 // back to field 0 (version-only) -- see `ReadChangeVectorFromTvr`.
 //
-// Upgrade-on-touch: a Legacy row is migrated to the canonical Hashed PK as a
-// side effect of any actual row rewrite (MarkRevisionAsConflicted's
-// WriteRevisionTableRow does delete-both-forms + Set-at-hash with field 12
-// populated from the incoming full canonical CV). A no-op re-Put leaves the
-// Legacy row in place.
+// Upgrade-on-touch: a Legacy row is migrated to the canonical Hashed PK when
+// MarkRevisionAsConflicted rewrites it (it deletes the row it read and inserts
+// at the hash, field 12 from the incoming full canonical CV). A Legacy row with
+// a twin stays two rows until the revisions key cleanup merges them. A no-op
+// re-Put leaves the Legacy row in place.
 
 using System;
 using Raven.Server.ServerWide.Context;
@@ -130,6 +130,13 @@ namespace Raven.Server.Documents.Revisions
                 return deleted;
             return table.DeleteByKey(raw);
         }
+
+        public void DeleteOne(Table table, Slice hash, Slice raw)
+        {
+            if (hashOnly == false && table.DeleteByKey(raw))
+                return;
+            table.DeleteByKey(hash);
+        }
     }
 
     public partial class RevisionsStorage
@@ -158,8 +165,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        // Constructed fresh on each access -- `_database.SupportedFeatures` is set after RevisionsStorage's ctor.
-        public DualFormProbe DualForm => new(_database.SupportedFeatures.SupportedFeatureTypes.HashedRevisionPk);
+        public DualFormProbe DualForm => new(HashedRevisionPk);
 
         internal bool TryReadRevision(Table table, in RevisionKey key, out TableValueReader tvr)
             => DualForm.TryRead(table, key.PrefixedHash, key.Raw, out tvr);
@@ -167,9 +173,8 @@ namespace Raven.Server.Documents.Revisions
         internal bool VerifyRevisionExists(Table table, in RevisionKey key)
             => DualForm.Exists(table, key.PrefixedHash, key.Raw);
 
-        // Must run before any Insert/Set so a stale legacy-PK row can't coexist with a fresh hash-PK row.
-        internal void DeleteRevisionByKey(Table table, in RevisionKey key)
-            => DualForm.Delete(table, key.PrefixedHash, key.Raw);
+        internal void DeleteRevisionRow(Table table, in RevisionKey key)
+            => DualForm.DeleteOne(table, key.PrefixedHash, key.Raw);
 
         internal static unsafe ChangeVector ReadChangeVectorFromTvr(DocumentsOperationContext context, ref TableValueReader tvr)
         {
@@ -182,7 +187,7 @@ namespace Raven.Server.Documents.Revisions
             return context.GetChangeVector(System.Text.Encoding.UTF8.GetString(pkPtr, pkSize));
         }
 
-        internal unsafe void WriteRevisionTableRecord(DocumentsOperationContext context, Table table, in RevisionKeys keys, RevisionsTableRow row, bool isInsert)
+        internal unsafe void WriteRevisionTableRecord(DocumentsOperationContext context, Table table, in RevisionKeys keys, RevisionsTableRow row)
         {
             if (row.FullChangeVector == null)
                 throw new ArgumentException("RevisionsTableRow.FullChangeVector must be non-null -- the writer cannot populate RevisionsTable.FullChangeVector (field 12) without it.", nameof(row));
@@ -204,11 +209,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(row.ResolvedField);                                                             // 10
                     tvb.Add(Bits.SwapBytes(row.LastModifiedTicks));                                         // 11
                     tvb.Add(fullCvSlice.Content.Ptr, fullCvSlice.Size);                                     // 12 FullChangeVector
-                    DeleteRevisionByKey(table, in keys.Revision);
-                    if (isInsert)
-                        table.Insert(tvb);
-                    else
-                        table.Set(tvb);
+                    table.Insert(tvb);
                 }
             }
         }

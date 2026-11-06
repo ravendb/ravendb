@@ -440,7 +440,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         putResult = Database.DocumentsStorage.Put(context, existingDoc.Id,
                                                                  existingDoc.ChangeVector,
                                                                   clonedDocData,
-                                                                  flags: existingDoc.Flags,
+                                                                  flags: existingDoc.Flags.Strip(DocumentFlags.FromClusterTransaction),
                                                                   nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
 
                         existingDoc.ChangeVector = putResult.ChangeVector;

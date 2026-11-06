@@ -636,7 +636,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
                     databaseRecord.CdcSinks = smugglerDatabaseRecord.CdcSinks;
-                    databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
+                    databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures ?? databaseRecord.SupportedFeatures; // a file from before backups carried it
                     databaseRecord.SnowflakeEtls = smugglerDatabaseRecord.SnowflakeEtls;
                     databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;
                     databaseRecord.AiConnectionStrings = smugglerDatabaseRecord.AiConnectionStrings;
