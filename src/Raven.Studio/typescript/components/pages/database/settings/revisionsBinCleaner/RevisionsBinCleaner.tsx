@@ -17,7 +17,9 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormGroup, FormInput, FormSwitch } from "components/common/Form";
+import { FormDurationPicker, FormGroup, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
+import OverridableField from "components/common/OverridableField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
@@ -27,6 +29,8 @@ import { revisionsBinCleanerUtils } from "components/pages/database/settings/rev
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Form from "react-bootstrap/Form";
+
+const defaultCleanerFrequencyPlaceholder = getDefaultDurationPlaceholder(300);
 
 export default function RevisionsBinCleaner() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -147,9 +151,9 @@ export default function RevisionsBinCleaner() {
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
                                                         placeholder={{
-                                                            days: "Default (30)",
-                                                            hours: "Default (0)",
-                                                            minutes: "Default (0)",
+                                                            days: "0",
+                                                            hours: "0",
+                                                            minutes: "0",
                                                         }}
                                                         name="minimumEntriesAgeToKeep"
                                                         showDays
@@ -157,34 +161,35 @@ export default function RevisionsBinCleaner() {
                                                 </FormGroup>
                                             </div>
                                         </Collapse>
-                                        <FormGroup>
-                                            <FormSwitch
-                                                name="isCleanerFrequencyInSecEnabled"
+                                        <div className="align-self-start mw-100">
+                                            <OverridableField
                                                 control={control}
-                                                color="primary"
-                                                className="mb-3"
+                                                overrideName="isCleanerFrequencyInSecEnabled"
+                                                valueName="cleanerFrequencyInSec"
+                                                setValue={setValue}
+                                                label="Cleaner frequency"
                                                 disabled={
                                                     !hasDatabaseAdminAccess ||
                                                     formState.isSubmitting ||
                                                     !formValues.isRevisionsBinCleanerEnabled
                                                 }
                                             >
-                                                Set custom cleaner frequency
-                                            </FormSwitch>
-                                            <FormInput
-                                                name="cleanerFrequencyInSec"
-                                                control={control}
-                                                type="number"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled ||
-                                                    !formValues.isCleanerFrequencyInSecEnabled
-                                                }
-                                                placeholder="Default (300)"
-                                                addon="seconds"
-                                            />
-                                        </FormGroup>
+                                                {({ isOverridden, isDisabled, labelId }) => (
+                                                    <FormDurationPicker
+                                                        name="cleanerFrequencyInSec"
+                                                        control={control}
+                                                        disabled={isDisabled}
+                                                        aria-labelledby={labelId}
+                                                        placeholder={
+                                                            isOverridden
+                                                                ? overriddenDurationPlaceholder
+                                                                : defaultCleanerFrequencyPlaceholder
+                                                        }
+                                                        showSeconds
+                                                    />
+                                                )}
+                                            </OverridableField>
+                                        </div>
                                     </Card.Body>
                                 </Card>
                             </Col>

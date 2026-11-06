@@ -1,12 +1,16 @@
 import React, { useEffect } from "react";
+import classNames from "classnames";
 import Card from "react-bootstrap/Card";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
+import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
+import OverridableField from "components/common/OverridableField";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { i18n } from "common/i18n/i18n";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -23,6 +27,7 @@ import ServerExpirationConfiguration = Raven.Client.Documents.Operations.Expirat
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "components/hooks/useRavenLink";
+import appUrl from "common/appUrl";
 import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
@@ -30,12 +35,16 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import RichAlert from "components/common/RichAlert";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FieldLabel from "components/common/FieldLabel";
+import useUniqueId from "components/hooks/useUniqueId";
 
 export const defaultItemsToProcess = 65536;
 const defaultDeleteFrequencyInSec = 60;
 
 export default function DocumentExpiration() {
+    const commonT = useStudioTranslation("common");
+    const defaultItemsToProcessLabel = defaultItemsToProcess.toLocaleString(i18n.language);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
@@ -67,52 +76,45 @@ export default function DocumentExpiration() {
         ],
     });
 
-    const defaultDeleteFrequency =
-        minPeriodForExpirationInHours > 0
-            ? moment.duration(minPeriodForExpirationInHours, "hours").asSeconds()
-            : defaultDeleteFrequencyInSec;
+    const licenseLimitedFrequencyLabelId = useUniqueId("expiration-frequency-label-");
 
-    const effectiveDeleteFrequencyInSec = formValues.isDeleteFrequencyEnabled
-        ? formValues.deleteFrequency
-        : defaultDeleteFrequencyInSec;
+    const isLicenseLimited = minPeriodForExpirationInHours > 0;
+    const licenseMinDeleteFrequencyInSec = moment.duration(minPeriodForExpirationInHours, "hours").asSeconds();
+
+    const effectiveDeleteFrequencyInSec =
+        isLicenseLimited || formValues.isDeleteFrequencyEnabled
+            ? (formValues.deleteFrequency ?? defaultDeleteFrequencyInSec)
+            : defaultDeleteFrequencyInSec;
 
     const deleteFrequencyInHours = moment.duration(effectiveDeleteFrequencyInSec, "seconds").asHours();
 
     const isLimitWarningVisible =
-        minPeriodForExpirationInHours > 0 &&
+        isLicenseLimited &&
         formValues.isDocumentExpirationEnabled &&
         deleteFrequencyInHours < minPeriodForExpirationInHours;
 
-    const deleteFrequencyPlaceholder = getDeleteFrequencyPlaceholder(defaultDeleteFrequency);
+    const licenseLimitMessage = `Your license doesn't allow an expiration frequency below ${minPeriodForExpirationInHours} hours.`;
 
     useEffect(() => {
         const { unsubscribe } = watch((values, { name }) => {
             switch (name) {
                 case "isDocumentExpirationEnabled": {
                     if (values.isDocumentExpirationEnabled) {
-                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
+                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
 
                         if (minPeriodForExpirationInHours > 0) {
                             setValue("isDeleteFrequencyEnabled", true, { shouldValidate: true });
                         }
                     } else {
-                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
-                        setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isLimitMaxItemsToProcessEnabled": {
-                    if (values.isLimitMaxItemsToProcessEnabled) {
-                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
-                    } else {
                         setValue("maxItemsToProcess", null, { shouldValidate: true });
+                        setValue("isDeleteFrequencyEnabled", false, { shouldValidate: true });
                     }
                     break;
                 }
                 case "isDeleteFrequencyEnabled": {
                     if (values.isDeleteFrequencyEnabled) {
-                        if (values.deleteFrequency == null) {
-                            setValue("deleteFrequency", defaultDeleteFrequency, { shouldValidate: true });
+                        if (values.deleteFrequency == null && minPeriodForExpirationInHours > 0) {
+                            setValue("deleteFrequency", licenseMinDeleteFrequencyInSec, { shouldValidate: true });
                         }
                     } else {
                         setValue("deleteFrequency", null, { shouldValidate: true });
@@ -122,7 +124,7 @@ export default function DocumentExpiration() {
             }
         });
         return () => unsubscribe();
-    }, [defaultDeleteFrequency, minPeriodForExpirationInHours, setValue, watch]);
+    }, [licenseMinDeleteFrequencyInSec, minPeriodForExpirationInHours, setValue, watch]);
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -130,7 +132,8 @@ export default function DocumentExpiration() {
 
             await databasesService.saveExpirationConfiguration(databaseName, {
                 Disabled: !formData.isDocumentExpirationEnabled,
-                DeleteFrequencyInSec: formData.isDeleteFrequencyEnabled ? formData.deleteFrequency : null,
+                DeleteFrequencyInSec:
+                    isLicenseLimited || formData.isDeleteFrequencyEnabled ? formData.deleteFrequency : null,
                 MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
             });
 
@@ -161,80 +164,136 @@ export default function DocumentExpiration() {
                     <Col>
                         <Form onSubmit={handleSubmit(onSave)} autoComplete="off">
                             <AboutViewHeading title="Document Expiration" icon="document-expiration" />
-                            <ButtonWithSpinner
-                                type="submit"
-                                variant="primary"
-                                className="mb-3"
-                                icon="save"
-                                disabled={!formState.isDirty || isLimitWarningVisible}
-                                isSpinning={formState.isSubmitting}
+                            <ConditionalPopover
+                                conditions={{ isActive: isLimitWarningVisible, message: licenseLimitMessage }}
                             >
-                                Save
-                            </ButtonWithSpinner>
+                                <ButtonWithSpinner
+                                    type="submit"
+                                    variant="primary"
+                                    className="mb-3"
+                                    icon="save"
+                                    disabled={!formState.isDirty || isLimitWarningVisible}
+                                    isSpinning={formState.isSubmitting}
+                                >
+                                    Save
+                                </ButtonWithSpinner>
+                            </ConditionalPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch name="isDocumentExpirationEnabled" control={control}>
                                                 Enable Document Expiration
                                             </FormSwitch>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isDeleteFrequencyEnabled"
-                                                    control={control}
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isDocumentExpirationEnabled
-                                                    }
-                                                >
-                                                    Set custom expiration frequency
-                                                </FormSwitch>
-                                                <Collapse appear in={formValues.isDeleteFrequencyEnabled}>
-                                                    <div className="pt-3">
+                                            {isLicenseLimited ? (
+                                                <div>
+                                                    <FieldLabel id={licenseLimitedFrequencyLabelId} className="d-block">
+                                                        Expiration frequency
+                                                    </FieldLabel>
+                                                    <div className="d-inline-block mw-100">
                                                         <div data-testid="deleteFrequencyDurationPicker">
                                                             <FormDurationPicker
                                                                 name="deleteFrequency"
                                                                 control={control}
                                                                 disabled={
                                                                     formState.isSubmitting ||
-                                                                    !formValues.isDeleteFrequencyEnabled
+                                                                    !formValues.isDocumentExpirationEnabled
                                                                 }
-                                                                placeholder={deleteFrequencyPlaceholder}
+                                                                aria-labelledby={licenseLimitedFrequencyLabelId}
+                                                                placeholder={overriddenDurationPlaceholder}
                                                                 showSeconds
                                                             />
                                                         </div>
                                                     </div>
-                                                </Collapse>
-                                                {isLimitWarningVisible && (
-                                                    <RichAlert variant="warning" className="mt-3">
-                                                        Your current license does not allow an expiration frequency
-                                                        below {minPeriodForExpirationInHours} hours.
-                                                    </RichAlert>
+                                                    <div
+                                                        className={classNames(
+                                                            "d-flex flex-wrap align-items-center column-gap-1 mt-1 small",
+                                                            {
+                                                                "item-disabled pe-none":
+                                                                    !formValues.isDocumentExpirationEnabled,
+                                                            }
+                                                        )}
+                                                    >
+                                                        {isLimitWarningVisible && !formState.errors.deleteFrequency ? (
+                                                            <span className="text-danger">
+                                                                <Icon icon="warning" />
+                                                                {licenseLimitMessage}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-muted">
+                                                                Minimum on your license:{" "}
+                                                                <strong>{minPeriodForExpirationInHours} hours</strong>.
+                                                            </span>
+                                                        )}
+                                                        <a
+                                                            href={appUrl.forAbout()}
+                                                            aria-disabled={!formValues.isDocumentExpirationEnabled}
+                                                            tabIndex={
+                                                                formValues.isDocumentExpirationEnabled ? undefined : -1
+                                                            }
+                                                        >
+                                                            See full comparison
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="align-self-start mw-100">
+                                                    <OverridableField
+                                                        control={control}
+                                                        overrideName="isDeleteFrequencyEnabled"
+                                                        valueName="deleteFrequency"
+                                                        setValue={setValue}
+                                                        label="Expiration frequency"
+                                                        disabled={
+                                                            formState.isSubmitting ||
+                                                            !formValues.isDocumentExpirationEnabled
+                                                        }
+                                                    >
+                                                        {({ isOverridden, isDisabled, labelId }) => (
+                                                            <div data-testid="deleteFrequencyDurationPicker">
+                                                                <FormDurationPicker
+                                                                    name="deleteFrequency"
+                                                                    control={control}
+                                                                    disabled={isDisabled}
+                                                                    aria-labelledby={labelId}
+                                                                    placeholder={
+                                                                        isOverridden
+                                                                            ? overriddenDurationPlaceholder
+                                                                            : deleteFrequencyPlaceholder
+                                                                    }
+                                                                    showSeconds
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </OverridableField>
+                                                </div>
+                                            )}
+                                            <OverridableField
+                                                control={control}
+                                                overrideName="isLimitMaxItemsToProcessEnabled"
+                                                valueName="maxItemsToProcess"
+                                                setValue={setValue}
+                                                optimalValue={defaultItemsToProcess}
+                                                optimalValueLabel={defaultItemsToProcessLabel}
+                                                optimalValueHint={commonT("maxItemsOptimalHint", {
+                                                    items: defaultItemsToProcessLabel,
+                                                })}
+                                                label="Max number of documents to process in a single run"
+                                                disabled={
+                                                    formState.isSubmitting || !formValues.isDocumentExpirationEnabled
+                                                }
+                                            >
+                                                {({ isDisabled }) => (
+                                                    <FormInput
+                                                        name="maxItemsToProcess"
+                                                        control={control}
+                                                        type="number"
+                                                        placeholder="Default (unlimited)"
+                                                        disabled={isDisabled}
+                                                        addon="items"
+                                                    />
                                                 )}
-                                            </div>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isDocumentExpirationEnabled
-                                                    }
-                                                >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
-                                            </div>
+                                            </OverridableField>
                                         </div>
                                     </Card.Body>
                                 </Card>
@@ -279,15 +338,7 @@ export default function DocumentExpiration() {
     );
 }
 
-function getDeleteFrequencyPlaceholder(totalSeconds: number) {
-    const duration = moment.duration(totalSeconds, "seconds");
-
-    return {
-        hours: `Default (${Math.floor(duration.asHours())})`,
-        minutes: `Default (${duration.minutes()})`,
-        seconds: `Default (${duration.seconds()})`,
-    };
-}
+const deleteFrequencyPlaceholder = getDefaultDurationPlaceholder(defaultDeleteFrequencyInSec);
 
 function mapToFormData(dto: ServerExpirationConfiguration): DocumentExpirationFormData {
     if (!dto) {

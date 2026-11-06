@@ -4,5 +4,6 @@
     "delete": "Usuń",
     "refresh": "Odśwież",
     "loadFromFile": "Wczytaj z pliku",
-    "usefulLinks": "przydatne linki"
+    "usefulLinks": "przydatne linki",
+    "maxItemsOptimalHint": "Przetwarzaj maksymalnie {{items}} dokumentów w jednym przebiegu, aby każdy przebieg był krótki."
 }

@@ -3,6 +3,7 @@ import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
 import FormGroup from "react-bootstrap/FormGroup";
 import InputGroup from "react-bootstrap/InputGroup";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 interface Duration {
     days: number;
@@ -24,11 +25,24 @@ export interface DurationPickerProps {
         seconds?: string;
     };
     isFlexGrow?: boolean;
+    "aria-labelledby"?: string;
+    onInvalidPartMessageChange?: (message: string) => void;
 }
 
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled, isFlexGrow } = props;
+    const {
+        totalSeconds,
+        onChange,
+        showDays,
+        placeholder,
+        showSeconds,
+        disabled,
+        isFlexGrow,
+        "aria-labelledby": ariaLabelledBy,
+        onInvalidPartMessageChange,
+    } = props;
 
+    const t = useStudioTranslation("durationPicker");
     const initialValues = getInitialValues(totalSeconds, showDays);
 
     const [days, setDays] = useState(initialValues?.days ?? null);
@@ -39,23 +53,31 @@ export default function DurationPicker(props: DurationPickerProps) {
     // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
     const lastTotalSecondsRef = useRef(totalSeconds);
 
+    const visibleParts = [showDays ? days : null, hours, minutes, showSeconds ? seconds : null];
+    const isEmpty = visibleParts.every((part) => part == null);
+    const invalidPartMessage = getInvalidPartMessage(visibleParts);
+
     useEffect(() => {
-        if (days == null && hours == null && minutes == null && seconds == null) {
-            return;
-        }
+        onInvalidPartMessageChange?.(invalidPartMessage);
+    }, [onInvalidPartMessageChange, invalidPartMessage]);
 
-        const calculatedTotalSeconds = seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
+    useEffect(() => {
+        const calculatedTotalSeconds = isEmpty
+            ? null
+            : invalidPartMessage
+              ? NaN
+              : seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
 
-        if (calculatedTotalSeconds === lastTotalSecondsRef.current) {
+        if (Object.is(calculatedTotalSeconds, lastTotalSecondsRef.current)) {
             return;
         }
 
         lastTotalSecondsRef.current = calculatedTotalSeconds;
         onChange(calculatedTotalSeconds);
-    }, [onChange, days, hours, minutes, seconds]);
+    }, [onChange, days, hours, minutes, seconds, isEmpty, invalidPartMessage]);
 
     useEffect(() => {
-        if (totalSeconds === lastTotalSecondsRef.current) {
+        if (Object.is(totalSeconds, lastTotalSecondsRef.current)) {
             return;
         }
 
@@ -74,7 +96,11 @@ export default function DurationPicker(props: DurationPickerProps) {
     };
 
     return (
-        <div className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}>
+        <div
+            role="group"
+            aria-labelledby={ariaLabelledBy}
+            className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}
+        >
             {showDays && (
                 <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
                     <InputGroup>
@@ -85,8 +111,9 @@ export default function DurationPicker(props: DurationPickerProps) {
                             placeholder={placeholder?.days}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                             disabled={disabled}
+                            aria-label={t("days")}
                         />
-                        <InputGroup.Text>Days</InputGroup.Text>
+                        <InputGroup.Text>{t("days")}</InputGroup.Text>
                     </InputGroup>
                 </FormGroup>
             )}
@@ -99,8 +126,9 @@ export default function DurationPicker(props: DurationPickerProps) {
                         placeholder={placeholder?.hours}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                         disabled={disabled}
+                        aria-label={t("hours")}
                     />
-                    <InputGroup.Text>Hours</InputGroup.Text>
+                    <InputGroup.Text>{t("hours")}</InputGroup.Text>
                 </InputGroup>
             </FormGroup>
             <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
@@ -112,8 +140,9 @@ export default function DurationPicker(props: DurationPickerProps) {
                         placeholder={placeholder?.minutes}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                         disabled={disabled}
+                        aria-label={t("minutes")}
                     />
-                    <InputGroup.Text>Minutes</InputGroup.Text>
+                    <InputGroup.Text>{t("minutes")}</InputGroup.Text>
                 </InputGroup>
             </FormGroup>
             {showSeconds && (
@@ -126,14 +155,27 @@ export default function DurationPicker(props: DurationPickerProps) {
                             placeholder={placeholder?.seconds}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                             disabled={disabled}
+                            aria-label={t("seconds")}
                         />
-                        <InputGroup.Text>Seconds</InputGroup.Text>
+                        <InputGroup.Text>{t("seconds")}</InputGroup.Text>
                     </InputGroup>
                 </FormGroup>
             )}
         </div>
     );
 }
+function getInvalidPartMessage(parts: number[]): string {
+    const filledParts = parts.filter((part) => part != null);
+
+    if (filledParts.some((part) => part < 0)) {
+        return "Please enter positive number";
+    }
+    if (filledParts.some((part) => !Number.isInteger(part))) {
+        return "Please enter integer number";
+    }
+    return null;
+}
+
 function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
     if (totalSeconds == null) {
         return null;
@@ -162,5 +204,26 @@ function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
         hours,
         minutes,
         seconds,
+    };
+}
+
+export const overriddenDurationPlaceholder: DurationPickerProps["placeholder"] = {
+    days: "0",
+    hours: "0",
+    minutes: "0",
+    seconds: "0",
+};
+
+export function getDefaultDurationPlaceholder(
+    totalSeconds: number,
+    showDays = false
+): DurationPickerProps["placeholder"] {
+    const { days, hours, minutes, seconds } = getInitialValues(totalSeconds, showDays);
+
+    return {
+        days: `Default (${days})`,
+        hours: `Default (${hours})`,
+        minutes: `Default (${minutes})`,
+        seconds: `Default (${seconds})`,
     };
 }
