@@ -3,6 +3,13 @@ import { ArrowUpIcon, StopIcon } from "@/components/icons";
 
 const MAX_TEXTAREA_HEIGHT_PX = 160;
 
+// A textarea has no intrinsic auto-grow, so its height is re-measured from the content.
+function fitToContent(textarea: HTMLTextAreaElement | null) {
+    if (textarea === null) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
+}
+
 type ComposerProps = {
     placeholder: string;
     isStreaming: boolean;
@@ -14,14 +21,28 @@ type ComposerProps = {
 export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onStop }: ComposerProps) {
     const [value, setValue] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const formRef = useRef<HTMLFormElement>(null);
 
-    // A textarea has no intrinsic auto-grow, so its height is re-measured from the content on every edit.
+    useLayoutEffect(() => fitToContent(textareaRef.current), [value]);
+
+    // How many lines the same text wraps into depends on the width, so a resize (a phone rotating, the
+    // theme editor switching preview widths) has to re-measure too - otherwise the box keeps the height
+    // the old width earned and the text spills out of it. The form is observed rather than the textarea
+    // because the height set above is not part of the form's width, so the measurement cannot feed itself.
     useLayoutEffect(() => {
-        const textarea = textareaRef.current;
-        if (textarea === null) return;
-        textarea.style.height = "auto";
-        textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
-    }, [value]);
+        const form = formRef.current;
+        if (form === null) return;
+
+        let lastWidth = form.clientWidth;
+        const observer = new ResizeObserver(() => {
+            if (form.clientWidth === lastWidth) return;
+            lastWidth = form.clientWidth;
+            fitToContent(textareaRef.current);
+        });
+
+        observer.observe(form);
+        return () => observer.disconnect();
+    }, []);
 
     const canSend = value.trim().length > 0 && isStreaming === false && isDisabled === false;
 
@@ -33,13 +54,14 @@ export function Composer({ placeholder, isStreaming, isDisabled, onSubmit, onSto
 
     return (
         <form
+            ref={formRef}
             className="border-rq-border shrink-0 border-t px-[var(--rq-pad-x)] py-[var(--rq-pad-y)]"
             onSubmit={(event) => {
                 event.preventDefault();
                 submit();
             }}
         >
-            <div className="rounded-rq-pill border-rq-border bg-rq-surface focus-within:border-rq-accent flex items-end gap-2 border py-1.5 ps-3.5 pe-1.5">
+            <div className="rq-composer-box border-rq-border bg-rq-surface focus-within:border-rq-accent flex items-end gap-2 border py-1.5 ps-3.5 pe-1.5">
                 <textarea
                     ref={textareaRef}
                     rows={1}

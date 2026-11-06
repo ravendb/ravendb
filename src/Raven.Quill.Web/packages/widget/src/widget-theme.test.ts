@@ -182,6 +182,11 @@ describe("widgetThemeStyle", () => {
         expect(widgetThemeStyle({ ...DEFAULT_THEME, radius: "None" }, "Light")["--rq-logo-radius"]).toBe("100vh");
     });
 
+    it("hands the logo's fit to CSS as the object-fit the operator chose", () => {
+        expect(widgetThemeStyle(DEFAULT_THEME, "Light")["--rq-logo-fit"]).toBe("contain");
+        expect(widgetThemeStyle({ ...DEFAULT_THEME, logoFit: "Cover" }, "Light")["--rq-logo-fit"]).toBe("cover");
+    });
+
     it("paints from the colors of the resolved scheme", () => {
         const theme = {
             ...DEFAULT_THEME,

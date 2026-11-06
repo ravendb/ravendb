@@ -8,7 +8,7 @@ export function WidgetHeader({ title, subtitle, logo }: WidgetHeaderProps) {
     return (
         <header className="border-rq-border flex shrink-0 items-center gap-3 border-b px-[var(--rq-pad-x)] py-[var(--rq-pad-y)]">
             {logo !== null && logo.length > 0 && (
-                <img src={logo} alt="" className="rounded-rq-logo size-9 shrink-0 object-contain" />
+                <img src={logo} alt="" className="rq-logo rounded-rq-logo size-9 shrink-0" />
             )}
             <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold">{title}</span>

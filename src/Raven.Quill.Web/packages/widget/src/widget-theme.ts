@@ -7,6 +7,12 @@ export type WidgetFontSize = "Small" | "Medium" | "Large" | "Custom";
 /** The logo's own rounding, independent of `WidgetRadius`: logos are usually avatars, so `Pill` is the default. */
 export type WidgetLogoRadius = "None" | "Small" | "Medium" | "Large" | "Pill";
 
+/** How the logo fills the square the header gives it: fit the whole image inside it, or fill and crop. */
+export type WidgetLogoFit = "Contain" | "Cover";
+
+/** How the welcome screen lays the suggested prompts out: one per line, or a wrapping row of chips. */
+export type WidgetSuggestedPromptsLayout = "Stacked" | "Inline";
+
 /** The colors an operator picks for one scheme; everything else the widget paints is derived from them. */
 export type WidgetThemeColors = {
     /** Buttons, links and highlights; the widget's accent. */
@@ -31,12 +37,14 @@ export type WidgetTheme = {
     /** A `data:image/...` URI shown in the header; the embed CSP allows `img-src data:`. */
     logo: string | null;
     logoRadius: WidgetLogoRadius;
+    logoFit: WidgetLogoFit;
     headerTitle: string;
     headerSubtitle: string | null;
     showHeader: boolean;
     greetingTitle: string | null;
     greetingBody: string | null;
     suggestedPrompts: string[];
+    suggestedPromptsLayout: WidgetSuggestedPromptsLayout;
     inputPlaceholder: string;
     disclaimer: string | null;
     /** Appended after the widget's own styles; in live mode the server shell injects it with a CSP nonce. */
@@ -57,12 +65,14 @@ export const DEFAULT_THEME: WidgetTheme = {
     customFontSizeRem: null,
     logo: null,
     logoRadius: "Pill",
+    logoFit: "Contain",
     headerTitle: "AI Assistant",
     headerSubtitle: "Ask me anything",
     showHeader: true,
     greetingTitle: "How can I help?",
     greetingBody: "Ask a question and I'll do my best to answer it.",
     suggestedPrompts: [],
+    suggestedPromptsLayout: "Stacked",
     inputPlaceholder: "Ask a question...",
     disclaimer: null,
     customCss: null,
@@ -227,6 +237,12 @@ export const RADIUS_SCALE: Record<WidgetRadius, { radius: string; sm: string; pi
 
 /** The logo's rounding. `Pill` uses 100vh rather than a percentage so a non-square logo gets pill-shaped
  *  sides instead of an ellipse. */
+/** The `object-fit` each choice maps to. Mirrored by `WidgetLogoFit` in `Channels/WidgetTheme.cs`. */
+export const LOGO_FIT_SCALE: Record<WidgetLogoFit, string> = {
+    Contain: "contain",
+    Cover: "cover",
+};
+
 export const LOGO_RADIUS_SCALE: Record<WidgetLogoRadius, string> = {
     None: "0px",
     Small: "4px",
@@ -289,6 +305,7 @@ export function widgetThemeStyle(theme: WidgetTheme, appearance: ResolvedAppeara
         "--rq-radius-sm": radius.sm,
         "--rq-radius-pill": radius.pill,
         "--rq-logo-radius": LOGO_RADIUS_SCALE[theme.logoRadius] ?? LOGO_RADIUS_SCALE.Pill,
+        "--rq-logo-fit": LOGO_FIT_SCALE[theme.logoFit] ?? LOGO_FIT_SCALE.Contain,
         "--rq-font": theme.fontFamily,
         "--rq-gap": SPACING.gap,
         "--rq-pad-x": SPACING.padX,

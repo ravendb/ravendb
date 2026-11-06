@@ -1,4 +1,6 @@
+import { delay } from "msw";
 import type {
+    ApiErrorResponse,
     WidgetDefaultThemeResponse,
     WidgetFontOption,
     WidgetTheme,
@@ -28,12 +30,14 @@ export const SAMPLE_DEFAULT_THEME: WidgetTheme = {
     customFontSizeRem: null,
     logo: null,
     logoRadius: "Pill",
+    logoFit: "Contain",
     headerTitle: "AI Assistant",
     headerSubtitle: "Ask me anything",
     showHeader: true,
     greetingTitle: "How can I help?",
     greetingBody: "Ask a question and I'll do my best to answer it.",
     suggestedPrompts: [],
+    suggestedPromptsLayout: "Stacked",
     inputPlaceholder: "Ask a question...",
     disclaimer: null,
     customCss: null,
@@ -50,12 +54,14 @@ export const SAMPLE_CHANNEL_THEME: WidgetTheme = {
     customFontSizeRem: null,
     logo: null,
     logoRadius: "Pill",
+    logoFit: "Contain",
     headerTitle: "Order support",
     headerSubtitle: "We usually reply instantly",
     showHeader: true,
     greetingTitle: "Need a hand with an order?",
     greetingBody: "Ask about delivery, returns or anything else.",
     suggestedPrompts: ["Where is my order?", "How do I return an item?", "Do you ship internationally?"],
+    suggestedPromptsLayout: "Inline",
     inputPlaceholder: "Type a message...",
     disclaimer: "Answers are AI generated and may be inaccurate.",
     customCss: null,
@@ -69,17 +75,34 @@ export const iframeMocks = {
             fontOptions: SAMPLE_FONT_OPTIONS,
         },
     ) => apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(200).json(theme)),
+    /** Never answers, so the theme page stays in its loading state. */
+    getThemePending: () =>
+        apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", async ({ response }) => {
+            await delay("infinite");
+            return response(200).json({
+                theme: SAMPLE_CHANNEL_THEME,
+                defaultTheme: SAMPLE_DEFAULT_THEME,
+                fontOptions: SAMPLE_FONT_OPTIONS,
+            });
+        }),
+    getThemeError: (error: ApiErrorResponse = { error: "Could not load the theme.", code: "theme_load_failed" }) =>
+        apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(404).json(error)),
     updateTheme: (defaultTheme: WidgetTheme = SAMPLE_DEFAULT_THEME) =>
         apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", async ({ request, response }) => {
             const body = await request.json();
             return response(200).json({ theme: body.theme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS });
         }),
+    updateThemeError: (error: ApiErrorResponse = { error: "Could not save the theme.", code: "theme_save_failed" }) =>
+        apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) => response(400).json(error)),
     getDefaultTheme: (
         defaultTheme: WidgetDefaultThemeResponse = {
             theme: SAMPLE_DEFAULT_THEME,
             fontOptions: SAMPLE_FONT_OPTIONS,
         },
     ) => apiHttp.get("/api/apps/{slug}/iframe/default-theme", ({ response }) => response(200).json(defaultTheme)),
+    getDefaultThemeError: (
+        error: ApiErrorResponse = { error: "Could not load the default theme.", code: "default_theme_load_failed" },
+    ) => apiHttp.get("/api/apps/{slug}/iframe/default-theme", ({ response }) => response(404).json(error)),
     updateDefaultTheme: () =>
         apiHttp.put("/api/apps/{slug}/iframe/default-theme", async ({ request, response }) => {
             const body = await request.json();
@@ -89,6 +112,29 @@ export const iframeMocks = {
             });
         }),
 };
+
+// A stateful pair for the channel theme GET/PUT. Every other mock here always answers with its fixed
+// fixture, so a refetch after a save never observes what was actually saved. This one echoes the last
+// PUT body back from the GET, like the real endpoint, so a save-then-reseed flow can be exercised.
+export function statefulThemeMocks(
+    initialTheme: WidgetTheme | null = SAMPLE_CHANNEL_THEME,
+    defaultTheme: WidgetTheme = SAMPLE_DEFAULT_THEME,
+) {
+    let currentTheme = initialTheme;
+
+    return {
+        getTheme: () =>
+            apiHttp.get("/api/apps/{slug}/iframe/{channelId}/theme", ({ response }) =>
+                response(200).json({ theme: currentTheme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS }),
+            ),
+        updateTheme: () =>
+            apiHttp.put("/api/apps/{slug}/iframe/{channelId}/theme", async ({ request, response }) => {
+                const body = await request.json();
+                currentTheme = body.theme;
+                return response(200).json({ theme: currentTheme, defaultTheme, fontOptions: SAMPLE_FONT_OPTIONS });
+            }),
+    };
+}
 
 // Happy-path handlers for every iframe endpoint (the story default). Because a story override replaces the
 // whole `iframe` array, spread this after a single overriding handler to change one endpoint while keeping
