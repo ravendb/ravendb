@@ -1555,6 +1555,13 @@ namespace Voron.Data.Fixed
 
         private (long Count, int ReachedDepth) EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int currentDepth, int maxDepth, ref RemainingNumberOfEntriesState state)
         {
+            if (page.IsLeaf)
+            {
+                // siblings can be leaves after a branch collapses
+                state.NonEstimatedAmount += page.NumberOfEntries;
+                return (page.NumberOfEntries, currentDepth - 1);
+            }
+
             var lastEntry = page.GetEntry(page.NumberOfEntries - 1);
             var lastPage = GetReadOnlyPage(lastEntry->PageNumber);
 
