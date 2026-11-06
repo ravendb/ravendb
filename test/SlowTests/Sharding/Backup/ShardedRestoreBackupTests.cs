@@ -1139,7 +1139,7 @@ namespace SlowTests.Sharding.Backup
                     using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var databaseExists = database.ServerStore.Cluster.DatabaseExists(context, restoredDatabaseName);
+                        var databaseExists = ClusterStateMachine.DatabaseExists(context, restoredDatabaseName);
                         Assert.False(databaseExists);
                     }
                 }
