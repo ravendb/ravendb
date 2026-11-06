@@ -1468,10 +1468,16 @@ namespace Raven.Server.Rachis
             if (guid == RaftIdGenerator.DontCareId)
             {
                 var newGuid = $"DontCare/{term}-{lastIndex}";
-                cmd.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
-                using (var old = cmd)
+                // the original is owned by the caller, only the copy belongs to this transaction
+                var original = cmd;
+                original.Modifications = new DynamicJsonValue { [nameof(CommandBase.UniqueRequestId)] = newGuid };
+                try
                 {
-                    cmd = context.ReadObject(cmd, newGuid);
+                    cmd = context.ReadObject(original, newGuid);
+                }
+                finally
+                {
+                    original.Modifications = null;
                 }
             }
 

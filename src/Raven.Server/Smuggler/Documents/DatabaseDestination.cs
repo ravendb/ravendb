@@ -1463,9 +1463,12 @@ namespace Raven.Server.Smuggler.Documents
                     _prevCommand = null;
                 }
 
-                if (_batchSize.GetValue(SizeUnit.Bytes) > 0)
+                using (_cmd)
                 {
-                    await _database.TxMerger.Enqueue(_cmd);
+                    if (_batchSize.GetValue(SizeUnit.Bytes) > 0)
+                    {
+                        await _database.TxMerger.Enqueue(_cmd);
+                    }
                 }
 
                 _cmd = null;

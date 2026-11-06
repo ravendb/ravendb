@@ -277,7 +277,11 @@ namespace Raven.Server.Documents.Handlers
             private IDisposable _resetContext;
             private bool _isDisposed;
 
+            internal bool IsDisposed => _isDisposed;
+
             private readonly List<IDisposable> _toDispose;
+
+            private readonly List<string> _errors = new();
 
             private SmugglerResult _result;
 
@@ -310,6 +314,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _counterGroups = counterGroups;
                 _legacyDictionary = legacyDictionary;
+                _counterUpdates = new Dictionary<string, Document>();
 
                 _toDispose = new List<IDisposable>();
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
@@ -375,6 +380,10 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
+                _counterUpdates.Clear();
+                _errors.Clear();
+                ErrorCount = 0;
+
                 if (_legacyDictionary != null)
                 {
                     foreach (var kvp in _legacyDictionary)
@@ -401,7 +410,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var etag = _database.DocumentsStorage.GenerateNextEtag();
                     var localCv = _database.DocumentsStorage.GetNewChangeVector(context, etag);
-                    using (cgd.Values)
                     using (var lazyCv = context.GetLazyString(localCv))
                     {
                         cgd.ChangeVector = lazyCv;
@@ -411,7 +419,6 @@ namespace Raven.Server.Documents.Handlers
 
                 UpdateDocumentsMetadata(context);
 
-
                 return _counterGroups.Count;
             }
 
@@ -419,15 +426,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var toUpdate in _counterUpdates)
                 {
-                    var doc = toUpdate.Value;
-                    using (doc.Data)
-                    {
-                        UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, doc);
-                    }
+                    UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, toUpdate.Value);
                 }
             }
 
-            private static void CheckForDataCorruption(DocumentsOperationContext context, CounterGroupDetail counterGroup, Document doc)
+            private void CheckForDataCorruption(CounterGroupDetail counterGroup, Document doc)
             {
                 if (counterGroup.Values.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
                     throw new InvalidDataException($"Counter-group of document '{counterGroup.DocumentId}' is missing '{Values}' property");
@@ -466,10 +469,8 @@ namespace Raven.Server.Documents.Handlers
                     [CounterNames] = originalNames
                 };
 
-                using (var old = counterGroup.Values)
-                {
-                    counterGroup.Values = context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
+                // allocated from the command's context (not the transaction's), since it is kept by the command
+                counterGroup.Values = _context.ReadObject(counterGroup.Values, counterGroup.DocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
             private static List<string> TryGetCounterNamesFromDocument(Document doc)
@@ -493,14 +494,14 @@ namespace Raven.Server.Documents.Handlers
                 catch (DocumentDoesNotExistException e)
                 {
                     ErrorCount++;
-                    _result.AddError(e.Message);
+                    _errors.Add(e.Message);
                     return;
                 }
 
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
-                CheckForDataCorruption(context, counterGroupDetail, doc);
+                CheckForDataCorruption(counterGroupDetail, doc);
 
                 var counterGroupChangeVector = context.GetChangeVector(counterGroupDetail.ChangeVector);
                 _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
@@ -646,6 +647,10 @@ namespace Raven.Server.Documents.Handlers
 
                 _isDisposed = true;
 
+                foreach (var cgd in _counterGroups)
+                {
+                    cgd.Values?.Dispose();
+                }
                 _counterGroups.Clear();
 
                 _counterUpdates.Clear();
@@ -664,7 +669,15 @@ namespace Raven.Server.Documents.Handlers
                 _resetContext?.Dispose();
                 _resetContext = null;
 
-                _result.Counters.ErroredCount += ErrorCount;
+                if (_result != null)
+                {
+                    foreach (var error in _errors)
+                        _result.AddError(error);
+
+                    _result.Counters.ErroredCount += ErrorCount;
+                }
+
+                _errors.Clear();
             }
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)

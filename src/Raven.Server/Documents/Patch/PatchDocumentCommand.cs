@@ -154,6 +154,9 @@ namespace Raven.Server.Documents.Patch
                     // when running in debug mode let's use the external context so we'll be able to read blittables added to DebugActions
 
                     patchContext = _externalContext;
+
+                    // the script objects that are created in the external context are also disposed during this execution
+                    JsonOperationContext.AllowDisposalFrom(_externalContext);
                 }
 
                 var modifiedDoc = ExecuteScript(context, id, run, patchContext, documentInstance, args);
