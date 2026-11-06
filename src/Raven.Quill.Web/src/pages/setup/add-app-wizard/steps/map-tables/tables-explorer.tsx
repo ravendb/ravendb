@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/incompatible-library */
+/* eslint-disable react-hooks-js/incompatible-library */
 // React Compiler memoization is disabled here: useVirtualizer returns a mutable instance
 // whose scroll-driven state must be re-read on every render.
 "use no memo";

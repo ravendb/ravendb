@@ -345,7 +345,7 @@ const MergedPlanes = forwardRef<THREE.Mesh, MergedPlanesProps>(({ material, widt
         // Driving the animation clock by mutating the live shader uniform each frame is the
         // standard react-three-fiber pattern; it sits outside React's render/immutability model.
         const mat = mesh.current?.material as THREE.ShaderMaterial | undefined;
-        // eslint-disable-next-line react-hooks/immutability
+        // eslint-disable-next-line react-hooks-js/immutability
         if (mat) mat.uniforms.time.value += 0.1 * delta;
     });
     return <mesh ref={mesh} geometry={geometry} material={material} />;

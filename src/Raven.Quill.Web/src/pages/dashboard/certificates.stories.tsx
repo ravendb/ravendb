@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sampleCertificates, settingsMocks } from "@/mocks/settings-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { DashboardCertificates } from "./certificates";
 
 const meta = {
@@ -20,18 +21,16 @@ export const Default: Story = {};
 
 export const Empty: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                settings: [
-                    settingsMocks.feedback(),
-                    settingsMocks.license(),
-                    settingsMocks.usage(),
-                    settingsMocks.certificates([]),
-                    settingsMocks.certificatesGenerate(),
-                    settingsMocks.certificatesEdit(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            settings: [
+                settingsMocks.feedback(),
+                settingsMocks.license(),
+                settingsMocks.usage(),
+                settingsMocks.certificates([]),
+                settingsMocks.certificatesGenerate(),
+                settingsMocks.certificatesEdit(),
+            ],
+        }),
     },
 };
 
@@ -39,17 +38,15 @@ export const Empty: Story = {
 // inside the dialog.
 export const GenerateError: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                settings: [
-                    settingsMocks.feedback(),
-                    settingsMocks.license(),
-                    settingsMocks.usage(),
-                    settingsMocks.certificates(sampleCertificates),
-                    settingsMocks.certificatesGenerateError(),
-                    settingsMocks.certificatesEdit(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            settings: [
+                settingsMocks.feedback(),
+                settingsMocks.license(),
+                settingsMocks.usage(),
+                settingsMocks.certificates(sampleCertificates),
+                settingsMocks.certificatesGenerateError(),
+                settingsMocks.certificatesEdit(),
+            ],
+        }),
     },
 };

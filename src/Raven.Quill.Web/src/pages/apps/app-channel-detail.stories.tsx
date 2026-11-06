@@ -14,13 +14,14 @@ import {
 } from "@/mocks/discord-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
 import { sampleSlackHealth, slackMocks } from "@/mocks/slack-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { AppChannelDetail } from "./app-channel-detail";
 
 const meta = {
     title: "Apps/Channel detail",
     component: AppChannelDetail,
     parameters: {
-        page: { title: "Channel" },
+        page: {},
         router: {
             initialPath: `/apps/demo/channels/${SAMPLE_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
@@ -36,11 +37,9 @@ export const Default: Story = {};
 
 export const NoLinks: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                embedLinks: [embedLinksMocks.list([])],
-            },
-        },
+        msw: mockHandlers({
+            embedLinks: [embedLinksMocks.list([])],
+        }),
     },
 };
 
@@ -68,20 +67,18 @@ export const SlackTokenRejected: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_SLACK_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                slack: [
-                    slackMocks.health([
-                        {
-                            ...sampleSlackHealth[0],
-                            tokenValid: false,
-                            tokenError: "slack rejected the bot token",
-                            lastInboundAt: null,
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            slack: [
+                slackMocks.health([
+                    {
+                        ...sampleSlackHealth[0],
+                        tokenValid: false,
+                        tokenError: "slack rejected the bot token",
+                        lastInboundAt: null,
+                    },
+                ]),
+            ],
+        }),
     },
 };
 
@@ -91,19 +88,17 @@ export const SlackSendError: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_SLACK_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                slack: [
-                    slackMocks.health([
-                        {
-                            ...sampleSlackHealth[0],
-                            lastSendErrorAt: new Date().toISOString(),
-                            lastSendError: "channel_not_found",
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            slack: [
+                slackMocks.health([
+                    {
+                        ...sampleSlackHealth[0],
+                        lastSendErrorAt: new Date().toISOString(),
+                        lastSendError: "channel_not_found",
+                    },
+                ]),
+            ],
+        }),
     },
 };
 
@@ -113,20 +108,18 @@ export const SlackSocketDisconnected: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_SLACK_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                slack: [
-                    slackMocks.health([
-                        {
-                            ...sampleSlackHealth[0],
-                            socketConnected: false,
-                            lastSocketError:
-                                "slack rejected the app-level token; regenerate it on the app's Basic Information page and rotate it on this channel",
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            slack: [
+                slackMocks.health([
+                    {
+                        ...sampleSlackHealth[0],
+                        socketConnected: false,
+                        lastSocketError:
+                            "slack rejected the app-level token; regenerate it on the app's Basic Information page and rotate it on this channel",
+                    },
+                ]),
+            ],
+        }),
     },
 };
 
@@ -145,20 +138,18 @@ export const DiscordGatewayDisconnected: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [
-                    discordMocks.health([
-                        {
-                            ...sampleDiscordHealth[0],
-                            gatewayConnected: false,
-                            lastGatewayError: "discord rejected the direct messages intent for this app",
-                            lastInboundAt: null,
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            discord: [
+                discordMocks.health([
+                    {
+                        ...sampleDiscordHealth[0],
+                        gatewayConnected: false,
+                        lastGatewayError: "discord rejected the direct messages intent for this app",
+                        lastInboundAt: null,
+                    },
+                ]),
+            ],
+        }),
     },
 };
 
@@ -168,11 +159,9 @@ export const DiscordTokenRejected: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [discordMocks.health(tokenRejectedDiscordHealth)],
-            },
-        },
+        msw: mockHandlers({
+            discord: [discordMocks.health(tokenRejectedDiscordHealth)],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -190,11 +179,9 @@ export const DiscordPaused: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [discordMocks.health(pausedDiscordHealth)],
-            },
-        },
+        msw: mockHandlers({
+            discord: [discordMocks.health(pausedDiscordHealth)],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -227,19 +214,17 @@ export const DiscordSendErrorOlderThanTheLastMessage: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [
-                    discordMocks.health([
-                        {
-                            ...sampleDiscordHealth[0],
-                            lastSendErrorAt: "2026-08-21T11:50:00Z",
-                            lastSendError: "503: discord is unavailable",
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            discord: [
+                discordMocks.health([
+                    {
+                        ...sampleDiscordHealth[0],
+                        lastSendErrorAt: "2026-08-21T11:50:00Z",
+                        lastSendError: "503: discord is unavailable",
+                    },
+                ]),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -255,21 +240,19 @@ export const DiscordConnecting: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [
-                    discordMocks.health([
-                        {
-                            ...sampleDiscordHealth[0],
-                            gatewayConnected: false,
-                            lastConnectedAt: null,
-                            lastGatewayError: null,
-                            lastInboundAt: null,
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            discord: [
+                discordMocks.health([
+                    {
+                        ...sampleDiscordHealth[0],
+                        gatewayConnected: false,
+                        lastConnectedAt: null,
+                        lastGatewayError: null,
+                        lastInboundAt: null,
+                    },
+                ]),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -287,19 +270,17 @@ export const DiscordSendErrorNewerThanTheLastMessage: Story = {
             initialPath: `/apps/demo/channels/${SAMPLE_DISCORD_CHANNEL_ID}`,
             path: "/apps/:slug/channels/:channelId",
         },
-        msw: {
-            handlers: {
-                discord: [
-                    discordMocks.health([
-                        {
-                            ...sampleDiscordHealth[0],
-                            lastSendErrorAt: "2026-08-21T12:10:00Z",
-                            lastSendError: "503: discord is unavailable",
-                        },
-                    ]),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            discord: [
+                discordMocks.health([
+                    {
+                        ...sampleDiscordHealth[0],
+                        lastSendErrorAt: "2026-08-21T12:10:00Z",
+                        lastSendError: "503: discord is unavailable",
+                    },
+                ]),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
