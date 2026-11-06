@@ -200,6 +200,13 @@ namespace Raven.Server.Documents.Sharding.Handlers
             using (var processor = new IndexHandlerProcessorForConvertAutoIndex<ShardedDatabaseRequestHandler, TransactionOperationContext>(this))
                 await processor.ExecuteAsync();
         }
+
+        [RavenShardedAction("/databases/*/indexes/heaviness/analyze", "POST")]
+        public async Task AnalyzeHeaviness()
+        {
+            using (var processor = new ShardedIndexHandlerProcessorForAnalyzeHeaviness(this))
+                await processor.ExecuteAsync();
+        }
     }
 }
 
