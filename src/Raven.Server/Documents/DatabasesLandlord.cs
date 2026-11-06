@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -55,6 +56,8 @@ namespace Raven.Server.Documents
         internal SemaphoreSlim _databaseSemaphore;
         internal TimeSpan _concurrentDatabaseLoadTimeout;
         internal int _dueTimeOnRetry = 60_000;
+
+        private static readonly string OnDatabaseDeleteExecConfigurationKey = RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec);
 
         public DatabasesLandlord(ServerStore serverStore)
         {
@@ -104,6 +107,7 @@ namespace Raven.Server.Documents
             internal Action DelayNotifyFeaturesAboutStateChange;
             internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
             internal bool SkipShouldContinueDisposeCheck = false;
+            internal Action<string, Exception> OnDatabaseDeleteExecCompleted;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -134,6 +138,9 @@ namespace Raven.Server.Documents
                             UnloadDatabase(databaseName, dbRecordIsNull: true);
                             return;
                         }
+
+                        if (_serverStore.IsLeader() && changeState is DeleteDatabaseCommand deleteDatabaseCommand && rawRecord.EntireDatabasePendingDeletion())
+                            StartOnDatabaseDeleteExec(databaseName, deleteDatabaseCommand.HardDelete, index);
 
                         if (rawRecord.IsSharded)
                         {
@@ -496,6 +503,52 @@ namespace Raven.Server.Documents
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
         {
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
+        }
+
+        private void StartOnDatabaseDeleteExec(string databaseName, bool hardDelete, long index)
+        {
+            DatabaseConfiguration configuration = _serverStore.Configuration.Databases;
+            if (string.IsNullOrEmpty(configuration.OnDatabaseDeleteExec))
+                return;
+
+            // Fire-and-forget, and it must stay that way. HandleClusterDatabaseChanged is awaited before
+            // NotifyListenersAbout(index) runs, and DeleteDatabasesOperation waits on that notification
+            // with its own timeout - awaiting the hook would turn a successful delete into an apparent failure.
+            _ = Task.Run(() => RunOnDatabaseDeleteExecAsync(databaseName, hardDelete, index, configuration));
+        }
+
+        private async Task RunOnDatabaseDeleteExecAsync(string databaseName, bool hardDelete, long index, DatabaseConfiguration configuration)
+        {
+            Exception error = null;
+            try
+            {
+                await DatabaseExecUtils.ExecuteOnDatabaseDeleteAsync(configuration.OnDatabaseDeleteExec, configuration.OnDatabaseDeleteExecArguments,
+                    configuration.OnDatabaseDeleteExecTimeout.AsTimeSpan, databaseName, hardDelete, index, _logger).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                error = e;
+
+                string title = $"The '{OnDatabaseDeleteExecConfigurationKey}' hook failed for database '{databaseName}'";
+                string message =
+                    $"The database deletion hook did not complete successfully. The deletion itself was not affected. " +
+                    $"Raft index: {index}, deletion kind: {(hardDelete ? "hard" : "soft")}. Error: {e.Message}";
+
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations(title, e);
+
+                // server-scoped on purpose: the deletion drops the database's own notifications storage,
+                // so a database-scoped alert would be erased by the very event that raised it. Being
+                // server-scoped is also why the key has to carry the database name: the notification id
+                // is built from the alert type and the key alone, so without it every failure would
+                // overwrite the previous one and dismissing it once would mute the channel for good.
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(null, title, message, AlertType.DatabaseEventExecFailure,
+                    NotificationSeverity.Error, key: databaseName, details: new ExceptionDetails(e)));
+            }
+            finally
+            {
+                ForTestingPurposes?.OnDatabaseDeleteExecCompleted?.Invoke(databaseName, error);
+            }
         }
 
         private void NotifyLeaderAboutRemoval(string dbName, string databaseId, string requestId = null)

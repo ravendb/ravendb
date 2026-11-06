@@ -98,5 +98,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlConnectionString_DeprecatedFactoryReplaced,
 
         GcThreadContention,
+
+        DatabaseEventExecFailure,
     }
 }
