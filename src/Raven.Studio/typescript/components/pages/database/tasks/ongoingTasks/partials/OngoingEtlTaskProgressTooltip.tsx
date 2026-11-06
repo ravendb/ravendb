@@ -7,6 +7,7 @@ import copyToClipboard from "common/copyToClipboard";
 import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/partials/NodeInfoFailure";
 import { loadStatus } from "components/models/common";
 import Button from "react-bootstrap/Button";
+import { CalculateExactProgressLink } from "components/pages/database/tasks/ongoingTasks/partials/CalculateExactProgressLink";
 
 interface OngoingTaskEtlProgressTooltipProps {
     target: HTMLElement;
@@ -15,10 +16,13 @@ interface OngoingTaskEtlProgressTooltipProps {
     progress: OngoingTaskNodeEtlProgressDetails[];
     showPreview: (transformationName: string) => void;
     toggleErrorModal: () => void;
+    calculateExact: () => void;
+    isCalculatingExact: boolean;
 }
 
 export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressTooltipProps) {
-    const { target, showPreview, toggleErrorModal, status, hasError, progress } = props;
+    const { target, showPreview, toggleErrorModal, status, hasError, progress, calculateExact, isCalculatingExact } =
+        props;
 
     if (status === "failure") {
         return <NodeInfoFailure target={target} openErrorModal={toggleErrorModal} />;
@@ -49,6 +53,14 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                         const nameNode = (
                             <div className="d-flex align-items-center justify-content-center gap-1">
                                 {transformationScriptProgress.transformationName}
+                                {transformationScriptProgress.estimated && (
+                                    <small
+                                        className="text-muted"
+                                        title="Estimated value. The exact count takes too long to calculate and will be skipped for performance."
+                                    >
+                                        (~)
+                                    </small>
+                                )}
                                 <Button
                                     variant="link"
                                     className="p-0"
@@ -104,6 +116,9 @@ export function OngoingEtlTaskProgressTooltip(props: OngoingTaskEtlProgressToolt
                             </div>
                         );
                     })}
+                {progress?.some((x) => x.estimated) && (
+                    <CalculateExactProgressLink isCalculating={isCalculatingExact} calculate={calculateExact} />
+                )}
             </div>
         </PopoverWithHover>
     );

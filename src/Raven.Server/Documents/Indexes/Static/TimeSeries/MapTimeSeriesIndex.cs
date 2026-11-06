@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,6 +20,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -300,18 +301,17 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         }
 
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
-            Stopwatch overallDuration)
+            Stopwatch overallDuration, bool exact)
         {
-            progressStats.NumberOfItemsToProcess +=
-                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalCount, overallDuration);
-            progressStats.TotalNumberOfItems += totalCount;
+            NumberOfEntriesAfterResult entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
 
+            progressStats.AddItems(entriesAfter);
 
-            progressStats.NumberOfTimeSeriesDeletedRangesToProcess +=
-                DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
-                    progressStats.LastProcessedTimeSeriesDeletedRangeEtag, out totalCount, overallDuration);
-            progressStats.TotalNumberOfTimeSeriesDeletedRanges += totalCount;
+            entriesAfter = DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesToProcess(queryContext.Documents, collectionName,
+                progressStats.LastProcessedTimeSeriesDeletedRangeEtag, overallDuration, exact);
+
+            progressStats.AddTimeSeriesDeletedRanges(entriesAfter);
         }
     }
 }

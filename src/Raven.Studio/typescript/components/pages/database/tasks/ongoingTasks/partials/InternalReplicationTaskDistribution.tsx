@@ -10,6 +10,11 @@ import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationTaskProgressTooltip } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationTaskProgressTooltip";
 import { withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useServices } from "hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useExactProgress } from "components/pages/database/tasks/ongoingTasks/partials/useExactProgress";
+import { mapInternalReplicationProgress } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface ItemWithTooltipProps {
     nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
@@ -18,7 +23,7 @@ interface ItemWithTooltipProps {
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, progress } = props;
+    const { nodeInfo, sharded } = props;
 
     const shard = (
         <div className="top shard">
@@ -38,6 +43,15 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     };
 
     const [node, setNode] = useState<HTMLDivElement>();
+
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const { progress, calculateExact, isCalculatingExact } = useExactProgress(props.progress, async () => {
+        const { Results } = await tasksService.getInternalReplicationProgress(databaseName, nodeInfo.location, true);
+        const destinationProgress = Results.find((x) => x.DestinationNodeTag === props.progress?.destinationNodeTag);
+        return destinationProgress && mapInternalReplicationProgress(destinationProgress);
+    });
 
     const hasError = nodeInfo.status === "failure";
     return (
@@ -73,6 +87,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         status={nodeInfo.status}
                         lastAcceptedChangeVectorFromDestination={progress?.lastAcceptedChangeVectorFromDestination}
                         sourceDatabaseChangeVector={progress?.sourceDatabaseChangeVector}
+                        calculateExact={calculateExact}
+                        isCalculatingExact={isCalculatingExact}
                     />
                 ))}
         </div>
