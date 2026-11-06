@@ -1591,18 +1591,9 @@ namespace Voron.Data.Fixed
                     {
                         var entry = page.GetEntry(page.LastSearchPosition);
                         var childPage = GetReadOnlyPage(entry->PageNumber);
-
-                        if (childPage.IsLeaf)
-                        {
-                            totalEstimate += childPage.NumberOfEntries;
-                            state.NonEstimatedAmount += childPage.NumberOfEntries;
-                        }
-                        else
-                        {
-                            var branchEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
-                            totalEstimate += branchEstimate.Count;
-                            reachedDepth = Math.Max(reachedDepth, branchEstimate.ReachedDepth);
-                        }
+                        var childEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
+                        totalEstimate += childEstimate.Count;
+                        reachedDepth = Math.Max(reachedDepth, childEstimate.ReachedDepth);
 
                         page.LastSearchPosition++;
                     }
