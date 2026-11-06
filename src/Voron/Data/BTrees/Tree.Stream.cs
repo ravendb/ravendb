@@ -571,6 +571,34 @@ namespace Voron.Data.BTrees
             return (StreamInfo*)(page.DataPointer + lastChunk.ChunkSize);
         }
 
+        /// <summary>
+        /// Returns the total size of a stream from its chunk details, without reading the data page of the last chunk like <see cref="GetStreamInfo"/>.
+        /// Every chunk records exactly the bytes it added to <see cref="StreamInfo.TotalSize"/>. Returns null when the stream does not exist.
+        /// </summary>
+        internal long? GetStreamSizeFromChunkDetails(Slice key)
+        {
+            if (IsInlineStream(key, out byte* inlineData, out _, out _))
+                return ((InlineStreamHeader*)inlineData)->Info.TotalSize;
+
+            FixedSizeTree chunksTree = GetStreamChunksTree(key);
+            if (chunksTree.NumberOfEntries == 0)
+                return null;
+
+            long totalSize = 0;
+            using (FixedSizeTree.IFixedSizeIterator it = chunksTree.Iterate())
+            {
+                if (it.Seek(long.MinValue) == false)
+                    return null;
+
+                do
+                {
+                    totalSize += ((ChunkDetails*)it.CreateReaderForCurrent().Base)->ChunkSize;
+                } while (it.MoveNext());
+            }
+
+            return totalSize;
+        }
+
         private bool TryGetLastChunkDetailsForStream(Slice key, out ChunkDetails lastChunk)
         {
             lastChunk = default;
