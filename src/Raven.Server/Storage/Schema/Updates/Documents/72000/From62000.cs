@@ -293,12 +293,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             });
         }
 
-        private static unsafe long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
+        private static long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
         {
-            var info = tree.GetStreamInfo(hashSlice, false);
-            if (info == null)
-                return -1;
-            return info->TotalSize;
+            // GetStreamInfo would read a random data page per attachment; the chunk details in the tree node already hold the size.
+            return tree.GetStreamSizeFromChunkDetails(hashSlice) ?? -1;
         }
 
         private unsafe Attachment TableValueToAttachmentOld(DocumentsOperationContext context, Tree tree, ref TableValueReader tvr, out ByteStringContext<ByteStringMemoryCache>.InternalScope scope)
