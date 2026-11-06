@@ -70,26 +70,25 @@ public class QueryExecution
         return analyzed;
     }
     
-    public void SetKnownClause(ClauseExecution exec, PlanTemplate t)
+    public void SetKnownClause(ClauseExecution exec, PlanTemplate t, int templateIndex)
     {
         if (exec.IsSentinel)
             return; // sentinel clause is effectively removed, cannot be a known clause
         
-        int originalIndex = exec.Clause.OriginalIndex;
-        if (originalIndex == t.SortDrivingClauseIndex)
+        if (templateIndex == t.SortDrivingClauseIndex)
         {
             DrivingClauseCardinality = exec.Cardinality;
             SortDrivingClause = exec;
         }
-        if (originalIndex == t.CompoundExact.First)
+        if (templateIndex == t.CompoundExact.First)
             CompoundExactFirst = exec;
-        if (originalIndex == t.CompoundExact.Second)
+        if (templateIndex == t.CompoundExact.Second)
             CompoundExactSecond = exec;
-        if (originalIndex == t.CompoundFieldDrivingClause)
+        if (templateIndex == t.CompoundFieldDrivingClause)
             CompoundFieldDrivingClause = exec;       
-        if (originalIndex == t.CompoundFieldField2Range)
+        if (templateIndex == t.CompoundFieldField2Range)
             CompoundFieldField2Range = exec;
-        if (originalIndex == t.SortSeekHintTemplateIdx)
+        if (templateIndex == t.SortSeekHintTemplateIdx)
             SortSeekClause = exec;
     }
 }
