@@ -523,6 +523,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         bool isFirstIteration = true;
+        AiUsage droppedRequestUsage = null;
         var debugTraces = new AiDebugTraceCollector(_document.Debug, database);
 
         try
@@ -537,7 +538,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 var trace = debugTraces.CreateTrace();
 
-                var request = talker.CreateRequest(attachments);
+                var finalStructuredTurn = droppedRequestUsage != null;
+                var request = talker.CreateRequest(attachments, finalStructuredTurn);
                 r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
 
                 var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
@@ -549,11 +551,24 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 isFirstIteration = false;
 
                 bool isNoSchema = r.Type is AiResponseType.Result && _schema == null;
-                _document.AddMessage(context, r.Message, currentTurnUsage, isNoSchema);
+                // not kept even if it looks like JSON: nothing checked it against the schema, so a final request asks again
+                var answerIsDropped = r.Type is AiResponseType.Result && request.AnswerIsDropped;
+                if (answerIsDropped)
+                {
+                    droppedRequestUsage = talker.AiUsage;
+                }
+                else
+                {
+                    var messageUsage = finalStructuredTurn
+                        ? WithDroppedTurnUsage(AiUsage.GetUsageDifference(droppedRequestUsage, _document.CurrentUsage), currentTurnUsage)
+                        : currentTurnUsage;
+                    _document.AddMessage(context, r.Message, messageUsage, isNoSchema);
+                }
                 _document.UpdateUsage(talker.AiUsage);
                 OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
 
-                if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
+                // the dropped turn already checked these tool results
+                if (finalStructuredTurn == false && currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
                 {
                     if (_document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
                     {
@@ -568,6 +583,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         );
                     }
                 }
+
+                // the chat isn't reduced and CurrentUsage isn't moved before the final request, which needs the tool results
+                if (answerIsDropped)
+                    continue;
 
                 toolsIterations++;
                 if (r.Type is AiResponseType.Result)
@@ -590,10 +609,12 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     }
                 }
 
-                _document.CurrentUsage = talker.AiUsage;
+                // the final request had no tool definitions and the next request has them again, like the dropped one
+                _document.CurrentUsage = droppedRequestUsage == null ? talker.AiUsage : WithFinalAnswer(droppedRequestUsage, talker.AiUsage);
+                droppedRequestUsage = null;
 
                 // check if we should summarize or truncate the chat history
-                var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
+                var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, _document.CurrentUsage, token);
                 if (reductionResult != null)
                 {
                     historyDocs ??= [];
@@ -623,6 +644,26 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             ToolsIterations = toolsIterations,
         };
     }
+
+    // the final request repeats the dropped one's prompt without the tools, so its message gets that prompt and both answers
+    private static AiUsage WithDroppedTurnUsage(AiUsage droppedTurnUsage, AiUsage finalTurnUsage) => new()
+    {
+        PromptTokens = droppedTurnUsage.PromptTokens,
+        CachedTokens = droppedTurnUsage.CachedTokens,
+        CompletionTokens = droppedTurnUsage.CompletionTokens + finalTurnUsage.CompletionTokens,
+        ReasoningTokens = droppedTurnUsage.ReasoningTokens + finalTurnUsage.ReasoningTokens,
+        TotalTokens = droppedTurnUsage.TotalTokens + finalTurnUsage.CompletionTokens
+    };
+
+    // the history now holds the dropped request's prompt, with the tool definitions, and the final answer
+    private static AiUsage WithFinalAnswer(AiUsage droppedRequestUsage, AiUsage finalRequestUsage) => new()
+    {
+        PromptTokens = droppedRequestUsage.PromptTokens,
+        CachedTokens = droppedRequestUsage.CachedTokens,
+        CompletionTokens = finalRequestUsage.CompletionTokens,
+        ReasoningTokens = finalRequestUsage.ReasoningTokens,
+        TotalTokens = droppedRequestUsage.PromptTokens + finalRequestUsage.CompletionTokens
+    };
 
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
     {

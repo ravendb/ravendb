@@ -19,6 +19,9 @@ public sealed record AiChatRequest
 
     public string Schema;
 
+    // A tool turn whose plain-text answer is dropped, so an empty answer isn't an error.
+    public bool AnswerIsDropped;
+
     public string PromptCacheKey;
 
     // False when no later call can reuse this prompt, so caching it would only add the write cost.

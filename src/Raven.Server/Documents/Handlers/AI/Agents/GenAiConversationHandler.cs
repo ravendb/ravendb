@@ -25,7 +25,7 @@ internal class GenAiConversationHandler(ServerStore server, DocumentDatabase dat
         var result = new GenAiHandlerResult
         {
             Response = response.Response.ToString(), 
-            Usage = response.Usage, 
+            Usage = _document.TotalUsage,
         };
 
         if (configuration.TestMode)

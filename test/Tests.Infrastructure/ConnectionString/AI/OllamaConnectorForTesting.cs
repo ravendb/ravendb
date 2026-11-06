@@ -21,6 +21,9 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
 {
     public const string Model = "qwen2.5:0.5b";
 
+    // the default model is too small to call tools reliably
+    public const string ToolsModel = "qwen3-vl:4b-instruct";
+
     public GenAiOllamaConnectorForTesting()
     {
         RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaChatUriEnvName];
