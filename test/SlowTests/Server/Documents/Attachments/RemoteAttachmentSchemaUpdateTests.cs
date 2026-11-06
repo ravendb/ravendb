@@ -1,5 +1,7 @@
-﻿using System;
+using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -13,6 +15,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -346,6 +349,55 @@ namespace SlowTests.Server.Documents.Attachments
             {
                 // Restore original batch size
                 From62000.NumberOfAttachmentsToMigrateInSingleTransaction = originalBatchSize;
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task Schema_Update_From62000_Should_Report_Progress_In_Init_Log()
+        {
+            int originalBatchSize = From62000.NumberOfAttachmentsToMigrateInSingleTransaction;
+            TimeSpan originalInterval = From62000.MinimumProgressReportInterval;
+            From62000.NumberOfAttachmentsToMigrateInSingleTransaction = 1;
+            From62000.MinimumProgressReportInterval = TimeSpan.Zero;
+
+            try
+            {
+                string dest = "Northwind";
+                string snapshot = $"{dest}.zip";
+                string backupPath = NewDataPath(forceCreateDir: true);
+                string fullBackupPath = Path.Combine(backupPath, snapshot);
+                string databasePath = Path.Combine(backupPath, dest);
+
+                await using (FileStream file = File.Create(fullBackupPath))
+                {
+                    await using (Stream stream = typeof(RemoteAttachmentSchemaUpdateTests).Assembly.GetManifestResourceStream($"SlowTests.Data.Attachments.RavenDB_24543.{snapshot}"))
+                    {
+                        Assert.NotNull(stream);
+                        await stream.CopyToAsync(file);
+                    }
+                }
+
+                ZipFile.ExtractToDirectory(fullBackupPath, backupPath);
+
+                // Opened the way the server opens a database, with an init log the test can read.
+                string databaseName = GetDatabaseName();
+                RavenConfiguration configuration = DatabasesLandlord.CreateDatabaseConfiguration(Server.ServerStore, databaseName,
+                    new Dictionary<string, string> { ["DataDir"] = databasePath, ["RunInMemory"] = "false" });
+                ConcurrentQueue<string> initLog = new();
+
+                using (DocumentDatabase database = DatabasesLandlord.CreateDocumentDatabase(databaseName, configuration, Server.ServerStore, (_, line) => initLog.Enqueue(line)))
+                {
+                    database.Initialize(InitializeOptions.SkipLoadingDatabaseRecord);
+                }
+
+                Assert.Contains("Schema upgrade from version #62000 to version #72000: pass 1 of 2, migrated 1 of 17 attachments (5%)", initLog);
+                Assert.Contains("Schema upgrade from version #62000 to version #72000: pass 1 of 2, migrated 17 of 17 attachments (100%)", initLog);
+                Assert.Single(initLog, line => line == "Schema upgrade from version #62000 to version #72000: pass 2 of 2, migrated 17 of 17 attachments (100%)");
+            }
+            finally
+            {
+                From62000.NumberOfAttachmentsToMigrateInSingleTransaction = originalBatchSize;
+                From62000.MinimumProgressReportInterval = originalInterval;
             }
         }
 
