@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents;
@@ -35,7 +36,15 @@ namespace SlowTests.Sharding.Cluster
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CanMoveToRehabAndBackToMember()
         {
-            var cluster = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false);
+            // the revived node is promoted only after its supervisor connection and the mentors' replication reconnect to it,
+            // so we don't want to wait for the default reconnection backoffs
+            var settings = new Dictionary<string, string>(DefaultClusterSettings)
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.OnErrorDelayTime)] = "500",
+                [RavenConfiguration.GetKey(x => x.Replication.RetryMaxTimeout)] = "1"
+            };
+
+            var cluster = await CreateRaftCluster(3, leaderIndex: 0, shouldRunInMemory: false, customSettings: settings);
             var options = Sharding.GetOptionsForCluster(cluster.Leader, shards: 3, shardReplicationFactor: 3, orchestratorReplicationFactor: 3, dynamicNodeDistribution: false);
             
             options.Server = cluster.Leader;
@@ -43,11 +52,11 @@ namespace SlowTests.Sharding.Cluster
             {
                 var result = await DisposeServerAndWaitForFinishOfDisposalAsync(cluster.Nodes[1]);
 
-                await AssertWaitForValueAsync(async () =>
+                await AssertWaitForValueWithDebugInfoAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
                     return shards.Sum(s => s.Value.Rehabs.Count);
-                }, 3);
+                }, 3, "shard rehabs after disposing the node");
 
                 await AssertWaitForValueAsync(async () =>
                 {
@@ -64,7 +73,7 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(1, top.DemotionReasons.Count);
                 Assert.Equal(1, top.PromotablesStatus.Count);
 
-                var settings = new Dictionary<string, string>
+                var revivedSettings = new Dictionary<string, string>
                 {
                     {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
                 };
@@ -75,15 +84,15 @@ namespace SlowTests.Sharding.Cluster
                     RunInMemory = false,
                     DeletePrevious = false,
                     DataDirectory = result.DataDirectory,
-                    CustomSettings = settings,
+                    CustomSettings = revivedSettings,
                     NodeTag = result.NodeTag
                 });
-                
-                await AssertWaitForValueAsync(async () =>
+
+                await AssertWaitForValueWithDebugInfoAsync(async () =>
                 {
                     var shards = await ShardingCluster.GetShards(store);
                     return shards?.Sum(s => s.Value.Members.Count);
-                }, 9);
+                }, 9, "shard members after reviving the node");
                 
                 await AssertWaitForValueAsync(async () =>
                 {
@@ -100,7 +109,19 @@ namespace SlowTests.Sharding.Cluster
                 Assert.Equal(0, top.PromotablesStatus.Count);
             }
         }
-        
+
+        private async Task AssertWaitForValueWithDebugInfoAsync<T>(Func<Task<T>> act, T expectedVal, string description)
+        {
+            var actual = await WaitForValueAsync(act, expectedVal);
+            if (Equals(actual, expectedVal))
+                return;
+
+            var sb = new StringBuilder($"Waiting for {description}: expected {expectedVal} but got {actual}.");
+            sb.AppendLine("debug logs : ");
+            await GetClusterDebugLogsAsync(sb);
+            Assert.Fail(sb.ToString());
+        }
+
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task AddNodeToOrchestratorTopologyAndWaitForPromote()
         {
