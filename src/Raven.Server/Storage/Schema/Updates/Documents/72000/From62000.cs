@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents;
@@ -7,11 +8,13 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Util;
@@ -32,6 +35,26 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static readonly int _oldSchemaSize = 7;
 
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
+
+        // Progress is reported at most once per percent and interval, because every database load timeout exception carries the whole init log.
+        internal static TimeSpan MinimumProgressReportInterval = TimeSpan.FromSeconds(10);
+
+        internal static TestingStuff ForTestingPurposes;
+
+        internal static TestingStuff ForTestingPurposesOnly() => ForTestingPurposes ??= new TestingStuff();
+
+        internal sealed class TestingStuff
+        {
+            // Called with the number of batches committed so far, in both passes.
+            internal Action<int> AfterBatchCommit;
+            internal int CommittedBatches;
+        }
+
+        private static void OnBatchCommitted()
+        {
+            TestingStuff testingStuff = ForTestingPurposes;
+            testingStuff?.AfterBatchCommit?.Invoke(++testingStuff.CommittedBatches);
+        }
         
         private static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
@@ -104,8 +127,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 });
             }
 
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
+            PopulateAttachmentsFlagAndHashIndex(step, attachmentsSchemaBase, dynamicIndex);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, isSharded);
             // This code misses the schemaBase.SerializeSchemaIntoTableTree call.
             // It works for runtime operations, but not for features that use offline database files,
             // which use the serialized schema from disk to perform their operations.
@@ -114,12 +137,97 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return true;
         }
 
-        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex, bool isSharded,
-            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update)
+        // Every attachment must be in the new index before UpdateSchemaInternal rewrites any record: Table.Set can move neighbouring records,
+        // and Table.OnDataMoved throws for a moved record that is missing from an index. During the upgrade the key of every attachment
+        // is (RemoteAttachmentFlags.None, hash), so the index is built from the AttachmentsHash index without reading records or streams.
+        private void PopulateAttachmentsFlagAndHashIndex(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex)
+        {
+            Table table = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+            if (table == null)
+                return;
+
+            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 1 of 2", table.NumberOfEntries);
+            byte[] lastHash = null;
+            long lastId = 0;
+            long migrated = 0;
+
+            while (true)
+            {
+                Table readTable = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+                Table writeTable = step.WriteTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+                Tree hashIndexTree = readTable.GetTree(attachmentsSchemaBase.Indexes[AttachmentsHashSlice]);
+                Tree flagAndHashIndexTree = writeTable.GetTree(dynamicIndex);
+                long processed = 0;
+                bool batchFull = false;
+
+                using (GetBatchStartKey(step.ReadTx.Allocator, lastHash, out Slice startHash))
+                using (TreeIterator hashIt = hashIndexTree.Iterate(prefetch: true))
+                {
+                    if (hashIt.Seek(startHash))
+                    {
+                        do
+                        {
+                            bool isResumedHash = lastHash != null && hashIt.CurrentKey.AsReadOnlySpan().SequenceEqual(lastHash);
+                            FixedSizeTree ids = readTable.GetFixedSizeTree(hashIndexTree, hashIt.CurrentKey, 0, isGlobal: false);
+
+                            using (GenerateFlagAndHashKey(step.WriteTx.Allocator, (int)RemoteAttachmentFlags.None, hashIt.CurrentKey, out Slice flagAndHash))
+                            using (FixedSizeTree.IFixedSizeIterator idIt = ids.Iterate())
+                            {
+                                // Resuming inside a hash continues after the last id of the previous batch. Re-adding an id is a no-op.
+                                if (idIt.Seek(isResumedHash ? lastId + 1 : long.MinValue) == false)
+                                    continue;
+
+                                do
+                                {
+                                    writeTable.AddValueToDynamicIndex(idIt.CurrentKey, dynamicIndex, flagAndHashIndexTree, flagAndHash, TreeNodeFlags.Data);
+
+                                    if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
+                                    {
+                                        lastHash = hashIt.CurrentKey.AsReadOnlySpan().ToArray();
+                                        lastId = idIt.CurrentKey;
+                                        batchFull = true;
+                                        break;
+                                    }
+                                } while (idIt.MoveNext());
+                            }
+                        } while (batchFull == false && hashIt.MoveNext());
+                    }
+                }
+
+                step.Commit(null);
+                step.RenewTransactions();
+                OnBatchCommitted();
+                migrated += processed;
+
+                if (batchFull == false)
+                {
+                    progress.Completed(migrated);
+                    return;
+                }
+
+                progress.BatchCommitted(migrated);
+            }
+        }
+
+        private static IDisposable GetBatchStartKey(ByteStringContext allocator, byte[] lastKey, out Slice startKey)
+        {
+            if (lastKey == null)
+            {
+                startKey = Slices.BeforeAllKeys;
+                return null;
+            }
+
+            return Slice.From(allocator, lastKey, ByteStringType.Immutable, out startKey);
+        }
+
+        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, bool isSharded)
         {
             var skip = 0L;
             var processed = 0L;
             var done = false;
+
+            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 2 of 2",
+                step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata)?.NumberOfEntries ?? 0);
 
             while (done == false)
             {
@@ -148,9 +256,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
 
                                 using (scope)
-                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
+                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out _))
                                 {
-                                    update.Invoke(dynamicIndex, writeTable, pkSlice, tvb);
+                                    writeTable.Set(tvb, forceUpdate: true);
                                 }
                             }
 
@@ -167,6 +275,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         {
                             step.Commit(context);
                             step.RenewTransactions();
+                            OnBatchCommitted();
+                            progress.BatchCommitted(skip);
                             continue;
                         }
 
@@ -184,27 +294,51 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     }
                 }
             }
+
+            progress.Completed(skip + processed);
         }
 
-        private static bool PopulateAttachmentsFlagAndHashDynamicIndex(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
+        private sealed class UpgradeProgress
         {
-            if (writeTable.TryFindIdFromPrimaryKey(pkSlice, out var id))
+            private readonly UpdateStep _step;
+            private readonly string _prefix;
+            private readonly long _total;
+            private readonly Stopwatch _sinceLastReport = Stopwatch.StartNew();
+            private int _lastReportedPercent;
+            private long _lastReported = -1;
+
+            public UpgradeProgress(UpdateStep step, string prefix, long total)
             {
-                // populate value into the new dynamic index
-                using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
-                {
-                    var indexTree = writeTable.GetTree(dynamicIndex);
-                    writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
-                }
+                _step = step;
+                _prefix = prefix;
+                _total = total;
             }
 
-            return true;
-        }
+            public void BatchCommitted(long migrated)
+            {
+                int percent = Percent(migrated);
+                if (percent <= _lastReportedPercent || _sinceLastReport.Elapsed < MinimumProgressReportInterval)
+                    return;
 
-        private bool AttachmentsTableSchemaUpdate(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
-        {
-            writeTable.Set(tvb, forceUpdate: true);
-            return true;
+                _lastReportedPercent = percent;
+                Report(migrated, percent);
+            }
+
+            public void Completed(long migrated)
+            {
+                if (migrated != _lastReported)
+                    Report(migrated, Percent(migrated));
+            }
+
+            private int Percent(long migrated) => _total == 0 ? 100 : (int)(migrated * 100 / _total);
+
+            private void Report(long migrated, int percent)
+            {
+                _lastReported = migrated;
+                _sinceLastReport.Restart();
+                _step.DocumentsStorage.DocumentDatabase.AddToInitLog?.Invoke(LogLevel.Debug,
+                    $"{_prefix}, migrated {migrated:#,#;;0} of {_total:#,#;;0} attachments ({percent}%)");
+            }
         }
 
         private unsafe IDisposable AttachmentOldToTableValue(DocumentsOperationContext context, Table writeTable, Attachment attachment, out TableValueBuilder tvb, out Slice keySlice)
@@ -239,12 +373,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             });
         }
 
-        private static unsafe long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
+        private static long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
         {
-            var info = tree.GetStreamInfo(hashSlice, false);
-            if (info == null)
-                return -1;
-            return info->TotalSize;
+            // GetStreamInfo would read a random data page per attachment; the chunk details in the tree node already hold the size.
+            return tree.GetStreamSizeFromChunkDetails(hashSlice) ?? -1;
         }
 
         private unsafe Attachment TableValueToAttachmentOld(DocumentsOperationContext context, Tree tree, ref TableValueReader tvr, out ByteStringContext<ByteStringMemoryCache>.InternalScope scope)
@@ -273,12 +405,19 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
             int flags = tvr.Count == _oldSchemaSize ? (int)RemoteAttachmentFlags.None : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
-            var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
-            var span = new Span<byte>(buffer.Ptr, buffer.Length);
+            using (Slice.External(tx.Allocator, hashPtr, hashSize, out Slice hash))
+                return GenerateFlagAndHashKey(tx.Allocator, flags, hash, out slice);
+        }
+
+        private static unsafe ByteStringContext.Scope GenerateFlagAndHashKey(ByteStringContext allocator, int flags, Slice hash, out Slice slice)
+        {
+            ByteStringContext.Scope scope = allocator.Allocate(sizeof(int) + 1 + hash.Size, out ByteString buffer); // flag + record separator + hash
+
+            Span<byte> span = new Span<byte>(buffer.Ptr, buffer.Length);
             MemoryMarshal.AsBytes(new Span<int>(ref flags)).CopyTo(span);
             buffer.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
-            new ReadOnlySpan<byte>(hashPtr, hashSize).CopyTo(span[(sizeof(int) + 1)..]);
+            hash.AsReadOnlySpan().CopyTo(span[(sizeof(int) + 1)..]);
 
             slice = new Slice(buffer);
             return scope;
