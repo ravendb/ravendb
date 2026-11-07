@@ -220,11 +220,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return Slice.From(allocator, lastKey, ByteStringType.Immutable, out startKey);
         }
 
+        // Records are migrated in hash order, so the Attachments stream tree and the hash-keyed indexes are visited sequentially. Each batch
+        // resumes at the hash of its last record. Table.Set re-inserts a record under a new id, so migrated records are recognized by their
+        // field count and skipped, which also covers a re-run over partially migrated data.
         private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, bool isSharded)
         {
-            var skip = 0L;
-            var processed = 0L;
-            var done = false;
+            byte[] lastHash = null;
+            long processed = 0;
+            long visited = 0;
+            bool done = false;
 
             UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 2 of 2",
                 step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata)?.NumberOfEntries ?? 0);
@@ -249,11 +253,20 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                         var streamsTree = step.ReadTx.ReadTree(Attachments);
 
-                        foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
+                        using (GetBatchStartKey(context.Allocator, lastHash, out Slice startHash))
+                        foreach (var read in readTable.SeekForwardFrom(attachmentsSchemaBase.Indexes[AttachmentsHashSlice], startHash, 0))
                         {
-                            using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                            if (read.Result.Reader.Count != _oldSchemaSize)
                             {
-                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
+                                // Records under the resumed hash were counted by an earlier batch.
+                                if (lastHash == null || read.Key.AsReadOnlySpan().SequenceEqual(lastHash) == false)
+                                    visited++;
+                                continue;
+                            }
+
+                            using (TableValueReaderUtil.CloneTableValueReader(context, read.Result))
+                            {
+                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Result.Reader, out var scope);
 
                                 using (scope)
                                 using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out _))
@@ -262,9 +275,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 }
                             }
 
+                            visited++;
                             if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
                             {
-                                skip += processed;
+                                lastHash = read.Key.AsReadOnlySpan().ToArray();
                                 processed = 0;
                                 commit = true;
                                 break;
@@ -276,7 +290,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             step.Commit(context);
                             step.RenewTransactions();
                             OnBatchCommitted();
-                            progress.BatchCommitted(skip);
+                            progress.BatchCommitted(visited);
                             continue;
                         }
 
@@ -295,7 +309,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
             }
 
-            progress.Completed(skip + processed);
+            progress.Completed(visited);
         }
 
         private sealed class UpgradeProgress
