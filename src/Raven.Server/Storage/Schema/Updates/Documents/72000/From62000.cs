@@ -38,6 +38,23 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         // Progress is reported at most once per percent and interval, because every database load timeout exception carries the whole init log.
         internal static TimeSpan MinimumProgressReportInterval = TimeSpan.FromSeconds(10);
+
+        internal static TestingStuff ForTestingPurposes;
+
+        internal static TestingStuff ForTestingPurposesOnly() => ForTestingPurposes ??= new TestingStuff();
+
+        internal sealed class TestingStuff
+        {
+            // Called with the number of batches committed so far, in both passes.
+            internal Action<int> AfterBatchCommit;
+            internal int CommittedBatches;
+        }
+
+        private static void OnBatchCommitted()
+        {
+            TestingStuff testingStuff = ForTestingPurposes;
+            testingStuff?.AfterBatchCommit?.Invoke(++testingStuff.CommittedBatches);
+        }
         
         private static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
@@ -179,6 +196,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 step.Commit(null);
                 step.RenewTransactions();
+                OnBatchCommitted();
                 migrated += processed;
 
                 if (batchFull == false)
@@ -257,6 +275,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         {
                             step.Commit(context);
                             step.RenewTransactions();
+                            OnBatchCommitted();
                             progress.BatchCommitted(skip);
                             continue;
                         }
