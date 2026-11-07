@@ -14,6 +14,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Voron.Util;
@@ -109,8 +110,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 });
             }
 
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex, pass: 1);
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate, pass: 2);
+            PopulateAttachmentsFlagAndHashIndex(step, attachmentsSchemaBase, dynamicIndex);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, isSharded);
             // This code misses the schemaBase.SerializeSchemaIntoTableTree call.
             // It works for runtime operations, but not for features that use offline database files,
             // which use the serialized schema from disk to perform their operations.
@@ -119,14 +120,95 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return true;
         }
 
-        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex, bool isSharded,
-            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update, int pass)
+        // Every attachment must be in the new index before UpdateSchemaInternal rewrites any record: Table.Set can move neighbouring records,
+        // and Table.OnDataMoved throws for a moved record that is missing from an index. During the upgrade the key of every attachment
+        // is (RemoteAttachmentFlags.None, hash), so the index is built from the AttachmentsHash index without reading records or streams.
+        private void PopulateAttachmentsFlagAndHashIndex(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex)
+        {
+            Table table = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+            if (table == null)
+                return;
+
+            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 1 of 2", table.NumberOfEntries);
+            byte[] lastHash = null;
+            long lastId = 0;
+            long migrated = 0;
+
+            while (true)
+            {
+                Table readTable = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+                Table writeTable = step.WriteTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+                Tree hashIndexTree = readTable.GetTree(attachmentsSchemaBase.Indexes[AttachmentsHashSlice]);
+                Tree flagAndHashIndexTree = writeTable.GetTree(dynamicIndex);
+                long processed = 0;
+                bool batchFull = false;
+
+                using (GetBatchStartKey(step.ReadTx.Allocator, lastHash, out Slice startHash))
+                using (TreeIterator hashIt = hashIndexTree.Iterate(prefetch: true))
+                {
+                    if (hashIt.Seek(startHash))
+                    {
+                        do
+                        {
+                            bool isResumedHash = lastHash != null && hashIt.CurrentKey.AsReadOnlySpan().SequenceEqual(lastHash);
+                            FixedSizeTree ids = readTable.GetFixedSizeTree(hashIndexTree, hashIt.CurrentKey, 0, isGlobal: false);
+
+                            using (GenerateFlagAndHashKey(step.WriteTx.Allocator, (int)RemoteAttachmentFlags.None, hashIt.CurrentKey, out Slice flagAndHash))
+                            using (FixedSizeTree.IFixedSizeIterator idIt = ids.Iterate())
+                            {
+                                // Resuming inside a hash continues after the last id of the previous batch. Re-adding an id is a no-op.
+                                if (idIt.Seek(isResumedHash ? lastId + 1 : long.MinValue) == false)
+                                    continue;
+
+                                do
+                                {
+                                    writeTable.AddValueToDynamicIndex(idIt.CurrentKey, dynamicIndex, flagAndHashIndexTree, flagAndHash, TreeNodeFlags.Data);
+
+                                    if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
+                                    {
+                                        lastHash = hashIt.CurrentKey.AsReadOnlySpan().ToArray();
+                                        lastId = idIt.CurrentKey;
+                                        batchFull = true;
+                                        break;
+                                    }
+                                } while (idIt.MoveNext());
+                            }
+                        } while (batchFull == false && hashIt.MoveNext());
+                    }
+                }
+
+                step.Commit(null);
+                step.RenewTransactions();
+                migrated += processed;
+
+                if (batchFull == false)
+                {
+                    progress.Completed(migrated);
+                    return;
+                }
+
+                progress.BatchCommitted(migrated);
+            }
+        }
+
+        private static IDisposable GetBatchStartKey(ByteStringContext allocator, byte[] lastKey, out Slice startKey)
+        {
+            if (lastKey == null)
+            {
+                startKey = Slices.BeforeAllKeys;
+                return null;
+            }
+
+            return Slice.From(allocator, lastKey, ByteStringType.Immutable, out startKey);
+        }
+
+        private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, bool isSharded)
         {
             var skip = 0L;
             var processed = 0L;
             var done = false;
 
-            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass {pass} of 2",
+            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 2 of 2",
                 step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata)?.NumberOfEntries ?? 0);
 
             while (done == false)
@@ -156,9 +238,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
 
                                 using (scope)
-                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
+                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out _))
                                 {
-                                    update.Invoke(dynamicIndex, writeTable, pkSlice, tvb);
+                                    writeTable.Set(tvb, forceUpdate: true);
                                 }
                             }
 
@@ -240,27 +322,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
         }
 
-        private static bool PopulateAttachmentsFlagAndHashDynamicIndex(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
-        {
-            if (writeTable.TryFindIdFromPrimaryKey(pkSlice, out var id))
-            {
-                // populate value into the new dynamic index
-                using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
-                {
-                    var indexTree = writeTable.GetTree(dynamicIndex);
-                    writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
-                }
-            }
-
-            return true;
-        }
-
-        private bool AttachmentsTableSchemaUpdate(TableSchema.DynamicKeyIndexDef dynamicIndex, Table writeTable, Slice pkSlice, TableValueBuilder tvb)
-        {
-            writeTable.Set(tvb, forceUpdate: true);
-            return true;
-        }
-
         private unsafe IDisposable AttachmentOldToTableValue(DocumentsOperationContext context, Table writeTable, Attachment attachment, out TableValueBuilder tvb, out Slice keySlice)
         {
             var toDispose = new List<IDisposable>();
@@ -325,12 +386,19 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
 
             int flags = tvr.Count == _oldSchemaSize ? (int)RemoteAttachmentFlags.None : *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
-            var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
-            var span = new Span<byte>(buffer.Ptr, buffer.Length);
+            using (Slice.External(tx.Allocator, hashPtr, hashSize, out Slice hash))
+                return GenerateFlagAndHashKey(tx.Allocator, flags, hash, out slice);
+        }
+
+        private static unsafe ByteStringContext.Scope GenerateFlagAndHashKey(ByteStringContext allocator, int flags, Slice hash, out Slice slice)
+        {
+            ByteStringContext.Scope scope = allocator.Allocate(sizeof(int) + 1 + hash.Size, out ByteString buffer); // flag + record separator + hash
+
+            Span<byte> span = new Span<byte>(buffer.Ptr, buffer.Length);
             MemoryMarshal.AsBytes(new Span<int>(ref flags)).CopyTo(span);
             buffer.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
-            new ReadOnlySpan<byte>(hashPtr, hashSize).CopyTo(span[(sizeof(int) + 1)..]);
+            hash.AsReadOnlySpan().CopyTo(span[(sizeof(int) + 1)..]);
 
             slice = new Slice(buffer);
             return scope;
