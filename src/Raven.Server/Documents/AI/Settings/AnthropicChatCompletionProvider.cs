@@ -42,7 +42,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         request.Headers.TryAddWithoutValidation(Wire.HeaderAnthropicVersion, apiVersion);
     }
 
-    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
+    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema, bool strict)
     {
         var inputSchema = ParsedJsonCache.ParseObject(ctx, parametersSchema);
 
@@ -50,8 +50,8 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         {
             [Wire.Name] = name,
             [Wire.Description] = description,
-            [Wire.InputSchema] = BuildStrictToolRootSchema(inputSchema),
-            [Wire.Strict] = true
+            [Wire.InputSchema] = inputSchema.Count > 0 ? inputSchema : EmptyObjectSchema(),
+            [Wire.Strict] = strict
         };
     }
 
@@ -184,39 +184,13 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
     // Anthropic's effort levels are lowercase and case-sensitive; any value goes out as given, lowercased, and the API validates it.
     private string EffortLevel() => _settings.ReasoningEffort.Trim().ToLowerInvariant();
 
-    // Anthropic's strict mode requires `additionalProperties: false` on every object in a tool schema. The schemas RavenDB generates
-    // (sub-agent and sample-object) already close every object, so this only matters for a hand-written ParametersSchema. Only the
-    // root is repaired: the rest of a hand-written schema belongs to the agent author - if it declares something Anthropic rejects,
-    // Anthropic says so.
-    //
-    // A hand-written schema without it, e.g.:
-    //   {"type":"object","properties":{"customerId":{"description":"The customer to look up","type":"string"}},"required":["customerId"]}
-    // goes out to Anthropic as the same object with "additionalProperties": false appended at the root.
-    // A schema that already states additionalProperties is sent as-is; a tool with no parameters gets
-    //   {"type":"object","properties":{},"additionalProperties":false}
-    private static object BuildStrictToolRootSchema(BlittableJsonReaderObject schema)
+    // a tool with no parameters still needs an object schema
+    private static DynamicJsonValue EmptyObjectSchema() => new()
     {
-        if (schema.Count == 0)
-            return new DynamicJsonValue
-            {
-                [Canonical.JsonSchemaFields.Type] = Canonical.JsonSchemaFields.TypeObject,
-                [Canonical.JsonSchemaFields.Properties] = new DynamicJsonValue(),
-                [Canonical.JsonSchemaFields.AdditionalProperties] = false
-            };
-
-        if (schema.TryGetMember(Canonical.JsonSchemaFields.AdditionalProperties, out _))
-            return schema;
-
-        var root = new DynamicJsonValue();
-        foreach (var property in schema.GetPropertyNames())
-        {
-            if (schema.TryGetMember(property, out var value))
-                root[property] = value;
-        }
-
-        root[Canonical.JsonSchemaFields.AdditionalProperties] = false;
-        return root;
-    }
+        [Canonical.JsonSchemaFields.Type] = Canonical.JsonSchemaFields.TypeObject,
+        [Canonical.JsonSchemaFields.Properties] = new DynamicJsonValue(),
+        [Canonical.JsonSchemaFields.AdditionalProperties] = false
+    };
 
     // Consecutive tool results go back as one user turn.
     private static void FlushToolResults(DynamicJsonArray messages, DynamicJsonArray pendingToolResults)

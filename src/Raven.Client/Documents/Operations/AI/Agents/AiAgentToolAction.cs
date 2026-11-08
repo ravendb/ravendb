@@ -54,17 +54,28 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         public string ParametersSchema { get; set; }
 
         /// <summary>
+        /// Sends <see cref="ParametersSchema"/> in strict mode; it must follow the provider's strict rules.
+        /// A schema built from <see cref="ParametersSampleObject"/> is always strict.
+        /// </summary>
+        public bool Strict { get; set; }
+
+        /// <summary>
         /// Serializes this tool action to JSON structure.
         /// </summary>
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var djv = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Description)] = Description,
                 [nameof(ParametersSampleObject)] = ParametersSampleObject,
                 [nameof(ParametersSchema)] = ParametersSchema
             };
+
+            if (Strict)
+                djv[nameof(Strict)] = true;
+
+            return djv;
         }
     }
 

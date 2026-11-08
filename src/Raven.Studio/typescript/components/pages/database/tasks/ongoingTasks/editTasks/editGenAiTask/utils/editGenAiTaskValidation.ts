@@ -88,6 +88,7 @@ const editGenAiTaskSchema = yup.object({
             isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
+            strict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(
