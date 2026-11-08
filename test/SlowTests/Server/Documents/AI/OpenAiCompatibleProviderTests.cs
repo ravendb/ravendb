@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -58,6 +61,82 @@ namespace SlowTests.Server.Documents.AI
                 Assert.Equal(bodyWithoutCache, client.LastRequestBody);
                 Assert.Equal(1, parsedJson.ParseCount);
             }
+        }
+
+        // Chat Completions reads strict only inside "function" (RavenDB-27249)
+        [RavenTheory(RavenTestCategory.Ai)]
+        [InlineData(AiConnectorType.OpenAi, true)]
+        [InlineData(AiConnectorType.AzureOpenAi, true)]
+        [InlineData(AiConnectorType.Google, false)]
+        public void Tools_StrictFlagGoesInsideFunction(AiConnectorType type, bool supportsStrict)
+        {
+            var provider = type switch
+            {
+                AiConnectorType.OpenAi => OpenAi(),
+                AiConnectorType.AzureOpenAi => new AzureOpenAiChatCompletionProvider(new AzureOpenAiSettings("key", "https://test.openai.azure.com/", "gpt-test", "deployment")),
+                _ => new GoogleChatCompletionProvider(new GoogleSettings("gemini-test", "key"))
+            };
+
+            using var contextPool = NewContextPool();
+            using var client = NewClient(provider, _ => Ok("{}"), contextPool);
+
+            using (contextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                var generatedSchema = ChatCompletionClient.GetSchemaForTool(schema: null, sampleObject: "{\"id\": \"customers/1\"}");
+                const string optedOut = "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}},\"required\":[\"id\"],\"additionalProperties\":true}";
+                var tools = client.PrepareTools(ctx, [new AiToolDescriptor("generated", "d", generatedSchema), new AiToolDescriptor("user", "d", optedOut)]);
+
+                Assert.All(tools, tool => Assert.False(tool.TryGetMember("strict", out _)));
+
+                tools[0].TryGet("function", out BlittableJsonReaderObject generated);
+                Assert.Equal(supportsStrict, generated.TryGet("strict", out bool strict) && strict);
+
+                tools[1].TryGet("function", out BlittableJsonReaderObject user);
+                Assert.False(user.TryGetMember("strict", out _));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public void CanUseStrictTool_OnlyWhenEveryObjectIsClosedAndFullyRequired()
+        {
+            var generated = ChatCompletionClient.GetSchemaForTool(schema: null, "{\"id\": \"customers/1\", \"lines\": [{\"product\": \"Chai\", \"quantity\": 1}]}");
+
+            // the schemas we generate close every object and require every property
+            Assert.True(ChatCompletionClient.CanUseStrictTool(generated));
+            Assert.True(ChatCompletionClient.CanUseStrictTool(ChatCompletionClient.GetSchemaForTool(schema: null, "{\"additionalProperties\": \"a tool argument with that name\"}")));
+            using (var contextPool = NewContextPool())
+            using (contextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                Assert.True(ChatCompletionClient.CanUseStrictTool(ConversationHandler.GetSchemaForSubAgentTool(ctx, new Dictionary<string, ConversationHandler.ParameterDefinition>
+                {
+                    ["userPrompt"] = new("what the sub-agent should do", AiAgentParameterValueType.String),
+                    ["tags"] = new("tags", AiAgentParameterValueType.ArrayOfString)
+                })));
+            }
+
+            // a schema the user wrote is strict only when every object has additionalProperties: false and all its properties required
+            Assert.True(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}},\"required\":[\"id\"],\"additionalProperties\":false}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}},\"required\":[\"id\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool(
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"type\":\"object\",\"properties\":{\"status\":{\"type\":\"string\"}},\"required\":[\"status\"]}},\"required\":[\"filter\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}}}"));
+            Assert.True(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"id\":{\"type\":\"string\"}},\"required\":[]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool(
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"status\":{\"type\":\"string\"}}}},\"required\":[\"filter\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"additionalProperties\":true}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool(generated.Replace("\"additionalProperties\": false", "\"additionalProperties\": {\"type\":\"string\"}")));
+            Assert.False(ChatCompletionClient.CanUseStrictTool(
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"type\":\"object\",\"additionalProperties\":true}},\"required\":[\"filter\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool(
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"lines\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":true}}},\"required\":[\"lines\"]}"));
+            // a nullable object, and an open object written without "type"
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"type\":[\"object\",\"null\"]}},\"required\":[\"filter\"]}"));
+            Assert.True(ChatCompletionClient.CanUseStrictTool(
+                "{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"type\":[\"object\",\"null\"],\"properties\":{},\"additionalProperties\":false}},\"required\":[\"filter\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"filter\":{\"additionalProperties\":true}},\"required\":[\"filter\"]}"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("not json"));
+            Assert.False(ChatCompletionClient.CanUseStrictTool("{\"a\": 1, \"a\": 2}"));
         }
 
         // The client only allocates a JsonOperationContext, so a plain pool is enough (as in BaseAiConnectorForTesting).

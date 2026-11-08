@@ -604,6 +604,87 @@ public class ChatCompletionClient : IDisposable
         throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
     }
 
+    // strict only when every object has additionalProperties: false and all its properties in "required", otherwise OpenAI returns 400
+    internal static bool CanUseStrictTool(string schema)
+    {
+        if (string.IsNullOrWhiteSpace(schema))
+            return true;
+
+        try
+        {
+            return IsStrict(JsonNode.Parse(schema));
+        }
+        catch (Exception)
+        {
+            // a duplicate key is accepted when the schema is read for the request (the last value is kept),
+            // but JsonObject throws on it, so the tool goes without strict instead of failing the request
+            return false;
+        }
+    }
+
+    private static bool IsStrict(JsonNode node)
+    {
+        if (node is JsonArray array)
+            return array.All(IsStrict);
+
+        if (node is not JsonObject obj)
+            return true;
+
+        // a missing additionalProperties means open (JSON Schema default)
+        if (IsObjectSchema(obj) && IsClosed(obj[Constants.JsonSchemaFields.AdditionalProperties]) == false)
+            return false;
+
+        if (HasOptionalProperty(obj))
+            return false;
+
+        foreach (var (key, value) in obj)
+        {
+            // the keys under "properties" are argument names, not schema keywords
+            if (key == Constants.JsonSchemaFields.Properties && value is JsonObject properties)
+            {
+                if (properties.Any(p => IsStrict(p.Value) == false))
+                    return false;
+            }
+            else if (IsStrict(value) == false)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsClosed(JsonNode additionalProperties) => additionalProperties is JsonValue value && value.TryGetValue(out bool allowed) && allowed == false;
+
+    private static bool IsObjectSchema(JsonObject obj)
+    {
+        if (obj.ContainsKey(Constants.JsonSchemaFields.Properties) || obj.ContainsKey(Constants.JsonSchemaFields.AdditionalProperties))
+            return true;
+
+        // e.g. "type": ["object", "null"]
+        var type = obj[Constants.JsonSchemaFields.Type];
+        return type is JsonArray types ? types.Any(IsObjectType) : IsObjectType(type);
+    }
+
+    private static bool IsObjectType(JsonNode type) => type is JsonValue value && value.TryGetValue(out string name) && name == Constants.JsonSchemaFields.TypeObject;
+
+    private static bool HasOptionalProperty(JsonObject obj)
+    {
+        if (obj[Constants.JsonSchemaFields.Properties] is not JsonObject properties || properties.Count == 0)
+            return false;
+
+        if (obj[Constants.JsonSchemaFields.Required] is not JsonArray required)
+            return true;
+
+        foreach (var (name, _) in properties)
+        {
+            if (required.Any(r => r is JsonValue value && value.TryGetValue(out string s) && s == name) == false)
+                return true;
+        }
+
+        return false;
+    }
+
     internal static string GetSchemaFromSampleObject(string sampleObject)
     {
         var doc = JsonDocument.Parse(sampleObject);

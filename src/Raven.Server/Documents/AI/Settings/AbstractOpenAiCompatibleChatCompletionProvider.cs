@@ -144,8 +144,9 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             }
         };
 
-        if (SupportStrictTools)
-            tool[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
+        // Chat Completions reads strict inside "function" (FunctionObject), a tool-level strict is ignored
+        if (SupportStrictTools && ChatCompletionClient.CanUseStrictTool(parametersSchema))
+            ((DynamicJsonValue)tool[ChatCompletionClient.Constants.ResponseFields.Function])[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
 
         return tool;
     }
