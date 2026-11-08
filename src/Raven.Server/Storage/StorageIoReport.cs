@@ -5,7 +5,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
-using Sparrow.Server.Utils.DiskStatsGetter;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -113,7 +113,7 @@ namespace Raven.Server.Storage
         public static StorageDeviceIoInfo Create(DeviceWriteBudget device, DeviceTracker tracker, StorageDeviceMonitor monitor)
         {
             CongestionThresholds thresholds = monitor.Thresholds;
-            DiskStatsResult diskStats = monitor.GetDiskStats(tracker?.MountPoint);
+            DeviceIoStats diskStats = device.DeviceStats;
             DeviceWriteBudget.DeviceClass deviceClass = device.Classify(out DeviceWriteBudget.ClassReason classReason);
             TimeSpan sinceLastWrite = device.TimeSinceLastJournalWrite;
             DeviceTracker.Sample? last = null;
@@ -136,10 +136,10 @@ namespace Raven.Server.Storage
                 SyncCostInMs = device.SyncCost.TotalMilliseconds,
                 DiskStats = diskStats == null ? null : new StorageDiskStatsInfo
                 {
-                    ReadsPerSec = diskStats.IoReadOperations,
-                    WritesPerSec = diskStats.IoWriteOperations,
-                    ReadBytesPerSec = diskStats.ReadThroughput.GetValue(SizeUnit.Bytes),
-                    WriteBytesPerSec = diskStats.WriteThroughput.GetValue(SizeUnit.Bytes)
+                    ReadsPerSec = diskStats.ReadsPerSecond,
+                    WritesPerSec = diskStats.WritesPerSecond,
+                    ReadBytesPerSec = (long)diskStats.ReadBytesPerSecond,
+                    WriteBytesPerSec = (long)diskStats.WriteBytesPerSecond
                 },
                 Draining = device.IsDraining,
                 LastModeSwitch = device.LastModeSwitch,
