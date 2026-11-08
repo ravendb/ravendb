@@ -748,9 +748,9 @@ namespace Voron.Data.Tables
         {
             var llt = _tx.LowLevelTransaction;
             var count = 0;
-            pages[count++] = id / Constants.Storage.PageSize;
+            count = Add(llt, pages, count, id / Constants.Storage.PageSize);
             if (id % Constants.Storage.PageSize != 0) // a small value: its section header page tracks its space
-                pages[count++] = RawDataSection.GetSectionPageNumber(llt, id);
+                count = Add(llt, pages, count, RawDataSection.GetSectionPageNumber(llt, id));
 
             if (indexes.IsEmpty == false)
             {
@@ -758,10 +758,19 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in indexes)
                 {
                     if (GetFixedSizeTree(indexDef).TryGetLeafPageNumber(indexDef.GetValue(value), out var leaf))
-                        pages[count++] = leaf;
+                        count = Add(llt, pages, count, leaf);
                 }
             }
             return count;
+
+            // a page in scratch is in memory, and its data file copy is stale
+            static int Add(LowLevelTransaction llt, Span<long> pages, int count, long page)
+            {
+                if (llt.IsInScratch(page))
+                    return count;
+                pages[count] = page;
+                return count + 1;
+            }
         }
 
         /// <summary>
