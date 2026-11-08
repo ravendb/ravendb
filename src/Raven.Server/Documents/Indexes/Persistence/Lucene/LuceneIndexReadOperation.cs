@@ -582,7 +582,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return gatherAllCollector.ToTopDocs();
                 }
 
-                var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
+                var numberOfDocsToCollect = Math.Abs(pageSize + start);
+
+                if (StatisticsBackedNonSortingCollector.TryExecute(_searcher, documentQuery, numberOfDocsToCollect, _state, out var topDocs))
+                    return topDocs;
+
+                var noSortingCollector = new NonSortingCollector(numberOfDocsToCollect);
                 _searcher.Search(documentQuery, noSortingCollector, _state);
                 return noSortingCollector.ToTopDocs();
             }
