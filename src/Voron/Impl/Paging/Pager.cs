@@ -103,8 +103,28 @@ public unsafe partial class Pager : IDisposable
         return funcs;
     }
 
+    private static string IoRingFilesExhaustedMessage(string filename)
+    {
+        var max = PalConfiguration.IoRingFileTableSize;
+        var suggested = max * 2;
+        var withoutRing = PlatformDetails.RunningOnWindows ? Pal.RvnWriteMode.FileIo : Pal.RvnWriteMode.VectoredFileIo;
+        var message =
+            $"Cannot open the data file '{filename}': the I/O ring that writes data files is full. 'Storage.IoRingMaxFiles' sets its size to {max} files" +
+            (PalConfiguration.IoRingMaxFiles == null ? " (the default: the process's limit on open files). " : ". ") +
+            $"Each database, each index, and some internal stores (such as the cluster state) have their own data file, and each open data file uses one place in the I/O ring until it is closed.{Environment.NewLine}" +
+            $"To open more databases and indexes, raise 'Storage.IoRingMaxFiles' (for example to {suggested}) and restart the server. Set it in settings.json (\"Storage.IoRingMaxFiles\": {suggested}), " +
+            $"with the environment variable RAVEN_Storage_IoRingMaxFiles={suggested}, or with the command line argument --Storage.IoRingMaxFiles={suggested}.{Environment.NewLine}";
+        if (PlatformDetails.RunningOnLinux)
+            message += "On Linux, the I/O ring holds at most the limit on open files of the RavenDB process ('ulimit -n'; raise it with LimitNOFILE in the systemd unit), " +
+                       $"and older kernels (such as 5.10) at most 32768 files, whatever the value.{Environment.NewLine}";
+        return message + $"To stop using the I/O ring, set 'Storage.WriteMode' to '{withoutRing}'.";
+    }
+
     public static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
     {
+        if (rc == PalFlags.FailCodes.FailIoRingFilesExhausted)
+            throw new InvalidOperationException(IoRingFilesExhaustedMessage(filename));
+
         if (rc == PalFlags.FailCodes.FailCreateIoRing)
         {
             if (Pal.rvn_get_error_meaning(errorCode) is PalFlags.ErrnoSpecialCodes.NoMem)
