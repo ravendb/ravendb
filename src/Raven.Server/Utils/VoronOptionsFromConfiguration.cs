@@ -16,7 +16,6 @@ namespace Raven.Server.Utils
             options.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
             options.EnablePrefetching = configuration.Storage.EnablePrefetching;
             options.DiscardVirtualMemory = configuration.Storage.DiscardVirtualMemory;
-            options.UseSequentialReadAheadHintForJournalRecovery = configuration.Storage.UseSequentialReadAheadHintForJournalRecovery;
             options.TimeToSyncAfterFlushInSec = (int)configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (configuration.Storage.MaxScratchBufferSize.HasValue)

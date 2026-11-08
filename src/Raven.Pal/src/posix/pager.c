@@ -159,6 +159,12 @@ int32_t _open_pager_file(int fd,
         return SUCCESS;
     }
 
+#if !__APPLE__
+    // a file read from start to end (journal recovery): a larger read-ahead window than the device's (advisory)
+    if (global_state->open_flags & OPEN_FILE_SEQUENTIAL_SCAN)
+        (void)posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
+
     if ((global_state->open_flags & OPEN_FILE_DO_NOT_MAP))
     {
         handle_ptr->file_fd = fd;
