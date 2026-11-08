@@ -35,15 +35,15 @@ namespace Raven.Server.Web.System
         public async Task PrefetchStats()
         {
             // the counters of the process wide prefetch ring (page hints and segment read-ahead), since the server started
-            var ring = PrefetchRing.Default;
-            var stats = ring.GetStats();
+            var ring = ServerStore.Configuration.Storage.EnablePrefetching ? PrefetchRing.Default : null;
+            var stats = ring?.GetStats();
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(PrefetchRing.IsAvailable)] = ring.IsAvailable,
-                    [nameof(PrefetchRing.MaxFiles)] = ring.MaxFiles,
+                    [nameof(PrefetchRing.IsAvailable)] = ring?.IsAvailable ?? false,
+                    [nameof(PrefetchRing.MaxFiles)] = ring?.MaxFiles,
                     [nameof(PrefetchRingStats.Submitted)] = stats?.Submitted,
                     [nameof(PrefetchRingStats.DroppedFull)] = stats?.DroppedFull,
                     [nameof(PrefetchRingStats.DroppedStale)] = stats?.DroppedStale,

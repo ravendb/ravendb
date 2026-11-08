@@ -178,6 +178,8 @@ namespace Raven.Server
             PalConfiguration.PrefetchMaxFiles = configuration.Storage.PrefetchRingMaxFiles;
             PalConfiguration.PrefetchRingEntries = configuration.Storage.PrefetchRingEntries;
             PalConfiguration.PrefetchQueueSize = configuration.Storage.PrefetchRingQueueSize;
+            if (configuration.Storage.EnablePrefetching)
+                _ = PrefetchRing.Default; // a ring that cannot be created stops the server here, not at the first database
 
             GlobalFlushingBehavior.NumberOfConcurrentSyncs = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
 

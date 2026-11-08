@@ -29,8 +29,31 @@ public readonly struct PrefetchRingStats
 /// </summary>
 public sealed class PrefetchRing : IDisposable
 {
-    public static readonly PrefetchRing Default = new(PalConfiguration.PrefetchRingEntries,
-        PalConfiguration.PrefetchMaxFiles ?? PalConfiguration.FilesTheProcessCanOpen(), PalConfiguration.PrefetchQueueSize);
+    private static PrefetchRing _default;
+    private static readonly object DefaultLock = new();
+
+    /// <summary>The process's ring, created on first use. If it cannot be created, every use throws, with the reason.</summary>
+    public static PrefetchRing Default => Volatile.Read(ref _default) ?? CreateDefault();
+
+    private static PrefetchRing CreateDefault()
+    {
+        lock (DefaultLock)
+        {
+            if (_default != null)
+                return _default;
+            try
+            {
+                Volatile.Write(ref _default, new PrefetchRing(PalConfiguration.PrefetchRingEntries,
+                    PalConfiguration.PrefetchMaxFiles ?? PalConfiguration.FilesTheProcessCanOpen(), PalConfiguration.PrefetchQueueSize));
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    "Could not create the prefetch ring, which reads data files ahead. To run without read-ahead, set 'Storage.EnablePrefetching' to false.", e);
+            }
+            return _default;
+        }
+    }
 
     private const int WaitSlots = 1024;
 
