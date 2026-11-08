@@ -218,6 +218,75 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task PreparedPatchOfADocumentDeletedBeforeTheMerger(bool recreated)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Name = "original", Age = 1 }, "items/1");
+                    session.SaveChanges();
+                }
+
+                var database = await GetDatabase(store.Database);
+                var patch = new Raven.Server.Documents.Patch.PatchRequest("this.Name = args.v;", PatchRequestType.Patch);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    string changeVector;
+                    DocumentFlags flags;
+                    BlittableJsonReaderObject prepared;
+                    using (context.OpenReadTransaction())
+                    using (var document = database.DocumentsStorage.Get(context, "items/1"))
+                    {
+                        changeVector = document.ChangeVector;
+                        flags = document.Flags;
+                        var preparedArgs = context.ReadObject(new DynamicJsonValue { ["v"] = "from-snapshot" }, "args");
+                        Assert.True(SimpleAssignmentPatch.TryGet(patch).TryApply(context, document.Data, preparedArgs, out prepared));
+                    }
+
+                    // the document is deleted (and maybe created again) after the snapshot was taken
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("items/1");
+                        session.SaveChanges();
+                    }
+                    if (recreated)
+                    {
+                        using (var session = store.OpenSession())
+                        {
+                            session.Store(new Item { Name = "recreated", Age = 3 }, "items/1");
+                            session.SaveChanges();
+                        }
+                    }
+
+                    var args = context.ReadObject(new DynamicJsonValue { ["v"] = "from-script" }, "args");
+                    using (var command = new PatchDocumentCommand(context, "items/1", null, false, (patch, args), (null, null), null,
+                               database.IdentityPartsSeparator, isTest: false, debugMode: false, collectResultsNeeded: true, returnDocument: false))
+                    {
+                        command.SetPrepared("items/1", changeVector, flags, prepared);
+                        await database.TxMerger.Enqueue(command);
+                        Assert.Equal(recreated ? PatchStatus.Patched : PatchStatus.DocumentDoesNotExist, command.PatchResult.Status);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var item = session.Load<Item>("items/1");
+                    if (recreated == false)
+                    {
+                        Assert.Null(item); // the snapshot is not written over a delete
+                        return;
+                    }
+                    Assert.Equal("from-script", item.Name); // the script ran on the new document
+                    Assert.Equal(3, item.Age);
+                }
+            }
+        }
+
         private static PatchStatus Patch(IDocumentStore store, string id, string script, Dictionary<string, object> values)
         {
             var request = new PatchRequest { Script = script };
