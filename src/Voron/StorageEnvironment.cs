@@ -1669,7 +1669,8 @@ namespace Voron
             if (pageNumber != current->PageNumber)
                 ThrowInvalidPageNumber(pageNumber, current);
 
-            // an encrypted page was checked by its MAC when it was decrypted, and the decryption copy read its overflow pages
+            // an encrypted page was checked by its MAC when it was decrypted, and its overflow pages were read ahead before
+            // the decryption copy (Pager.Crypto.AcquirePagePointer): here they would only be hinted after they were read
             if (Options.Encryption.IsEnabled == false)
             {
                 if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
