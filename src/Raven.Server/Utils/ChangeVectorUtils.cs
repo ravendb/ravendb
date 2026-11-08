@@ -439,10 +439,11 @@ namespace Raven.Server.Utils
                 return incomingVersion;
 
             var newIncoming = new List<ChangeVectorEntry>();
+            var unused = context.DocumentDatabase.DocumentsStorage.UnusedDatabaseIds;
 
             foreach (var entry in incoming)
             {
-                if (ContainsDbId(global, entry.DbId))
+                if (ContainsDbId(global, entry.DbId) || unused?.Contains(entry.DbId) == true)
                 {
                     newIncoming.Add(entry);
                     knownEntries?.Add(entry);
@@ -476,7 +477,14 @@ namespace Raven.Server.Utils
                 }
             }
 
-            return newIncoming.SerializeVector();
+            // a sink rebuilds a change vector that carries SINK itself; any other one it stores as received, so send it as stored
+            foreach (var entry in newIncoming)
+            {
+                if (entry.NodeTag == ChangeVectorParser.SinkInt)
+                    return newIncoming.SerializeVector();
+            }
+
+            return incomingVersion;
         }
 
         private static bool ContainsDbId(List<ChangeVectorEntry> changeVector, string dbId)

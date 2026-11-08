@@ -40,6 +40,7 @@ namespace Voron.Data.Tables
                 }
 
                 if (size + _values.Count + 1 > byte.MaxValue) _elementSize = 2;
+                else _elementSize = 1; // a Set may have shrunk the value
 
                 Return:
                 _isDirty = false;
@@ -122,6 +123,51 @@ namespace Voron.Data.Tables
             _values.Add(ptr);
             _size += ptr.Size;
             _isDirty = true;
+        }
+
+        // Replaces column `index`, or appends it when index == Count.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Set<T>(int index, T value) where T : struct
+        {
+            PtrSize ptr = PtrSize.Create(value);
+            Set(index, ref ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Set(int index, Slice buffer)
+        {
+            PtrSize ptr = PtrSize.Create(buffer.Content.Ptr, buffer.Content.Length);
+            Set(index, ref ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Set(int index, void* pointer, int size)
+        {
+            PtrSize ptr = PtrSize.Create(pointer, size);
+            Set(index, ref ptr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Set(int index, ref PtrSize ptr)
+        {
+            if (index == _values.Count)
+            {
+                Add(ref ptr);
+                return;
+            }
+
+            if ((uint)index > (uint)_values.Count)
+                ThrowColumnPastTheEnd(index);
+
+            _size += ptr.Size - _values[index].Size;
+            _values[index] = ptr;
+            _isDirty = true;
+        }
+
+        [DoesNotReturn]
+        private void ThrowColumnPastTheEnd(int index)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index), $"Column {index} is past the end of a value with {_values.Count} columns");
         }
 
         [DoesNotReturn]
