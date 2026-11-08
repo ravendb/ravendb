@@ -262,6 +262,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
         public int IoRingQueueSize { get; set; }
 
+        [Description("EXPERT: The number of data files (one per database, index and internal store) that can be open with the I/O ring at the same time. Opening a data file beyond this number fails. By default, the process's limit on open files (RLIMIT_NOFILE) on Linux, and 1048576 on Windows. On Linux, the I/O ring holds at most the process's limit on open files, and older kernels (such as 5.10) at most 32768 files.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Storage.IoRingMaxFiles", ConfigurationEntryScope.ServerWideOnly)]
+        public int? IoRingMaxFiles { get; set; }
+
         [Description("EXPERT: The write mode for writing to the data file (Auto/VectoredFileIo/FileIo/IoRing).")]
         [DefaultValue(Pal.RvnWriteMode.Auto)]
         [ConfigurationEntry("Storage.WriteMode", ConfigurationEntryScope.ServerWideOnly)]
@@ -320,6 +325,14 @@ namespace Raven.Server.Config.Categories
                 throw new InvalidOperationException(
                     $"'{sizeKey}' is set to {IoRingQueueSize}, which is not a valid I/O ring queue size. " +
                     $"Use -1 to disable I/O ring (only supported with '{modeKey}={Pal.RvnWriteMode.Auto}') or a value of at least 3.");
+            }
+
+            if (IoRingMaxFiles < 1)
+            {
+                var maxFilesKey = RavenConfiguration.GetKey(x => x.Storage.IoRingMaxFiles);
+                throw new InvalidOperationException(
+                    $"'{maxFilesKey}' is set to {IoRingMaxFiles}, but the I/O ring needs room for at least one data file. " +
+                    $"Remove '{maxFilesKey}' to use the default (the process's limit on open files), or set '{modeKey}' to stop using the I/O ring.");
             }
 
             if (WriteMode == Pal.RvnWriteMode.IoRing && IoRingQueueSize == -1)

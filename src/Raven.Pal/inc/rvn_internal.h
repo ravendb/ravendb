@@ -17,3 +17,10 @@ EXPORT int32_t rvn_get_pal_ver();
 
 PRIVATE
 int io_ring_setup_successful(void);
+
+static inline bool
+_uses_write_ring(int32_t open_flags)
+{
+    return g_cfg.write_mode == rvn_write_mode_io_ring &&
+           (open_flags & (OPEN_FILE_READ_ONLY | OPEN_FILE_COPY_ON_WRITE | OPEN_FILE_WRITABLE_MAP)) == 0;
+}

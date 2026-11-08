@@ -250,6 +250,7 @@ void delete_global_state(struct handle_global_state *global_state)
     free(global_state->writes_arena.arena);
     free(global_state->fsync_dir_arena.arena);
     _free_dirty_bitmaps(global_state->dirty_bitmap);
+    rvn_io_ring_unregister_file(global_state);
     if (global_state->prefetch_ring != NULL)
         rvn_prefetch_unregister(global_state->prefetch_ring, global_state->prefetch_ticket);
     free(global_state->file_path);
@@ -335,6 +336,7 @@ rvn_init_pager(const char *filename,
 
     global_state->open_flags = open_flags;
     global_state->ref_count = 1;
+    global_state->io_ring_file = -1;
     global_state->prefetch_ticket = -1;
     global_state->prefetch_request_size = DEFAULT_PREFETCH_REQUEST_SIZE;
     global_state->writes_arena = (struct arena){.eventfd = -1};
@@ -400,6 +402,13 @@ rvn_init_pager(const char *filename,
     fd = -1;  // _open_pager_file takes ownership of fd in all cases:
     if (rc != SUCCESS)
         goto Error;
+
+    if (_uses_write_ring(open_flags))
+    {
+        rc = rvn_io_ring_register_file(global_state, ((struct handle *)*handle)->file_fd, detailed_error_code);
+        if (rc != SUCCESS)
+            goto ClosePager;
+    }
 
     if (open_flags & OPEN_FILE_PREFETCH)
         global_state->prefetch_request_size = _prefetch_request_size(((struct handle *)*handle)->file_fd);
