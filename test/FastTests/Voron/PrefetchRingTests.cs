@@ -411,6 +411,55 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         }
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void WithoutPrefetchingDataFilesOpenAsBeforeTheRing(bool enablePrefetching)
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        var path = RavenTestHelper.NewDataPath(nameof(WithoutPrefetchingDataFilesOpenAsBeforeTheRing), enablePrefetching ? 1 : 0, forceCreateDir: true);
+        try
+        {
+            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            {
+                options.EnablePrefetching = enablePrefetching;
+                options.PrefetchRing = ring;
+                Assert.Equal(enablePrefetching && PlatformDetails.RunningOnLinux, Pager.CanReadPagesAhead(options));
+
+                var (pager, state) = options.InitializeDataPager();
+                using (pager)
+                using (state)
+                {
+                    Assert.Equal(PalFlags.FailCodes.Success, Pal.rvn_pager_get_prefetch_info(state.Handle, out var info));
+                    if (ring.IsAvailable)
+                        Assert.Equal(enablePrefetching, info.Ticket != -1);
+                    if (PlatformDetails.RunningOnLinux)
+                        Assert.Equal(enablePrefetching, HasRandomReadAdvice(state.ReadAddress));
+                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).IsCompleted);
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+
+        // the 'rr' VmFlag of the mapping marks MADV_RANDOM
+        static bool HasRandomReadAdvice(byte* address)
+        {
+            var start = ((ulong)address).ToString("x");
+            var inMapping = false;
+            foreach (var line in File.ReadLines("/proc/self/smaps"))
+            {
+                if (line.StartsWith(start + "-", StringComparison.Ordinal))
+                    inMapping = true;
+                else if (inMapping && line.StartsWith("VmFlags:", StringComparison.Ordinal))
+                    return line.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("rr");
+            }
+            throw new InvalidOperationException($"No mapping at {start} in /proc/self/smaps");
+        }
+    }
+
     [RavenFact(RavenTestCategory.Voron)]
     public void ThePrefetchRequestSizeComesFromTheDevice()
     {
