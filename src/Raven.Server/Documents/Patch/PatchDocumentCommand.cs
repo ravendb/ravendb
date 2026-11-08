@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Jint;
@@ -582,6 +582,11 @@ namespace Raven.Server.Documents.Patch
 
             _disposableScriptRunner?.Dispose();
             _disposableScriptRunner = null;
+
+            // the runners are back in the pool: a merger rerun of this command takes new ones
+            _run = null;
+            _runIfMissing = null;
+            _isInitialized = false;
         }
 
         public PatchDocumentCommand(
