@@ -60,6 +60,38 @@ namespace SlowTests.Server.Documents.AI
             }
         }
 
+        // Chat Completions reads strict only inside "function" (RavenDB-27249)
+        [RavenTheory(RavenTestCategory.Ai)]
+        [InlineData(AiConnectorType.OpenAi)]
+        [InlineData(AiConnectorType.AzureOpenAi)]
+        [InlineData(AiConnectorType.Google)]
+        public void Tools_StrictFlagGoesInsideFunction(AiConnectorType type)
+        {
+            var provider = type switch
+            {
+                AiConnectorType.OpenAi => OpenAi(),
+                AiConnectorType.AzureOpenAi => new AzureOpenAiChatCompletionProvider(new AzureOpenAiSettings("key", "https://test.openai.azure.com/", "gpt-test", "deployment")),
+                _ => new GoogleChatCompletionProvider(new GoogleSettings("gemini-test", "key"))
+            };
+
+            using var contextPool = NewContextPool();
+            using var client = NewClient(provider, _ => Ok("{}"), contextPool);
+
+            using (contextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                var schema = ChatCompletionClient.GetSchemaForTool(schema: null, sampleObject: "{\"id\": \"customers/1\"}");
+                var tools = client.PrepareTools(ctx, [new AiToolDescriptor("strict", "d", schema, strict: true), new AiToolDescriptor("notStrict", "d", schema, strict: false)]);
+
+                Assert.All(tools, tool => Assert.False(tool.TryGetMember("strict", out _)));
+
+                tools[0].TryGet("function", out BlittableJsonReaderObject strictTool);
+                Assert.True(strictTool.TryGet("strict", out bool strict) && strict);
+
+                tools[1].TryGet("function", out BlittableJsonReaderObject notStrictTool);
+                Assert.False(notStrictTool.TryGetMember("strict", out _));
+            }
+        }
+
         // The client only allocates a JsonOperationContext, so a plain pool is enough (as in BaseAiConnectorForTesting).
         private static JsonContextPool NewContextPool() => new();
 

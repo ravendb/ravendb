@@ -68,6 +68,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
+                strict: x.Strict ?? !x.ParametersSchema,
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -113,6 +114,7 @@ const mapToDto = (
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
+                Strict: !!x.parametersSchema && (x.strict ?? true),
                 Options: {
                     AddToInitialContext: x.isAddToInitialContextOverride ? x.isAddToInitialContext : null,
                     AllowModelQueries: x.isAllowModelQueriesOverride ? x.isAllowModelQueries : null,

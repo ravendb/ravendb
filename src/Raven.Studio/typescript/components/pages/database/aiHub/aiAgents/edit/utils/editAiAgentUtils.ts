@@ -60,6 +60,7 @@ function mapFromDto(
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
+                strict: x.Strict ?? !x.ParametersSchema,
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -69,6 +70,7 @@ function mapFromDto(
                 description: x.Description,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
+                strict: x.Strict ?? !x.ParametersSchema,
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -127,6 +129,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
+                Strict: !!x.parametersSchema && (x.strict ?? true),
                 Options: {
                     AddToInitialContext: x.isAddToInitialContextOverride ? x.isAddToInitialContext : null,
                     AllowModelQueries: x.isAllowModelQueriesOverride ? x.isAllowModelQueries : null,
@@ -138,6 +141,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Description: x.description,
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
+                Strict: !!x.parametersSchema && (x.strict ?? true),
             })) ?? [],
         MaxModelIterationsPerCall: null,
         ChatTrimming:

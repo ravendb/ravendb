@@ -253,7 +253,7 @@ public class ChatCompletionClient : IDisposable
             var paramsSchema = GetSchemaForTool(schema: null, sampleObject: "{\"reason\":\"why the tool is being called\"}");
             var descriptors = new List<AiToolDescriptor>
             {
-                new("connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema)
+                new("connection_test_probe", "A probe so the request matches an agent call. Do not call it.", paramsSchema, strict: true)
             };
 
             using var request = CreateCompletionRequest(new AiChatRequest
@@ -420,7 +420,7 @@ public class ChatCompletionClient : IDisposable
 
         var tools = new List<BlittableJsonReaderObject>(descriptors.Count);
         foreach (var descriptor in descriptors)
-            tools.Add(ctx.ReadObject(_provider.BuildTool(ctx, descriptor.Name, descriptor.Description, descriptor.ParametersSchema), "tool"));
+            tools.Add(ctx.ReadObject(_provider.BuildTool(ctx, descriptor.Name, descriptor.Description, descriptor.ParametersSchema, descriptor.Strict), "tool"));
 
         return tools;
     }

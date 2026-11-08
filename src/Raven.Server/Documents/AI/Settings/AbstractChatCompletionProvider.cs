@@ -83,7 +83,7 @@ internal abstract class AbstractChatCompletionProvider
 
     public abstract void AddAuthentication(HttpRequestMessage request);
 
-    public abstract DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema);
+    public abstract DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema, bool strict);
 
     // 'request' is resolved by the client: internal messages filtered, tools in this provider's shape.
     // 'ctx' lives only for this write; keep nothing built with it.

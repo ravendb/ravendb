@@ -461,13 +461,13 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 continue;
 
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
-            tools.Add(new AiToolDescriptor(q.Name, q.Description, paramsSchema));
+            tools.Add(new AiToolDescriptor(q.Name, q.Description, paramsSchema, strict: string.IsNullOrWhiteSpace(q.ParametersSchema) || q.Strict));
         }
 
         foreach (var a in configuration.Actions ?? [])
         {
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
-            tools.Add(new AiToolDescriptor(a.Name, a.Description, paramsSchema));
+            tools.Add(new AiToolDescriptor(a.Name, a.Description, paramsSchema, strict: string.IsNullOrWhiteSpace(a.ParametersSchema) || a.Strict));
         }
 
         foreach (var subAgent in configuration.SubAgents ?? [])
@@ -477,7 +477,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             var paramsSchema = GetSchemaForSubAgentTool(context, parameters);
             var description = new StringBuilder(subAgent.Description).AppendLine();
             subAgentConfiguration.AppendCapabilities(description);
-            tools.Add(new AiToolDescriptor(subAgent.Identifier, description.ToString(), paramsSchema));
+            tools.Add(new AiToolDescriptor(subAgent.Identifier, description.ToString(), paramsSchema, strict: true));
         }
 
         return tools;

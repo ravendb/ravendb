@@ -24,6 +24,7 @@ export default function useEditAiAgentToolsSection() {
             description: "",
             query: "",
             parametersSchema: "",
+            strict: true,
             isAllowModelQueries: null,
             isAllowModelQueriesOverride: false,
             isAddToInitialContext: null,
@@ -55,6 +56,7 @@ export default function useEditAiAgentToolsSection() {
             name: "",
             description: "",
             parametersSchema: "",
+            strict: true,
             isEditing: true,
         });
     };

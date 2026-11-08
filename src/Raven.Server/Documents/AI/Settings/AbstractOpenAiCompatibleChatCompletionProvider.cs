@@ -21,8 +21,6 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     {
     }
 
-    public virtual bool SupportStrictTools => true;
-
     public virtual bool SupportsToolChoiceNone => true;
 
     public override void AddHeaders(HttpRequestMessage request)
@@ -131,23 +129,24 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             : new AuthenticationHeaderValue(ChatCompletionClient.Constants.RequestFields.AuthorizationApiKeyProperty, ApiKey);
     }
 
-    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
+    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema, bool strict)
     {
-        var tool = new DynamicJsonValue
+        var function = new DynamicJsonValue
         {
-            [ChatCompletionClient.Constants.JsonSchemaFields.Type] = Wire.RequestFields.ToolTypeFunction,
-            [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.ResponseFields.Name] = name,
-                [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
-                [Wire.RequestFields.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
-            }
+            [ChatCompletionClient.Constants.ResponseFields.Name] = name,
+            [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
+            [Wire.RequestFields.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
         };
 
-        if (SupportStrictTools)
-            tool[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
+        // Chat Completions reads strict inside "function" (FunctionObject), a tool-level strict is ignored
+        if (strict)
+            function[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
 
-        return tool;
+        return new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.JsonSchemaFields.Type] = Wire.RequestFields.ToolTypeFunction,
+            [ChatCompletionClient.Constants.ResponseFields.Function] = function
+        };
     }
 
     protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
