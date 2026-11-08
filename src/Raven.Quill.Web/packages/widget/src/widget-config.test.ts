@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveMount } from "@/widget-config";
+import { normalizeTheme, resolveMount } from "@/widget-config";
 
 const LIVE_CONFIG = JSON.stringify({
     mode: "live",
@@ -38,5 +38,18 @@ describe("resolveMount", () => {
     // conversation on the operator's own public origin.
     it("does not fall back to preview when a live config is malformed", () => {
         expect(resolveMount("{ not json", "?mode=preview")).toEqual({ mode: "unusable" });
+    });
+});
+
+// A server that predates the option sends no `suggestedPromptsLayout` at all. Merging over the defaults has
+// to leave the stacked layout the widget has always drawn, not `undefined`, which would fall through to the
+// inline branch in `Greeting`.
+describe("normalizeTheme", () => {
+    it("stacks the prompts when the server omits the layout", () => {
+        expect(normalizeTheme({ headerTitle: "Order support" }).suggestedPromptsLayout).toBe("Stacked");
+    });
+
+    it("keeps a layout the server did send", () => {
+        expect(normalizeTheme({ suggestedPromptsLayout: "Inline" }).suggestedPromptsLayout).toBe("Inline");
     });
 });

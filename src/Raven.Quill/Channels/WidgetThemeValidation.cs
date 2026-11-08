@@ -79,6 +79,18 @@ public static partial class WidgetThemeValidation
             return false;
         }
 
+        if (Enum.IsDefined(theme.LogoFit) == false)
+        {
+            error = "logoFit must be 'Contain' or 'Cover'";
+            return false;
+        }
+
+        if (Enum.IsDefined(theme.SuggestedPromptsLayout) == false)
+        {
+            error = "suggestedPromptsLayout must be 'Stacked' or 'Inline'";
+            return false;
+        }
+
         if (TryValidateColors(theme.Light, "light", out error) == false)
             return false;
 
