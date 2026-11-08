@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.LowMemory;
 using Sparrow.Utils;
 using Voron;
 using Voron.Impl;
@@ -282,7 +283,14 @@ namespace Raven.Server.Documents.Indexes.Static
                         metadata.TryGet(Constants.Documents.Metadata.Collection, out collection);
 
                     loaded = new LoadedDocument { Key = keySlice, Document = read, Collection = collection };
-                    _loadedDocuments[keySlice] = loaded;
+
+                    // past the bound a document is read again, nothing is evicted
+                    if (_loadedDocuments.Count < MaxKeptLoadedDocuments)
+                    {
+                        _loadedDocuments[keySlice] = loaded;
+                        if (_loadedDocuments.Count > HighestNumberOfKeptLoadedDocuments)
+                            HighestNumberOfKeptLoadedDocuments = _loadedDocuments.Count;
+                    }
                 }
 
                 var idSlice = GetIdSlice(id);
@@ -329,6 +337,20 @@ namespace Raven.Server.Documents.Indexes.Static
             public Document Document; // null: there is no such document (or it is in conflict)
             public string Collection;
         }
+
+        // bound of the documents kept for a batch
+        private const int ApproximateBytesKeptPerLoadedDocument = 2560;
+
+        internal static int MaxKeptLoadedDocuments = GetDefaultMaxKeptLoadedDocuments();
+
+        private static int GetDefaultMaxKeptLoadedDocuments()
+        {
+            // a 256th of the physical memory, at least 16 MB
+            var budget = Size.Max(new Size(16, SizeUnit.Megabytes), MemoryInformation.TotalPhysicalMemory / 256);
+            return (int)Math.Min(int.MaxValue, budget.GetValue(SizeUnit.Bytes) / ApproximateBytesKeptPerLoadedDocument);
+        }
+
+        internal static int HighestNumberOfKeptLoadedDocuments;
 
         private Dictionary<Slice, LoadedDocument> _loadedDocuments;
         private Voron.Impl.Transaction _loadedDocumentsTransaction;

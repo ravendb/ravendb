@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -219,6 +220,40 @@ public class LoadDocumentCacheTests(ITestOutputHelper output) : RavenTestBase(ou
         var changeVector = session.Advanced.GetChangeVectorFor(owner);
         Assert.False(string.IsNullOrEmpty(changeVector));
         Assert.Equal(20, session.Query<Result>(IndexName).Count(x => x.Cv == changeVector));
+    }
+
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void TheDocumentsKeptForABatchAreBoundedAndTheResultsDoNotDependOnIt(Options options)
+    {
+        // every key is loaded twice, far apart, with the bound reached
+        const int owners = 300;
+        const int cap = 50;
+
+        var previousCap = CurrentIndexingScope.MaxKeptLoadedDocuments;
+        var previousHighest = CurrentIndexingScope.HighestNumberOfKeptLoadedDocuments;
+        CurrentIndexingScope.MaxKeptLoadedDocuments = cap;
+        CurrentIndexingScope.HighestNumberOfKeptLoadedDocuments = 0;
+        try
+        {
+            using var store = GetDocumentStore(options);
+            store.Maintenance.Send(new PutIndexesOperation(OwnerIndex(MapWithState, "OwnerName", "State")));
+
+            Seed(store, owners, companiesPerOwner: 2);
+            Indexes.WaitForIndexing(store);
+
+            Assert.True(CurrentIndexingScope.HighestNumberOfKeptLoadedDocuments <= cap,
+                $"{CurrentIndexingScope.HighestNumberOfKeptLoadedDocuments} loaded documents were kept for a batch, the bound is {cap}");
+
+            Assert.Equal(2, CountByOwnerName(store, "Owner 0"));
+            Assert.Equal(2, CountByOwnerName(store, $"Owner {owners - 1}"));
+            Assert.Equal(0, CountWithoutOwner(store));
+        }
+        finally
+        {
+            CurrentIndexingScope.MaxKeptLoadedDocuments = previousCap;
+            CurrentIndexingScope.HighestNumberOfKeptLoadedDocuments = previousHighest;
+        }
     }
 
     [RavenFact(RavenTestCategory.Indexes)]
