@@ -507,8 +507,9 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) InitializeDataPager()
             {
-                // page-sized point lookups: a fault reads only the pages it touches, and pages are prefetched through the ring
-                var flags = Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch;
+                // page-sized point lookups: a fault reads only the pages it touches, and pages are prefetched through the ring.
+                // Without prefetching, the kernel's read-around stays, as it was before the ring.
+                var flags = EnablePrefetching ? Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch : Pal.OpenFileFlags.None;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)

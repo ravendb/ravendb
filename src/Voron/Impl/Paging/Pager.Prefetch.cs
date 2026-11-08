@@ -24,7 +24,8 @@ public unsafe partial class Pager
     private const int CheckedReadAheadLimit = 16;
 
     /// <summary>False where <see cref="ReadPagesAhead"/> and <see cref="WillNeedPages"/> do nothing: callers can skip finding the pages.</summary>
-    public static bool CanReadPagesAhead(StorageEnvironmentOptions options) => WillNeedSupported && options.RunningOn32Bits == false;
+    public static bool CanReadPagesAhead(StorageEnvironmentOptions options) =>
+        WillNeedSupported && options.RunningOn32Bits == false && options.EnablePrefetching;
 
     /// <summary>Completes once the pages are in the page cache. Recently requested pages are skipped.</summary>
     [SkipLocalsInit]
