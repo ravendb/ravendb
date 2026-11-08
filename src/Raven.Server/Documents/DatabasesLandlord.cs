@@ -1436,18 +1436,24 @@ namespace Raven.Server.Documents
                                 }
 
                                 PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
+                                if (backupStatus == null)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Skipping the backup status update of the idle database '{databaseName}' because it has no backup status for task {nextIdleDatabaseActivity.TaskId} on this node");
+                                }
+                                else
+                                {
+                                    backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
+                                    backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
+                                    backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
 
-                                backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
-                                backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
-                                backupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
+                                    var backupResult = new BackupResult();
+                                    backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
 
-                                var backupResult = new BackupResult();
-                                backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-
-                                BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                                    BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
+                                    ForTestingPurposes?.AfterIdleBackupStatusSaved?.Invoke(databaseName);
+                                }
                             }
-
-                            ForTestingPurposes?.AfterIdleBackupStatusSaved?.Invoke(databaseName);
 
                             if (_serverStore.IdleDatabases.ContainsKey(databaseName) == false)
                             {
