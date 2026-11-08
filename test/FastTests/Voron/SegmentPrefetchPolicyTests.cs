@@ -140,15 +140,18 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
         }
     }
 
-    private sealed class FixedQueueDepth : DeviceQueueDepthReader
+    private sealed class NoCounters : DeviceCounters
     {
-        public override double Read() => 0;
-        public override void Dispose() { }
+        public override bool TrySample(long timestamp, out DeviceIoStats stats)
+        {
+            stats = null;
+            return false;
+        }
     }
 
     // queue depth threshold 5, as Storage.SyncWritebackDrainQueueDepthThreshold
     private static DeviceWriteBudget Device() =>
-        new(new FixedQueueDepth(), "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+        new(new DeviceIoSampler(0, "test", new NoCounters()), "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
 
     [RavenFact(RavenTestCategory.Voron)]
     public void ReadAheadThatUsesItsWholeBudgetGetsTwiceAsMuchWhileTheQueueIsShort()
@@ -194,7 +197,7 @@ public class SegmentPrefetchPolicyTests(ITestOutputHelper output) : NoDisposalNe
     [RavenFact(RavenTestCategory.Voron)]
     public void WithoutAQueueSignalReadAheadIsNotLimited()
     {
-        var device = new DeviceWriteBudget(queueReader: null, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+        var device = new DeviceWriteBudget(sampler: null, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
         for (var i = 0; i < 1_000; i++)
             Assert.True(device.TryStartReadAhead(SegmentSize));
     }
