@@ -1438,9 +1438,7 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
             {
-                var flags = Pal.OpenFileFlags.ReadOnly;
-                if (PlatformDetails.RunningOnPosix) // read from start to end; on Windows the flag would replace FILE_FLAG_RANDOM_ACCESS
-                    flags |= Pal.OpenFileFlags.SequentialScan;
+                var flags = Pal.OpenFileFlags.ReadOnly | Pal.OpenFileFlags.SequentialScan; // read from start to end
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
                 return Pager.Create(this, filename, 0, flags, pageSize: Constants.Storage.JournalPageSize);
