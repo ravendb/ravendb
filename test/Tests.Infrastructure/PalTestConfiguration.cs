@@ -15,6 +15,7 @@ public static class PalTestConfiguration
         PalConfiguration.LowPriorityIo = configuration.Storage.LowPriorityFlushAndSync;
         PalConfiguration.WriteMode = configuration.Storage.WriteMode;
         PalConfiguration.IoRingQueueSize = configuration.Storage.IoRingQueueSize;
+        PalConfiguration.IoRingMaxFiles = configuration.Storage.IoRingMaxFiles;
     }
 
     public static void Apply()

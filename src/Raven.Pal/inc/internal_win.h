@@ -32,6 +32,9 @@ struct handle_global_state
     size_t arena_size;
 
     struct dirty_bitmap* dirty_bitmap;
+
+    // slot in the write ring's file table, -1 when the file does not use the ring
+    int32_t io_ring_file;
 };
 
 // This state represent a single handle to the pager on a file
@@ -72,6 +75,12 @@ int32_t rvn_write_io_ring(
     struct page_to_write* buffers,
     int32_t count,
     int32_t* detailed_error_code);
+
+PRIVATE int32_t
+rvn_io_ring_register_file(struct handle_global_state *global_state, HANDLE file, int32_t *detailed_error_code);
+
+PRIVATE void
+rvn_io_ring_unregister_file(struct handle_global_state *global_state);
 
 PRIVATE void
 _mark_dirty_pages(void *handle, struct page_to_write *buffers, int32_t count);

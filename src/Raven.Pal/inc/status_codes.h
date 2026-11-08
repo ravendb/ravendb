@@ -75,6 +75,7 @@ enum
     FAIL_WRITEBACK_NOT_SUPPORTED =     65,
     FAIL_MOVE_FILE              =      66,
     FAIL_PREFETCH_FILES_EXHAUSTED =    67,
+    FAIL_IO_RING_FILES_EXHAUSTED =     68,
 };
 
 #define ERRNO_SPECIAL_CODES_NONE        0

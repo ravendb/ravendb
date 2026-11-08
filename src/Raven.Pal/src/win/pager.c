@@ -402,6 +402,7 @@ void delete_global_state(struct handle_global_state *global_state)
     {
         return;
     }
+    rvn_io_ring_unregister_file(global_state); // before notify is closed, the unregister waits on it
     if (global_state->notify != NULL)
     {
         CloseHandle(global_state->notify);
@@ -583,6 +584,7 @@ rvn_init_pager(const char *filename,
     }
     global_state->open_flags = open_flags;
     global_state->ref_count = 1;
+    global_state->io_ring_file = -1;
     InitializeCriticalSection(&global_state->lock);
     LPCWSTR file_path_unicode = (LPCWSTR)filename;
     global_state->file_path = ConvertLPCWSTRToUTF8(file_path_unicode);
@@ -624,6 +626,20 @@ rvn_init_pager(const char *filename,
     rc = _open_pager_file(h, global_state, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
     if (rc == SUCCESS)
     {
+        if (_uses_write_ring(open_flags))
+        {
+            rc = rvn_io_ring_register_file(global_state, ((struct handle *)*handle)->file_handle, detailed_error_code);
+            if (rc != SUCCESS)
+            {
+                int32_t ignored;
+                rvn_close_pager(*handle, &ignored); // the last reference: also deletes the global state
+                *handle = NULL;
+                *memory = NULL;
+                *writable_memory = NULL;
+                *memory_size = 0;
+                return rc;
+            }
+        }
         return SUCCESS;
     }
 
