@@ -26,7 +26,6 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError),
             nameof(StorageEnvironmentOptions.MaxScratchBufferSize),
             nameof(StorageEnvironmentOptions.PrefetchSegmentSize),
-            nameof(StorageEnvironmentOptions.PrefetchResetThreshold),
             nameof(StorageEnvironmentOptions.SyncJournalsCountThreshold),
             nameof(StorageEnvironmentOptions.MaxUnsyncedBytesBeforeSync),
             nameof(StorageEnvironmentOptions.MaxUnsyncedBytesBeforeMandatorySync),

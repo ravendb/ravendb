@@ -22,6 +22,33 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     private const int PosixFadviseDontNeed = 4;
 
     [RavenFact(RavenTestCategory.Voron)]
+    public void ARingWithNoFilesIsOffAndDataFilesStillOpen()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PrefetchRing(ringEntries: 8, maxFiles: -1, queueSize: 64));
+
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 0, queueSize: 64);
+        Assert.False(ring.IsAvailable);
+
+        var path = RavenTestHelper.NewDataPath(nameof(ARingWithNoFilesIsOffAndDataFilesStillOpen), 0, forceCreateDir: true);
+        try
+        {
+            using var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.PrefetchRing = ring;
+            for (var i = 0; i < 3; i++)
+            {
+                var (pager, state) = Pager.Create(options, Path.Combine(path, $"{i}.voron"), 64 * 1024, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+                using (pager)
+                using (state)
+                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).IsCompleted); // nothing to wait for without a ring
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void DataFilesReleaseTheirRingRegistrationWhenClosed()
     {
         const int maxFiles = 64;
@@ -298,13 +325,16 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         Random.Shared.NextBytes(content);
         File.WriteAllBytes(file, content);
 
+        // a ring of its own: the default ring also counts the failed reads of the files other tests close
+        using var ring = new PrefetchRing(ringEntries: 32, maxFiles: 4, queueSize: 64);
         using (var options = StorageEnvironmentOptions.ForPathForTests(path))
         {
+            options.PrefetchRing = ring;
             var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
             using (pager)
             using (state)
             {
-                var ringAvailable = PrefetchRing.Default.IsAvailable;
+                var ringAvailable = ring.IsAvailable;
 
                 var expected = content.Length / Environment.SystemPageSize;
                 DropFromPageCache(file);
@@ -326,7 +356,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
                 if (ringAvailable)
                 {
-                    var stats = PrefetchRing.Default.GetStats();
+                    var stats = ring.GetStats();
                     Assert.NotNull(stats);
                     Assert.True(stats.Value.Submitted > 0);
                     Assert.Equal(0, stats.Value.Failed);
@@ -433,55 +463,71 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void StartReadsReportsAndReadsOnlyThePagesNotInMemory()
+    public void StartReadsReportsThePagesNotInMemory()
+    {
+        WithPage5InMemory(nameof(StartReadsReportsThePagesNotInMemory), Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch, (state, page) =>
+        {
+            var offsets = stackalloc long[] { 3 * Constants.Storage.PageSize, 5 * Constants.Storage.PageSize, 7 * Constants.Storage.PageSize };
+            var missing = Pal.rvn_pager_start_reads(state.Handle, offsets, 3);
+            if (missing == 3)
+            {
+                Output.WriteLine("this file system has no RWF_NOWAIT: every page counts as missing");
+                return;
+            }
+
+            // kernel 6.12 and later also start the reads of the missing pages; earlier kernels do not
+            Assert.Equal(2, missing);
+            Assert.Equal(3 * Constants.Storage.PageSize, offsets[0]);
+            Assert.Equal(7 * Constants.Storage.PageSize, offsets[1]);
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadAheadWithoutARingReadsOnlyThePagesNotInMemory()
+    {
+        // no prefetch flag: the file has no ring to wait on, so the pages are read ahead without waiting
+        WithPage5InMemory(nameof(ReadAheadWithoutARingReadsOnlyThePagesNotInMemory), Pal.OpenFileFlags.RandomAccess, (state, page) =>
+        {
+            Assert.True(Pager.ReadPagesAhead(state, new long[] { 3, 5, 7 }).IsCompletedSuccessfully);
+
+            var expected = Constants.Storage.PageSize / Environment.SystemPageSize;
+            Assert.Equal(expected, WaitForResident((byte*)page(3), expected));
+            Assert.Equal(expected, WaitForResident((byte*)page(7), expected));
+            Assert.Equal(0, ResidentPages((byte*)page(4), Constants.Storage.PageSize));
+            Assert.Equal(0, ResidentPages((byte*)page(6), Constants.Storage.PageSize));
+        });
+    }
+
+    private delegate void PagesTest(Pager.State state, Func<long, IntPtr> page);
+
+    // a 16 page data file out of the page cache, but for page 5
+    private void WithPage5InMemory(string name, Pal.OpenFileFlags flags, PagesTest test)
     {
         if (PlatformDetails.RunningOnLinux == false)
             return;
 
-        const int pages = 16;
-        var path = RavenTestHelper.NewDataPath(nameof(StartReadsReportsAndReadsOnlyThePagesNotInMemory), 0, forceCreateDir: true);
+        var path = RavenTestHelper.NewDataPath(name, 0, forceCreateDir: true);
         try
         {
             var file = Path.Combine(path, Constants.DatabaseFilename);
-            var content = new byte[pages * Constants.Storage.PageSize];
+            var content = new byte[16 * Constants.Storage.PageSize];
             Random.Shared.NextBytes(content);
             File.WriteAllBytes(file, content);
 
-            using (var options = StorageEnvironmentOptions.ForPathForTests(path))
+            using var options = StorageEnvironmentOptions.ForPathForTests(path);
+            var (pager, state) = Pager.Create(options, file, content.Length, flags);
+            using (pager)
+            using (state)
             {
-                var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
-                using (pager)
-                using (state)
+                IntPtr Page(long n) => (IntPtr)(state.ReadAddress + n * Constants.Storage.PageSize);
+                DropFromPageCache(file);
+                if (ResidentPages((byte*)Page(5), Constants.Storage.PageSize) == Constants.Storage.PageSize / Environment.SystemPageSize)
                 {
-                    var expected = Constants.Storage.PageSize / Environment.SystemPageSize;
-                    byte* Page(long n) => state.ReadAddress + n * Constants.Storage.PageSize;
-                    DropFromPageCache(file);
-                    if (ResidentPages(Page(5), Constants.Storage.PageSize) == expected)
-                    {
-                        Output.WriteLine("this file system keeps the pages in memory (tmpfs?): nothing to check");
-                        return;
-                    }
-                    TouchPage(Page(5));
-
-                    var offsets = stackalloc long[] { 3 * Constants.Storage.PageSize, 5 * Constants.Storage.PageSize, 7 * Constants.Storage.PageSize };
-                    var missing = Pal.rvn_pager_start_reads(state.Handle, offsets, 3);
-                    if (missing == 3)
-                    {
-                        Output.WriteLine("this file system has no RWF_NOWAIT: every page counts as missing");
-                    }
-                    else
-                    {
-                        Assert.Equal(2, missing);
-                        Assert.Equal(3 * Constants.Storage.PageSize, offsets[0]);
-                        Assert.Equal(7 * Constants.Storage.PageSize, offsets[1]);
-                    }
-
-                    // the reads were started: whole pages, and nothing around them
-                    Assert.Equal(expected, WaitForResident(Page(3), expected));
-                    Assert.Equal(expected, WaitForResident(Page(7), expected));
-                    Assert.Equal(0, ResidentPages(Page(4), Constants.Storage.PageSize));
-                    Assert.Equal(0, ResidentPages(Page(6), Constants.Storage.PageSize));
+                    Output.WriteLine("this file system keeps the pages in memory (tmpfs?): nothing to check");
+                    return;
                 }
+                TouchPage((byte*)Page(5));
+                test(state, Page);
             }
         }
         finally
@@ -584,14 +630,14 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void AGroupLargerThanTheFreeQueueWaitsForRoom()
+    public void AGroupLargerThanTheQueueIsDroppedWithoutWaiting()
     {
         using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 2); // two cells, 12 pages each
         if (ring.IsAvailable == false)
             return;
 
         const int pages = 100;
-        var path = RavenTestHelper.NewDataPath(nameof(AGroupLargerThanTheFreeQueueWaitsForRoom), 0, forceCreateDir: true);
+        var path = RavenTestHelper.NewDataPath(nameof(AGroupLargerThanTheQueueIsDroppedWithoutWaiting), 0, forceCreateDir: true);
         try
         {
             var file = Path.Combine(path, Constants.DatabaseFilename);
@@ -612,20 +658,24 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                     if (ring.CanWaitForPages)
                     {
                         Assert.True(ring.TryRentSlot(out var slot));
-                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets).AsTask().Wait(TimeSpan.FromSeconds(10)));
-                        Assert.Equal(pages, ring.GetStats()!.Value.Reads);
+                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets).IsCompleted); // dropped: nothing to wait for
+                        Assert.True(ring.TryRentSlot(out slot));
+                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets.AsSpan(0, 24)).AsTask().Wait(TimeSpan.FromSeconds(10)));
                     }
                     else
                     {
                         fixed (long* p = offsets)
-                            Assert.Equal(1, Pal.rvn_prefetch_ring_read_pages(ring.Handle, info.Ticket, p, pages, 0)); // waits for the submitter to free cells
+                        {
+                            Assert.Equal(0, Pal.rvn_prefetch_ring_read_pages(ring.Handle, info.Ticket, p, pages, 0));
+                            Assert.Equal(1, Pal.rvn_prefetch_ring_read_pages(ring.Handle, info.Ticket, p, 24, 0)); // two cells: fits
+                        }
                         var sw = Stopwatch.StartNew();
                         while (ring.GetStats()!.Value.ReadGroups == 0 && sw.Elapsed < TimeSpan.FromSeconds(5))
                             Thread.Sleep(5);
                     }
                     var stats = ring.GetStats()!.Value;
                     Assert.Equal(1, stats.ReadGroups);
-                    Assert.Equal(0, stats.DroppedFull);
+                    Assert.Equal(1, stats.DroppedFull);
                 }
             }
         }
@@ -730,6 +780,201 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         while ((resident = ResidentPages(address, Constants.Storage.PageSize)) < expected && sw.Elapsed < TimeSpan.FromSeconds(5))
             Thread.Sleep(5);
         return resident;
+    }
+
+    private const int EAGAIN = 11;
+    private const int EBADF = 9;
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SubmitsThatFailForAWhileAreRetried()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        WithColdDataFile(ring, nameof(SubmitsThatFailForAWhileAreRetried), state =>
+        {
+            ring.FailSubmitsForTesting(5, EAGAIN); // nothing is in flight: the submitter waits a moment and submits again
+            Assert.True(Pager.ReadPagesAhead(state, Pages(0)).AsTask().Wait(TimeSpan.FromSeconds(10)));
+
+            var stats = ring.GetStats()!.Value;
+            Assert.Equal(0, stats.Failed);
+            Assert.Equal(ColdPages, stats.Reads);
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AGroupWaitsWhileSubmitsFailAndCompletesOnceTheyWork()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        WithColdDataFile(ring, nameof(AGroupWaitsWhileSubmitsFailAndCompletesOnceTheyWork), state =>
+        {
+            ring.FailSubmitsForTesting(int.MaxValue, EAGAIN);
+            var read = Pager.ReadPagesAhead(state, Pages(0)).AsTask();
+            Assert.False(read.Wait(TimeSpan.FromMilliseconds(300)));
+
+            ring.FailSubmitsForTesting(0, 0);
+            Assert.True(read.Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(0, ring.GetStats()!.Value.Failed);
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ASubmitThatFailsForGoodCompletesTheGroupsWithoutReads()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        WithColdDataFile(ring, nameof(ASubmitThatFailsForGoodCompletesTheGroupsWithoutReads), state =>
+        {
+            ring.FailSubmitsForTesting(1, EBADF);
+            Assert.True(Pager.ReadPagesAhead(state, Pages(0)).AsTask().Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(ColdPages, ring.GetStats()!.Value.Failed);
+
+            // the ring failed: later groups complete without reads too
+            Assert.True(Pager.ReadPagesAhead(state, Pages(1)).AsTask().Wait(TimeSpan.FromSeconds(10)));
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SubmitsThatKeepFailingFailTheRing()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        WithColdDataFile(ring, nameof(SubmitsThatKeepFailingFailTheRing), state =>
+        {
+            ring.FailSubmitsForTesting(int.MaxValue, EAGAIN, giveUpMs: 300);
+            Assert.True(Pager.ReadPagesAhead(state, Pages(0)).AsTask().Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(ColdPages, ring.GetStats()!.Value.Failed);
+
+            // the ring failed: later groups complete without reads, though submits work again
+            ring.FailSubmitsForTesting(0, 0);
+            Assert.True(Pager.ReadPagesAhead(state, Pages(1)).AsTask().Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(2 * ColdPages, ring.GetStats()!.Value.Failed);
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AGroupWaitingForAFailingSubmitCompletesWhenTheRingStops()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        Task read = null;
+        WithColdDataFile(ring, nameof(AGroupWaitingForAFailingSubmitCompletesWhenTheRingStops), state =>
+        {
+            ring.FailSubmitsForTesting(int.MaxValue, EAGAIN);
+            read = Pager.ReadPagesAhead(state, Pages(0)).AsTask();
+            Assert.False(read.Wait(TimeSpan.FromMilliseconds(200)));
+        });
+        if (read == null)
+            return; // no io_uring here
+
+        ring.Dispose(); // the data file is closed: its registration is gone
+        Assert.True(read.Wait(TimeSpan.FromSeconds(10)));
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenPlatform.Linux)]
+    public void TheDefaultFileTableHoldsAsManyFilesAsTheProcessCanOpen()
+    {
+        // "Max open files            1048576              1048576              files"
+        var line = File.ReadAllLines("/proc/self/limits").Single(l => l.StartsWith("Max open files"));
+        var soft = line["Max open files".Length..].Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+        var expected = soft == "unlimited" ? 1 << 20 : (int)Math.Min(long.Parse(soft), 1 << 20);
+
+        Assert.Equal(expected, PalConfiguration.FilesTheProcessCanOpen());
+        if (PalConfiguration.PrefetchMaxFiles == null)
+            Assert.Equal(expected, PrefetchRing.Default.MaxFiles);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ScanHintsReadTheirPagesAheadEvenWhenMemoryIsFull()
+    {
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
+        if (ring.IsAvailable == false)
+            return; // Windows / macOS
+
+        var path = RavenTestHelper.NewDataPath(nameof(ScanHintsReadTheirPagesAheadEvenWhenMemoryIsFull), 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            File.WriteAllBytes(file, new byte[64 * Constants.Storage.PageSize]);
+            using var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.PrefetchRing = ring;
+            var (pager, state) = Pager.Create(options, file, 64 * Constants.Storage.PageSize, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+            using (pager)
+            using (state)
+            {
+                PrefetchPolicy.Global.Tick(freeBytes: 0); // memory is full: no first-touch warm-up
+
+                // pages 1-3 are one run, 40 another; -1 and pages past the end are not pages of the file
+                pager.MaybePrefetchMemory(state, new List<long> { 1, 2, 3, 40, -1, 64, 1000 }.GetEnumerator());
+                var sw = Stopwatch.StartNew();
+                while (ring.GetStats()!.Value.Submitted < 2 && sw.Elapsed < TimeSpan.FromSeconds(5))
+                    Thread.Sleep(5);
+                Assert.Equal(2, ring.GetStats()!.Value.Submitted);
+
+                pager.MaybePrefetchMemory(state, new List<long> { 1, 2, 3, 40 }.GetEnumerator()); // requested a moment ago
+                Thread.Sleep(100);
+                var stats = ring.GetStats()!.Value;
+                Assert.Equal(2, stats.Submitted);
+                Assert.Equal(0, stats.Failed);
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AFullQueueDropsAGroupInsteadOfWaiting()
+    {
+        // 4 cells of 12 pages
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 4);
+        WithColdDataFile(ring, nameof(AFullQueueDropsAGroupInsteadOfWaiting), state =>
+        {
+            ring.FailSubmitsForTesting(int.MaxValue, EAGAIN); // the submitter stops in its first cell, with 8 reads prepared
+            var first = Pager.ReadPagesAhead(state, PageRange(0, 20)).AsTask(); // 2 cells
+            Thread.Sleep(200); // the submitter takes the first cell; the second stays in the queue
+            var second = Pager.ReadPagesAhead(state, PageRange(20, 36)).AsTask(); // 3 cells: the queue is full now
+            var dropped = Pager.ReadPagesAhead(state, PageRange(56, 17)); // 2 cells: no room
+
+            Assert.True(dropped.IsCompleted); // returned at once, without waiting for room
+            Assert.Equal(1, ring.GetStats()!.Value.DroppedFull);
+
+            ring.FailSubmitsForTesting(0, 0);
+            Assert.True(Task.WaitAll([first, second], TimeSpan.FromSeconds(10)));
+        });
+    }
+
+    // more than Pager.CheckedReadAheadLimit, so the pages go straight to the ring
+    private const int ColdPages = 20;
+
+    private static long[] PageRange(int first, int count) => Enumerable.Range(first, count).Select(i => (long)i).ToArray();
+
+    private static long[] Pages(int round) => Enumerable.Range(0, ColdPages).Select(i => (long)(round * ColdPages + i) * 2).ToArray();
+
+    // runs the test on a data file that is not in the page cache, when the ring uses io_uring
+    private static void WithColdDataFile(PrefetchRing ring, string name, Action<Pager.State> test)
+    {
+        if (ring.CanWaitForPages == false)
+            return; // Windows / macOS, or no io_uring here
+
+        var path = RavenTestHelper.NewDataPath(name, 0, forceCreateDir: true);
+        try
+        {
+            var file = Path.Combine(path, Constants.DatabaseFilename);
+            var content = new byte[8 * ColdPages * Constants.Storage.PageSize];
+            Random.Shared.NextBytes(content);
+            File.WriteAllBytes(file, content);
+
+            using var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.PrefetchRing = ring;
+            var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
+            using (pager)
+            using (state)
+            {
+                DropFromPageCache(file);
+                test(state);
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteDirectory(path);
+        }
     }
 
     private static void DropFromPageCache(string file)

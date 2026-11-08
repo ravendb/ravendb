@@ -268,12 +268,13 @@ rvn_prefetch_unregister(void *ring, int64_t ticket)
 }
 
 PRIVATE int32_t
-rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length)
+rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length, int64_t request_size)
 {
     (void)ring;
     (void)ticket;
     (void)offset;
     (void)length;
+    (void)request_size;
     return 0;
 }
 
@@ -308,6 +309,16 @@ rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
 {
     (void)ring;
     *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_fail_submits(void *ring, int32_t count, int32_t error, int32_t give_up_ms)
+{
+    (void)ring;
+    (void)count;
+    (void)error;
+    (void)give_up_ms;
     return FAIL_INVALID_HANDLE;
 }
 

@@ -30,8 +30,8 @@ namespace SlowTests.Client
         {
             using (var store = GetDocumentStore(options))
             {
-                var name = "Storage.PrefetchResetThresholdInGb";
-                var value = "10";
+                var name = "Storage.PrefetchBatchSizeInKb";
+                var value = "8192";
                 var settings = new Dictionary<string, string>();
                 settings.Add(name, value);
                 PutConfigurationSettings(store, settings);
@@ -45,8 +45,8 @@ namespace SlowTests.Client
         {
             using (var store = GetDocumentStore(options))
             {
-                string[] names = { "Storage.PrefetchResetThresholdInGb", "Storage.TimeToSyncAfterFlushInSec", "Tombstones.CleanupIntervalInMin" };
-                string[] values = { "10", "35", "10" };
+                string[] names = { "Storage.PrefetchBatchSizeInKb", "Storage.TimeToSyncAfterFlushInSec", "Tombstones.CleanupIntervalInMin" };
+                string[] values = { "8192", "35", "10" };
                 var settings = new Dictionary<string, string>();
                 for (int i = 0; i < names.Length; ++i)
                     settings.Add(names[i], values[i]);
