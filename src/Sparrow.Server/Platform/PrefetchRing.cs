@@ -29,29 +29,22 @@ public readonly struct PrefetchRingStats
 /// </summary>
 public sealed class PrefetchRing : IDisposable
 {
-    private static PrefetchRing _default;
-    private static readonly object DefaultLock = new();
+    private static readonly Lazy<PrefetchRing> LazyDefault = new(CreateDefault);
 
-    /// <summary>The process's ring, created on first use. If it cannot be created, every use throws, with the reason.</summary>
-    public static PrefetchRing Default => Volatile.Read(ref _default) ?? CreateDefault();
+    /// <summary>The process's ring, created on first use. If it cannot be created, every use throws the same error.</summary>
+    public static PrefetchRing Default => LazyDefault.Value;
 
     private static PrefetchRing CreateDefault()
     {
-        lock (DefaultLock)
+        try
         {
-            if (_default != null)
-                return _default;
-            try
-            {
-                Volatile.Write(ref _default, new PrefetchRing(PalConfiguration.PrefetchRingEntries,
-                    PalConfiguration.PrefetchMaxFiles ?? PalConfiguration.FilesTheProcessCanOpen(), PalConfiguration.PrefetchQueueSize));
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    "Could not create the prefetch ring, which reads data files ahead. To run without read-ahead, set 'Storage.EnablePrefetching' to false.", e);
-            }
-            return _default;
+            return new PrefetchRing(PalConfiguration.PrefetchRingEntries,
+                PalConfiguration.PrefetchMaxFiles ?? PalConfiguration.FilesTheProcessCanOpen(), PalConfiguration.PrefetchQueueSize);
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException(
+                "Could not create the prefetch ring, which reads data files ahead. To run without read-ahead, set 'Storage.EnablePrefetching' to false.", e);
         }
     }
 
