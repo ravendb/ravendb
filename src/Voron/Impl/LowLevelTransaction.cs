@@ -740,14 +740,17 @@ namespace Voron.Impl
             return *(T*)DataPager.AcquireRawPagePointer(DataPagerState, ref PagerTransactionState, pageNumber);
         }
 
+        /// <summary>True when this transaction reads the page from a scratch buffer, not from the data file.</summary>
+        internal bool IsInScratch(long pageNumber) => Flags switch
+        {
+            TransactionFlags.Read => _scratchPagesForReads.ContainsKey(pageNumber),
+            TransactionFlags.ReadWrite => _scratchPagesInUse.ContainsKey(pageNumber),
+            _ => throw new ArgumentOutOfRangeException(nameof(Flags))
+        };
+
         public void TryReleasePage(long pageNumber)
         {
-            var inScratches = Flags switch
-            {
-                TransactionFlags.Read => _scratchPagesForReads.ContainsKey(pageNumber),
-                TransactionFlags.ReadWrite => _scratchPagesInUse.ContainsKey(pageNumber),
-                _ => throw new ArgumentOutOfRangeException(nameof(Flags))
-            };
+            var inScratches = IsInScratch(pageNumber);
 
             if (inScratches) // we don't release pages from the scratch buffers
                 return;
