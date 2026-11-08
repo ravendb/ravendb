@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <versionhelpers.h>
 #include <stdio.h>
 
@@ -6,20 +6,6 @@
 #include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_win.h"
-
-#ifdef _MSC_VER
-static __forceinline int clzl(uint64_t x)
-{
-    unsigned long r = 0;
-    BitScanReverse64(&r, x);
-    return (int)(r ^ 63);
-}
-#else
-__forceinline int clzl(uint64_t x)
-{
-    return __builtin_clzl(x);
-}
-#endif
 
 extern struct rvn_configuration g_cfg;
 
@@ -95,27 +81,6 @@ rvn_pager_get_device_id(void *handle, uint64_t *device_id, int32_t *detailed_err
     }
     *device_id = info.dwVolumeSerialNumber;
     return SUCCESS;
-}
-
-uint64_t _GetNearestFileSize(uint64_t needed_size)
-{
-    const uint64_t POWER_OF_TWO_THRESHOLD = (uint64_t)512 * 1024ul * 1024ul; // 512MB
-    if (needed_size == 0)
-    {
-        return (uint64_t)1024 * 1024;
-    }
-    if (needed_size < POWER_OF_TWO_THRESHOLD)
-    {
-        int32_t idx = clzl(needed_size);
-        if (idx)
-        {
-            return (uint64_t)1 << (64 - idx);
-        }
-        return 1024 * 1024;
-    }
-    const uint64_t ONE_GB = (uint64_t)1024 * 1024 * 1024;
-    // if it is over 0.5 GB, then we grow at 1 GB intervals
-    return (needed_size + ONE_GB - 1) & ~ONE_GB;
 }
 
 int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t *detailed_error_code)
@@ -921,6 +886,16 @@ rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
 {
     (void)ring;
     *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_fail_submits(void *ring, int32_t count, int32_t error, int32_t give_up_ms)
+{
+    (void)ring;
+    (void)count;
+    (void)error;
+    (void)give_up_ms;
     return FAIL_INVALID_HANDLE;
 }
 

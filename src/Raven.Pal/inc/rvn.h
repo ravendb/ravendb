@@ -11,7 +11,6 @@
 
 #define EXPORT __declspec(dllexport)
 #define PRIVATE 
-#define __builtin_clzl _tzcnt_u64
 #endif
 
 #include <stdint.h>
@@ -20,8 +19,8 @@ typedef int32_t bool;
 #define true 1
 #define false 0
 
-#define rvn_max(x, y) ((x) >= (y)) ? (x) : (y)
-#define rvn_min(x, y) ((x) <= (y)) ? (x) : (y)
+#define rvn_max(x, y) (((x) >= (y)) ? (x) : (y))
+#define rvn_min(x, y) (((x) <= (y)) ? (x) : (y))
 
 enum
 {
@@ -211,6 +210,9 @@ struct rvn_prefetch_ring_stats
 
 EXPORT int32_t
 rvn_prefetch_ring_stats(void *ring, struct rvn_prefetch_ring_stats *stats);
+
+EXPORT int32_t
+rvn_prefetch_ring_fail_submits(void *ring, int32_t count, int32_t error, int32_t give_up_ms);
 
 EXPORT int32_t
 rvn_close_pager(

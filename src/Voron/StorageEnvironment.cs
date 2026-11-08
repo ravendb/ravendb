@@ -1654,8 +1654,8 @@ namespace Voron
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void HintFirstTouch(Pager.State dataPagerState, long pageNumber)
         {
-            if (pageNumber >= _lastValidPageAfterLoad)
-                return;
+            if ((ulong)pageNumber >= (ulong)_lastValidPageAfterLoad)
+                return; 
             var bit = 1L << (int)(pageNumber % (8 * sizeof(long)));
             if ((Volatile.Read(ref _validPagesAfterLoad[pageNumber / (8 * sizeof(long))]) & bit) != 0)
                 return;

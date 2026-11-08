@@ -4,16 +4,16 @@
 #define _GNU_SOURCE
 #endif
 #include <unistd.h>
-#include <limits.h>
 #include <sys/syscall.h>
 #include <sys/uio.h>
-#include <linux/futex.h>
+#include <errno.h>
+#include <stdlib.h>
 
 #include "rvn.h"
 #include "rvn_internal.h"
 #include "internal_posix.h"
 
-/* Raw system calls: glibc has no futex wrapper, and its preadv2 needs glibc 2.26 (the PAL needs only 2.17) */
+/* Raw system calls: glibc's preadv2 needs glibc 2.26 (the PAL needs only 2.17) */
 
 #ifndef RWF_NOWAIT
 #define RWF_NOWAIT 0x00000008
@@ -30,16 +30,37 @@ _preadv2_nowait(int fd, void *buffer, size_t length, int64_t offset)
 #endif
 }
 
-PRIVATE void
-_futex_wait(uint32_t *word, uint32_t expected)
+/* IORING_MAX_FIXED_FILES of older kernels (5.10); newer kernels allow 1 << 20 */
+#define OLD_KERNELS_MAX_FIXED_FILES (1u << 15)
+
+/* Sparse registration needs kernel 5.19; before that, a table of -1 entries */
+PRIVATE int
+_register_files_empty(struct io_uring *ring, unsigned count)
 {
-    (void)syscall(SYS_futex, word, FUTEX_WAIT_PRIVATE, expected, NULL, NULL, 0);
+    int rc = io_uring_register_files_sparse(ring, count);
+    if (rc != -EINVAL)
+        return rc;
+    int *files = malloc((size_t)count * sizeof(int));
+    if (files == NULL)
+        return -ENOMEM;
+    for (unsigned i = 0; i < count; i++)
+        files[i] = -1;
+    rc = io_uring_register_files(ring, files, count);
+    free(files);
+    return rc;
 }
 
-PRIVATE void
-_futex_wake_all(uint32_t *word)
+/* Registers an empty file table of up to *count slots, and sets *count to the size the kernel took */
+PRIVATE int
+_io_uring_register_files_empty(struct io_uring *ring, unsigned *count)
 {
-    (void)syscall(SYS_futex, word, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+    int rc = _register_files_empty(ring, *count);
+    if ((rc == -EMFILE || rc == -EINVAL) && *count > OLD_KERNELS_MAX_FIXED_FILES)
+    {
+        *count = OLD_KERNELS_MAX_FIXED_FILES;
+        rc = _register_files_empty(ring, *count);
+    }
+    return rc;
 }
 
 #endif

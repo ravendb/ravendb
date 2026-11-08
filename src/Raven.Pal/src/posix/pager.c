@@ -402,17 +402,21 @@ rvn_init_pager(const char *filename,
     {
         rc = rvn_prefetch_register(prefetch_ring, ((struct handle *)*handle)->file_fd, &global_state->prefetch_ticket, detailed_error_code);
         if (rc != SUCCESS)
-        {
-            int32_t ignored;
-            rvn_close_pager(*handle, &ignored); // last reference: also deletes the global state
-            *handle = NULL;
-            *memory = NULL;
-            *memory_size = 0;
-            return rc;
-        }
+            goto ClosePager;
         global_state->prefetch_ring = prefetch_ring;
     }
     return SUCCESS;
+
+ClosePager:
+{
+    int32_t ignored;
+    rvn_close_pager(*handle, &ignored); // last reference: also deletes the global state
+    *handle = NULL;
+    *memory = NULL;
+    *writable_memory = NULL;
+    *memory_size = 0;
+    return rc;
+}
 
 Error:
     if (fd != -1)
@@ -718,17 +722,10 @@ rvn_pager_prefetch(void *handle, int64_t offset, int64_t length)
     return 0; // no posix_fadvise
 #else
     void *ring = handle_ptr->global_state->prefetch_ring;
-    int64_t ticket = handle_ptr->global_state->prefetch_ticket;
-    int64_t request_size = handle_ptr->global_state->prefetch_request_size;
-    int32_t all = 1;
-    for (int64_t end = offset + length; offset < end; offset += request_size)
-    {
-        int64_t size = rvn_min(request_size, end - offset);
-        if (ring == NULL)
-            return 0;
-        all &= rvn_prefetch_enqueue(ring, ticket, offset, size);
-    }
-    return all;
+    if (ring == NULL)
+        return 0;
+    return rvn_prefetch_enqueue(ring, handle_ptr->global_state->prefetch_ticket, offset, length,
+                                handle_ptr->global_state->prefetch_request_size);
 #endif
 }
 

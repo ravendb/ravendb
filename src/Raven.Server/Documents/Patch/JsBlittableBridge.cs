@@ -258,84 +258,47 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteNumber(object parent, string propName, double d)
         {
-            var writer = _writer;
-            var boi = parent as BlittableObjectInstance;
-            if (boi == null || propName == null)
+            var originalType = BlittableJsonToken.Null; // a new property
+            if (parent is BlittableObjectInstance boi && propName != null)
             {
-                GuessNumberType();
-                return;
-            }
-
-            if (boi.OriginalPropertiesTypes != null &&
-                boi.OriginalPropertiesTypes.TryGetValue(propName, out var numType))
-            {
-                if (WriteNumberBasedOnType(numType & BlittableJsonReaderBase.TypesMask))
-                    return;
-            }
-            else if (boi.Blittable != null)
-            {
-                var propIndex = boi.Blittable.GetPropertyIndex(propName);
-                if (propIndex != -1)
+                if (boi.OriginalPropertiesTypes != null &&
+                    boi.OriginalPropertiesTypes.TryGetValue(propName, out var numType))
                 {
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-                    boi.Blittable.GetPropertyByIndex(propIndex, ref prop);
-                    if (WriteNumberBasedOnType(prop.Token & BlittableJsonReaderBase.TypesMask))
-                        return;
+                    originalType = numType & BlittableJsonReaderBase.TypesMask;
                 }
-            }
-
-            GuessNumberType();
-
-            bool WriteNumberBasedOnType(BlittableJsonToken type)
-            {
-                if (type == BlittableJsonToken.LazyNumber)
+                else if (boi.Blittable != null)
                 {
-                    writer.WriteValue(d);
-                    return true;
-                }
-
-                if (type == BlittableJsonToken.Integer)
-                {
-                    if (IsDoubleType())
+                    var propIndex = boi.Blittable.GetPropertyIndex(propName);
+                    if (propIndex != -1)
                     {
-                        // the previous value was a long and now changed to double
-                        writer.WriteValue(d);
+                        var prop = new BlittableJsonReaderObject.PropertyDetails();
+                        boi.Blittable.GetPropertyByIndex(propIndex, ref prop);
+                        originalType = prop.Token & BlittableJsonReaderBase.TypesMask;
                     }
-                    else
-                    {
-                        writer.WriteValue((long)d);
-                    }
-
-                    return true;
-                }
-
-                return false;
-            }
-
-            void GuessNumberType()
-            {
-                if (IsDoubleType())
-                {
-                    writer.WriteValue(d);
-                }
-                else
-                {
-                    writer.WriteValue((long)d);
                 }
             }
 
-            bool IsDoubleType()
-            {
-                var roundedNumber = Math.Round(d, 0);
-                if (roundedNumber.AlmostEquals(d))
-                {
-                    var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                        return false;
-                }
+            if (WriteAsDouble(originalType, d))
+                _writer.WriteValue(d);
+            else
+                _writer.WriteValue((long)d);
+        }
 
+        /// <summary>A script's number is written back as a double when the original property was one, or the value is not an integral long.</summary>
+        internal static bool WriteAsDouble(BlittableJsonToken originalType, double d)
+        {
+            if (originalType == BlittableJsonToken.LazyNumber)
                 return true;
+
+            var roundedNumber = Math.Round(d, 0);
+            if (roundedNumber.AlmostEquals(d))
+            {
+                var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
+                if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                    return false;
             }
+
+            return true;
         }
 
         private void WriteJsInstance(ObjectInstance obj, bool isRoot, bool filterProperties)

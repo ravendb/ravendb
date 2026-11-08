@@ -1,7 +1,10 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -55,5 +58,21 @@ public class BulkDocsPrefetchTests(ITestOutputHelper output) : RavenTestBase(out
             Assert.Null(items[ids[41]]);
             Assert.Equal(0, items[ids[42]].Version);
         }
+    }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.ClientApi)]
+    public void WhitespaceIdsKeepTheirMeaning()
+    {
+        using var store = GetDocumentStore(new Options { RunInMemory = false });
+        using (var session = store.OpenSession())
+        {
+            // a put stores the document under an id the server generates; a delete deletes nothing
+            var metadata = new DynamicJsonValue { [Raven.Client.Constants.Documents.Metadata.Collection] = "Items" };
+            session.Advanced.Defer(new PutCommandData(" ", null, new DynamicJsonValue { ["Name"] = "x", [Raven.Client.Constants.Documents.Metadata.Key] = metadata }));
+            session.Advanced.Defer(new DeleteCommandData(" ", null));
+            session.SaveChanges();
+        }
+
+        Assert.Equal(1, store.Maintenance.Send(new GetCollectionStatisticsOperation()).Collections["Items"]);
     }
 }
