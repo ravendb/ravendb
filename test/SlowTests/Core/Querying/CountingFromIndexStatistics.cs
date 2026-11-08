@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -199,6 +202,81 @@ namespace SlowTests.Core.Querying
 
                     Assert.Equal(1, stats.TotalResults);
                     Assert.Equal(orders.Count(x => x.Company == "A"), results.Single().Count);
+                }
+            }
+        }
+
+        // a single database only: a sharded database rejects intersect queries
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void IntersectionQuery_WhoseFirstClauseIsASingleTerm(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new Orders_ByLineProduct().Execute(store);
+                var orders = SeedOrders(store, createIndex: false);
+                var withProductP2 = orders.Where(x => x.Lines.Any(l => l.Product == "p2")).Select(x => x.Id).ToHashSet();
+
+                // the first clause runs as a plain page query and matches every order, the second clause is applied to
+                // that page; the total an intersection reports has always been the first clause's total
+                using (var session = store.OpenSession())
+                {
+                    var page = session.Query<Order, Orders_ByLineProduct>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Lines.Any(l => l.Product == "p0"))
+                        .Intersect()
+                        .Where(x => x.Lines.Any(l => l.Product == "p2"))
+                        .Take(10)
+                        .ToList();
+
+                    Assert.Equal(10, page.Count);
+                    Assert.Equal(10, page.Select(x => x.Id).Distinct().Count());
+                    Assert.All(page, x => Assert.Contains(x.Id, withProductP2));
+                    Assert.Equal(orders.Count, stats.TotalResults);
+
+                    var everyMatch = session.Query<Order, Orders_ByLineProduct>()
+                        .Statistics(out stats)
+                        .Where(x => x.Lines.Any(l => l.Product == "p0"))
+                        .Intersect()
+                        .Where(x => x.Lines.Any(l => l.Product == "p2"))
+                        .Take(withProductP2.Count)
+                        .ToList();
+
+                    Assert.Equal(withProductP2, everyMatch.Select(x => x.Id).ToHashSet());
+                    Assert.Equal(orders.Count, stats.TotalResults);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public void IndexEntries_ReportTheTotalAndPage(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var orders = SeedOrders(store);
+                var companyA = orders.Count(x => x.Company == "A");
+                var indexName = new Orders_ByCompany().IndexName;
+
+                using (var commands = store.Commands())
+                {
+                    // the sharded orchestrator fails on a paged query whose parameters are serialized as null, so the
+                    // queries carry an empty parameters object the way a session query always does
+                    var entries = commands.Query(new IndexQuery { Query = $"from index '{indexName}' limit 10", QueryParameters = new Parameters() }, indexEntriesOnly: true);
+
+                    Assert.Equal(orders.Count, entries.TotalResults);
+                    Assert.Equal(10, entries.Results.Length);
+
+                    entries = commands.Query(new IndexQuery { Query = $"from index '{indexName}' where Company = 'A' limit 5, 10", QueryParameters = new Parameters() }, indexEntriesOnly: true);
+
+                    Assert.Equal(companyA, entries.TotalResults);
+                    Assert.Equal(10, entries.Results.Length);
+                    Assert.All(entries.Results, entry => Assert.Equal("a", ((BlittableJsonReaderObject)entry)["Company"]?.ToString(), ignoreCase: true));
+
+                    entries = commands.Query(new IndexQuery { Query = $"from index '{indexName}' where Company = 'A' limit {companyA - 3}, 10", QueryParameters = new Parameters() }, indexEntriesOnly: true);
+
+                    Assert.Equal(companyA, entries.TotalResults);
+                    Assert.Equal(3, entries.Results.Length);
                 }
             }
         }
