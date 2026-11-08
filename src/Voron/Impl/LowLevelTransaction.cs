@@ -47,7 +47,6 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         internal PageLocator _pageLocator;
         private readonly bool _disposeAllocator;
-        private readonly bool _isValidationEnabled;
         private ScratchPagesTable _scratchPagesInUse;
         private readonly ScratchPagesSnapshot _scratchPagesForReads;
         private HashSet<long> _sparsePageRanges;
@@ -188,7 +187,6 @@ namespace Voron.Impl
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
             _allocator.RegisterListener(this);
             _disposeAllocator = allocator == null;
-            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesForReads = previous._scratchPagesForReads;
             ScratchSnapshotSeq = previous.ScratchSnapshotSeq;
             _getPageMethod = previous._getPageMethod;
@@ -273,7 +271,6 @@ namespace Voron.Impl
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
             _allocator.RegisterListener(this);
-            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesInUse = previous._scratchPagesInUse;
             ScratchSnapshotSeq = env.CurrentStateRecord.ScratchPagesTable.VisibleAsOfSeq;
             _scratchPagesInUse.BeginWriteTransaction(ScratchSnapshotSeq);
@@ -328,8 +325,6 @@ namespace Voron.Impl
                 _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
                 _allocator.RegisterListener(this);
                 _disposeAllocator = context == null;
-
-                _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
 
                 _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
@@ -718,10 +713,7 @@ namespace Voron.Impl
             if (Flags == TransactionFlags.Read)
                 _env.HintFirstTouch(DataPagerState, pageNumber);
             var page = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
-            if (_isValidationEnabled)// When encryption is off, we do validation by checksum
-                _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer, DataPagerState);
-            else
-                _env.MarkFirstTouch(pageNumber); // decrypting the page checked it
+            _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer, DataPagerState);
             return page;
         }
 

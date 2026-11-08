@@ -1662,18 +1662,6 @@ namespace Voron
             Pager.WillNeedPages(dataPagerState, pageNumber);
         }
 
-        // encrypted pages are checked when decrypted, not by checksum: the bit only records the first touch for HintFirstTouch
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void MarkFirstTouch(long pageNumber)
-        {
-            if ((ulong)pageNumber >= (ulong)_lastValidPageAfterLoad)
-                return;
-            ref var word = ref _validPagesAfterLoad[pageNumber / (8 * sizeof(long))];
-            var bit = 1L << (int)(pageNumber % (8 * sizeof(long)));
-            if ((Volatile.Read(ref word) & bit) == 0)
-                Interlocked.Or(ref word, bit);
-        }
-
         private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet, Pager.State dataPagerState)
         {
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
@@ -1681,17 +1669,21 @@ namespace Voron
             if (pageNumber != current->PageNumber)
                 ThrowInvalidPageNumber(pageNumber, current);
 
-            if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+            // an encrypted page was checked by its MAC when it was decrypted, and the decryption copy read its overflow pages
+            if (Options.Encryption.IsEnabled == false)
             {
-                var pages = Paging.GetNumberOfOverflowPages(current->OverflowSize);
-                if (pages > 1)
-                    Pager.WillNeedPages(dataPagerState, pageNumber + 1, pages - 1);
+                if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
+                {
+                    var pages = Paging.GetNumberOfOverflowPages(current->OverflowSize);
+                    if (pages > 1)
+                        Pager.WillNeedPages(dataPagerState, pageNumber + 1, pages - 1);
+                }
+
+                ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
+
+                if (checksum != current->Checksum)
+                    ThrowInvalidChecksum(pageNumber, current, checksum);
             }
-
-            ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
-
-            if (checksum != current->Checksum)
-                ThrowInvalidChecksum(pageNumber, current, checksum);
 
             while (true)
             {
