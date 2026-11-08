@@ -218,6 +218,9 @@ namespace Voron
         /// <summary>The ring for data file prefetches; null uses <see cref="PrefetchRing.Default"/>.</summary>
         public PrefetchRing PrefetchRing { get; set; }
 
+        /// <summary>For tests: the segment warm-up policy of the data file; null uses <see cref="Impl.Paging.PrefetchPolicy.Global"/>.</summary>
+        internal PrefetchPolicy PrefetchPolicy { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
