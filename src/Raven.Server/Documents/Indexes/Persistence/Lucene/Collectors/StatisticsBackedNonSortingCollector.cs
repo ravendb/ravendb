@@ -45,6 +45,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
             var reader = searcher.IndexReader;
             var segments = reader.GetSequentialSubReaders() ?? new[] { reader };
             var collector = new StatisticsBackedNonSortingCollector(numberOfDocsToCollect);
+
+            try
+            {
+                collector.Execute(searcher, query, term, segments, state);
+            }
+            catch
+            {
+                collector._scoreDocArray.Dispose();
+                throw;
+            }
+
+            result = collector.ToTopDocs();
+            return true;
+        }
+
+        private void Execute(IndexSearcher searcher, Query query, Term term, IndexReader[] segments, IState state)
+        {
             Weight weight = null;
             var docBase = 0;
 
@@ -53,36 +70,33 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
                 // a term's document frequency counts the documents deleted since, the live document count does not
                 var segmentIsCountable = term == null || segment.HasDeletions == false;
 
-                if (collector.PageIsFull && segmentIsCountable)
+                if (PageIsFull && segmentIsCountable)
                 {
-                    collector._totalHits += CountFromStatistics(segment, term, state);
+                    _totalHits += CountFromStatistics(segment, term, state);
                 }
                 else
                 {
                     weight ??= query.Weight(searcher, state);
-                    collector.SetNextReader(segment, docBase, state);
-                    collector._stopWhenPageIsFull = segmentIsCountable;
+                    SetNextReader(segment, docBase, state);
+                    _stopWhenPageIsFull = segmentIsCountable;
 
                     var scorer = weight.Scorer(segment, scoreDocsInOrder: false, topScorer: true, state);
                     if (scorer != null)
                     {
                         try
                         {
-                            scorer.Score(collector, state);
+                            scorer.Score(this, state);
                         }
                         catch (PageFilledException)
                         {
-                            var hitsWalkedInSegment = collector._totalHits - collector._totalHitsBeforeCurrentSegment;
-                            collector._totalHits += CountFromStatistics(segment, term, state) - hitsWalkedInSegment;
+                            var hitsWalkedInSegment = _totalHits - _totalHitsBeforeCurrentSegment;
+                            _totalHits += CountFromStatistics(segment, term, state) - hitsWalkedInSegment;
                         }
                     }
                 }
 
                 docBase += segment.MaxDoc;
             }
-
-            result = collector.ToTopDocs();
-            return true;
         }
 
         private static int CountFromStatistics(IndexReader segment, Term term, IState state)
