@@ -15,7 +15,6 @@ using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
-using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Global;
@@ -176,28 +175,6 @@ public unsafe partial class Pager : IDisposable
         long offset = pageNumber * Constants.Storage.PageSize;
 
         _ = Pal.rvn_discard_virtual_memory(baseAddress + offset, numberOfPages * Constants.Storage.PageSize, out _);
-    }
-
-    public void TrySetSequentialReadAheadHint(State state)
-    {
-        // posix_fadvise(POSIX_FADV_SEQUENTIAL) is Linux-only (absent on macOS). On Windows the read-ahead is
-        // handled at file-open time, so the hint is a no-op there - the caller gates this on RunningOnLinux too.
-        if (PlatformDetails.RunningOnLinux == false)
-            return;
-
-        // PAL hands back a dup of the pager's fd, so disposing the handle below does not close the pager's file.
-        if (Pal.rvn_pager_get_file_handle(state.Handle, out var fileHandle, out _) != PalFlags.FailCodes.Success)
-            return;
-
-        using (fileHandle)
-        {
-            var fd = fileHandle.DangerousGetHandle().ToInt32();
-            if (fd < 0)
-                return;
-
-            // best-effort kernel read-ahead hint for the upcoming sequential scan; failures are ignored
-            Syscall.posix_fadvise(fd, 0, 0, Syscall.POSIX_FADV_SEQUENTIAL);
-        }
     }
 
     public bool EnsureMapped(State state, ref PagerTransactionState txState, long page, int numberOfPages)

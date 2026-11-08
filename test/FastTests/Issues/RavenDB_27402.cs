@@ -21,7 +21,6 @@ namespace FastTests.Issues
             nameof(StorageEnvironmentOptions.CompressTxAboveSizeInBytes),
             nameof(StorageEnvironmentOptions.EnablePrefetching),
             nameof(StorageEnvironmentOptions.DiscardVirtualMemory),
-            nameof(StorageEnvironmentOptions.UseSequentialReadAheadHintForJournalRecovery),
             nameof(StorageEnvironmentOptions.TimeToSyncAfterFlushInSec),
             nameof(StorageEnvironmentOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError),
             nameof(StorageEnvironmentOptions.MaxScratchBufferSize),

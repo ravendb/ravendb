@@ -24,9 +24,6 @@ namespace Raven.Server.Config.Categories
             // On arm64 Linux kernels [7.0..7.1.9) madvise(MADV_DONTNEED) triggers CVE-2026-74674
             DiscardVirtualMemory = PlatformDetails.RunningOnPosix && HasStalePagingStructureCacheBug() == false;
 
-            // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
-            UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
-
             // On Windows a hole punch (FSCTL_SET_ZERO_DATA) makes NTFS walk the whole mapped section - seconds on a large file 
             // while holding a kernel level lock. On Posix the equivalent call is cheap, so we keep punching inline there.
             PunchSparseRegionsOnIdleOnly = PlatformDetails.RunningOnWindows;
@@ -47,11 +44,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.DiscardVirtualMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DiscardVirtualMemory { get; set; }
 
-        [Description("On Linux, hint the kernel (posix_fadvise with POSIX_FADV_SEQUENTIAL) to read journal files ahead aggressively during startup recovery, independent of the device's read_ahead_kb. This speeds up recovery when read_ahead_kb has been tuned low for random-access workloads. Has no effect on Windows or macOS. Set to false to opt out.")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [ConfigurationEntry("Storage.UseSequentialReadAheadHintForJournalRecovery", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; }
-        
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]

@@ -1433,15 +1433,14 @@ namespace Voron
                 }
 
                 string filename = fileInfo.FullName;
-                var (pager, state) = OpenJournalPager(filename);
-                if (UseSequentialReadAheadHintForJournalRecovery)
-                    pager.TrySetSequentialReadAheadHint(state);
-                return (pager, state);
+                return OpenJournalPager(filename);
             }
 
             public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
             {
                 var flags = Pal.OpenFileFlags.ReadOnly;
+                if (PlatformDetails.RunningOnPosix) // read from start to end; on Windows the flag would replace FILE_FLAG_RANDOM_ACCESS
+                    flags |= Pal.OpenFileFlags.SequentialScan;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
                 return Pager.Create(this, filename, 0, flags, pageSize: Constants.Storage.JournalPageSize);
@@ -1919,7 +1918,6 @@ namespace Voron
         public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
         public long ConsolidationTargetWriteSizeInBytes { get; set; }
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
-        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
         private readonly RavenLogger _log;
 
