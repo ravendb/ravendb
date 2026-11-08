@@ -166,7 +166,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size MaxUnsyncedSizeBeforeMandatorySync { get; set; }
 
-        [Description("Time-weighted device queue depth threshold (iostat aqu-sz) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
+        [Description("Time-weighted device queue depth threshold (iostat aqu-sz, averaged over 1 second samples) that switches writeback from trickle to paced drain mode; reverts when queue stays below 60% of this value for 30 seconds.")]
         [DefaultValue(5)]
         [ConfigurationEntry("Storage.SyncWritebackDrainQueueDepthThreshold", ConfigurationEntryScope.ServerWideOnly)]
         public int SyncWritebackDrainQueueDepthThreshold { get; set; }
