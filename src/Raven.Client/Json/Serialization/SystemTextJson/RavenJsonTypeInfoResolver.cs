@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
@@ -984,8 +985,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.IsExtensionData || property.AttributeProvider is not MemberInfo member)
+                if (property.AttributeProvider is not MemberInfo member)
                     continue;
+
+                if (property.IsExtensionData)
+                {
+                    if (property.Get != null)
+                        ToExtensionData(typeInfo, property, readData: true, writeData: true);
+
+                    return null;
+                }
 
                 object attribute = GetNewtonsoftAttribute(member, NewtonsoftJsonExtensionDataAttributeName);
                 if (attribute == null)
@@ -996,16 +1005,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     property.PropertyType.IsAssignableFrom(typeof(Dictionary<string, object>)) == false)
                     ThrowNewtonsoftExtensionDataNotSupported(member, property.PropertyType);
 
-                return ToExtensionData(typeInfo, property, attribute);
+                return ToExtensionData(typeInfo, property, GetNewtonsoftFlag(attribute, "ReadData"), GetNewtonsoftFlag(attribute, "WriteData"));
             }
 
             return null;
         }
 
-        private NewtonsoftExtensionData ToExtensionData(JsonTypeInfo typeInfo, JsonPropertyInfo property, object attribute)
+        private NewtonsoftExtensionData ToExtensionData(JsonTypeInfo typeInfo, JsonPropertyInfo property, bool readData, bool writeData)
         {
-            bool readData = GetNewtonsoftFlag(attribute, "ReadData");
-            bool writeData = GetNewtonsoftFlag(attribute, "WriteData");
             Func<object, object> get = property.Get;
             Action<object, object> set = property.Set;
             string identityPropertyName = _conventions.Conventions?.GetIdentityProperty(typeInfo.Type)?.Name;
@@ -1021,7 +1028,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     return null;
 
                 mappedNames ??= GetMappedNames(typeInfo, property);
-                return WithoutReservedKeys(target, (IDictionary<string, object>)get(target), mappedNames, identityPropertyName);
+                return WithoutReservedKeys(target, get(target), mappedNames, identityPropertyName);
             };
 
             Action<object> onSerializing = typeInfo.OnSerializing;
@@ -1069,21 +1076,41 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return names;
         }
 
-        private static Dictionary<string, object> WithoutReservedKeys(object target, IDictionary<string, object> dictionary, HashSet<string> mappedNames, string identityPropertyName)
+        private static object WithoutReservedKeys(object target, object extensionData, HashSet<string> mappedNames, string identityPropertyName)
         {
-            if (dictionary == null)
-                return null;
-
             bool isRoot = ReferenceEquals(target, RootDocument);
-            var result = new Dictionary<string, object>(dictionary.Count);
-            foreach (KeyValuePair<string, object> entry in dictionary)
-            {
-                if (entry.Key == Constants.Documents.Metadata.Key ||
-                    isRoot && (entry.Key == Constants.Documents.Metadata.Id || entry.Key == identityPropertyName) ||
-                    mappedNames.Contains(entry.Key))
-                    continue;
 
-                result[entry.Key] = entry.Value;
+            bool IsKept(string key) =>
+                key != Constants.Documents.Metadata.Key &&
+                (isRoot == false || key != Constants.Documents.Metadata.Id && key != identityPropertyName) &&
+                mappedNames.Contains(key) == false;
+
+            switch (extensionData)
+            {
+                case IDictionary<string, object> values:
+                    return WithoutReservedKeys(values, IsKept);
+                case IDictionary<string, JsonElement> elements:
+                    return WithoutReservedKeys(elements, IsKept);
+                case JsonObject node:
+                    var result = new JsonObject(node.Options);
+                    foreach (KeyValuePair<string, JsonNode> entry in node)
+                    {
+                        if (IsKept(entry.Key))
+                            result[entry.Key] = entry.Value?.DeepClone();
+                    }
+                    return result;
+                default:
+                    return extensionData;
+            }
+        }
+
+        private static Dictionary<string, T> WithoutReservedKeys<T>(IDictionary<string, T> dictionary, Func<string, bool> isKept)
+        {
+            var result = new Dictionary<string, T>(dictionary.Count);
+            foreach (KeyValuePair<string, T> entry in dictionary)
+            {
+                if (isKept(entry.Key))
+                    result[entry.Key] = entry.Value;
             }
 
             return result;
