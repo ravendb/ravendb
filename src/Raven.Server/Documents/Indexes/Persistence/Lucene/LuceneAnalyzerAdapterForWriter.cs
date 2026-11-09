@@ -46,15 +46,13 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
                 self._term = term = stream.GetAttribute<ITermAttribute>();
             }
 
-            bool continueWork = stream.IncrementToken();
-            while (continueWork)
+            while (stream.IncrementToken())
             {
                 int start = offset.StartOffset;
                 int length = offset.EndOffset - start;
                 if (length == 0)
                     continue; // We skip any empty token. 
                 
-
                 ReadOnlySpan<char> termChars = term.TermBuffer();
                 int outputLength = Encoding.UTF8.GetBytes(termChars[..term.TermLength()], output[currentOutputIdx..]);
 
@@ -66,8 +64,6 @@ internal sealed unsafe class LuceneAnalyzerAdapterForWriter : LuceneAnalyzerAdap
                 // Advance the current token output.
                 currentOutputIdx += outputLength;
                 currentTokenIdx++;
-                
-                continueWork = stream.IncrementToken();
             }
 
             output = output[..currentOutputIdx];
