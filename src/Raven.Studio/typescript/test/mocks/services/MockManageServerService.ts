@@ -6,6 +6,8 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import { SharedStubs } from "test/stubs/SharedStubs";
 import { mockJQueryError } from "test/mocks/utils";
+import { BackupDecisionLogDetails } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
+import DatabaseUtils from "components/utils/DatabaseUtils";
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -146,5 +148,29 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withGenerateTwoFactorSecret(dto?: MockedValue<{ Secret: string }>) {
         return this.mockResolvedValue(this.mocks.generateTwoFactorSecret, dto, ManageServerStubs.twoFactorSecret());
+    }
+
+    withBackupDecisionLog(dto?: MockedValue<BackupDecisionLogDetails>) {
+        const details = this.createValue(dto, ManageServerStubs.backupDecisionLog());
+        this.mocks.getBackupDecisionLog.mockImplementation(async (databaseName) => ({
+            ...details,
+            Entries: details.Entries.filter(
+                (x) =>
+                    !databaseName || x.Source === "Server" || DatabaseUtils.shardGroupKey(x.Database) === databaseName
+            ),
+        }));
+        return details;
+    }
+
+    withThrowingGetBackupDecisionLog() {
+        this.mocks.getBackupDecisionLog.mockRejectedValue(new Error());
+    }
+
+    withPauseBackupScheduler() {
+        this.mocks.pauseBackupScheduler.mockResolvedValue(undefined);
+    }
+
+    withResumeBackupScheduler() {
+        this.mocks.resumeBackupScheduler.mockResolvedValue(undefined);
     }
 }

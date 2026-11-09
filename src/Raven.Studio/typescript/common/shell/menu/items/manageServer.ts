@@ -12,6 +12,7 @@ import ServerWideCustomSorters = require("components/pages/resources/manageServe
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
 import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 import Certificates = require("components/pages/resources/manageServer/certificates/Certificates");
+import BackupDecisionLog = require("components/pages/resources/manageServer/backupDecisionLog/BackupDecisionLog");
 
 export = getManageServerMenuItem;
 
@@ -271,6 +272,21 @@ function getManageServerMenuItem() {
                     { name: "Import Stack Traces" },
                 ]
             }
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/backupDecisionLog',
+            moduleId: reactUtils.bridgeToReact(BackupDecisionLog.default, "nonShardedView"),
+            title: 'Backup Decision Log',
+            nav: true,
+            css: 'icon-backups',
+            dynamicHash: appUrl.forBackupDecisionLog,
+            requiredAccess: "Operator",
+            search: {
+                innerActions: [
+                    { name: "Pause backup scheduler" },
+                    { name: "Resume backup scheduler" },
+                ],
+            },
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',
