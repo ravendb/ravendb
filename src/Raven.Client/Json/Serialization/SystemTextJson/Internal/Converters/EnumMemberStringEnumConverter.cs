@@ -19,7 +19,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         public override bool CanConvert(Type typeToConvert)
         {
-            return typeToConvert.IsEnum;
+            return typeToConvert.IsEnum && typeToConvert.IsDefined(typeof(JsonConverterAttribute), inherit: false) == false;
         }
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)

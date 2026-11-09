@@ -2831,6 +2831,68 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [System.Text.Json.Serialization.JsonConverter(typeof(MoodConverter))]
+    private enum Mood
+    {
+        Happy,
+        Sad
+    }
+
+    private sealed class MoodConverter : System.Text.Json.Serialization.JsonConverter<Mood>
+    {
+        public override Mood Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) =>
+            Enum.Parse<Mood>(reader.GetString()!.Substring("MOOD:".Length), ignoreCase: true);
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, Mood value, System.Text.Json.JsonSerializerOptions options) =>
+            writer.WriteStringValue("MOOD:" + value.ToString().ToUpperInvariant());
+    }
+
+    [System.Text.Json.Serialization.JsonConverter(typeof(TaggedNamesConverter))]
+    private class TaggedNames(IEnumerable<string> names) : IEnumerable<string>
+    {
+        private readonly List<string> _names = names.ToList();
+
+        public IEnumerator<string> GetEnumerator() => _names.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private sealed class TaggedNamesConverter : System.Text.Json.Serialization.JsonConverter<TaggedNames>
+    {
+        public override TaggedNames Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options) =>
+            new(reader.GetString()!.Substring("names:".Length).Split(','));
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, TaggedNames value, System.Text.Json.JsonSerializerOptions options) =>
+            writer.WriteStringValue("names:" + string.Join(",", value));
+    }
+
+    private class HoldsTypeLevelConverters
+    {
+        public Mood Mood { get; set; }
+
+        public TaggedNames Names { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SystemTextJsonHonorsTypeLevelConvertersOfEnumsAndCollections(bool saveEnumsAsIntegers)
+    {
+        var conventions = new DocumentConventions { SaveEnumsAsIntegers = saveEnumsAsIntegers, Serialization = new SystemTextJsonSerializationConventions() };
+        var holder = new HoldsTypeLevelConverters { Mood = Mood.Happy, Names = new TaggedNames(["a", "b"]) };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(holder, context))
+        {
+            Assert.Equal("MOOD:HAPPY", json[nameof(HoldsTypeLevelConverters.Mood)].ToString());
+            Assert.Equal("names:a,b", json[nameof(HoldsTypeLevelConverters.Names)].ToString());
+
+            var read = conventions.Serialization.DefaultConverter.FromBlittable<HoldsTypeLevelConverters>(json);
+            Assert.Equal(Mood.Happy, read.Mood);
+            Assert.Equal(["a", "b"], read.Names);
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

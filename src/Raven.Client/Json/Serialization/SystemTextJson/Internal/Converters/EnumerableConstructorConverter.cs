@@ -40,7 +40,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             elementType = null;
 
-            if (type.IsClass == false || type.IsAbstract || type.IsArray || type == typeof(string))
+            if (type.IsClass == false || type.IsAbstract || type.IsArray || type == typeof(string) || type.IsDefined(typeof(JsonConverterAttribute), inherit: false))
                 return null;
 
             if (typeof(IDictionary).IsAssignableFrom(type))
