@@ -5,13 +5,14 @@ import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.Replic
 
 class replicationProgressCommand extends commandBase {
 
-    constructor(private readonly db: database | string, private readonly location: databaseLocationSpecifier, private readonly reportFailure = true, private readonly exact = false) {
+    constructor(private readonly db: database | string, private readonly location: databaseLocationSpecifier, private readonly reportFailure = true, private readonly taskName: string = null, private readonly exact = false) {
         super();
     }
 
     execute(): JQueryPromise<resultsDto<ReplicationTaskProgress>> {
         const args = {
             ...this.location,
+            name: this.taskName ?? undefined,
             exact: this.exact ? true : undefined,
         };
         const url = endpoints.databases.replication.replicationProgress + this.urlEncodeArgs(args);

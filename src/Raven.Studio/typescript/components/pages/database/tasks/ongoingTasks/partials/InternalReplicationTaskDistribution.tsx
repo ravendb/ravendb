@@ -13,7 +13,6 @@ import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partial
 import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useExactProgress } from "components/pages/database/tasks/ongoingTasks/partials/useExactProgress";
 import { mapInternalReplicationProgress } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface ItemWithTooltipProps {
@@ -23,7 +22,7 @@ interface ItemWithTooltipProps {
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded } = props;
+    const { nodeInfo, sharded, progress } = props;
 
     const shard = (
         <div className="top shard">
@@ -47,11 +46,16 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const { progress, calculateExact, isCalculatingExact } = useExactProgress(props.progress, async () => {
-        const { Results } = await tasksService.getInternalReplicationProgress(databaseName, nodeInfo.location, true);
-        const destinationProgress = Results.find((x) => x.DestinationNodeTag === props.progress?.destinationNodeTag);
-        return destinationProgress && mapInternalReplicationProgress(destinationProgress);
-    });
+    const fetchExactProgress = async () => {
+        const { Results } = await tasksService.getInternalReplicationProgress(
+            databaseName,
+            nodeInfo.location,
+            true,
+            true
+        );
+        const destinationProgress = Results.find((x) => x.DestinationNodeTag === progress?.destinationNodeTag);
+        return destinationProgress ? [mapInternalReplicationProgress(destinationProgress)] : undefined;
+    };
 
     const hasError = nodeInfo.status === "failure";
     return (
@@ -87,8 +91,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         status={nodeInfo.status}
                         lastAcceptedChangeVectorFromDestination={progress?.lastAcceptedChangeVectorFromDestination}
                         sourceDatabaseChangeVector={progress?.sourceDatabaseChangeVector}
-                        calculateExact={calculateExact}
-                        isCalculatingExact={isCalculatingExact}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>

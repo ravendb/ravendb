@@ -10,7 +10,6 @@ import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partial
 import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useExactProgress } from "components/pages/database/tasks/ongoingTasks/partials/useExactProgress";
 import { mapEtlProgress } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface OngoingEtlTaskDistributionProps {
@@ -52,15 +51,16 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const { progress, calculateExact, isCalculatingExact } = useExactProgress(nodeInfo.etlProgress, async () => {
+    const fetchExactProgress = async () => {
         const { Results } = await tasksService.getEtlProgress(
             databaseName,
             nodeInfo.location,
+            true,
             task.shared.taskName,
             true
         );
         return Results.find((x) => x.TaskName === task.shared.taskName)?.ProcessesProgress.map(mapEtlProgress);
-    });
+    };
 
     return (
         <div ref={setNode}>
@@ -81,7 +81,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
-                <OngoingEtlTaskProgress task={task} nodeInfo={{ ...nodeInfo, etlProgress: progress }} />
+                <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node &&
                 (errorToDisplay ? (
@@ -91,11 +91,10 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         hasError={!!nodeInfo.details?.error}
                         toggleErrorModal={toggleErrorModal}
                         target={node}
-                        progress={progress}
+                        progress={nodeInfo.etlProgress}
                         status={nodeInfo.status}
                         showPreview={showPreview}
-                        calculateExact={calculateExact}
-                        isCalculatingExact={isCalculatingExact}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>

@@ -106,6 +106,7 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
                     onClick={asyncGetTombstonesState.execute}
                     variant="primary"
                     isSpinning={asyncGetTombstonesState.loading}
+                    disabled={asyncCalculateExact.loading}
                     icon="refresh"
                 >
                     Refresh

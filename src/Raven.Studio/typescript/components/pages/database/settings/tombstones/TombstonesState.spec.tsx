@@ -27,7 +27,7 @@ describe("TombstonesState", () => {
     });
 
     it("can calculate the exact tombstone counts", async () => {
-        const getTombstonesState = mockServices.databasesService.mock.getTombstonesState as unknown as jest.Mock;
+        const getTombstonesState = jest.mocked(mockServices.databasesService.mock.getTombstonesState);
 
         try {
             const { screen, fireClick } = rtlRender(<Tombstones />);

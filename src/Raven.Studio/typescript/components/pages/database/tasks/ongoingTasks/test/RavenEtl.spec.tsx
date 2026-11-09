@@ -70,9 +70,9 @@ describe("RavenETL", function () {
         expect(await container.findByText(selectors.emptyScriptText)).toBeInTheDocument();
     });
 
-    it("can calculate the exact progress until the next refresh", async () => {
+    it("keeps the calculated exact progress while the tooltip is open", async () => {
         jest.useFakeTimers({ advanceTimers: true });
-        const getEtlProgress = mockServices.tasksService.mock.getEtlProgress as unknown as jest.Mock;
+        const getEtlProgress = jest.mocked(mockServices.tasksService.mock.getEtlProgress);
 
         try {
             const Story = composeStory(stories.Default, stories.default);
@@ -86,7 +86,7 @@ describe("RavenETL", function () {
             const exactProgress = TasksStubs.getEtlTasksProgress();
             exactProgress.Results.forEach((x) => x.ProcessesProgress.forEach((p) => (p.Estimated = false)));
             getEtlProgress.mockImplementation(async (...args: Parameters<TasksService["getEtlProgress"]>) => {
-                const [, , , exact] = args;
+                const [, , , , exact] = args;
                 return exact ? exactProgress : estimatedProgress;
             });
 
@@ -96,13 +96,27 @@ describe("RavenETL", function () {
             await fireClick(await screen.findByText("calculate exact counts"));
 
             const taskName = TasksStubs.getRavenEtlProgress().TaskName;
-            expect(getEtlProgress).toHaveBeenLastCalledWith(expect.any(String), expect.anything(), taskName, true);
+            expect(getEtlProgress).toHaveBeenLastCalledWith(
+                expect.any(String),
+                expect.anything(),
+                true,
+                taskName,
+                true
+            );
             await waitFor(() => expect(screen.queryByText("(~)")).not.toBeInTheDocument());
 
             act(() => {
                 jest.advanceTimersByTime(10_000);
             });
+            await waitFor(() =>
+                expect(getEtlProgress).toHaveBeenLastCalledWith(expect.any(String), expect.anything(), false)
+            );
+            expect(screen.queryByText("(~)")).not.toBeInTheDocument();
 
+            await user.unhover(etlItem);
+            await waitFor(() => expect(screen.queryByText(/Script #1/)).not.toBeInTheDocument());
+
+            await user.hover(etlItem);
             expect(await screen.findByText("(~)")).toBeInTheDocument();
         } finally {
             getEtlProgress.mockReset();

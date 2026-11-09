@@ -17,7 +17,6 @@ import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partial
 import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { useExactProgress } from "components/pages/database/tasks/ongoingTasks/partials/useExactProgress";
 import {
     mapReplicationProgress,
     matchProgresses,
@@ -60,10 +59,16 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
-    const { progress, calculateExact, isCalculatingExact } = useExactProgress(nodeInfo.progress, async () => {
-        const { Results } = await tasksService.getReplicationProgress(databaseName, nodeInfo.location, true);
+    const fetchExactProgress = async () => {
+        const { Results } = await tasksService.getReplicationProgress(
+            databaseName,
+            nodeInfo.location,
+            true,
+            task.shared.taskName,
+            true
+        );
         return matchProgresses(task, nodeInfo, Results).map(mapReplicationProgress);
-    });
+    };
 
     return (
         <div ref={setNode}>
@@ -88,7 +93,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
-                <ExternalReplicationTaskProgress task={task} nodeInfo={{ ...nodeInfo, progress }} />
+                <ExternalReplicationTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node &&
                 (errorToDisplay ? (
@@ -98,14 +103,13 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         hasError={!!nodeInfo.details?.error}
                         toggleErrorModal={toggleErrorModal}
                         target={node}
-                        progress={progress}
+                        progress={nodeInfo.progress}
                         status={nodeInfo.status}
                         lastAcceptedChangeVectorFromDestination={
                             nodeInfo.details?.lastAcceptedChangeVectorFromDestination
                         }
                         sourceDatabaseChangeVector={nodeInfo.details?.sourceDatabaseChangeVector}
-                        calculateExact={calculateExact}
-                        isCalculatingExact={isCalculatingExact}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>
