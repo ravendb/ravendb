@@ -1,9 +1,9 @@
 import classNames from "classnames";
-import { Control, FieldPath, FieldValues, get, useFormState } from "react-hook-form";
+import { Control, FieldPath, FieldValues, useController } from "react-hook-form";
 import appUrl from "common/appUrl";
 import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
 import FieldLabel from "components/common/FieldLabel";
-import { FormDurationPicker } from "components/common/Form";
+import { ControlledDurationPicker } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -33,8 +33,7 @@ export default function LicenseLimitedFrequencyField<
 }: LicenseLimitedFrequencyFieldProps<TFieldValues, TName>) {
     const t = useStudioTranslation("licenseLimitedFrequencyField");
     const labelId = useUniqueId("license-limited-frequency-label-");
-    const { errors, isSubmitting } = useFormState({ control, name });
-    const hasError = !!get(errors, name);
+    const { field, fieldState, formState } = useController({ control, name });
 
     return (
         <div>
@@ -42,10 +41,11 @@ export default function LicenseLimitedFrequencyField<
                 {label}
             </FieldLabel>
             <div className="d-inline-block mw-100">
-                <FormDurationPicker
-                    name={name}
-                    control={control}
-                    disabled={disabled || isSubmitting}
+                <ControlledDurationPicker
+                    field={field}
+                    fieldState={fieldState}
+                    isSubmitting={formState.isSubmitting}
+                    disabled={disabled || formState.isSubmitting}
                     aria-labelledby={labelId}
                     placeholder={ZERO_DURATION_PLACEHOLDER}
                     showSeconds
@@ -56,7 +56,7 @@ export default function LicenseLimitedFrequencyField<
                     "item-disabled pe-none": disabled,
                 })}
             >
-                {isBelowLimit && !hasError ? (
+                {isBelowLimit && !fieldState.invalid ? (
                     <span className="text-danger">
                         <Icon icon="warning" />
                         {limitMessage}

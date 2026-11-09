@@ -44,9 +44,11 @@ import FeatureNotAvailableInYourLicensePopoverBody from "components/common/Featu
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 export default function ClientDatabaseConfiguration() {
     const { manageServerService } = useServices();
+    const commonT = useStudioTranslation("common");
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const asyncGetClientGlobalConfiguration = useAsyncCallback(async () => {
@@ -216,7 +218,8 @@ export default function ClientDatabaseConfiguration() {
                                                         defaultValue={globalConfig.identityPartsSeparatorValue}
                                                         disabled
                                                         placeholder={
-                                                            globalConfig.identityPartsSeparatorValue || "Default ('/')"
+                                                            globalConfig.identityPartsSeparatorValue ||
+                                                            commonT("defaultPlaceholder", { value: "'/'" })
                                                         }
                                                     />
                                                 </FormGroup>
@@ -233,7 +236,7 @@ export default function ClientDatabaseConfiguration() {
                                                         placeholder={
                                                             globalConfig.maximumNumberOfRequestsValue
                                                                 ? globalConfig.maximumNumberOfRequestsValue.toLocaleString()
-                                                                : "Default (30)"
+                                                                : commonT("defaultPlaceholder", { value: "30" })
                                                         }
                                                     />
                                                 </FormGroup>
@@ -310,7 +313,7 @@ export default function ClientDatabaseConfiguration() {
                                                 <Form.Control
                                                     defaultValue={globalConfig.loadBalancerValue}
                                                     disabled
-                                                    placeholder="None"
+                                                    placeholder={commonT("defaultPlaceholder", { value: "None" })}
                                                 />
                                             </FormGroup>
                                             {(globalConfig?.loadBalancerSeedValue ||
@@ -325,7 +328,7 @@ export default function ClientDatabaseConfiguration() {
                                                     <Form.Control
                                                         defaultValue={globalConfig.loadBalancerSeedValue}
                                                         disabled
-                                                        placeholder="Default (0)"
+                                                        placeholder={commonT("defaultPlaceholder", { value: "0" })}
                                                     />
                                                 </FormGroup>
                                             )}
@@ -338,7 +341,7 @@ export default function ClientDatabaseConfiguration() {
                                                 </FieldLabel>
                                                 <Form.Control
                                                     defaultValue={globalConfig.readBalanceBehaviorValue}
-                                                    placeholder="None"
+                                                    placeholder={commonT("defaultPlaceholder", { value: "None" })}
                                                     disabled
                                                 />
                                             </FormGroup>

@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Control, FieldPath, FieldValues, get, PathValue, useController } from "react-hook-form";
+import { Control, FieldPath, FieldValues, PathValue, useController } from "react-hook-form";
 import { omit, pick } from "lodash";
 import classNames from "classnames";
 import Badge from "react-bootstrap/Badge";
@@ -100,7 +100,7 @@ export function FormSelectWithDefault<
 
 export function FormDurationPickerWithDefault<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>(
     props: Omit<FieldWithDefaultProps<TFieldValues, TName>, "defaultValueLabel"> &
-        Omit<FormDurationPickerProps, "disabled" | "placeholder" | "aria-labelledby" | "defaultTotalSeconds"> & {
+        Omit<FormDurationPickerProps, "id" | "disabled" | "placeholder" | "aria-labelledby" | "defaultTotalSeconds"> & {
             defaultTotalSeconds: number;
         }
 ) {
@@ -108,10 +108,11 @@ export function FormDurationPickerWithDefault<TFieldValues extends FieldValues, 
 
     return (
         <FieldWithDefault<TFieldValues, TName> {...fieldProps}>
-            {({ binding, isDisabled, labelId }) => (
+            {({ binding, isDisabled, controlId, labelId }) => (
                 <ControlledDurationPicker
                     {...binding}
                     {...inputProps}
+                    id={controlId}
                     disabled={isDisabled}
                     aria-labelledby={labelId}
                 />
@@ -156,11 +157,8 @@ function FieldWithDefault<TFieldValues extends FieldValues, TName extends FieldP
     const isOptimal = hasOptimalValue && field.value === optimalValue;
     const isOptimalSuggested = hasOptimalValue && !disabled && !isOptimal && !fieldState.invalid;
 
-    const emptyValue: PathValue<TFieldValues, TName> =
-        get(formState.defaultValues, name) === undefined ? undefined : null;
-
     const changeValue = (value: PathValue<TFieldValues, TName>) => {
-        const newValue = value == null || value === "" ? emptyValue : value;
+        const newValue: PathValue<TFieldValues, TName> = value == null || value === "" ? null : value;
         field.onChange(newValue);
         afterChange?.(newValue);
     };

@@ -134,7 +134,16 @@ const editSchema = yup.object({
             // History
             isEnableHistory: yup.boolean(),
             isSetHistoryExpiration: yup.boolean(),
-            historyExpirationInSeconds: yup.number().nullable().positive().integer(),
+            historyExpirationInSeconds: yup
+                .number()
+                .nullable()
+                .positive()
+                .integer()
+                .when(["method", "isEnableHistory", "isSetHistoryExpiration"], {
+                    is: (method: AiAgentTrimmingMethod, isEnableHistory: boolean, isSetHistoryExpiration: boolean) =>
+                        method != null && isEnableHistory && isSetHistoryExpiration,
+                    then: (schema) => schema.required(),
+                }),
 
             // Truncate
             // messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),

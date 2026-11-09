@@ -110,6 +110,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         defaultValues: asyncGetDefaultValues.execute,
         context: {
             areParametersRequired,
+            isDocumentExpirationEnabled: isDocumentExpirationEnabled.data,
         },
     });
 

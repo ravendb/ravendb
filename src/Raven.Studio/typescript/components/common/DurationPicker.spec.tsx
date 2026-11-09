@@ -20,7 +20,7 @@ function DurationForm({ defaultValues }: { defaultValues: DurationFormData }) {
             </FormSwitch>
             {isSet && (
                 <div role="group" aria-label="Duration">
-                    <FormDurationPicker control={control} name="duration" showDays />
+                    <FormDurationPicker control={control} name="duration" showDays showSeconds />
                 </div>
             )}
             <span>{formState.isDirty ? "Form is dirty" : "Form is pristine"}</span>
@@ -37,6 +37,17 @@ describe("DurationPicker", () => {
         expect(screen.getByText("Form is pristine")).toBeInTheDocument();
     });
 
+    it("keeps the form pristine when it mounts with a fractional value", async () => {
+        const { screen } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: 61.5 }} />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+
+        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(1);
+        expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(2);
+        expect(screen.queryByText("Please enter a whole number")).not.toBeInTheDocument();
+        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
     it("keeps the form pristine when it is shown and hidden again", async () => {
         const { screen, user } = rtlRender(<DurationForm defaultValues={{ isSet: false, duration: undefined }} />);
 
@@ -45,6 +56,29 @@ describe("DurationPicker", () => {
         await user.click(toggle);
 
         expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("clears an invalid value when it is hidden", async () => {
+        const { screen, user } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: 3600 }} />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        const hours = within(durationPicker).getByRole("spinbutton", { name: "Hours" });
+        await user.clear(hours);
+        await user.type(hours, "1.5");
+        expect(screen.getByText("Value: NaN")).toBeInTheDocument();
+
+        await user.click(screen.getByRole("checkbox", { name: "Set duration" }));
+
+        expect(screen.getByText("Value: null")).toBeInTheDocument();
+    });
+
+    it("shows empty parts when it mounts with an invalid value", async () => {
+        const { screen } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: NaN }} />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+
+        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(null);
+        expect(screen.queryByText("Please enter a whole number")).not.toBeInTheDocument();
     });
 
     it("clears the value once every part is cleared", async () => {

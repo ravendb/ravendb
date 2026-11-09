@@ -238,8 +238,6 @@ function DestinationsList() {
     );
 }
 
-const DEFAULT_CHECK_FREQUENCY_IN_SEC = 60;
-
 function RemoteAttachmentsSettingsCard() {
     const { control, formState, setValue } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -273,7 +271,6 @@ function RemoteAttachmentsSettingsCard() {
                     name="checkFrequencyInSec"
                     label="Interval between remote attachments task runs"
                     disabled={isSettingsDisabled}
-                    defaultFrequencyInSec={DEFAULT_CHECK_FREQUENCY_IN_SEC}
                 />
                 <FormInputWithDefault
                     control={control}

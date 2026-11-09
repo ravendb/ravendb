@@ -5,6 +5,7 @@ import FormGroup from "react-bootstrap/FormGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import useUniqueId from "components/hooks/useUniqueId";
+import useIsomorphicLayoutEffect from "components/hooks/useIsomorphicLayoutEffect";
 
 interface Duration {
     days: number;
@@ -20,6 +21,7 @@ type DurationPlaceholder = Partial<Record<DurationPart, string>>;
 export interface DurationPickerProps {
     onChange: (totalSeconds: number) => void;
     totalSeconds: number;
+    id?: string;
     showDays?: boolean;
     showSeconds?: boolean;
     disabled?: boolean;
@@ -41,6 +43,7 @@ export default function DurationPicker(props: DurationPickerProps) {
     const {
         totalSeconds,
         onChange,
+        id,
         showDays,
         placeholder,
         defaultTotalSeconds,
@@ -63,6 +66,20 @@ export default function DurationPicker(props: DurationPickerProps) {
 
     // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
     const lastTotalSecondsRef = useRef(totalSeconds ?? null);
+    const onChangeRef = useRef(onChange);
+
+    useIsomorphicLayoutEffect(() => {
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    useEffect(
+        () => () => {
+            if (Number.isNaN(lastTotalSecondsRef.current)) {
+                onChangeRef.current(null);
+            }
+        },
+        []
+    );
 
     const parts: { name: DurationPart; value: number; setValue: (value: number) => void }[] = [
         { name: "days" as const, value: days, setValue: setDays, isVisible: showDays },
@@ -87,13 +104,13 @@ export default function DurationPicker(props: DurationPickerProps) {
               ? NaN
               : seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
 
-        if (Object.is(calculatedTotalSeconds, lastTotalSecondsRef.current)) {
+        if (Object.is(calculatedTotalSeconds, toWholeSeconds(lastTotalSecondsRef.current))) {
             return;
         }
 
         lastTotalSecondsRef.current = calculatedTotalSeconds;
-        onChange(calculatedTotalSeconds);
-    }, [onChange, days, hours, minutes, seconds, isEmpty, hasInvalidPart]);
+        onChangeRef.current(calculatedTotalSeconds);
+    }, [days, hours, minutes, seconds, isEmpty, hasInvalidPart]);
 
     useEffect(() => {
         const consumerTotalSeconds = totalSeconds ?? null;
@@ -131,10 +148,10 @@ export default function DurationPicker(props: DurationPickerProps) {
             aria-labelledby={ariaLabelledBy}
             className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}
         >
-            {parts.map((part) => (
+            {parts.map((part, index) => (
                 <FormGroup
                     key={part.name}
-                    controlId={controlIdPrefix + part.name}
+                    controlId={index === 0 && id ? id : controlIdPrefix + part.name}
                     className={classNames({ "flex-grow-1": isFlexGrow })}
                 >
                     <InputGroup>
@@ -167,12 +184,16 @@ function getInvalidPartMessageKey(parts: number[]): "nonNegativeNumberRequired" 
     return null;
 }
 
+function toWholeSeconds(totalSeconds: number): number {
+    return totalSeconds == null ? null : Math.round(totalSeconds);
+}
+
 function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
-    if (totalSeconds == null) {
+    if (totalSeconds == null || Number.isNaN(totalSeconds)) {
         return null;
     }
 
-    let total = totalSeconds,
+    let total = toWholeSeconds(totalSeconds),
         hours = 0,
         days = 0;
 
