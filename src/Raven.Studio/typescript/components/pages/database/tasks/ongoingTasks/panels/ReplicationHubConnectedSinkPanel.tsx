@@ -80,7 +80,7 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                     </RichPanelDetailItem>
                 )}
             </RichPanelDetails>
-            <Collapse in={isExpanded}>
+            <Collapse in={isExpanded} mountOnEnter>
                 <div>
                     <ExternalReplicationTaskDistribution task={data} />
                 </div>

@@ -87,6 +87,8 @@ function getSinkFilterCategories(
     updateFilters: (partialFilters: Partial<SinkFilters>) => void,
     nodeTags: string[]
 ): FilterCategory[] {
+    const nodeTagOptions = Array.from(new Set([...nodeTags, ...filters.nodeTags])).sort();
+
     return [
         {
             key: "databaseName",
@@ -141,7 +143,7 @@ function getSinkFilterCategories(
             label: "Node processing the sink",
             icon: "node",
             type: "checkboxList",
-            options: nodeTags.map((x) => ({ value: x, label: `Node ${x}` })),
+            options: nodeTagOptions.map((x) => ({ value: x, label: `Node ${x}` })),
             selectedValues: filters.nodeTags,
             onChange: (selectedNodeTags) => updateFilters({ nodeTags: selectedNodeTags }),
         },
