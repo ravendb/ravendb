@@ -27,6 +27,49 @@ public class SystemTextJsonScalarConverterTests(ITestOutputHelper output) : NoDi
         public List<char> Many { get; set; }
     }
 
+    private enum ByteEnum : byte
+    {
+        One = 1,
+        Max = byte.MaxValue
+    }
+
+    private enum SByteEnum : sbyte
+    {
+        Negative = -5
+    }
+
+    private enum ShortEnum : short
+    {
+        Negative = short.MinValue
+    }
+
+    [Flags]
+    private enum LongFlags : long
+    {
+        High = 1L << 40,
+        Higher = 1L << 41
+    }
+
+    private enum ULongEnum : ulong
+    {
+        Max = ulong.MaxValue
+    }
+
+    private class HoldsEnums
+    {
+        public ByteEnum Byte { get; set; }
+
+        public SByteEnum SByte { get; set; }
+
+        public ShortEnum Short { get; set; }
+
+        public LongFlags Flags { get; set; }
+
+        public ULongEnum ULong { get; set; }
+
+        public Dictionary<ByteEnum, int> Keyed { get; set; }
+    }
+
     [RavenTheory(RavenTestCategory.ClientApi)]
     [InlineData("42")]
     [InlineData("-42")]
@@ -121,6 +164,45 @@ public class SystemTextJsonScalarConverterTests(ITestOutputHelper output) : NoDi
             Assert.Equal("\u017c", actualMetadata["Wide"].ToString());
             Assert.Equal(expectedMetadata["Ascii"].ToString(), actualMetadata["Ascii"].ToString());
             Assert.Equal(expectedMetadata["Wide"].ToString(), actualMetadata["Wide"].ToString());
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void EnumsOfEveryUnderlyingTypeAreWrittenAndReadLikeNewtonsoft(bool saveEnumsAsIntegers)
+    {
+        var value = new HoldsEnums
+        {
+            Byte = ByteEnum.Max,
+            SByte = SByteEnum.Negative,
+            Short = ShortEnum.Negative,
+            Flags = LongFlags.High | LongFlags.Higher,
+            ULong = ULongEnum.Max,
+            Keyed = new Dictionary<ByteEnum, int> { [ByteEnum.One] = 1, [ByteEnum.Max] = 2 }
+        };
+
+        var read = saveEnumsAsIntegers ? AssertWritesLikeNewtonsoft(value, NewtonsoftIntegers, SystemTextJsonIntegers) : AssertWritesLikeNewtonsoft(value);
+        Assert.Equal(value.Byte, read.Byte);
+        Assert.Equal(value.SByte, read.SByte);
+        Assert.Equal(value.Short, read.Short);
+        Assert.Equal(value.Flags, read.Flags);
+        Assert.Equal(value.ULong, read.ULong);
+        Assert.Equal(value.Keyed, read.Keyed);
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void EnumsReadOutOfRangeNumbersLikeEnumToObject()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject blittable = context.Sync.ReadForMemory("{\"Byte\":300,\"SByte\":251,\"Short\":-32769,\"Flags\":-1}", "enums"))
+        {
+            var read = SystemTextJsonIntegers.Serialization.DefaultConverter.FromBlittable<HoldsEnums>(blittable);
+
+            Assert.Equal((ByteEnum)Enum.ToObject(typeof(ByteEnum), 300L), read.Byte);
+            Assert.Equal((SByteEnum)Enum.ToObject(typeof(SByteEnum), 251L), read.SByte);
+            Assert.Equal((ShortEnum)Enum.ToObject(typeof(ShortEnum), -32769L), read.Short);
+            Assert.Equal((LongFlags)Enum.ToObject(typeof(LongFlags), -1L), read.Flags);
         }
     }
 
