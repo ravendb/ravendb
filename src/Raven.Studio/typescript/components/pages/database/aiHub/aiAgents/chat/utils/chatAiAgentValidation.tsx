@@ -69,7 +69,19 @@ const schema = yup.object({
             is: true,
             then: (schema) => schema.required(),
         }),
-    persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
+    persistenceExpiresInSeconds: yup
+        .number()
+        .nullable()
+        .positive()
+        .integer()
+        .when(["isEnableDocumentExpiration", "isDocumentExpireInCustomizeEnabled", "$isDocumentExpirationEnabled"], {
+            is: (
+                isEnableDocumentExpiration: boolean,
+                isDocumentExpireInCustomizeEnabled: boolean,
+                isDocumentExpirationEnabled: boolean
+            ) => (isEnableDocumentExpiration || isDocumentExpirationEnabled) && isDocumentExpireInCustomizeEnabled,
+            then: (schema) => schema.required(),
+        }),
 });
 
 export const chatAiAgentYupResolver = yupResolver(schema);

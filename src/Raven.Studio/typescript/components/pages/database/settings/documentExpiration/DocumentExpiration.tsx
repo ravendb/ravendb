@@ -5,9 +5,12 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
-import FrequencyField, { getLicenseFrequencyLimit } from "components/common/FrequencyField";
+import FrequencyField, {
+    getFrequencySettingsOnToggle,
+    getLicenseFrequencyLimit,
+} from "components/common/FrequencyField";
 import MaxItemsToProcessField from "components/common/MaxItemsToProcessField";
-import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -32,11 +35,9 @@ import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
-
-const DEFAULT_DELETE_FREQUENCY_IN_SEC = 60;
 
 export default function DocumentExpiration() {
+    const t = useStudioTranslation("documentExpiration");
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
 
@@ -72,24 +73,19 @@ export default function DocumentExpiration() {
         minPeriodInHours: minPeriodForExpirationInHours,
         isFeatureEnabled: formValues.isDocumentExpirationEnabled,
         frequencyInSec: formValues.deleteFrequency,
-        defaultFrequencyInSec: DEFAULT_DELETE_FREQUENCY_IN_SEC,
-        limitMessage:
-            minPeriodForExpirationInHours > 0
-                ? `Your license doesn't allow an expiration frequency below ${pluralizeHelpers.pluralize(minPeriodForExpirationInHours, "hour", "hours")}.`
-                : null,
+        limitMessage: t("limitWarning", { count: minPeriodForExpirationInHours }),
     });
 
     const resetSettingsOnToggle = (isEnabled: boolean) => {
-        if (!isEnabled) {
-            setValue("maxItemsToProcess", null, DIRTY_AND_VALIDATE);
-            setValue("deleteFrequency", null, DIRTY_AND_VALIDATE);
-            return;
-        }
+        const settings = getFrequencySettingsOnToggle({
+            isEnabled,
+            frequencyInSec: getValues("deleteFrequency"),
+            maxItemsToProcess: getValues("maxItemsToProcess"),
+            licenseLimit,
+        });
 
-        setValue("maxItemsToProcess", DEFAULT_ITEMS_TO_PROCESS, DIRTY_AND_VALIDATE);
-        if (licenseLimit.isLicenseLimited && getValues("deleteFrequency") == null) {
-            setValue("deleteFrequency", licenseLimit.minFrequencyInSec, DIRTY_AND_VALIDATE);
-        }
+        setValue("deleteFrequency", settings.frequencyInSec, DIRTY_AND_VALIDATE);
+        setValue("maxItemsToProcess", settings.maxItemsToProcess, DIRTY_AND_VALIDATE);
     };
 
     const onSave: SubmitHandler<DocumentExpirationFormData> = async (formData) => {
@@ -159,7 +155,6 @@ export default function DocumentExpiration() {
                                                 name="deleteFrequency"
                                                 label="Expiration frequency"
                                                 disabled={!formValues.isDocumentExpirationEnabled}
-                                                defaultFrequencyInSec={DEFAULT_DELETE_FREQUENCY_IN_SEC}
                                                 licenseLimit={licenseLimit}
                                             />
                                             <MaxItemsToProcessField

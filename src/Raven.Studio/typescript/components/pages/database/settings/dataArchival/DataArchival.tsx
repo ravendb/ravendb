@@ -19,9 +19,8 @@ import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
-import FrequencyField from "components/common/FrequencyField";
+import FrequencyField, { getFrequencySettingsOnToggle } from "components/common/FrequencyField";
 import MaxItemsToProcessField from "components/common/MaxItemsToProcessField";
-import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -38,8 +37,6 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useRavenLink } from "hooks/useRavenLink";
 import moment from "moment";
 
-const DEFAULT_ARCHIVE_FREQUENCY_IN_SEC = 60;
-
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -51,7 +48,7 @@ export default function DataArchival() {
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
         mapToFormData(await databasesService.getDataArchivalConfiguration(databaseName))
     );
-    const { handleSubmit, control, formState, reset, setValue } = useForm<DataArchivalFormData>({
+    const { handleSubmit, control, formState, reset, setValue, getValues } = useForm<DataArchivalFormData>({
         resolver: dataArchivalYupResolver,
         mode: "all",
         defaultValues: asyncGetDataArchivalConfiguration.execute,
@@ -71,10 +68,14 @@ export default function DataArchival() {
     });
 
     const resetSettingsOnToggle = (isEnabled: boolean) => {
-        setValue("maxItemsToProcess", isEnabled ? DEFAULT_ITEMS_TO_PROCESS : null, DIRTY_AND_VALIDATE);
-        if (!isEnabled) {
-            setValue("archiveFrequency", null, DIRTY_AND_VALIDATE);
-        }
+        const settings = getFrequencySettingsOnToggle({
+            isEnabled,
+            frequencyInSec: getValues("archiveFrequency"),
+            maxItemsToProcess: getValues("maxItemsToProcess"),
+        });
+
+        setValue("archiveFrequency", settings.frequencyInSec, DIRTY_AND_VALIDATE);
+        setValue("maxItemsToProcess", settings.maxItemsToProcess, DIRTY_AND_VALIDATE);
     };
 
     const onSave: SubmitHandler<DataArchivalFormData> = async (formData) => {
@@ -149,7 +150,6 @@ export default function DataArchival() {
                                                 name="archiveFrequency"
                                                 label="Archive frequency"
                                                 disabled={!formValues.isDataArchivalEnabled}
-                                                defaultFrequencyInSec={DEFAULT_ARCHIVE_FREQUENCY_IN_SEC}
                                             />
                                             <MaxItemsToProcessField
                                                 control={control}

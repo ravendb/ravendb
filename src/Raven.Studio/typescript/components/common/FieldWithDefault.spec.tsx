@@ -1,17 +1,52 @@
-import React from "react";
+import React, { useState } from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { within } from "@testing-library/dom";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { rtlRender } from "test/rtlTestUtils";
-import { FormInputWithDefault } from "components/common/FieldWithDefault";
+import { FormInputWithDefault, FormSelectWithDefault } from "components/common/FieldWithDefault";
+import { SelectOption } from "components/common/select/Select";
 import * as stories from "./FieldWithDefault.stories";
 
 const { States } = composeStories(stories);
 
 interface SingleFieldFormData {
     value: number;
+}
+
+interface ToolsFormData {
+    tools: { isEnabled: boolean }[];
+}
+
+const BOOLEAN_OPTIONS: SelectOption<boolean>[] = [
+    { label: "True", value: true },
+    { label: "False", value: false },
+];
+
+function ToolsForm() {
+    const { control } = useForm<ToolsFormData>({ defaultValues: { tools: [] } });
+    const { fields, append } = useFieldArray({ control, name: "tools" });
+    const [isEditing, setIsEditing] = useState(true);
+
+    return (
+        <div>
+            <Button onClick={() => append({ isEnabled: null })}>Add tool</Button>
+            <Button onClick={() => setIsEditing(!isEditing)}>{isEditing ? "Close tools" : "Edit tools"}</Button>
+            {isEditing &&
+                fields.map((field, index) => (
+                    <FormSelectWithDefault
+                        key={field.id}
+                        control={control}
+                        name={`tools.${index}.isEnabled`}
+                        label="Enabled"
+                        options={BOOLEAN_OPTIONS}
+                        defaultValueLabel="True"
+                        isSearchable={false}
+                    />
+                ))}
+        </div>
+    );
 }
 
 function SubmittingForm() {
@@ -27,15 +62,9 @@ function SubmittingForm() {
     );
 }
 
-function DirtyTrackingForm({
-    onValueChange,
-    defaultValue = null,
-}: {
-    onValueChange?: (value: number) => void;
-    defaultValue?: number;
-}) {
+function DirtyTrackingForm({ onValueChange }: { onValueChange?: (value: number) => void }) {
     const { control, formState } = useForm<SingleFieldFormData>({
-        defaultValues: { value: defaultValue },
+        defaultValues: { value: null },
     });
 
     return (
@@ -110,15 +139,31 @@ describe("FieldWithDefault", () => {
         expect(screen.getByText("Form is pristine")).toBeInTheDocument();
     });
 
-    it("is not dirty after a typed value is reset to an undefined default", async () => {
-        const { screen, user } = rtlRender(<DirtyTrackingForm defaultValue={undefined} />);
+    it("keeps a False selection instead of treating it as the default", async () => {
+        const { screen, user } = rtlRender(<ToolsForm />);
 
-        await user.type(await screen.findByName("value"), "5");
-        expect(screen.getByText("Form is dirty")).toBeInTheDocument();
+        await user.click(await screen.findByRole("button", { name: "Add tool" }));
+        await user.click(screen.getByRole("combobox", { name: "Enabled" }));
+        await user.click(await screen.findByText("False"));
 
-        await user.click(screen.getByRole("button", { name: "Reset to default" }));
+        expect(screen.getByText("False")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Reset to default", description: "Enabled" })).toBeInTheDocument();
+    });
 
-        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    it("resets a newly added list item after it is shown again", async () => {
+        const { screen, user } = rtlRender(<ToolsForm />);
+
+        await user.click(await screen.findByRole("button", { name: "Add tool" }));
+        await user.click(screen.getByRole("combobox", { name: "Enabled" }));
+        await user.click(await screen.findByText("False"));
+        await user.click(screen.getByRole("button", { name: "Close tools" }));
+        await user.click(screen.getByRole("button", { name: "Edit tools" }));
+
+        await user.click(screen.getByRole("button", { name: "Reset to default", description: "Enabled" }));
+
+        expect(screen.queryByText("False")).not.toBeInTheDocument();
+        expect(screen.getByText("Default (True)")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Reset to default" })).not.toBeInTheDocument();
     });
 
     it("shows the default value in the placeholder", async () => {
@@ -188,6 +233,15 @@ describe("FieldWithDefault", () => {
         expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(1);
         expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(0);
         expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(0);
+    });
+
+    it("focuses the first duration part when its label is clicked", async () => {
+        const { screen, user } = rtlRender(<States />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        await user.click(screen.getByText("Duration", { selector: "label" }));
+
+        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveFocus();
     });
 
     it("shows the default duration once every part is cleared", async () => {

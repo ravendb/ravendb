@@ -5,9 +5,11 @@ import Col from "react-bootstrap/Col";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
-import FrequencyField, { getLicenseFrequencyLimit } from "components/common/FrequencyField";
+import FrequencyField, {
+    getFrequencySettingsOnToggle,
+    getLicenseFrequencyLimit,
+} from "components/common/FrequencyField";
 import MaxItemsToProcessField from "components/common/MaxItemsToProcessField";
-import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -34,8 +36,6 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import { StudioTrans } from "components/common/i18n/StudioTrans";
-
-const DEFAULT_REFRESH_FREQUENCY_IN_SEC = 60;
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -73,21 +73,19 @@ export default function DocumentRefresh() {
         minPeriodInHours: minPeriodForRefreshInHours,
         isFeatureEnabled: formValues.isDocumentRefreshEnabled,
         frequencyInSec: formValues.refreshFrequency,
-        defaultFrequencyInSec: DEFAULT_REFRESH_FREQUENCY_IN_SEC,
         limitMessage: t("limitWarning", { count: minPeriodForRefreshInHours }),
     });
 
     const resetSettingsOnToggle = (isEnabled: boolean) => {
-        if (!isEnabled) {
-            setValue("maxItemsToProcess", null, DIRTY_AND_VALIDATE);
-            setValue("refreshFrequency", null, DIRTY_AND_VALIDATE);
-            return;
-        }
+        const settings = getFrequencySettingsOnToggle({
+            isEnabled,
+            frequencyInSec: getValues("refreshFrequency"),
+            maxItemsToProcess: getValues("maxItemsToProcess"),
+            licenseLimit,
+        });
 
-        setValue("maxItemsToProcess", DEFAULT_ITEMS_TO_PROCESS, DIRTY_AND_VALIDATE);
-        if (licenseLimit.isLicenseLimited && getValues("refreshFrequency") == null) {
-            setValue("refreshFrequency", licenseLimit.minFrequencyInSec, DIRTY_AND_VALIDATE);
-        }
+        setValue("refreshFrequency", settings.frequencyInSec, DIRTY_AND_VALIDATE);
+        setValue("maxItemsToProcess", settings.maxItemsToProcess, DIRTY_AND_VALIDATE);
     };
 
     const onSave: SubmitHandler<DocumentRefreshFormData> = async (formData) => {
@@ -153,7 +151,6 @@ export default function DocumentRefresh() {
                                                 name="refreshFrequency"
                                                 label={t("frequencyLabel")}
                                                 disabled={!formValues.isDocumentRefreshEnabled}
-                                                defaultFrequencyInSec={DEFAULT_REFRESH_FREQUENCY_IN_SEC}
                                                 licenseLimit={licenseLimit}
                                             />
                                             <MaxItemsToProcessField

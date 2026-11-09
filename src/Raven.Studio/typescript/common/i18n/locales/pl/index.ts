@@ -2,6 +2,7 @@ import type { LanguageResources } from "../../resources";
 import aboutView from "./aboutView.json";
 import common from "./common.json";
 import conflicts from "./conflicts.json";
+import documentExpiration from "./documentExpiration.json";
 import documentRefresh from "./documentRefresh.json";
 import durationPicker from "./durationPicker.json";
 import editCustomSorter from "./editCustomSorter.json";
@@ -16,6 +17,7 @@ const pl: LanguageResources = {
     aboutView,
     common,
     conflicts,
+    documentExpiration,
     documentRefresh,
     durationPicker,
     editCustomSorter,

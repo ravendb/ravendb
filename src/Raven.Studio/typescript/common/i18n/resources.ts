@@ -1,6 +1,7 @@
 import aboutView from "./locales/en/aboutView";
 import common from "./locales/en/common";
 import conflicts from "./locales/en/conflicts";
+import documentExpiration from "./locales/en/documentExpiration";
 import documentRefresh from "./locales/en/documentRefresh";
 import durationPicker from "./locales/en/durationPicker";
 import editCustomSorter from "./locales/en/editCustomSorter";
@@ -28,6 +29,7 @@ export const en = {
     aboutView,
     common,
     conflicts,
+    documentExpiration,
     documentRefresh,
     durationPicker,
     editCustomSorter,

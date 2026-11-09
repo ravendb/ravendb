@@ -110,7 +110,16 @@ const editGenAiTaskSchema = yup.object({
     ),
     isEnableTracing: yup.boolean(),
     isSetTracingExpiration: yup.boolean(),
-    tracingExpirationInSeconds: yup.number().nullable().positive().integer(),
+    tracingExpirationInSeconds: yup
+        .number()
+        .nullable()
+        .positive()
+        .integer()
+        .when(["isEnableTracing", "isSetTracingExpiration"], {
+            is: (isEnableTracing: boolean, isSetTracingExpiration: boolean) =>
+                isEnableTracing && isSetTracingExpiration,
+            then: (schema) => schema.required(),
+        }),
 
     // update step
     updateScript: yup.string().required(),
