@@ -43,12 +43,12 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
         bool captured = false;
 
-        foreach (string propertyName in json.GetPropertyNames())
+        for (int i = 0; i < json.Count; i++)
         {
+            json.GetPropertyByIndex(i, ref propertyDetails);
+            string propertyName = propertyDetails.Name;
             if (propertyName == Constants.Documents.Metadata.Key || propertyName == TypeNameConverter.TypePropertyName)
                 continue;
-
-            json.GetPropertyByIndex(json.GetPropertyIndex(propertyName), ref propertyDetails);
 
             if (knownProperties.TryGetValue(propertyName, out JsonPropertyInfo property) == false)
             {
@@ -58,7 +58,7 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
                 continue;
             }
 
-            if (property.Get != null)
+            if (CanHoldMissingProperties(property, propertyDetails.Value))
                 captured |= CaptureValue(property.Get(instance), propertyDetails.Value);
         }
 
@@ -131,12 +131,13 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
         Dictionary<string, JsonPropertyInfo> knownProperties = Conventions.GetJsonProperties(type);
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-        foreach (string propertyName in json.GetPropertyNames())
+        for (int i = 0; i < json.Count; i++)
         {
-            if (knownProperties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null)
+            json.GetPropertyByIndex(i, ref propertyDetails);
+            string propertyName = propertyDetails.Name;
+            if (knownProperties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || CanHoldMissingProperties(property, propertyDetails.Value) == false)
                 continue;
 
-            json.GetPropertyByIndex(json.GetPropertyIndex(propertyName), ref propertyDetails);
             if (RestoreValue(property.Get(instance), propertyDetails.Value, out object restored) == false)
                 continue;
 
@@ -208,6 +209,14 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
         restored = modified ? new DynamicJsonArray(values) : null;
         return modified;
+    }
+
+    private static bool CanHoldMissingProperties(JsonPropertyInfo property, object json)
+    {
+        return property.Get != null &&
+               property.PropertyType.IsValueType == false &&
+               property.PropertyType != typeof(string) &&
+               json is BlittableJsonReaderObject or BlittableJsonReaderArray;
     }
 
     private bool IsObject(Type type)
