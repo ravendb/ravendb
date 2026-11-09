@@ -4,13 +4,13 @@
 .replication-hub-sinks-header {
     position: sticky;
     top: calc(var(--sticky-header-height, 0px) - 1px);
-    z-index: 1;
+    z-index: 2;
     margin-top: -(sizes.$gutter-xxs);
     padding: sizes.$gutter-xxs 0 sizes.$gutter-xs;
     background-color: colors.$panel-bg-1-var;
 
     @media (max-height: 800px) {
-        position: static;
+        position: relative;
     }
 
     .collapsing & {
@@ -41,6 +41,8 @@
 }
 
 .replication-hub-sinks-chips {
+    position: relative;
+    z-index: 1;
     margin-bottom: sizes.$gutter-xs;
 
     .sinks-results-count {
@@ -69,14 +71,17 @@
 .dropdown-menu.sinks-sort-menu {
     padding-top: 0;
     padding-bottom: var(--bs-dropdown-padding-x);
-    font-size: inherit;
 
     .sinks-sort-selects {
         display: flex;
         gap: sizes.$gutter-xxs;
 
         .sinks-sort-field-select {
-            min-width: 220px;
+            min-width: 280px;
+
+            .react-select__menu {
+                min-width: max-content;
+            }
         }
 
         .sinks-sort-direction-select {

@@ -968,7 +968,7 @@ $dropdown-divider-margin-y: #{$gutter-xxs} !default;
 $dropdown-box-shadow: var(--#{$prefix}box-shadow) !default;
 
 $dropdown-link-color: $text-color-var !default;
-$dropdown-link-hover-color: $dropdown-link-color !default;
+$dropdown-link-hover-color: $text-emphasis-var !default;
 $dropdown-link-hover-bg: $panel-bg-2-var !default;
 
 $dropdown-link-active-color: $component-active-color !default;

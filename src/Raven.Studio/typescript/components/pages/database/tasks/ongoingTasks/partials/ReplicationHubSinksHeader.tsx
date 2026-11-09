@@ -140,6 +140,7 @@ function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) 
     const { sort } = sinksState;
     const fieldLabel = getSortFieldInfo(sort.field).label;
     const directionLabel = getSortDirectionOptions(sort.field).find((x) => x.value === sort.direction).label;
+    const isDirectionSpelledOut = sort.field === "status";
 
     return (
         <Dropdown as={ButtonGroup} autoClose="outside" align="end" className="sinks-sort-dropdown">
@@ -150,8 +151,12 @@ function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) 
                 title={`Sorted by ${fieldLabel}, ${directionLabel.toLowerCase()}`}
             >
                 <span className="sinks-sort-button-label">Sort by:</span>
-                <span className="sinks-sort-button-value">{fieldLabel}</span>
-                <Icon icon={sort.direction === "asc" ? "arrow-thin-top" : "arrow-thin-bottom"} margin="ms-1" />
+                <span className="sinks-sort-button-value">
+                    {isDirectionSpelledOut ? `${fieldLabel}, ${directionLabel.toLowerCase()}` : fieldLabel}
+                </span>
+                {!isDirectionSpelledOut && (
+                    <Icon icon={sort.direction === "asc" ? "arrow-thin-top" : "arrow-thin-bottom"} margin="ms-1" />
+                )}
             </Dropdown.Toggle>
             <Dropdown.Menu className="sinks-sort-menu" popperConfig={sortMenuPopperConfig}>
                 <SortMenu sinksState={sinksState} />

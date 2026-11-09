@@ -49,6 +49,7 @@
         .filter-chip-toggle {
             min-width: 0;
             padding: sizes.$gutter-xxs 0 sizes.$gutter-xxs sizes.$gutter-xs;
+            border-radius: sizes.$border-radius-pill 0 0 sizes.$border-radius-pill;
 
             &::after {
                 display: none;
@@ -57,6 +58,7 @@
 
         .filter-chip-clear {
             padding: sizes.$gutter-xxs sizes.$gutter-xs sizes.$gutter-xxs sizes.$gutter-xxs;
+            border-radius: 0 sizes.$border-radius-pill sizes.$border-radius-pill 0;
 
             &:hover {
                 color: colors.$text-emphasis-var;
@@ -78,13 +80,9 @@
 }
 
 .dropdown-menu.filter-menu-dropdown {
-    --bs-dropdown-link-hover-color: #{colors.$text-emphasis-var};
-    --bs-dropdown-link-active-bg: #{colors.$panel-bg-3-var};
-    --bs-dropdown-link-active-color: #{colors.$text-emphasis-var};
     min-width: 240px;
     padding-top: 0;
     padding-bottom: var(--bs-dropdown-padding-x);
-    font-size: inherit;
 
     .form-control {
         font-size: inherit;
@@ -108,9 +106,15 @@
     .filter-menu-checkbox {
         position: relative;
         padding: var(--bs-dropdown-item-padding-y) var(--bs-dropdown-item-padding-x);
+        border-radius: var(--bs-dropdown-item-border-radius);
 
-        &:hover {
+        &:hover,
+        &:has(:focus-visible) {
             background-color: var(--bs-dropdown-link-hover-bg);
+
+            .form-check-label {
+                color: var(--bs-dropdown-link-hover-color);
+            }
         }
 
         .form-check-label {
