@@ -61,7 +61,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Corax\Corax.csproj" />
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
-    <ProjectReference Include="..\Raven.Client.NewtonsoftJson\Raven.Client.NewtonsoftJson.csproj" />
+    <ProjectReference Include="..\Raven.Client.Serialization.NewtonsoftJson\Raven.Client.Serialization.NewtonsoftJson.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>

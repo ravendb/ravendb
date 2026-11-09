@@ -76,7 +76,7 @@ $OUT_DIR = [io.path]::combine($PROJECT_DIR, "artifacts")
 $CLIENT_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client")
 $CLIENT_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client", "bin", "Release")
 
-$CLIENT_NEWTONSOFTJSON_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client.NewtonsoftJson")
+$CLIENT_NEWTONSOFTJSON_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Client.Serialization.NewtonsoftJson")
 
 $TESTDRIVER_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver")
 $TESTDRIVER_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.TestDriver", "bin", "Release")
