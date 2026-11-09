@@ -4,7 +4,7 @@ This package plugs [Newtonsoft.Json](https://www.newtonsoft.com/json) into the R
 The RavenDB .NET Client serializes entities with System.Text.Json by default. Install this package to keep serializing them with Newtonsoft.Json, for example when your entities rely on Newtonsoft.Json attributes, converters or `JObject` values.
 
 ## Installation
-Get the latest stable version from [NuGet](https://www.nuget.org/packages/RavenDB.Client.NewtonsoftJson).
+Get the latest stable version from [NuGet](https://www.nuget.org/packages/RavenDB.Client.Serialization.NewtonsoftJson).
 
 ## Usage
 ```csharp
