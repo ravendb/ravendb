@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
@@ -709,8 +710,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     if (ShouldFilterField(fieldInfo) || IsIgnoredBySystemTextJson(fieldInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
                         continue;
 
-                    Action<object, object> set = fieldInfo.IsInitOnly ? null : fieldInfo.SetValue;
-                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo, fieldInfo.FieldType, fieldInfo.GetValue, set));
+                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo, fieldInfo.FieldType, CreateGetter(fieldInfo), CreateSetter(fieldInfo)));
                 }
             }
         }
@@ -803,7 +803,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (propertyInfo.GetMethod == null)
                 return null;
 
-            return propertyInfo.GetValue;
+            if (propertyInfo.GetMethod.IsStatic || propertyInfo.GetIndexParameters().Length != 0 || CanCompileAccessors(propertyInfo.DeclaringType) == false)
+                return propertyInfo.GetValue;
+
+            ParameterExpression target = Expression.Parameter(typeof(object), "target");
+            Expression value = Expression.Property(Expression.Convert(target, propertyInfo.DeclaringType), propertyInfo);
+            return Expression.Lambda<Func<object, object>>(Expression.Convert(value, typeof(object)), target).Compile();
         }
 
         private static Action<object, object> CreateSetter(PropertyInfo propertyInfo)
@@ -811,7 +816,50 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (propertyInfo.SetMethod == null)
                 return null;
 
-            return propertyInfo.SetValue;
+            if (propertyInfo.SetMethod.IsStatic || propertyInfo.GetIndexParameters().Length != 0 || CanCompileAccessors(propertyInfo.DeclaringType) == false)
+                return propertyInfo.SetValue;
+
+            ParameterExpression target = Expression.Parameter(typeof(object), "target");
+            ParameterExpression value = Expression.Parameter(typeof(object), "value");
+            Expression property = Expression.Property(Expression.Convert(target, propertyInfo.DeclaringType), propertyInfo);
+            return Expression.Lambda<Action<object, object>>(Expression.Assign(property, Expression.Convert(value, propertyInfo.PropertyType)), target, value).Compile();
+        }
+
+        private static Func<object, object> CreateGetter(FieldInfo fieldInfo)
+        {
+            if (fieldInfo.IsStatic || CanCompileAccessors(fieldInfo.DeclaringType) == false)
+                return fieldInfo.GetValue;
+
+            ParameterExpression target = Expression.Parameter(typeof(object), "target");
+            Expression value = Expression.Field(Expression.Convert(target, fieldInfo.DeclaringType), fieldInfo);
+            return Expression.Lambda<Func<object, object>>(Expression.Convert(value, typeof(object)), target).Compile();
+        }
+
+        private static Action<object, object> CreateSetter(FieldInfo fieldInfo)
+        {
+            if (fieldInfo.IsInitOnly)
+                return null;
+
+            if (fieldInfo.IsStatic || CanCompileAccessors(fieldInfo.DeclaringType) == false)
+                return fieldInfo.SetValue;
+
+            ParameterExpression target = Expression.Parameter(typeof(object), "target");
+            ParameterExpression value = Expression.Parameter(typeof(object), "value");
+            Expression field = Expression.Field(Expression.Convert(target, fieldInfo.DeclaringType), fieldInfo);
+            return Expression.Lambda<Action<object, object>>(Expression.Assign(field, Expression.Convert(value, fieldInfo.FieldType)), target, value).Compile();
+        }
+
+        private static Func<object> CreateFactory(ConstructorInfo constructor)
+        {
+            if (constructor.DeclaringType.IsAbstract || CanCompileAccessors(constructor.DeclaringType) == false)
+                return () => constructor.Invoke(null);
+
+            return Expression.Lambda<Func<object>>(Expression.Convert(Expression.New(constructor), typeof(object))).Compile();
+        }
+
+        private static bool CanCompileAccessors(Type declaringType)
+        {
+            return declaringType != null && declaringType.IsValueType == false && declaringType.ContainsGenericParameters == false;
         }
 
         private static bool IsIgnoredBySystemTextJson(MemberInfo member)
@@ -1954,9 +2002,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 modifiers: null);
 
             if (constructor != null)
-            {
-                typeInfo.CreateObject = () => constructor.Invoke(null);
-            }
+                typeInfo.CreateObject = CreateFactory(constructor);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
