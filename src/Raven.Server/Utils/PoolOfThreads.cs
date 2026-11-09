@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
                     IsBackground = true,
                 };
 
-                thread.Start();
+                thread.UnsafeStart(); // does not capture the AsyncLocals
             }
 
             pooled.StartedAt = DateTime.UtcNow;
