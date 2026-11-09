@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
@@ -288,8 +288,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, BuildNumber> BuildNumber = GenerateJsonDeserializationRoutine<BuildNumber>();
 
         public static readonly Func<BlittableJsonReaderObject, LicenseVersionInformation> LicenseVersionInformation = GenerateJsonDeserializationRoutine<LicenseVersionInformation>();
-
-        public static readonly Func<BlittableJsonReaderObject, LegacySourceReplicationInformation> LegacySourceReplicationInformation = GenerateJsonDeserializationRoutine<LegacySourceReplicationInformation>();
 
         public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
