@@ -73,6 +73,38 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 GetPopulateSetter(property)?.Invoke(entity, property.Get(newInstance));
             }
+
+            foreach (JsonPropertyInfo property in properties.Values)
+            {
+                if (property.IsExtensionData)
+                    PopulateExtensionData(entity, newInstance, property);
+            }
+        }
+
+        private static void PopulateExtensionData(object entity, object source, JsonPropertyInfo property)
+        {
+            object values = property.Get(source);
+            if (values == null)
+                return;
+
+            object existing = property.Get(entity);
+            if (existing == null)
+            {
+                GetPopulateSetter(property)?.Invoke(entity, values);
+                return;
+            }
+
+            switch (existing)
+            {
+                case IDictionary target when values is IDictionary entries:
+                    foreach (DictionaryEntry entry in entries)
+                        target[entry.Key] = entry.Value;
+                    break;
+                case IDictionary<string, JsonNode> target when values is IDictionary<string, JsonNode> entries:
+                    foreach (KeyValuePair<string, JsonNode> entry in entries)
+                        target[entry.Key] = entry.Value?.DeepClone();
+                    break;
+            }
         }
 
         private static Action<object, object> GetPopulateSetter(JsonPropertyInfo property)

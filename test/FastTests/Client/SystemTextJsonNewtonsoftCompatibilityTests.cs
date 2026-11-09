@@ -2936,6 +2936,62 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         Assert.IsType<Animal>(grid.Cells[0, 1]);
     }
 
+    private class WithSystemTextJsonExtensionData
+    {
+        public string Name { get; set; }
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public Dictionary<string, object> Extra { get; set; }
+    }
+
+    private class WithNewtonsoftExtensionData
+    {
+        public string Name { get; set; }
+
+        [JsonExtensionData]
+        public IDictionary<string, object> Extra { get; set; }
+    }
+
+    private class WithGetOnlyExtensionData
+    {
+        public string Name { get; set; }
+
+        [System.Text.Json.Serialization.JsonExtensionData]
+        public Dictionary<string, System.Text.Json.JsonElement> Extra { get; } = new();
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPopulateEntityRefreshesExtensionDataLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"new\",\"Legacy\":\"new\"}", "populate"))
+        {
+            var expected = new WithNewtonsoftExtensionData { Name = "old", Extra = new Dictionary<string, object> { ["Legacy"] = "old", ["Kept"] = 1L } };
+            Newtonsoft.Serialization.DefaultConverter.PopulateEntity(expected, json);
+            Assert.Equal("new", expected.Name);
+            Assert.Equal("new", expected.Extra["Legacy"].ToString());
+            Assert.Equal(1L, expected.Extra["Kept"]);
+
+            var translated = new WithNewtonsoftExtensionData { Name = "old", Extra = new Dictionary<string, object> { ["Legacy"] = "old", ["Kept"] = 1L } };
+            SystemTextJson.Serialization.DefaultConverter.PopulateEntity(translated, json);
+            Assert.Equal("new", translated.Name);
+            Assert.Equal("new", translated.Extra["Legacy"].ToString());
+            Assert.Equal(1L, translated.Extra["Kept"]);
+
+            var native = new WithSystemTextJsonExtensionData { Name = "old", Extra = new Dictionary<string, object> { ["Legacy"] = "old", ["Kept"] = 1L } };
+            SystemTextJson.Serialization.DefaultConverter.PopulateEntity(native, json);
+            Assert.Equal("new", native.Name);
+            Assert.Equal("new", native.Extra["Legacy"].ToString());
+            Assert.Equal(1L, native.Extra["Kept"]);
+
+            var getOnly = new WithGetOnlyExtensionData { Name = "old" };
+            getOnly.Extra["Legacy"] = System.Text.Json.JsonSerializer.SerializeToElement("old");
+            SystemTextJson.Serialization.DefaultConverter.PopulateEntity(getOnly, json);
+            Assert.Equal("new", getOnly.Name);
+            Assert.Equal("new", getOnly.Extra["Legacy"].GetString());
+        }
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
