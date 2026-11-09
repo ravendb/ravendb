@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Voron.Data.RawData;
 using Xunit;
 
 namespace FastTests.Voron;
@@ -16,6 +17,42 @@ public class BulkDocsPrefetchTests(ITestOutputHelper output) : RavenTestBase(out
     {
         public string Name { get; set; }
         public int Version { get; set; }
+    }
+
+    private class Person
+    {
+        public string Name { get; set; }
+    }
+
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(100)]
+    [InlineData(64 * 1024)] // a large value: its own overflow pages
+    public async Task TheCollectionOfADocumentComesFromItsPageHeader(int size)
+    {
+        using var store = GetDocumentStore(new Options { RunInMemory = false });
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Item { Name = new string('x', size) }, "items/1");
+            await session.SaveChangesAsync();
+        }
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Person { Name = new string('y', size) }, "people/1"); // a collection added by a later transaction
+            await session.SaveChangesAsync();
+        }
+
+        var database = await GetDatabase(store.Database);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+            Assert.True(llt.TryGetClientState(out DocumentTransactionCache cache));
+            foreach (var (id, collection) in new[] { ("items/1", "Items"), ("people/1", "People") })
+            {
+                using (var document = database.DocumentsStorage.Get(context, id))
+                    Assert.Equal(collection, cache.CollectionsByDocumentsTableOwnerHash[RawDataSection.GetOwnerHash(llt, document.StorageId)].Name);
+            }
+        }
     }
 
     [RavenFact(RavenTestCategory.Voron)]

@@ -33,13 +33,16 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
             return ValueTask.CompletedTask; // only the read-ahead would read the document here
 
         using (context.OpenReadTransaction())
-        using (var document = storage.Get(context, id, simplePatch == null ? DocumentFields.Data : DocumentFields.All, throwOnConflict: false))
         {
             PatchDocumentCommand.ValidateId(context, id); // validate here, we may skip the merger
+            if (simplePatch == null)
+                return storage.PrefetchDocumentAsync(context, id); // the script runs in the merger: only read ahead the pages it will modify
+
+            using var document = storage.Get(context, id, DocumentFields.All, throwOnConflict: false);
             if (document == null)
                 return ValueTask.CompletedTask;
 
-            if (simplePatch != null && simplePatch.TryApply(context, document.Data, args, out var modified))
+            if (simplePatch.TryApply(context, document.Data, args, out var modified))
             {
                 if (modified == null)
                 {
