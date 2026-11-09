@@ -223,6 +223,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         });
     }
 
+    protected override StreamsTempFile GetTempFileForResponseBuffering() => RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("docs");
+
     public override void Dispose()
     {
         base.Dispose();
