@@ -17,7 +17,7 @@ function UpdateCsprojAndNuspecWithVersionInfo ( $projectDir, $version ) {
     $src = $(Join-Path $projectDir -ChildPath "src");
     $testDriverCsproj = [io.path]::Combine($src, "Raven.TestDriver", "Raven.TestDriver.csproj")
     $clientCsproj = [io.path]::Combine($src, "Raven.Client", "Raven.Client.csproj")
-    $clientNewtonsoftJsonCsproj = [io.path]::Combine($src, "Raven.Client.NewtonsoftJson", "Raven.Client.NewtonsoftJson.csproj")
+    $clientNewtonsoftJsonCsproj = [io.path]::Combine($src, "Raven.Client.Serialization.NewtonsoftJson", "Raven.Client.Serialization.NewtonsoftJson.csproj")
     $embeddedCsproj = [io.path]::Combine($src, "Raven.Embedded", "Raven.Embedded.csproj")
 
     # https://github.com/Microsoft/msbuild/issues/1721
