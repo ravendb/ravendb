@@ -17,9 +17,8 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormGroup, FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
-import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
-import moment from "moment";
+import { FormGroup, FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import { FormDurationPickerWithDefault } from "components/common/FieldWithDefault";
 import FrequencyField from "components/common/FrequencyField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
@@ -27,6 +26,7 @@ import { LoadError } from "components/common/LoadError";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import {
     DEFAULT_CLEANER_FREQUENCY_IN_SEC,
+    DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC,
     revisionsBinCleanerUtils,
 } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
 import { Icon } from "components/common/Icon";
@@ -42,9 +42,7 @@ export default function RevisionsBinCleaner() {
         revisionsBinCleanerUtils.mapToFormData(await databasesService.getRevisionsBinCleanerConfiguration(databaseName))
     );
 
-    const { handleSubmit, control, formState, reset, setValue, getValues } = useForm<
-        Partial<RevisionsBinCleanerFormData>
-    >({
+    const { handleSubmit, control, formState, reset, setValue } = useForm<Partial<RevisionsBinCleanerFormData>>({
         resolver: revisionsBinCleanerYupResolver,
         mode: "all",
         defaultValues: asyncGetRevisionsBinCleanerConfiguration.execute,
@@ -65,11 +63,9 @@ export default function RevisionsBinCleaner() {
         setValue("cleanerFrequencyInSec", null, DIRTY_AND_VALIDATE);
     };
 
-    const toggleMinimumEntriesAgeToKeep = (isEnabled: boolean) => {
+    const resetMinimumEntriesAgeToKeepOnToggle = (isEnabled: boolean) => {
         if (!isEnabled) {
             setValue("minimumEntriesAgeToKeep", null, DIRTY_AND_VALIDATE);
-        } else if (getValues("minimumEntriesAgeToKeep") == null) {
-            setValue("minimumEntriesAgeToKeep", moment.duration(1, "month").asSeconds(), DIRTY_AND_VALIDATE);
         }
     };
 
@@ -138,7 +134,7 @@ export default function RevisionsBinCleaner() {
                                                 name="isMinimumEntriesAgeToKeepEnabled"
                                                 control={control}
                                                 color="primary"
-                                                afterChange={toggleMinimumEntriesAgeToKeep}
+                                                afterChange={resetMinimumEntriesAgeToKeepOnToggle}
                                                 disabled={
                                                     !hasDatabaseAdminAccess ||
                                                     formState.isSubmitting ||
@@ -163,19 +159,19 @@ export default function RevisionsBinCleaner() {
                                             }
                                         >
                                             <div>
-                                                <FormGroup data-testid="durationPicker">
-                                                    <FormDurationPicker
+                                                <div className="w-fit-content mw-100 mb-3">
+                                                    <FormDurationPickerWithDefault
                                                         control={control}
+                                                        name="minimumEntriesAgeToKeep"
+                                                        label="Minimum entries age"
                                                         disabled={
                                                             !hasDatabaseAdminAccess ||
-                                                            formState.isSubmitting ||
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
-                                                        placeholder={ZERO_DURATION_PLACEHOLDER}
-                                                        name="minimumEntriesAgeToKeep"
+                                                        defaultTotalSeconds={DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC}
                                                         showDays
                                                     />
-                                                </FormGroup>
+                                                </div>
                                             </div>
                                         </Collapse>
                                         <FrequencyField

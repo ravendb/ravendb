@@ -46,7 +46,7 @@ export default function FrequencyField<TFieldValues extends FieldValues, TName e
     }
 
     return (
-        <div className="align-self-start mw-100">
+        <div className="w-fit-content mw-100">
             <FormDurationPickerWithDefault
                 control={control}
                 name={name}

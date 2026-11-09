@@ -90,12 +90,20 @@ export default function DurationPicker(props: DurationPickerProps) {
         seconds: showSeconds,
     };
     const parts = durationParts.filter((part) => isPartVisible[part]);
+    const isDurationEmpty = isEmpty(duration, parts);
+    const hasInvalidValueWithoutParts = isDurationEmpty && Number.isNaN(totalSeconds);
+
+    useEffect(() => {
+        if (hasInvalidValueWithoutParts) {
+            onChange(null);
+        }
+    }, [hasInvalidValueWithoutParts, onChange]);
 
     const getPlaceholder = (part: DurationPart): string => {
         if (defaultTotalSeconds == null) {
             return placeholder?.[part];
         }
-        if (!isEmpty(duration, parts)) {
+        if (!isDurationEmpty) {
             return ZERO_DURATION_PLACEHOLDER[part];
         }
         return commonT("defaultPlaceholder", { value: toDuration(defaultTotalSeconds, showDays)[part] });
@@ -103,13 +111,16 @@ export default function DurationPicker(props: DurationPickerProps) {
 
     const handlePartChange = (part: DurationPart, inputValue: string) => {
         const newDuration = { ...duration, [part]: inputValue === "" ? null : Number(inputValue) };
-        const newTotalSeconds = getTotalSeconds(newDuration, parts);
         const invalidPartMessageKey = getInvalidPartMessageKey(newDuration, parts);
+        const newTotalSeconds = invalidPartMessageKey ? NaN : getTotalSeconds(newDuration, parts);
 
         setDuration(newDuration);
-        setSyncedTotalSeconds(newTotalSeconds);
         onInvalidPartMessageChange?.(invalidPartMessageKey ? t(invalidPartMessageKey) : null);
-        onChange(newTotalSeconds);
+
+        if (!Object.is(newTotalSeconds, syncedTotalSeconds)) {
+            setSyncedTotalSeconds(newTotalSeconds);
+            onChange(newTotalSeconds);
+        }
     };
 
     return (
@@ -166,9 +177,6 @@ function getInvalidPartMessageKey(
 function getTotalSeconds(duration: Duration, parts: DurationPart[]): number {
     if (isEmpty(duration, parts)) {
         return null;
-    }
-    if (getInvalidPartMessageKey(duration, parts)) {
-        return NaN;
     }
 
     const { days, hours, minutes, seconds } = duration;
