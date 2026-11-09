@@ -2893,6 +2893,49 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class LinqZoo
+    {
+        public IEnumerable<Animal> Pets { get; set; }
+    }
+
+    private class AnimalBag(IEnumerable<Animal> animals) : IEnumerable<Animal>
+    {
+        private readonly List<Animal> _animals = animals.ToList();
+
+        public IEnumerator<Animal> GetEnumerator() => _animals.GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    private class HoldsAnimalBag
+    {
+        public AnimalBag Bag { get; set; }
+    }
+
+    private class AnimalGrid
+    {
+        public Animal[,] Cells { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonWritesDerivedItemsOfConvertedCollectionsLikeNewtonsoft()
+    {
+        var zoo = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new LinqZoo { Pets = new[] { new Dog { Name = "Rex", Barks = true } }.Select(x => (Animal)x) });
+        Assert.Equal("Rex", Assert.Single(zoo.Pets).Name);
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new LinqZoo { Pets = new[] { new Dog { Name = "Rex", Barks = true } }.Select(x => (Animal)x) }, context))
+            Assert.True((bool)((BlittableJsonReaderObject)((BlittableJsonReaderArray)json[nameof(LinqZoo.Pets)])[0])[nameof(Dog.Barks)]);
+
+        var bag = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsAnimalBag { Bag = new AnimalBag([new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }]) });
+        Assert.True(Assert.IsType<Dog>(bag.Bag.First()).Barks);
+        Assert.IsType<Animal>(bag.Bag.Last());
+
+        var grid = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new AnimalGrid { Cells = new Animal[,] { { new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" } } } });
+        Assert.True(Assert.IsType<Dog>(grid.Cells[0, 0]).Barks);
+        Assert.IsType<Animal>(grid.Cells[0, 1]);
+    }
+
     private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())

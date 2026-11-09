@@ -83,7 +83,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             {
                 writer.WriteStartArray();
                 foreach (T item in value)
-                    JsonSerializer.Serialize(writer, item, options);
+                    JsonSerializer.Serialize(writer, item, item?.GetType() ?? typeof(T), options);
                 writer.WriteEndArray();
             }
         }

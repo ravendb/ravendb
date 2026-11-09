@@ -11,12 +11,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
     internal sealed class EnumerableConstructorConverter : JsonConverterFactory
     {
-        public static readonly EnumerableConstructorConverter Instance = new();
+        private readonly TypeNameHandling _typeNameHandling;
 
         private static readonly ConcurrentDictionary<Type, (ConstructorInfo Constructor, Type ElementType)> _constructors = new();
 
-        private EnumerableConstructorConverter()
+        public EnumerableConstructorConverter(TypeNameHandling typeNameHandling)
         {
+            _typeNameHandling = typeNameHandling;
         }
 
         public override bool CanConvert(Type typeToConvert)
@@ -28,7 +29,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             (ConstructorInfo constructor, Type elementType) = GetCachedConstructor(typeToConvert);
             Type converterType = typeof(EnumerableConstructorConverterInner<,>).MakeGenericType(typeToConvert, elementType);
-            return (JsonConverter)Activator.CreateInstance(converterType, constructor);
+            return (JsonConverter)Activator.CreateInstance(converterType, constructor, _typeNameHandling);
         }
 
         private static (ConstructorInfo Constructor, Type ElementType) GetCachedConstructor(Type type)
@@ -90,14 +91,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             private readonly ConstructorInfo _constructor;
 
-            public EnumerableConstructorConverterInner(ConstructorInfo constructor)
+            private readonly TypeNameHandling _typeNameHandling;
+
+            public EnumerableConstructorConverterInner(ConstructorInfo constructor, TypeNameHandling typeNameHandling)
             {
                 _constructor = constructor;
+                _typeNameHandling = typeNameHandling;
             }
 
             public override TEnumerable Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                List<TElement> items = JsonSerializer.Deserialize<List<TElement>>(ref reader, options);
+                if (reader.TokenType == JsonTokenType.Null)
+                    return default;
+
+                if (reader.TokenType != JsonTokenType.StartArray)
+                    throw new JsonException($"Expected StartArray for '{typeof(TEnumerable).FullName}' but got {reader.TokenType}.");
+
+                var items = new List<TElement>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                    items.Add((TElement)TypeNameConverter.ReadItem(ref reader, typeof(TElement), _typeNameHandling, options));
+
                 return (TEnumerable)_constructor.Invoke([items]);
             }
 
@@ -105,7 +118,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             {
                 writer.WriteStartArray();
                 foreach (TElement item in value)
-                    JsonSerializer.Serialize(writer, item, options);
+                    TypeNameConverter.WriteItem(writer, item, typeof(TElement), _typeNameHandling, options);
                 writer.WriteEndArray();
             }
         }

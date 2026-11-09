@@ -7,10 +7,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
     internal sealed class MultidimensionalArrayConverter : JsonConverterFactory
     {
-        public static readonly MultidimensionalArrayConverter Instance = new();
+        private readonly TypeNameHandling _typeNameHandling;
 
-        private MultidimensionalArrayConverter()
+        public MultidimensionalArrayConverter(TypeNameHandling typeNameHandling)
         {
+            _typeNameHandling = typeNameHandling;
         }
 
         public override bool CanConvert(Type typeToConvert)
@@ -21,16 +22,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         {
             Type converterType = typeof(MultidimensionalArrayConverterInner<,>).MakeGenericType(typeToConvert, typeToConvert.GetElementType());
-            return (JsonConverter)Activator.CreateInstance(converterType);
+            return (JsonConverter)Activator.CreateInstance(converterType, _typeNameHandling);
         }
 
-        private sealed class MultidimensionalArrayConverterInner<TArray, TElement> : JsonConverter<TArray>
+        private sealed class MultidimensionalArrayConverterInner<TArray, TElement>(TypeNameHandling typeNameHandling) : JsonConverter<TArray>
             where TArray : class
         {
             public override TArray Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 int rank = typeToConvert.GetArrayRank();
-                List<object> items = ReadDimension(ref reader, 0, rank, options);
+                List<object> items = ReadDimension(ref reader, 0, rank, typeNameHandling, options);
 
                 var lengths = new int[rank];
                 List<object> current = items;
@@ -45,7 +46,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return (TArray)(object)array;
             }
 
-            private static List<object> ReadDimension(ref Utf8JsonReader reader, int dimension, int rank, JsonSerializerOptions options)
+            private static List<object> ReadDimension(ref Utf8JsonReader reader, int dimension, int rank, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
             {
                 if (reader.TokenType != JsonTokenType.StartArray)
                     throw new JsonException($"Expected StartArray for dimension {dimension} of '{typeof(TArray).FullName}' but got {reader.TokenType}.");
@@ -54,9 +55,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 {
                     if (dimension < rank - 1)
-                        items.Add(ReadDimension(ref reader, dimension + 1, rank, options));
+                        items.Add(ReadDimension(ref reader, dimension + 1, rank, typeNameHandling, options));
                     else
-                        items.Add(JsonSerializer.Deserialize<TElement>(ref reader, options));
+                        items.Add(TypeNameConverter.ReadItem(ref reader, typeof(TElement), typeNameHandling, options));
                 }
 
                 return items;
@@ -80,10 +81,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             public override void Write(Utf8JsonWriter writer, TArray value, JsonSerializerOptions options)
             {
                 var array = (Array)(object)value;
-                WriteDimension(writer, array, new int[array.Rank], 0, options);
+                WriteDimension(writer, array, new int[array.Rank], 0, typeNameHandling, options);
             }
 
-            private static void WriteDimension(Utf8JsonWriter writer, Array array, int[] indices, int dimension, JsonSerializerOptions options)
+            private static void WriteDimension(Utf8JsonWriter writer, Array array, int[] indices, int dimension, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
             {
                 writer.WriteStartArray();
 
@@ -92,9 +93,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 {
                     indices[dimension] = i;
                     if (dimension == array.Rank - 1)
-                        JsonSerializer.Serialize(writer, (TElement)array.GetValue(indices), options);
+                        TypeNameConverter.WriteItem(writer, array.GetValue(indices), typeof(TElement), typeNameHandling, options);
                     else
-                        WriteDimension(writer, array, indices, dimension + 1, options);
+                        WriteDimension(writer, array, indices, dimension + 1, typeNameHandling, options);
                 }
 
                 writer.WriteEndArray();
