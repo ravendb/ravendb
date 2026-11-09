@@ -11,15 +11,17 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         private readonly SelectManyRewriter _selectManyRewriter;
         private readonly string _dynamicEnumerable;
         private readonly bool _usesLinqEnumerable;
+        private readonly bool _usesLinqStringOrdering;
 
         public ReduceFunctionProcessor(ResultsVariableNameRewriter setResultsVariable, GroupByFieldsRetriever getGroupByFields, SelectManyRewriter selectManyRewriter, string dynamicEnumerable,
-            bool usesLinqEnumerable)
+            bool usesLinqEnumerable, bool usesLinqStringOrdering)
         {
             _setResultsVariable = setResultsVariable;
             _getGroupByFields = getGroupByFields;
             _selectManyRewriter = selectManyRewriter;
             _dynamicEnumerable = dynamicEnumerable;
             _usesLinqEnumerable = usesLinqEnumerable;
+            _usesLinqStringOrdering = usesLinqStringOrdering;
         }
 
         public CompiledIndexField[] GroupByFields => _getGroupByFields.GroupByFields;
@@ -33,7 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _getGroupByFields,
                 WhereRewriter.Instance,
                 new DynamicInvocationExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
-                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
+                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable, _usesLinqStringOrdering),
                 _selectManyRewriter,
                 SelectManyRewriter.SelectMethodOnProperties,
                 SpatialFieldRewriter.Instance,

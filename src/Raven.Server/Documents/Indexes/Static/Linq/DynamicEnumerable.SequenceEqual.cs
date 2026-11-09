@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.Linq
 {
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 
         public static bool SequenceEqual(object first, object second)
         {
-            if (first is not IEnumerable firstEnumerable || second is not IEnumerable secondEnumerable)
+            if (first is not IEnumerable firstEnumerable || second is not IEnumerable secondEnumerable || first is string or LazyStringValue)
                 return Enumerable.SequenceEqual((dynamic)first, (dynamic)second);
 
             if (first is DynamicArray array)

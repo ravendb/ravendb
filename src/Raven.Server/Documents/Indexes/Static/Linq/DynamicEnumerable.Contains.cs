@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             if (source is DynamicArray array)
                 return array.Contains(value);
 
-            if (source is not IEnumerable enumerable)
+            if (source is not IEnumerable enumerable || source is string or LazyStringValue)
                 // ReSharper disable once CanReplaceCastWithTypeArgument
                 return Enumerable.Contains((dynamic)source, (dynamic)value);
 
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
             if (source is DynamicArray array)
                 return array.Contains(value, comparer);
 
-            if (source is not IEnumerable enumerable)
+            if (source is not IEnumerable enumerable || source is string or LazyStringValue)
                 // ReSharper disable once CanReplaceCastWithTypeArgument
                 return Enumerable.Contains((dynamic)source, (dynamic)value, (dynamic)comparer);
 

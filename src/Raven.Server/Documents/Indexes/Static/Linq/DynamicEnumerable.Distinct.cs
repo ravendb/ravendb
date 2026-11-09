@@ -6,7 +6,8 @@ namespace Raven.Server.Documents.Indexes.Static.Linq
 {
     public static partial class DynamicEnumerable
     {
-        // The tuple binds a call with a dynamic source statically, to the object overload; a CLR source keeps its element type here.
+        // The tuple binds a dynamic source statically to the object overload; a CLR source keeps its element type here. Generated object
+        // calls are lowered to Distinct in the index assembly; these overloads remain the fallback when that binding is unavailable.
         public static IEnumerable<TSource> DistinctFromEnumerable<TSource>((IEnumerable<TSource> Source, IEqualityComparer<TSource> Comparer) arguments)
         {
             return Enumerable.Distinct(arguments.Source, arguments.Comparer);

@@ -23,7 +23,7 @@ namespace InterversionTests
     {
         private const string BaselineClientVersion = "6.2.18";
         private const string BaselineServerVersion = "6.2.18";
-        private const int ExpectedDefinitionCount = 312;
+        private const int ExpectedDefinitionCount = 313;
         private const int ServerRoundTripBatchSize = 16;
 
         private readonly ITestOutputHelper _output;
@@ -203,28 +203,10 @@ namespace InterversionTests
         {
             Assert.True(File.Exists(generatorPath), $"Released client generator assembly was not found at '{generatorPath}'.");
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-            startInfo.ArgumentList.Add(generatorPath);
+            var process = await ReleasedClientGeneratorCache.RunProcess("dotnet", Environment.CurrentDirectory, TimeSpan.FromMinutes(5), generatorPath);
+            Assert.True(process.ExitCode == 0, $"Released client generator exited with {process.ExitCode}.\nSTDOUT:\n{process.StandardOutput}\nSTDERR:\n{process.StandardError}");
 
-            using var process = Process.Start(startInfo);
-            Assert.NotNull(process);
-
-            var standardOutput = process.StandardOutput.ReadToEndAsync();
-            var standardError = process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
-
-            var output = await standardOutput;
-            var error = await standardError;
-            Assert.True(process.ExitCode == 0, $"Released client generator exited with {process.ExitCode}.\nSTDOUT:\n{output}\nSTDERR:\n{error}");
-
-            var result = JsonSerializer.Deserialize<GeneratorOutput>(output);
+            var result = JsonSerializer.Deserialize<GeneratorOutput>(process.StandardOutput);
             Assert.NotNull(result);
             Assert.NotNull(result.Definitions);
             return result;

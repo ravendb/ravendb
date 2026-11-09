@@ -18,6 +18,9 @@ internal static class ReleasedClientGeneratorCache
     private const string RuntimeFrameworkVersion = "8.0.29";
     private const string Configuration = "Release";
 
+    private static readonly TimeSpan SdkVersionTimeout = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan GeneratorBuildTimeout = TimeSpan.FromMinutes(15);
+
     private static readonly string[] GeneratorSourceRelativePaths =
     [
         Path.Combine("DefinitionCases", "DefinitionCase.cs"),
@@ -43,7 +46,7 @@ internal static class ReleasedClientGeneratorCache
     {
         var repositoryRoot = FindRepositoryRoot();
         var expectedSdkVersion = GetCompilerFingerprintPart(compilerFingerprint, "sdk");
-        var sdkVersion = await RunDotNet(repositoryRoot, "--version");
+        var sdkVersion = await RunProcess("dotnet", repositoryRoot, SdkVersionTimeout, "--version");
         if (sdkVersion.ExitCode != 0)
             throw new InvalidOperationException(BuildProcessFailure("Unable to resolve the dotnet SDK.", repositoryRoot, sdkVersion));
 
@@ -95,14 +98,25 @@ internal static class ReleasedClientGeneratorCache
             await File.WriteAllTextAsync(projectPath, project, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             await File.WriteAllTextAsync(programPath, generatedProgram, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-            var build = await RunDotNet(
-                repositoryRoot,
-                "build",
-                projectPath,
-                "--configuration",
-                Configuration,
-                "--nologo",
-                "--verbosity:minimal");
+            ProcessResult build;
+            try
+            {
+                build = await RunProcess("dotnet", repositoryRoot, GeneratorBuildTimeout,
+                    "build", projectPath, "--configuration", Configuration, "--nologo", "--verbosity:minimal");
+            }
+            catch (TimeoutException e)
+            {
+                try
+                {
+                    await File.WriteAllTextAsync(Path.Combine(cacheDirectory, "build.timeout.log"), e.ToString());
+                }
+                catch (Exception loggingError) when (loggingError is IOException or UnauthorizedAccessException)
+                {
+                    // Preserve the process timeout when its diagnostic log cannot be written.
+                }
+
+                throw;
+            }
             await File.WriteAllTextAsync(Path.Combine(cacheDirectory, "build.stdout.log"), build.StandardOutput);
             await File.WriteAllTextAsync(Path.Combine(cacheDirectory, "build.stderr.log"), build.StandardError);
 
@@ -291,11 +305,11 @@ internal static class ReleasedClientGeneratorCache
             "Could not find the RavenDB repository root from: " + string.Join(", ", startingDirectories));
     }
 
-    private static async Task<ProcessResult> RunDotNet(string workingDirectory, params string[] arguments)
+    internal static async Task<ProcessResult> RunProcess(string fileName, string workingDirectory, TimeSpan timeout, params string[] arguments)
     {
-         var startInfo = new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
-            FileName = "dotnet",
+            FileName = fileName,
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -307,16 +321,40 @@ internal static class ReleasedClientGeneratorCache
 
         using var process = Process.Start(startInfo);
         if (process == null)
-            throw new InvalidOperationException("Could not start dotnet.");
+            throw new InvalidOperationException($"Could not start {fileName}.");
 
         var standardOutput = process.StandardOutput.ReadToEndAsync();
         var standardError = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
+        var completion = Task.WhenAll(process.WaitForExitAsync(), standardOutput, standardError);
+        string command = $"{QuoteArgument(fileName)} {string.Join(" ", arguments.Select(QuoteArgument))}";
+        try
+        {
+            // Include pipe draining in the deadline: a descendant can retain a pipe after the parent exits.
+            await completion.WaitAsync(timeout);
+        }
+        catch (TimeoutException)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException)
+            {
+                // The process can exit between reaching the deadline and terminating it.
+            }
+
+            await Task.WhenAny(completion, Task.Delay(TimeSpan.FromSeconds(10)));
+            var timedOut = new ProcessResult(process.HasExited ? process.ExitCode : -1,
+                standardOutput.IsCompletedSuccessfully ? standardOutput.Result : "<output not completed>",
+                standardError.IsCompletedSuccessfully ? standardError.Result : "<error output not completed>", command);
+            throw new TimeoutException(BuildProcessFailure($"Process {process.Id} exceeded its timeout of {timeout}.", workingDirectory, timedOut));
+        }
+
         return new ProcessResult(
             process.ExitCode,
             await standardOutput,
             await standardError,
-            command: $"dotnet {string.Join(" ", arguments.Select(QuoteArgument))}");
+            command);
     }
 
     private static string QuoteArgument(string argument)
@@ -346,7 +384,7 @@ internal static class ReleasedClientGeneratorCache
         public bool WasBuilt { get; }
     }
 
-    private sealed class ProcessResult
+    internal sealed class ProcessResult
     {
         public ProcessResult(int exitCode, string standardOutput, string standardError, string command)
         {

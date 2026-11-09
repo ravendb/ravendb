@@ -13,12 +13,14 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         private readonly SelectManyRewriter _selectManyRewriter;
         private readonly string _dynamicEnumerable;
         private readonly bool _usesLinqEnumerable;
+        private readonly bool _usesLinqStringOrdering;
 
-        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter, string dynamicEnumerable, bool usesLinqEnumerable)
+        public MapFunctionProcessor(CSharpSyntaxRewriter collectionRetriever, SelectManyRewriter selectManyRewriter, string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering)
         {
             _selectManyRewriter = selectManyRewriter;
             _dynamicEnumerable = dynamicEnumerable;
             _usesLinqEnumerable = usesLinqEnumerable;
+            _usesLinqStringOrdering = usesLinqStringOrdering;
             CollectionRetriever = collectionRetriever;
             _refCollectionsRetriever = new ReferencedCollectionsRetriever();
             _compareExchangeReferenceDetector = new CompareExchangeReferenceDetectorRewriter();
@@ -42,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 WhereRewriter.Instance,
                 new DynamicInvocationExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
                 DynamicExtensionMethodsRewriter.Instance,
-                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable),
+                new DynamicLambdaExpressionsRewriter(rangeSourceParameters, _dynamicEnumerable, _usesLinqEnumerable, _usesLinqStringOrdering),
                 RecurseRewriter.Instance,
                 SpatialFieldRewriter.Instance,
                 ConditionalAccessExpressionRewriter.Instance,

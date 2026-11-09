@@ -14,20 +14,25 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         private readonly string _dynamicEnumerable;
 
         private readonly bool _usesLinqEnumerable;
+        private readonly bool _usesLinqStringOrdering;
 
-        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable, bool usesLinqEnumerable)
+        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering)
         {
             _rangeSourceParameters = rangeSourceParameters;
             _dynamicEnumerable = dynamicEnumerable;
             _usesLinqEnumerable = usesLinqEnumerable;
+            _usesLinqStringOrdering = usesLinqStringOrdering;
         }
+
+        private bool RedirectsStringOrdering(InvocationExpressionSyntax invocation) => _usesLinqStringOrdering ||
+            invocation.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax { Identifier.ValueText: "Enumerable" } };
 
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             if (node.Expression is not MemberAccessExpressionSyntax member ||
                 member.Name is not IdentifierNameSyntax method ||
                 method.Identifier.ValueText is not ("OrderBy" or "OrderByDescending" or "ThenBy" or "ThenByDescending") ||
-                HasArrayOrderingSource(node, out bool stringArray) == false || stringArray == false)
+                HasArrayOrderingSource(node, out bool stringArray) == false || stringArray == false || RedirectsStringOrdering(node) == false)
                 return base.VisitInvocationExpression(node);
 
             var isDynamicSelector = UsesDefaultOrderingArguments(node) &&
@@ -122,7 +127,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "OrderByDescending":
                 case "ThenBy":
                 case "ThenByDescending":
-                    if (HasArrayOrderingSource(invocation, out bool stringArray) == false)
+                    if (HasArrayOrderingSource(invocation, out bool stringArray) == false || stringArray && RedirectsStringOrdering(invocation) == false)
                         return Visit(ModifyLambdaForSelect(node, invocation));
 
                     if (stringArray && UsesDefaultOrderingArguments(invocation) && HasUntypedParameter(node))

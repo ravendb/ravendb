@@ -309,6 +309,10 @@ internal static class StructuralDefinitionCases
                 "enumerable-rewrite/instance-contains-projection",
                 doc => doc.IntValues.Contains(42)),
 
+            ProjectionCase(
+                "enumerable-rewrite/string-instance-contains-projection",
+                doc => doc.Id.Contains("structural")),
+
             new DefinitionCase(
                 "enumerable-rewrite/instance-contains-query-where",
                 conventions => Definition(conventions, new IndexDefinitionBuilder<StructuralDoc, object>

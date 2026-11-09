@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
@@ -2070,6 +2071,7 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         // A result of numbers keeps its element type for a generic, object or nongeneric parameter, and a parameter that takes only
         // objects, also as a params array beside overloads of unrelated element types, gets the numbers as objects.
         [RavenData("GenericProbe", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("GenericOnlyProbe", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("ObjectProbe", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("UntypedProbe", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("OnlyObjectsProbe", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -2102,6 +2104,10 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
             {
                 internal static bool Pick<T>(IEnumerable<T> values) => typeof(T) == typeof(long);
                 internal static bool Pick(IEnumerable<string> values) => false;
+            }
+            public static class GenericOnlyProbe
+            {
+                internal static bool Pick<T>(IEnumerable<T> values) => typeof(T) == typeof(long);
             }
             public static class ObjectProbe
             {
@@ -2513,6 +2519,246 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct((dynamic)" + InternalTupleValues + ")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct(comparer: (dynamic)null, source: (dynamic)" + InternalTupleValues + ")) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct(Enumerable.Distinct((dynamic)" + InternalTupleValues + "))) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct(Enumerable.Distinct((dynamic)" + InternalTupleValues + "), EqualityComparer<object>.Default)) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct((IEnumerable<object>)Enumerable.Distinct((dynamic)" + InternalTupleValues + "))) == 1", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleProbe.Tally(Enumerable.Distinct((dynamic)" + InternalTupleValues + ")) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(item.Tags, tag => TupleFallbackProbe.Tally(Enumerable.Distinct((dynamic)" + InternalTupleValues + "), value => 1) == 2) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Count(Enumerable.Distinct(Enumerable.Distinct((dynamic)new[] { \"a\", \"a\", \"b\" }))) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        // The PR already supports comparer-first arguments over an iterator; keep that behavior while moving the call site.
+        [RavenData("Enumerable.Count(Enumerable.Distinct(comparer: (dynamic)null, source: Enumerable.Distinct((dynamic)new[] { \"a\", \"a\", \"b\" }))) == 2", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctKeepsInternalAdditionalSourceEquality(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["InternalTuples.cs"] = """
+                    using System;
+                    using System.Collections.Generic;
+                    internal sealed class LocalTuple : Tuple<int>, IEquatable<LocalTuple>
+                    {
+                        public LocalTuple(int value) : base(value) { }
+                        bool IEquatable<LocalTuple>.Equals(LocalTuple other) => object.ReferenceEquals(this, other);
+                    }
+                    public static class TupleProbe
+                    {
+                        internal static int Tally(IEnumerable<LocalTuple> values) => System.Linq.Enumerable.Count(values);
+                        internal static int Tally(IEnumerable<object> values) => -1;
+                    }
+                    public static class TupleFallbackProbe
+                    {
+                        internal static int Tally(IEnumerable<LocalTuple> values, Func<LocalTuple, int> selector) => -1;
+                        internal static int Tally(IEnumerable<object> values, Func<object, int> selector) => System.Linq.Enumerable.Sum(values, selector);
+                    }
+                    """ });
+        }
+
+        private const string InternalTupleValues = "new[] { new LocalTuple(1), new LocalTuple(1) }";
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctGenericConsumerKeepsExplicitTypeArgument(Options options)
+        {
+            AssertPrimitiveArrayExpression(options,
+                "Enumerable.Count(item.Tags, tag => !GenericOnlyProbe.Pick<object>(Enumerable.Distinct((dynamic)new[] { \"a\", \"a\", \"b\" }))) == 2",
+                new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } },
+                new Dictionary<string, string> { ["ElementTypeConsumers.cs"] = ElementTypeConsumerSources });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void EnumerableVariableKeepsItsCustomContains(Options options, bool shadowsEnumerable)
+        {
+            string variable = shadowsEnumerable ? "Enumerable" : "Probe";
+            string expression = variable + ".Contains(new[] { \"A\" }, \"a\")";
+            if (shadowsEnumerable == false)
+                expression += " && Enumerable.Contains(item.Values, 1)";
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Tags = new[] { "a" }, Values = new[] { 1L } },
+                new Dictionary<string, string>
+                {
+                    ["CustomProbe.cs"] = """
+                        public class CustomProbe
+                        {
+                            internal bool Contains(string[] source, string value) =>
+                                System.Linq.Enumerable.Contains(source, value, System.StringComparer.OrdinalIgnoreCase);
+                        }
+                        """
+                }, lets: "let " + variable + " = new CustomProbe()");
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NestedUserDefinedCountKeepsItsArgumentType(Options options)
+        {
+            // Deliberate name shadowing through the supported AdditionalSources API.
+            AssertPrimitiveArrayExpression(options, "Enumerable.Count(item.Tags, tag => Enumerable.Count(\"abc\") == 3) == 2",
+                new PrimitiveArrayItem { Tags = new[] { "alpha", "b" } }, new Dictionary<string, string>
+                {
+                    ["UserEnumerable.cs"] = """
+                        namespace Raven.Server.Documents.Indexes.Static.Generated
+                        {
+                            public static class Enumerable
+                            {
+                                internal static int Count(string value) => value.Length;
+                                internal static int Count(System.Collections.Generic.IEnumerable<object> source, System.Func<object, bool> predicate) =>
+                                    System.Linq.Enumerable.Count(source, predicate);
+                            }
+                        }
+                        """
+                });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringArrayOrderingKeepsUserExtensionBinding(Options options, bool alsoUsesLinqContains)
+        {
+            string expression = "new string[] { \"b\", \"a\" }.OrderBy(value => value).First() == \"b\"";
+            if (alsoUsesLinqContains)
+                expression += " && Enumerable.Contains(item.Values, 1)";
+            // A deliberately diagnostic extension distinguishes user binding from the built-in sort.
+            AssertPrimitiveArrayExpression(options, expression, new PrimitiveArrayItem { Values = new[] { 1L } },
+                new Dictionary<string, string>
+                {
+                    ["StringArrayOrder.cs"] = """
+                        namespace Raven.Server.Documents.Indexes.Static.Generated
+                        {
+                            public static class StringArrayOrder
+                            {
+                                internal static string[] OrderBy(this string[] source, System.Func<object, object> keySelector) => source;
+                            }
+                        }
+                        """
+                });
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("lambda", true, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("user-int", false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("mixed", false, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("user-struct", false, SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringArrayOrderingIgnoresInapplicableExtensions(Options options, string calls, bool optimized)
+        {
+            const string lambda = "new string[] { \"b\", \"a\" }.OrderBy(value => value).First() == \"a\"";
+            const string userCall = "new string[] { \"b\", \"a\" }.OrderBy(1).First() == \"b\"";
+            string expression = calls switch
+            {
+                "lambda" => lambda,
+                "user-int" => userCall,
+                "user-struct" => "new string[] { \"b\", \"a\" }.OrderBy(value => value).First() == \"b\"",
+                _ => userCall + " && " + lambda
+            };
+            using var store = GetDocumentStore(options);
+            const string indexName = "PrimitiveArrays/InapplicableOrdering";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { "from item in docs.PrimitiveArrayItems select new { Found = " + expression + " }" },
+                Fields = { ["Found"] = new IndexFieldOptions { Storage = FieldStorage.Yes } },
+                AdditionalSources = new Dictionary<string, string>
+                {
+                    ["StringArrayOrder.cs"] = calls == "user-struct" ? """
+                        namespace Raven.Server.Documents.Indexes.Static.Generated
+                        {
+                            public readonly struct Selector
+                            {
+                                public static implicit operator Selector(System.Func<object, object> value) => default;
+                            }
+                            public static class StringArrayOrder
+                            {
+                                internal static string[] OrderBy(this string[] source, Selector selector) => source;
+                            }
+                        }
+                        """ : """
+                        namespace PerfUnused
+                        {
+                            public static class StringArrayOrder
+                            {
+                                internal static string[] OrderBy(this string[] source, int mode) => source;
+                            }
+                        }
+                        """
+                }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new PrimitiveArrayItem());
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            Assert.Empty(store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors);
+            using (var session = store.OpenSession())
+                Assert.True(session.Advanced.RawQuery<ClrContainsResult>($"from index '{indexName}' select Found").Single().Found);
+
+            // Both routes return the right result; the dispatch assertion protects the allocation-sensitive path.
+            var index = (MapIndex)Databases.GetDocumentDatabaseInstanceFor(store).GetAwaiter().GetResult().IndexStore.GetIndex(indexName);
+            Assert.Equal(optimized, index._compiled.Source.Contains("OrderByWithDefaultComparer"));
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("Enumerable.Contains(d.Tags, \"x\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.SequenceEqual(d.Tags, new[] { \"x\" })", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StoredStringSequenceOperandFailsOnlyItsDocumentInsteadOfStoringFalse(Options options, string expression)
+        {
+            using var store = GetDocumentStore(options);
+            const string indexName = "StringOperands/StaticSequenceCall";
+            const string stringId = "StringOperandItems/string-tags";
+            string map = "from d in docs.StringOperandItems select new { d.Name, Has = " + expression + " }";
+            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            {
+                Name = indexName,
+                Maps = { map },
+                Fields = { ["Name"] = new IndexFieldOptions { Storage = FieldStorage.Yes }, ["Has"] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
+            }));
+            using (var session = store.OpenSession())
+            {
+                session.Store(new StringOperandItem { Name = "string-tags", Tags = "x" }, stringId);
+                session.Store(new StringOperandItem { Name = "array-tags", Tags = Array.Empty<string>() });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store, allowErrors: true);
+            string snapshot = WaitForOperandSnapshot(store, indexName, $"attempts=2 errors=1 entries=1 failed=[{stringId}:RuntimeBinderException]");
+            List<ScalarOperandResult> rows;
+            using (var session = store.OpenSession())
+                rows = session.Advanced.RawQuery<ScalarOperandResult>($"from index '{indexName}' select Name, Has").ToList();
+            string observed = snapshot + $" rows=[{string.Join(", ", rows.OrderBy(row => row.Name).Select(row => row.Name + ":" + row.Has))}]";
+            Output.WriteLine(expression + " => " + observed);
+            Assert.Equal($"attempts=2 errors=1 entries=1 failed=[{stringId}:RuntimeBinderException] rows=[array-tags:False]", observed);
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData("item.Group.Contains(\"x\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Contains(item.Group, 'x')", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.SequenceEqual(item.Group, \"x-mas\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Enumerable.Contains(item.Tags, \"x-mas\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("!Enumerable.Contains(item.Tags, \"x\")", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void StringOperandsKeepCharacterAndInstanceSemantics(Options options, string expression)
+        {
+            AssertPrimitiveArrayExpression(options, expression,
+                new PrimitiveArrayItem { Group = "x-mas", Tags = new[] { "x-mas", "hanuka" } });
+        }
+
+        private sealed class StringOperandItem
+        {
+            public string Name { get; set; }
+            public object Tags { get; set; }
+        }
+
+        private string WaitForOperandSnapshot(DocumentStore store, string indexName, string expected)
+        {
+            return WaitForValue(() =>
+            {
+                IndexStats stats = store.Maintenance.Send(new GetIndexStatisticsOperation(indexName));
+                IndexingError[] errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+                return $"attempts={stats.MapAttempts} errors={stats.MapErrors} entries={stats.EntriesCount} " +
+                       $"failed=[{string.Join(", ", errors.OrderBy(error => error.Document).Select(error => error.Document + ":" + (error.Error.Contains("RuntimeBinderException") ? "RuntimeBinderException" : error.Error)))}]";
+            }, expected, timeout: 15_000, interval: 100);
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData("Enumerable.Contains(d.Age, 5)", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.Contains(d.Age, 5, EqualityComparer<object>.Default)", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Enumerable.SequenceEqual(d.Tags, d.Age)", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -2539,15 +2785,12 @@ public sealed class OriginCollection : DynamicArray, ICollection<object>
             }
 
             Indexes.WaitForIndexing(store, allowErrors: true);
-            IndexStats stats = store.Maintenance.Send(new GetIndexStatisticsOperation(indexName));
-            IndexingError[] errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName })).Single().Errors;
+            string snapshot = WaitForOperandSnapshot(store, indexName, $"attempts=2 errors=1 entries=1 failed=[{scalarAgeId}:RuntimeBinderException]");
             List<ScalarOperandResult> rows;
             using (var session = store.OpenSession())
                 rows = session.Advanced.RawQuery<ScalarOperandResult>($"from index '{indexName}' select Name, Has").ToList();
 
-            string observed = $"attempts={stats.MapAttempts} errors={stats.MapErrors} entries={stats.EntriesCount} " +
-                              $"failed=[{string.Join(", ", errors.OrderBy(x => x.Document).Select(x => x.Document + ":" + (x.Error.Contains("RuntimeBinderException") ? "RuntimeBinderException" : x.Error)))}] " +
-                              $"rows=[{string.Join(", ", rows.OrderBy(x => x.Name).Select(x => x.Name + ":" + x.Has))}]";
+            string observed = snapshot + $" rows=[{string.Join(", ", rows.OrderBy(x => x.Name).Select(x => x.Name + ":" + x.Has))}]";
             Output.WriteLine(expression + " => " + observed);
             Assert.Equal($"attempts=2 errors=1 entries=1 failed=[{scalarAgeId}:RuntimeBinderException] rows=[null-age:False]", observed);
         }

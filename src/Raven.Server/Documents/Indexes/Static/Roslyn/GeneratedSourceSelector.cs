@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
         private static readonly AssemblyIdentity ServerAssembly = AssemblyIdentity.FromAssemblyDefinition(typeof(DynamicEnumerable).Assembly);
 
+        private static readonly AssemblyIdentity LinqAssembly = AssemblyIdentity.FromAssemblyDefinition(typeof(Enumerable).Assembly);
+
         private static readonly string HelperTypeName = typeof(DynamicEnumerable).FullName!;
 
         private static readonly string RangeSourceTypeName = typeof(DynamicEnumerable.RangeSource).FullName!;
@@ -29,6 +31,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         private static readonly string[] DistinctFromEnumerable = ["DynamicEnumerable", nameof(DynamicEnumerable.DistinctFromEnumerable)];
 
         private static readonly string[] DistinctFromEnumerableComparerFirst = ["DynamicEnumerable", nameof(DynamicEnumerable.DistinctFromEnumerableComparerFirst)];
+
+        private static readonly string[] DynamicDistinct = ["DynamicEnumerable", nameof(DynamicEnumerable.DynamicDistinctFromEnumerable)];
+
+        private static readonly string[] DynamicDistinctComparerFirst = ["DynamicEnumerable", nameof(DynamicEnumerable.DynamicDistinctFromEnumerableComparerFirst)];
 
         public static bool TrySelect(SyntaxNode compilationUnit, IReadOnlyCollection<SyntaxTree> additionalSyntaxTrees, IEnumerable<MetadataReference> references, string dynamicEnumerable,
             out SyntaxNode selected)
@@ -80,7 +86,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             }
 
             if (choices.Count == 0)
-                return false;
+            {
+                selected = LowerObjectDistincts(compilation, tree, semanticModel, root, helperType, generatedReceiver, dynamicEnumerable, additionalSyntaxTrees);
+                return selected != null;
+            }
 
             var objectElements = new HashSet<InvocationExpressionSyntax>();
             foreach (var choice in choices)
@@ -122,7 +131,99 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 selected = choices.Count > 0 ? ReplaceChoices(root, choices, objectElements, annotations, guards, dynamicEnumerable) : null;
             }
 
+            selected = LowerObjectDistincts(compilation, tree, semanticModel, selected ?? root, helperType, generatedReceiver, dynamicEnumerable, additionalSyntaxTrees) ?? selected;
             return selected != null;
+        }
+
+        // Keep dynamic binding in the index assembly, where internal AdditionalSources types are accessible. The facade retains the static
+        // object-sequence view chosen above; genuine typed sources and explicit helper calls keep their original binding.
+        private static SyntaxNode LowerObjectDistincts(CSharpCompilation compilation, SyntaxTree tree, SemanticModel model, SyntaxNode root,
+            INamedTypeSymbol helperType, ExpressionSyntax generatedReceiver, string dynamicEnumerable, IReadOnlyCollection<SyntaxTree> additionalSyntaxTrees)
+        {
+            if (root.SyntaxTree != tree)
+            {
+                var finalTree = tree.WithRootAndOptions(root, tree.Options);
+                model = compilation.ReplaceSyntaxTree(tree, finalTree).GetSemanticModel(finalTree);
+                root = finalTree.GetRoot();
+            }
+
+            var linqEnumerable = model.Compilation.SourceModule.ReferencedAssemblySymbols.FirstOrDefault(assembly => assembly.Identity.Equals(LinqAssembly))
+                ?.GetTypeByMetadataName("System.Linq.Enumerable");
+            if (linqEnumerable == null)
+                return null;
+
+            bool IsGeneratedDistinct(InvocationExpressionSyntax invocation) =>
+                (IsDistinct(invocation) || IsAccess(invocation.Expression, DynamicDistinct) || IsAccess(invocation.Expression, DynamicDistinctComparerFirst)) &&
+                ((MemberAccessExpressionSyntax)invocation.Expression).Expression.IsEquivalentTo(generatedReceiver) &&
+                IsHelperCall(model, invocation, helperType, rangeSource: null);
+
+            var objectBound = new Dictionary<InvocationExpressionSyntax, bool>();
+            bool IsObjectBound(InvocationExpressionSyntax invocation)
+            {
+                if (objectBound.TryGetValue(invocation, out bool known))
+                    return known;
+
+                bool bound = false;
+                if (model.GetSymbolInfo(invocation).Symbol is IMethodSymbol method && TryGetOperands(invocation, out var source, out var comparer))
+                {
+                    if (method.IsGenericMethod == false)
+                        bound = true;
+                    else if (method.TypeArguments is [{ TypeKind: TypeKind.Dynamic } or { SpecialType: SpecialType.System_Object }] && IsNullLiteral(comparer))
+                    {
+                        while (source is ParenthesizedExpressionSyntax parentheses)
+                            source = parentheses.Expression;
+                        bound = source is InvocationExpressionSyntax inner && IsGeneratedDistinct(inner) && IsObjectBound(inner);
+                    }
+                }
+
+                return objectBound[invocation] = bound;
+            }
+
+            var linqName = SyntaxFactory.ParseTypeName("global::System.Linq.Enumerable");
+            var sites = root.DescendantNodes().OfType<InvocationExpressionSyntax>()
+                .Where(invocation => IsGeneratedDistinct(invocation) && IsObjectBound(invocation) && BindsDynamic(model, invocation.SpanStart) &&
+                    SymbolEqualityComparer.Default.Equals(model.GetSpeculativeTypeInfo(invocation.SpanStart, linqName, SpeculativeBindingOption.BindAsTypeOrNamespace).Type, linqEnumerable))
+                .ToList();
+            if (sites.Count == 0)
+                return null;
+
+            HashSet<string> names = null;
+            return root.ReplaceNodes(sites, (original, rewritten) =>
+            {
+                TryGetOperands(rewritten, out var source, out var comparer);
+                bool comparerFirst = IsAccess(rewritten.Expression, DistinctFromEnumerableComparerFirst) || IsAccess(rewritten.Expression, DynamicDistinctComparerFirst);
+                ExpressionSyntax distinct;
+                if (comparerFirst)
+                {
+                    names ??= GetNames(additionalSyntaxTrees.Append(root.SyntaxTree));
+                    string comparerName = GetFreshName(names, "__distinctComparer");
+                    string sourceName = GetFreshName(names, "__distinctSource");
+                    // Named dynamic calls cannot bind a non-public LINQ iterator. The tuple retains comparer-first evaluation for a positional call.
+                    var template = SyntaxFactory.ParseExpression($"(((object, object))(__comparerOperand, __sourceOperand) switch {{ var ({comparerName}, {sourceName}) => global::System.Linq.Enumerable.Distinct((dynamic){sourceName}, (dynamic){comparerName}) }})")
+                        .NormalizeWhitespace();
+                    var operands = template.DescendantNodes().OfType<IdentifierNameSyntax>()
+                        .Where(identifier => identifier.Identifier.ValueText is "__comparerOperand" or "__sourceOperand");
+                    distinct = template.ReplaceNodes(operands, (operand, _) => SyntaxFactory.ParenthesizedExpression(
+                        operand.Identifier.ValueText == "__comparerOperand" ? comparer : source));
+                }
+                else
+                    distinct = SyntaxFactory.ParseExpression($"global::System.Linq.Enumerable.Distinct((dynamic)({source}), (dynamic)({comparer}))");
+
+                bool dynamicResult = IsAccess(rewritten.Expression, DynamicDistinct) || IsAccess(rewritten.Expression, DynamicDistinctComparerFirst);
+                ExpressionSyntax result = dynamicResult
+                        ? SyntaxFactory.ParenthesizedExpression(distinct)
+                        : SyntaxFactory.InvocationExpression(SyntaxFactory.ParseExpression(dynamicEnumerable + ".DistinctResultAsObjects"))
+                            .AddArgumentListArguments(SyntaxFactory.Argument(SyntaxFactory.CastExpression(
+                                SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.ObjectKeyword)), SyntaxFactory.ParenthesizedExpression(distinct))));
+                return result.WithTriviaFrom(original);
+            });
+        }
+
+        private static bool IsNullLiteral(ExpressionSyntax expression)
+        {
+            while (expression is ParenthesizedExpressionSyntax parentheses)
+                expression = parentheses.Expression;
+            return expression.IsKind(SyntaxKind.NullLiteralExpression);
         }
 
         private static HashSet<string> GetNames(IEnumerable<SyntaxTree> trees)
@@ -452,13 +553,61 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
         {
             var consumerInfo = semanticModel.GetSymbolInfo(consumer);
             var index = argumentList.Arguments.IndexOf(argument);
-            var typedCandidate = GetCandidates(semanticModel, consumer, consumerInfo)
-                .Any(method => new[] { false, true }.Any(expanded => GetParameterTypes(method, argumentList, expanded) is { } types && IsTypedSequence(types[index])));
+            var candidates = GetCandidates(semanticModel, consumer, consumerInfo).ToList();
+            var typedCandidate = candidates.Any(method => new[] { false, true }.Any(expanded =>
+                GetParameterTypes(method, argumentList, expanded) is { } types && IsTypedSequence(types[index]))) ||
+                TakesElementTypeParameter(consumer, argumentList, index, candidates);
             if (typedCandidate == false)
                 return Demand.None;
 
             // A call that did not bind with the object result did not compile; one that binds, also dynamically, is checked.
             return consumerInfo.Symbol == null && consumerInfo.CandidateReason != CandidateReason.LateBound ? Demand.Certain : Demand.Checked;
+        }
+
+        private static bool TakesElementTypeParameter(ExpressionSyntax consumer, ArgumentListSyntax argumentList, int index, IEnumerable<IMethodSymbol> candidates)
+        {
+            if (consumer is InvocationExpressionSyntax { Expression: GenericNameSyntax or MemberAccessExpressionSyntax { Name: GenericNameSyntax } })
+                return false;
+
+            var methods = candidates.Distinct(SymbolEqualityComparer.Default).Cast<IMethodSymbol>().ToList();
+            var definitions = methods.Where(method => SymbolEqualityComparer.Default.Equals(method, method.OriginalDefinition)).ToHashSet(SymbolEqualityComparer.Default);
+            bool takesElement = false;
+            foreach (var method in methods)
+            {
+                // Pick<object> inferred from the facade is the same candidate as Pick<T>, not an independent object overload.
+                if (SymbolEqualityComparer.Default.Equals(method, method.OriginalDefinition) == false && definitions.Contains(method.OriginalDefinition))
+                    continue;
+
+                foreach (bool expanded in new[] { false, true })
+                {
+                    if (GetParameterTypes(method, argumentList, expanded) is not { } types)
+                        continue;
+                    var type = types[index];
+                    if (type.SpecialType is SpecialType.System_Object or SpecialType.System_Collections_IEnumerable || type.TypeKind == TypeKind.Dynamic ||
+                        type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Collections_Generic_IEnumerable_T, TypeArguments: [var element] } &&
+                        (element.SpecialType == SpecialType.System_Object || element.TypeKind == TypeKind.Dynamic))
+                        return false;
+                    takesElement |= IsElementTypeParameter(method, type);
+                }
+            }
+
+            return takesElement;
+        }
+
+        private static bool IsElementTypeParameter(IMethodSymbol method, ITypeSymbol type)
+        {
+            if (type is not INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Collections_Generic_IEnumerable_T,
+                    TypeArguments: [ITypeParameterSymbol { TypeParameterKind: TypeParameterKind.Method } element] } ||
+                method.TypeParameters.Contains(element, SymbolEqualityComparer.Default) == false)
+                return false;
+
+            bool Mentions(ITypeSymbol candidate) => SymbolEqualityComparer.Default.Equals(candidate, element) || (candidate switch
+            {
+                IArrayTypeSymbol array => Mentions(array.ElementType),
+                INamedTypeSymbol named => named.TypeArguments.Any(Mentions),
+                _ => false
+            });
+            return method.Parameters.Count(parameter => Mentions(parameter.Type)) == 1;
         }
 
         private static IEnumerable<IMethodSymbol> GetCandidates(SemanticModel semanticModel, ExpressionSyntax consumer, SymbolInfo consumerInfo)
@@ -520,7 +669,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
             // The qualified name of a referenced type may also be the name of a type of the index sources, so it must bind to the type.
             var position = call.SpanStart;
-            if (semanticModel.GetSpeculativeTypeInfo(position, SyntaxFactory.IdentifierName("dynamic"), SpeculativeBindingOption.BindAsTypeOrNamespace).Type is not { TypeKind: TypeKind.Dynamic })
+            if (BindsDynamic(semanticModel, position) == false)
                 return null;
 
             var syntaxes = new List<TypeSyntax>();
@@ -535,6 +684,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 
             return syntaxes;
         }
+
+        private static bool BindsDynamic(SemanticModel model, int position) =>
+            model.GetSpeculativeTypeInfo(position, SyntaxFactory.IdentifierName("dynamic"), SpeculativeBindingOption.BindAsTypeOrNamespace).Type is { TypeKind: TypeKind.Dynamic };
 
         // The switch is built from compiler-owned nodes with a placeholder, so no name written in the index is taken for a generated one.
         private static ExpressionSyntax GuardDynamicResult(InvocationExpressionSyntax dynamicResult, List<TypeSyntax> views, string name, string dynamicEnumerable)
@@ -595,7 +747,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
             if (distinct.ArgumentList.Arguments is not [{ Expression: TupleExpressionSyntax { Arguments: [var first, var second] } }])
                 return false;
 
-            var comparerFirst = IsAccess(distinct.Expression, DistinctFromEnumerableComparerFirst);
+            var comparerFirst = IsAccess(distinct.Expression, DistinctFromEnumerableComparerFirst) || IsAccess(distinct.Expression, DynamicDistinctComparerFirst);
             source = (comparerFirst ? second : first).Expression;
             comparer = (comparerFirst ? first : second).Expression;
             return true;

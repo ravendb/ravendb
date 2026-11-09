@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 return visited;
 
             // Only a top-level Count gets the IEnumerable<dynamic> cast; a nested one keeps the element type of its source, as before the rewrite.
-            if (IsInsideCastRewrittenCall(node) == false)
+            if (IsNestedInRewrittenCall(node) == false)
             {
                 var argument = visited.ArgumentList.Arguments[0];
                 var cast = SyntaxFactory.CastExpression(EnumerableOfDynamic, SyntaxFactory.ParenthesizedExpression(argument.Expression));
@@ -132,8 +132,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
         private SyntaxNode HandleEnumerableDistinct(InvocationExpressionSyntax node)
         {
-            if (IsInsideCastRewrittenCall(node) == false)
+            if (IsNestedInRewrittenCall(node) == false)
                 return SyntaxFactory.ParseExpression($"((IEnumerable<dynamic>){base.VisitInvocationExpression(node)})");
+
+            if (_usesLinqEnumerable == false)
+                return base.VisitInvocationExpression(node);
 
             var visited = (InvocationExpressionSyntax)base.VisitInvocationExpression(node)!;
             if (TryGetDistinctArguments(visited.ArgumentList, out var source, out var comparer, out var comparerFirst) == false)
@@ -186,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "Select":
                 case "SelectMany":
                 case "Enumerable.ToDictionary":
-                    if (IsInsideCastRewrittenCall(node) == false)
+                    if (IsNestedInRewrittenCall(node) == false)
                         return SyntaxFactory.ParseExpression($"{base.VisitInvocationExpression(node)}.Cast<dynamic>()");
                     break;
             }
@@ -259,11 +262,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             return false;
         }
 
-        private bool IsInsideCastRewrittenCall(SyntaxNode node)
-        {
-            if (_usesLinqEnumerable == false)
-                return false;
+        private bool IsInsideCastRewrittenCall(SyntaxNode node) => _usesLinqEnumerable && IsNestedInRewrittenCall(node);
 
+        private static bool IsNestedInRewrittenCall(SyntaxNode node)
+        {
             for (var parent = node.Parent; parent != null; parent = parent.Parent)
             {
                 if (parent is not InvocationExpressionSyntax invocation)
