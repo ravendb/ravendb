@@ -226,13 +226,11 @@ public static class WizardEndpoints
         if (state?.Provider is null || string.IsNullOrEmpty(state.SourceConnectionString))
             return Results.NotFound(new ApiErrorResponse($"no wizard draft found for '{body.Slug}'"));
 
-        // the wizard doc outlives provisioning, so a created app must not be resumed as a new one
         var isAppCreated = await AppLookup.LoadAppAsync(store, body.Slug, ct) is not null;
 
         return Results.Ok(new WizardDraftResponse(
             IsAppCreated: isAppCreated,
             AppName: state.AppName ?? string.Empty,
-            // the wizard knows the provider by its SqlProvider name, the doc keeps the factory name
             Provider: SqlProviderParser.GetSupportedProvider(state.Provider).ToString(),
             ConnectionString: state.SourceConnectionString,
             IsConnected: state.LastVerifyResult?.Success == true,
@@ -256,7 +254,6 @@ public static class WizardEndpoints
         if (await session.Advanced.ExistsAsync(wizardId, ct) == false)
             return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
 
-        // patched, so a plan id a running planner turn stores meanwhile is not overwritten
         session.Advanced.Patch<WizardState, string?>(wizardId, state => state.AppName, body.AppName);
         session.Advanced.Patch<WizardState, SelectedSourceTable[]?>(wizardId, state => state.SelectedTables, body.SelectedTables);
         session.Advanced.Patch<WizardState, string?>(wizardId, state => state.Step, body.Step);
@@ -544,10 +541,6 @@ public static class WizardEndpoints
     private static IResult Stop(MigrationStopRequest body, MigrationService service) =>
         service.Stop(body) is { } refusal ? Refused(refusal) : Results.NoContent();
 
-    /// <summary>
-    /// A turn refused before its first frame answers with a status code; once a frame is out the
-    /// stream is the answer, and a refusal can no longer happen.
-    /// </summary>
     private static async Task RefuseAsync(HttpContext ctx, MigrationStream stream, MigrationService.Refusal? refusal)
     {
         if (refusal is null || stream.Started)
@@ -573,8 +566,6 @@ public static class WizardEndpoints
             : StatusCodes.Status200OK);
     }
 
-    // A status the AI service reported is the operator's to act on; no status at all means the
-    // request itself was wrong, and a status it never got to report means the service is down.
     private static IResult Refused(MigrationService.Refusal refusal) =>
         Results.Json(new ApiErrorResponse(refusal.Message), statusCode: refusal.Status switch
         {

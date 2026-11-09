@@ -91,6 +91,23 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         Assert.Equal("Orders", (string?)frames[1]["config"]!["collectionName"]);
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("AreaNotStarted")]
+    [InlineData(null)]
+    public async Task The_planner_error_code_reaches_the_browser_and_is_omitted_when_the_api_sent_none(string? code)
+    {
+        var planner = StubPlannerHandler.Replying(new ErrorFrame { Message = "The area Sales has not started; start it first.", Code = code });
+        await using var host = await NewMigrationHostAsync(planner);
+        await SeedAsync(host, PlanId);
+
+        var resp = await host.Client.PostAsJsonAsync(QuillRoutes.MigrationAreaAsk, new { slug = Slug, area = "Sales", prompt = "add Orders" });
+        var frame = Assert.Single(await ReadFramesAsync(resp)).AsObject();
+
+        Assert.Equal("error", (string?)frame["type"]);
+        Assert.Equal(code, (string?)frame["code"]);
+        Assert.Equal(code is not null, frame.ContainsKey("code"));
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Each_proposed_collection_reaches_the_browser_with_its_field_names()
     {
@@ -186,7 +203,6 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
 
         var resp = await host.Client.PostAsJsonAsync(QuillRoutes.MigrationProposalStart, new { slug = Slug });
 
-        // The operator cannot fix this by giving consent, so it must not be reported as consent.
         Assert.Equal(HttpStatusCode.BadGateway, resp.StatusCode);
         Assert.Null(planner.LastPath);
     }
@@ -440,7 +456,6 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         var applied = await resp.Content.ReadFromJsonAsync<MigrationApplyResponse>(ApiJson);
         Assert.Equal("Orders", Assert.Single(applied!.Configuration!.Tables).CollectionName);
 
-        // only orders is mapped; the other two discovered tables are reported rather than dropped silently
         Assert.Equal(["public.customers", "public.audit_log"], applied.UnmappedTables);
 
         var state = await MigrationSamples.LoadStateAsync(host.Config, Slug);
@@ -501,8 +516,6 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         Assert.Null(state!.PlanId);
         Assert.Null(state.PlanSelectedTables);
     }
-
-    // -------------------------------------------------------------------
 
     private static Task<HttpResponseMessage> SaveAsync(QuillHost host) =>
         host.Client.PostAsJsonAsync(QuillRoutes.MigrationPlanSave, new

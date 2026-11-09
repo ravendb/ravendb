@@ -3,11 +3,6 @@ using Raven.Quill.Endpoints.Helpers;
 
 namespace Raven.Quill.AiHelper.Migration;
 
-/// <summary>
-/// The browser's side of a planner turn. The response headers go out with the first frame, so a request
-/// refused before the turn starts still answers with a status code. Writing stops once the browser is gone;
-/// the turn itself runs on in the api, and the browser re-syncs with plan/get when it comes back.
-/// </summary>
 public sealed class MigrationStream(HttpContext context)
 {
     public bool Started { get; private set; }

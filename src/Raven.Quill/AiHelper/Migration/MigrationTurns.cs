@@ -3,12 +3,6 @@ using Raven.Quill.Contracts;
 
 namespace Raven.Quill.AiHelper.Migration;
 
-/// <summary>
-/// One running turn per conversation of an app: the proposal, or one area. The api runs the turns and writes
-/// the plan; Quill keeps a second turn on the same conversation from crossing it, and a manual save from crossing
-/// any turn of the app, in both directions. A turn is held until its stream ends, whether or not the browser is
-/// still there, unless the operator stops it.
-/// </summary>
 public sealed class MigrationTurns
 {
     private const string SaveKey = "Save";
@@ -21,7 +15,6 @@ public sealed class MigrationTurns
 
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, Turn>> _apps = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Refused while a turn on the same conversation, or a save of the app, runs.</summary>
     public Turn TryBeginTurn(string slug, PlannerAgent agent, string? area)
     {
         var running = Running(slug);
@@ -35,7 +28,6 @@ public sealed class MigrationTurns
         return turn;
     }
 
-    /// <summary>Refused while any turn, or another save, of the app runs.</summary>
     public Turn TryBeginSave(string slug)
     {
         var running = Running(slug);
@@ -49,7 +41,6 @@ public sealed class MigrationTurns
         return save;
     }
 
-    /// <summary>Cancels the turn on that conversation if one runs; the relay then ends it upstream.</summary>
     public void Stop(string slug, PlannerAgent agent, string? area)
     {
         if (Running(slug).TryGetValue(GetKey(agent, area), out var turn))
