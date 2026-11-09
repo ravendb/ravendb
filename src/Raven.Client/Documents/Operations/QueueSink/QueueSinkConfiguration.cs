@@ -64,6 +64,7 @@ public class QueueSinkConfiguration : IDynamicJson, IDatabaseTask
 
     [JsonDeserializationIgnore]
     [IgnoreDataMember]
+    [System.Text.Json.Serialization.JsonIgnore]
     internal QueueConnectionString Connection { get; set; }
 
     public void Initialize(QueueConnectionString connectionString)

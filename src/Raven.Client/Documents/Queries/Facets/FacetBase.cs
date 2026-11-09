@@ -10,6 +10,7 @@ namespace Raven.Client.Documents.Queries.Facets
     public abstract class FacetBase
     {
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private string _displayFieldName;
 
         protected FacetBase()
