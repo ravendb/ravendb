@@ -5,7 +5,9 @@ import documentRefresh from "./locales/en/documentRefresh";
 import durationPicker from "./locales/en/durationPicker";
 import editCustomSorter from "./locales/en/editCustomSorter";
 import featureAvailabilitySummary from "./locales/en/featureAvailabilitySummary";
-import overridableField from "./locales/en/overridableField";
+import fieldWithDefault from "./locales/en/fieldWithDefault";
+import licenseLimitedFrequencyField from "./locales/en/licenseLimitedFrequencyField";
+import maxItemsToProcessField from "./locales/en/maxItemsToProcessField";
 import revisionsBin from "./locales/en/revisionsBin";
 import studioGlobalConfiguration from "./locales/en/studioGlobalConfiguration";
 
@@ -30,7 +32,9 @@ export const en = {
     durationPicker,
     editCustomSorter,
     featureAvailabilitySummary,
-    overridableField,
+    fieldWithDefault,
+    licenseLimitedFrequencyField,
+    maxItemsToProcessField,
     revisionsBin,
     studioGlobalConfiguration,
 };

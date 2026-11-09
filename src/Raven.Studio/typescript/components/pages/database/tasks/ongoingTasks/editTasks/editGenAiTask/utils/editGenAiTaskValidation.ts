@@ -84,22 +84,8 @@ const editGenAiTaskSchema = yup.object({
                     }
                 ),
             description: yup.string().required(),
-            isAllowModelQueries: yup
-                .boolean()
-                .nullable()
-                .when("isAllowModelQueriesOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAllowModelQueriesOverride: yup.boolean(),
-            isAddToInitialContext: yup
-                .boolean()
-                .nullable()
-                .when("isAddToInitialContextOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAddToInitialContextOverride: yup.boolean(),
+            isAllowModelQueries: yup.boolean().nullable(),
+            isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup

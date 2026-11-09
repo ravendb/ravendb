@@ -2,13 +2,15 @@ import { RevisionsBinCleanerFormData } from "components/pages/database/settings/
 import moment from "moment";
 import RevisionsBinConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsBinConfiguration;
 
+export const DEFAULT_CLEANER_FREQUENCY_IN_SEC = 300;
+
 function mapToDto(dto: RevisionsBinCleanerFormData): RevisionsBinConfiguration {
     return {
         Disabled: !dto.isRevisionsBinCleanerEnabled,
         MinimumEntriesAgeToKeepInMin: dto.isMinimumEntriesAgeToKeepEnabled
             ? moment.duration(dto.minimumEntriesAgeToKeep, "seconds").asMinutes()
             : 0,
-        CleanerFrequencyInSec: dto.isCleanerFrequencyInSecEnabled ? dto.cleanerFrequencyInSec : 300,
+        CleanerFrequencyInSec: dto.cleanerFrequencyInSec ?? DEFAULT_CLEANER_FREQUENCY_IN_SEC,
     };
 }
 
@@ -18,7 +20,6 @@ function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormD
             isRevisionsBinCleanerEnabled: false,
             isMinimumEntriesAgeToKeepEnabled: false,
             minimumEntriesAgeToKeep: null,
-            isCleanerFrequencyInSecEnabled: false,
             cleanerFrequencyInSec: null,
         };
     }
@@ -29,8 +30,8 @@ function mapToFormData(dto: RevisionsBinConfiguration): RevisionsBinCleanerFormD
         minimumEntriesAgeToKeep: dto.MinimumEntriesAgeToKeepInMin
             ? moment.duration(dto.MinimumEntriesAgeToKeepInMin, "minutes").asSeconds() // minimumEntriesAgeToKeep are in minutes, so we need format minutes to seconds
             : null,
-        isCleanerFrequencyInSecEnabled: dto.CleanerFrequencyInSec !== 300,
-        cleanerFrequencyInSec: dto.CleanerFrequencyInSec !== 300 ? dto.CleanerFrequencyInSec : null,
+        cleanerFrequencyInSec:
+            dto.CleanerFrequencyInSec !== DEFAULT_CLEANER_FREQUENCY_IN_SEC ? (dto.CleanerFrequencyInSec ?? null) : null,
     };
 }
 

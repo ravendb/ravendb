@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -19,11 +18,10 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
-import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
-import OverridableField from "components/common/OverridableField";
-import { useStudioTranslation } from "hooks/useStudioTranslation";
-import { i18n } from "common/i18n/i18n";
+import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import FrequencyField from "components/common/FrequencyField";
+import MaxItemsToProcessField from "components/common/MaxItemsToProcessField";
+import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -40,12 +38,9 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useRavenLink } from "hooks/useRavenLink";
 import moment from "moment";
 
-const defaultItemsToProcess = 65536;
-const defaultArchiveFrequencyPlaceholder = getDefaultDurationPlaceholder(60);
+const DEFAULT_ARCHIVE_FREQUENCY_IN_SEC = 60;
 
 export default function DataArchival() {
-    const commonT = useStudioTranslation("common");
-    const defaultItemsToProcessLabel = defaultItemsToProcess.toLocaleString(i18n.language);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
@@ -56,7 +51,7 @@ export default function DataArchival() {
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
         mapToFormData(await databasesService.getDataArchivalConfiguration(databaseName))
     );
-    const { handleSubmit, control, formState, reset, setValue, watch } = useForm<DataArchivalFormData>({
+    const { handleSubmit, control, formState, reset, setValue } = useForm<DataArchivalFormData>({
         resolver: dataArchivalYupResolver,
         mode: "all",
         defaultValues: asyncGetDataArchivalConfiguration.execute,
@@ -75,28 +70,12 @@ export default function DataArchival() {
         ],
     });
 
-    useEffect(() => {
-        const { unsubscribe } = watch((values, { name }) => {
-            switch (name) {
-                case "isDataArchivalEnabled": {
-                    if (values.isDataArchivalEnabled) {
-                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
-                    } else {
-                        setValue("maxItemsToProcess", null, { shouldValidate: true });
-                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isArchiveFrequencyEnabled": {
-                    if (!values.isArchiveFrequencyEnabled) {
-                        setValue("archiveFrequency", null, { shouldValidate: true });
-                    }
-                    break;
-                }
-            }
-        });
-        return () => unsubscribe();
-    }, [setValue, watch]);
+    const resetSettingsOnToggle = (isEnabled: boolean) => {
+        setValue("maxItemsToProcess", isEnabled ? DEFAULT_ITEMS_TO_PROCESS : null, DIRTY_AND_VALIDATE);
+        if (!isEnabled) {
+            setValue("archiveFrequency", null, DIRTY_AND_VALIDATE);
+        }
+    };
 
     const onSave: SubmitHandler<DataArchivalFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -104,8 +83,8 @@ export default function DataArchival() {
 
             await databasesService.saveDataArchivalConfiguration(databaseName, {
                 Disabled: !formData.isDataArchivalEnabled,
-                ArchiveFrequencyInSec: formData.isArchiveFrequencyEnabled ? formData.archiveFrequency : null,
-                MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
+                ArchiveFrequencyInSec: formData.archiveFrequency,
+                MaxItemsToProcess: formData.maxItemsToProcess,
             });
 
             messagePublisher.reportSuccess("Data archival configuration saved successfully");
@@ -161,60 +140,22 @@ export default function DataArchival() {
                                                 name="isDataArchivalEnabled"
                                                 control={control}
                                                 disabled={formState.isSubmitting}
+                                                afterChange={resetSettingsOnToggle}
                                             >
                                                 Enable Data Archival
                                             </FormSwitch>
-                                            <div className="align-self-start mw-100">
-                                                <OverridableField
-                                                    control={control}
-                                                    overrideName="isArchiveFrequencyEnabled"
-                                                    valueName="archiveFrequency"
-                                                    setValue={setValue}
-                                                    label="Archive frequency"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                >
-                                                    {({ isOverridden, isDisabled, labelId }) => (
-                                                        <FormDurationPicker
-                                                            name="archiveFrequency"
-                                                            control={control}
-                                                            disabled={isDisabled}
-                                                            aria-labelledby={labelId}
-                                                            placeholder={
-                                                                isOverridden
-                                                                    ? overriddenDurationPlaceholder
-                                                                    : defaultArchiveFrequencyPlaceholder
-                                                            }
-                                                            showSeconds
-                                                        />
-                                                    )}
-                                                </OverridableField>
-                                            </div>
-                                            <OverridableField
+                                            <FrequencyField
                                                 control={control}
-                                                overrideName="isLimitMaxItemsToProcessEnabled"
-                                                valueName="maxItemsToProcess"
-                                                setValue={setValue}
-                                                optimalValue={defaultItemsToProcess}
-                                                optimalValueLabel={defaultItemsToProcessLabel}
-                                                optimalValueHint={commonT("maxItemsOptimalHint", {
-                                                    items: defaultItemsToProcessLabel,
-                                                })}
-                                                label="Max number of documents to process in a single run"
-                                                disabled={formState.isSubmitting || !formValues.isDataArchivalEnabled}
-                                            >
-                                                {({ isDisabled }) => (
-                                                    <FormInput
-                                                        name="maxItemsToProcess"
-                                                        control={control}
-                                                        type="number"
-                                                        placeholder="Default (unlimited)"
-                                                        disabled={isDisabled}
-                                                        addon="items"
-                                                    />
-                                                )}
-                                            </OverridableField>
+                                                name="archiveFrequency"
+                                                label="Archive frequency"
+                                                disabled={!formValues.isDataArchivalEnabled}
+                                                defaultFrequencyInSec={DEFAULT_ARCHIVE_FREQUENCY_IN_SEC}
+                                            />
+                                            <MaxItemsToProcessField
+                                                control={control}
+                                                name="maxItemsToProcess"
+                                                disabled={!formValues.isDataArchivalEnabled}
+                                            />
                                         </div>
                                     </Card.Body>
                                 </Card>
@@ -280,19 +221,15 @@ function mapToFormData(dto: DataArchivalConfiguration): DataArchivalFormData {
     if (!dto) {
         return {
             isDataArchivalEnabled: false,
-            isArchiveFrequencyEnabled: false,
             archiveFrequency: null,
-            isLimitMaxItemsToProcessEnabled: false,
             maxItemsToProcess: null,
         };
     }
 
     return {
         isDataArchivalEnabled: !dto.Disabled,
-        isArchiveFrequencyEnabled: dto.ArchiveFrequencyInSec != null,
-        archiveFrequency: dto.ArchiveFrequencyInSec,
-        isLimitMaxItemsToProcessEnabled: dto.MaxItemsToProcess != null,
-        maxItemsToProcess: dto.MaxItemsToProcess,
+        archiveFrequency: dto.ArchiveFrequencyInSec ?? null,
+        maxItemsToProcess: dto.MaxItemsToProcess ?? null,
     };
 }
 

@@ -17,7 +17,7 @@ import connectionStringsSlice = require("components/pages/database/settings/conn
 import storeCompat = require("components/storeCompat");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
-import DocumentExpiration = require("components/pages/database/settings/documentExpiration/DocumentExpiration");
+import maxItemsToProcess = require("common/constants/maxItemsToProcess");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import licenseModel = require("models/auth/licenseModel");
 import TimeInSeconds = require("common/constants/timeInSeconds");
@@ -344,7 +344,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                 await new saveExpirationConfigurationCommand(this.db, {
                     Disabled: false,
                     DeleteFrequencyInSec: this.isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
-                    MaxItemsToProcess: DocumentExpiration.defaultItemsToProcess
+                    MaxItemsToProcess: maxItemsToProcess.DEFAULT_ITEMS_TO_PROCESS
                 }).execute();
 
                 activeDatabaseTracker.default.database().hasExpirationConfiguration(true);

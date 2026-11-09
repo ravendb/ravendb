@@ -1,0 +1,60 @@
+import React from "react";
+import { within } from "@testing-library/dom";
+import { useForm, useWatch } from "react-hook-form";
+import { rtlRender } from "test/rtlTestUtils";
+import { FormDurationPicker, FormSwitch } from "components/common/Form";
+
+interface DurationFormData {
+    isSet: boolean;
+    duration: number;
+}
+
+function DurationForm({ defaultValues }: { defaultValues: DurationFormData }) {
+    const { control, formState } = useForm<DurationFormData>({ defaultValues });
+    const { isSet, duration } = useWatch({ control });
+
+    return (
+        <div>
+            <FormSwitch control={control} name="isSet">
+                Set duration
+            </FormSwitch>
+            {isSet && (
+                <div role="group" aria-label="Duration">
+                    <FormDurationPicker control={control} name="duration" showDays />
+                </div>
+            )}
+            <span>{formState.isDirty ? "Form is dirty" : "Form is pristine"}</span>
+            <span>Value: {String(duration)}</span>
+        </div>
+    );
+}
+
+describe("DurationPicker", () => {
+    it("keeps the form pristine when it mounts without a value", async () => {
+        const { screen } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: undefined }} />);
+
+        expect(await screen.findByRole("group", { name: "Duration" })).toBeInTheDocument();
+        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("keeps the form pristine when it is shown and hidden again", async () => {
+        const { screen, user } = rtlRender(<DurationForm defaultValues={{ isSet: false, duration: undefined }} />);
+
+        const toggle = await screen.findByRole("checkbox", { name: "Set duration" });
+        await user.click(toggle);
+        await user.click(toggle);
+
+        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("clears the value once every part is cleared", async () => {
+        const { screen, user } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: 3600 }} />);
+
+        const durationPicker = await screen.findByRole("group", { name: "Duration" });
+        for (const part of within(durationPicker).getAllByRole("spinbutton")) {
+            await user.clear(part);
+        }
+
+        expect(screen.getByText("Value: null")).toBeInTheDocument();
+    });
+});

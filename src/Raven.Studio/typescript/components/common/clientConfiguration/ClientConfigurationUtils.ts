@@ -50,34 +50,13 @@ export default class ClientConfigurationUtils {
     }
 
     static mapToFormData(dto: ClientConfiguration, overrideConfig = true): ClientConfigurationFormData {
-        if (!dto) {
-            return {
-                overrideConfig,
-                identityPartsSeparatorEnabled: false,
-                identityPartsSeparatorValue: null,
-                maximumNumberOfRequestsEnabled: false,
-                maximumNumberOfRequestsValue: null,
-                loadBalancerEnabled: false,
-                loadBalancerValue: null,
-                loadBalancerSeedEnabled: false,
-                loadBalancerSeedValue: null,
-                readBalanceBehaviorEnabled: false,
-                readBalanceBehaviorValue: null,
-            };
-        }
-
         return {
             overrideConfig,
-            identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
-            identityPartsSeparatorValue: dto.IdentityPartsSeparator || null,
-            maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,
-            maximumNumberOfRequestsValue: dto.MaxNumberOfRequestsPerSession || null,
-            loadBalancerEnabled: !!dto.LoadBalanceBehavior,
-            loadBalancerValue: dto.LoadBalanceBehavior || null,
-            loadBalancerSeedEnabled: !!dto.LoadBalancerContextSeed,
-            loadBalancerSeedValue: dto.LoadBalancerContextSeed || null,
-            readBalanceBehaviorEnabled: !!dto.ReadBalanceBehavior,
-            readBalanceBehaviorValue: dto.ReadBalanceBehavior || null,
+            identityPartsSeparatorValue: dto?.IdentityPartsSeparator || null,
+            maximumNumberOfRequestsValue: dto?.MaxNumberOfRequestsPerSession || null,
+            loadBalancerValue: dto?.LoadBalanceBehavior || null,
+            loadBalancerSeedValue: dto?.LoadBalancerContextSeed || null,
+            readBalanceBehaviorValue: dto?.ReadBalanceBehavior || null,
         };
     }
 
@@ -90,15 +69,11 @@ export default class ClientConfigurationUtils {
         }
 
         return {
-            IdentityPartsSeparator: formData.identityPartsSeparatorEnabled
-                ? formData.identityPartsSeparatorValue
-                : null,
-            LoadBalanceBehavior: formData.loadBalancerEnabled ? formData.loadBalancerValue : null,
-            LoadBalancerContextSeed: formData.loadBalancerSeedEnabled ? formData.loadBalancerSeedValue : null,
-            ReadBalanceBehavior: formData.readBalanceBehaviorEnabled ? formData.readBalanceBehaviorValue : null,
-            MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsEnabled
-                ? formData.maximumNumberOfRequestsValue
-                : null,
+            IdentityPartsSeparator: formData.identityPartsSeparatorValue,
+            LoadBalanceBehavior: formData.loadBalancerValue,
+            LoadBalancerContextSeed: formData.loadBalancerSeedValue,
+            ReadBalanceBehavior: formData.readBalanceBehaviorValue,
+            MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
             Disabled: !formData.overrideConfig,
             Etag: undefined,
         };
