@@ -1540,6 +1540,54 @@ namespace FastTests.Client
             }
         }
 
+        private class NoIdentityWithExtensionData
+        {
+            public string Name { get; set; }
+
+            [JsonExtensionData]
+            public Dictionary<string, object> Extra { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task SessionSavesMetadataChangesOfEntitiesWithSystemTextJsonExtensionDataAndNoIdentity()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = new NoIdentityWithExtensionData { Name = "name", Extra = new Dictionary<string, object> { ["City"] = "Hadera" } };
+                await session.StoreAsync(item, "items/1");
+                session.Advanced.GetMetadataFor(item)["Custom"] = "old";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = await session.LoadAsync<NoIdentityWithExtensionData>("items/1");
+                Assert.False(session.Advanced.HasChanges);
+
+                session.Advanced.GetMetadataFor(item)["Custom"] = "new";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = await session.LoadAsync<NoIdentityWithExtensionData>("items/1");
+                Assert.Equal("new", session.Advanced.GetMetadataFor(item)["Custom"]);
+                Assert.Equal("Hadera", item.Extra["City"]);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+                Assert.Equal(1, raw.GetPropertyNames().Count(x => x == Raven.Client.Constants.Documents.Metadata.Key));
+                Assert.Equal("new", ((BlittableJsonReaderObject)raw[Raven.Client.Constants.Documents.Metadata.Key])["Custom"].ToString());
+            }
+        }
+
         private class WithNewtonsoftExtensionData
         {
             public string Id { get; set; }
