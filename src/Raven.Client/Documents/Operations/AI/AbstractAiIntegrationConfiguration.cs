@@ -16,5 +16,6 @@ public abstract class AbstractAiIntegrationConfiguration : EtlConfiguration<AiCo
     /// </summary>
     [JsonDeserializationIgnore]
     [IgnoreDataMember]
+    [System.Text.Json.Serialization.JsonIgnore]
     public AiConnectorType AiConnectorType => Connection?.GetActiveProvider() ?? AiConnectorType.None;
 }

@@ -24,6 +24,7 @@ namespace Raven.Client.Documents.Queries.Timings
         public IDictionary<string, QueryTimings> Timings { get; set; }
         
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public IDynamicJson QueryPlan { get; set; }
 
         internal bool ShouldBeIncluded { get; set; }

@@ -97,6 +97,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private TResult[] _results;
 
         private TResult[] MaterializeStream()
@@ -114,12 +115,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public IEnumerator<TResult> Stream => _timeSeriesStream ?? _results?.AsEnumerable().GetEnumerator();
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public IAsyncEnumerator<TResult> StreamAsync => _timeSeriesStream;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private TimeSeriesStreamEnumerator<TResult> _timeSeriesStream;
         
         void ITimeSeriesQueryStreamResult.SetStream(StreamOperation.TimeSeriesStreamEnumerator stream)
@@ -182,6 +186,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private T _count;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Max
         {
             get
@@ -196,6 +201,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Min
         {
             get
@@ -210,6 +216,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Last
         {
             get
@@ -224,6 +231,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T First
         {
             get
@@ -238,6 +246,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Average
         {
             get
@@ -252,6 +261,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Sum
         {
             get
@@ -266,6 +276,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public new T Count
         {
             get

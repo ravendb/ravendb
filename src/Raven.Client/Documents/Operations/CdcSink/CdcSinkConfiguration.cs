@@ -46,6 +46,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     [JsonDeserializationIgnore]
     [IgnoreDataMember]
+    [System.Text.Json.Serialization.JsonIgnore]
     internal SqlConnectionString Connection { get; set; }
 
     public void Initialize(SqlConnectionString connectionString)

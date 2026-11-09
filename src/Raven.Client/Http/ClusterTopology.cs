@@ -250,6 +250,7 @@ namespace Raven.Client.Http
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         internal int Count => Members.Count + Promotables.Count + Watchers.Count;
     }
 
