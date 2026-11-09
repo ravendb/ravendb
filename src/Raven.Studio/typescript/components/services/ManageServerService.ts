@@ -35,6 +35,10 @@ import fetchSsoServerCertCommand = require("commands/auth/fetchSsoServerCertComm
 import registerSsoUserEntryCommand = require("commands/auth/registerSsoUserEntryCommand");
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
+import getBackupDecisionLogCommand = require("commands/maintenance/getBackupDecisionLogCommand");
+import pauseBackupSchedulerCommand = require("commands/maintenance/pauseBackupSchedulerCommand");
+import resumeBackupSchedulerCommand = require("commands/maintenance/resumeBackupSchedulerCommand");
+import { BackupDecisionLogDetails } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
 import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uploadDebugPackageForAnalysisCommand");
 import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
@@ -200,6 +204,18 @@ export default class ManageServerService {
 
     async getClusterDomains() {
         return new getClusterDomainsCommand().execute();
+    }
+
+    async getBackupDecisionLog(databaseName?: string, take?: number): Promise<BackupDecisionLogDetails> {
+        return new getBackupDecisionLogCommand(databaseName, take).execute();
+    }
+
+    async pauseBackupScheduler(nodeTag: string): Promise<void> {
+        return new pauseBackupSchedulerCommand(nodeTag).execute();
+    }
+
+    async resumeBackupScheduler(nodeTag: string): Promise<void> {
+        return new resumeBackupSchedulerCommand(nodeTag).execute();
     }
 
     async uploadDebugPackageForAnalysis(...args: ConstructorParameters<typeof uploadDebugPackageForAnalysisCommand>) {

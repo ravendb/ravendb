@@ -14,6 +14,7 @@ export interface DateFormatterCellProps<TData, TValue> extends CellContextSubset
     cellClassName?: string;
     displayFormat?: string;
     showTooltip?: boolean;
+    displayText?: string;
 }
 
 export function DateFormatterCell<TData, TValue>({
@@ -21,6 +22,7 @@ export function DateFormatterCell<TData, TValue>({
     cellClassName,
     displayFormat = genUtils.dateFormat,
     showTooltip = true,
+    displayText,
 }: DateFormatterCellProps<TData, TValue>) {
     const rawValue = getValue();
 
@@ -54,7 +56,7 @@ export function DateFormatterCell<TData, TValue>({
         <PopoverWithHoverWrapper
             message={<DateTooltip date={dateValue} copyValue={typeof rawValue === "string" ? rawValue : null} />}
         >
-            <CellValue value={formattedDate} className={cellClassName} />
+            <CellValue value={displayText ?? formattedDate} className={cellClassName} />
         </PopoverWithHoverWrapper>
     );
 }
