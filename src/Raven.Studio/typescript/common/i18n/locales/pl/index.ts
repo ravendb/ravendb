@@ -6,7 +6,9 @@ import documentRefresh from "./documentRefresh.json";
 import durationPicker from "./durationPicker.json";
 import editCustomSorter from "./editCustomSorter.json";
 import featureAvailabilitySummary from "./featureAvailabilitySummary.json";
-import overridableField from "./overridableField.json";
+import fieldWithDefault from "./fieldWithDefault.json";
+import licenseLimitedFrequencyField from "./licenseLimitedFrequencyField.json";
+import maxItemsToProcessField from "./maxItemsToProcessField.json";
 import revisionsBin from "./revisionsBin.json";
 import studioGlobalConfiguration from "./studioGlobalConfiguration.json";
 
@@ -18,7 +20,9 @@ const pl: LanguageResources = {
     durationPicker,
     editCustomSorter,
     featureAvailabilitySummary,
-    overridableField,
+    fieldWithDefault,
+    licenseLimitedFrequencyField,
+    maxItemsToProcessField,
     revisionsBin,
     studioGlobalConfiguration,
 };

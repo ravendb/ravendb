@@ -1,0 +1,1 @@
+export const DEFAULT_ITEMS_TO_PROCESS = 65536;

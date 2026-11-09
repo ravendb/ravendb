@@ -1,7 +1,7 @@
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { FormProvider, SubmitHandler, useForm, useFormContext, UseFormReturn, useWatch } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm, useFormContext, useWatch } from "react-hook-form";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { LoadingView } from "components/common/LoadingView";
@@ -12,11 +12,11 @@ import Form from "react-bootstrap/Form";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Card from "react-bootstrap/Card";
-import { FormDurationPicker, FormInput, FormSwitch } from "components/common/Form";
-import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
-import OverridableField from "components/common/OverridableField";
+import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import { FormInputWithDefault } from "components/common/FieldWithDefault";
+import FrequencyField from "components/common/FrequencyField";
 import { Icon } from "components/common/Icon";
-import React, { useEffect } from "react";
+import React from "react";
 import {
     RemoteAttachmentsFormData,
     remoteAttachmentsYupResolver,
@@ -82,8 +82,6 @@ export default function RemoteAttachments() {
             reset(formData);
         });
     };
-
-    useRemoteAttachmentsSideEffects(form);
 
     if (loadStatus === "loading" || formState.isLoading) {
         return <LoadingView />;
@@ -240,14 +238,23 @@ function DestinationsList() {
     );
 }
 
-const defaultCheckFrequencyPlaceholder = getDefaultDurationPlaceholder(60);
+const DEFAULT_CHECK_FREQUENCY_IN_SEC = 60;
 
 function RemoteAttachmentsSettingsCard() {
     const { control, formState, setValue } = useFormContext<RemoteAttachmentsFormData>();
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const formValues = useWatch({ control });
-    const isSettingsDisabled =
-        !hasDatabaseAdminAccess || formState.isSubmitting || !formValues.isRemoteAttachmentsEnabled;
+    const isSettingsDisabled = !hasDatabaseAdminAccess || !formValues.isRemoteAttachmentsEnabled;
+
+    const resetSettingsOnToggle = (isEnabled: boolean) => {
+        if (isEnabled) {
+            return;
+        }
+
+        setValue("checkFrequencyInSec", null, DIRTY_AND_VALIDATE);
+        setValue("maxItemsToProcess", null, DIRTY_AND_VALIDATE);
+        setValue("concurrentUploads", null, DIRTY_AND_VALIDATE);
+    };
 
     return (
         <Card>
@@ -257,84 +264,36 @@ function RemoteAttachmentsSettingsCard() {
                     control={control}
                     color="primary"
                     disabled={!hasDatabaseAdminAccess || formState.isSubmitting}
+                    afterChange={resetSettingsOnToggle}
                 >
                     Enable Remote Attachments
                 </FormSwitch>
-                <div className="align-self-start mw-100">
-                    <OverridableField
-                        control={control}
-                        overrideName="isCheckFrequencyInSecEnabled"
-                        valueName="checkFrequencyInSec"
-                        setValue={setValue}
-                        label="Interval between remote attachments task runs"
-                        disabled={isSettingsDisabled}
-                    >
-                        {({ isOverridden, isDisabled, labelId }) => (
-                            <FormDurationPicker
-                                name="checkFrequencyInSec"
-                                control={control}
-                                disabled={isDisabled}
-                                aria-labelledby={labelId}
-                                placeholder={
-                                    isOverridden ? overriddenDurationPlaceholder : defaultCheckFrequencyPlaceholder
-                                }
-                                showSeconds
-                            />
-                        )}
-                    </OverridableField>
-                </div>
-                <OverridableField
+                <FrequencyField
                     control={control}
-                    overrideName="isMaxItemsToProcessEnabled"
-                    valueName="maxItemsToProcess"
-                    setValue={setValue}
+                    name="checkFrequencyInSec"
+                    label="Interval between remote attachments task runs"
+                    disabled={isSettingsDisabled}
+                    defaultFrequencyInSec={DEFAULT_CHECK_FREQUENCY_IN_SEC}
+                />
+                <FormInputWithDefault
+                    control={control}
+                    name="maxItemsToProcess"
                     label="Max number of attachments to process in a single run"
                     disabled={isSettingsDisabled}
-                >
-                    {({ isDisabled }) => (
-                        <FormInput
-                            name="maxItemsToProcess"
-                            control={control}
-                            type="number"
-                            placeholder="Default (unlimited)"
-                            disabled={isDisabled}
-                            addon="attachments"
-                        />
-                    )}
-                </OverridableField>
-                <OverridableField
+                    type="number"
+                    defaultValueLabel="unlimited"
+                    addon="attachments"
+                />
+                <FormInputWithDefault
                     control={control}
-                    overrideName="isConcurrentUploadsEnabled"
-                    valueName="concurrentUploads"
-                    setValue={setValue}
+                    name="concurrentUploads"
                     label="Max number of concurrent uploads"
                     disabled={isSettingsDisabled}
-                >
-                    {({ isDisabled }) => (
-                        <FormInput
-                            name="concurrentUploads"
-                            control={control}
-                            type="number"
-                            disabled={isDisabled}
-                            placeholder="Default (8)"
-                            addon="attachments"
-                        />
-                    )}
-                </OverridableField>
+                    type="number"
+                    defaultValueLabel="8"
+                    addon="attachments"
+                />
             </Card.Body>
         </Card>
     );
 }
-
-const useRemoteAttachmentsSideEffects = ({ watch, setValue }: UseFormReturn<RemoteAttachmentsFormData>) => {
-    useEffect(() => {
-        const { unsubscribe } = watch((values, { name }) => {
-            if (name === "isRemoteAttachmentsEnabled" && !values.isRemoteAttachmentsEnabled) {
-                setValue("isCheckFrequencyInSecEnabled", false, { shouldValidate: true });
-                setValue("isMaxItemsToProcessEnabled", false, { shouldValidate: true });
-                setValue("isConcurrentUploadsEnabled", false, { shouldValidate: true });
-            }
-        });
-        return unsubscribe;
-    }, [setValue, watch]);
-};

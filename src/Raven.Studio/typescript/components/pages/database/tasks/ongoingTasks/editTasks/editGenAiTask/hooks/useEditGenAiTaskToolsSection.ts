@@ -20,9 +20,7 @@ export default function useEditGenAiTaskToolsSection() {
             query: "",
             parametersSchema: "",
             isAllowModelQueries: null,
-            isAllowModelQueriesOverride: false,
             isAddToInitialContext: null,
-            isAddToInitialContextOverride: false,
             isEditing: true,
         });
     };

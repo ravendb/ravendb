@@ -19,7 +19,7 @@ describe("DocumentRefresh", () => {
     it("can disable and set to null refresh frequency after disabling 'Enable Document Refresh'", async () => {
         const { screen, fireClick } = rtlRender(<DefaultDocumentRefresh />);
 
-        const durationPicker = await screen.findByTestId("refreshFrequencyDurationPicker");
+        const durationPicker = await screen.findByRole("group", { name: "Refresh frequency" });
         const hoursInput = within(durationPicker).getByRole("spinbutton", { name: "Hours" });
         expect(hoursInput).toBeEnabled();
         expect(hoursInput).toHaveValue(35);
@@ -71,7 +71,7 @@ describe("DocumentRefresh", () => {
             await screen.findByRole("button", { name: "Reset to default", description: "Refresh frequency" })
         );
 
-        const durationPicker = screen.getByTestId("refreshFrequencyDurationPicker");
+        const durationPicker = screen.getByRole("group", { name: "Refresh frequency" });
         expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveAttribute(
             "placeholder",
             "Default (0)"
@@ -89,7 +89,7 @@ describe("DocumentRefresh", () => {
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        const durationPicker = await screen.findByTestId("refreshFrequencyDurationPicker");
+        const durationPicker = await screen.findByRole("group", { name: "Refresh frequency" });
 
         expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(35);
         expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(59);
@@ -109,7 +109,7 @@ describe("DocumentRefresh", () => {
         const { screen, fireClick } = rtlRender(<LicenseRestricted />);
 
         const documentRefreshSwitch = await screen.findByRole("checkbox", { name: "Enable Document Refresh" });
-        const hoursInput = within(screen.getByTestId("refreshFrequencyDurationPicker")).getByRole("spinbutton", {
+        const hoursInput = within(screen.getByRole("group", { name: "Refresh frequency" })).getByRole("spinbutton", {
             name: "Hours",
         });
 

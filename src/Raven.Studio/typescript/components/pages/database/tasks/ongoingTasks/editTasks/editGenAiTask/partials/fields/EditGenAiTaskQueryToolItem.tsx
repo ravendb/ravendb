@@ -1,7 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
-import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect } from "components/common/Form";
-import OverridableField from "components/common/OverridableField";
+import { FormInput, FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
+import { FormSelectWithDefault } from "components/common/FieldWithDefault";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -91,7 +91,7 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
         });
     };
 
-    const isAdvancedOpenByDefault = queryItem.isAllowModelQueriesOverride || queryItem.isAddToInitialContextOverride;
+    const isAdvancedOpenByDefault = queryItem.isAllowModelQueries != null || queryItem.isAddToInitialContext != null;
 
     return (
         <div className="well p-2 rounded-2 border border-secondary mt-2">
@@ -194,44 +194,22 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
                     <Accordion.Body className="pt-0">
                         <hr className="my-0 mb-2" />
                         <div className="vstack gap-3">
-                            <OverridableField
+                            <FormSelectWithDefault
                                 control={control}
-                                overrideName={`queries.${index}.isAllowModelQueriesOverride`}
-                                valueName={`queries.${index}.isAllowModelQueries`}
-                                setValue={setValue}
+                                name={`queries.${index}.isAllowModelQueries`}
                                 label="Allow model queries"
                                 tooltip={<AllowModelQueriesTooltip />}
-                            >
-                                {({ isDisabled, controlId }) => (
-                                    <FormSelect
-                                        control={control}
-                                        name={`queries.${index}.isAllowModelQueries`}
-                                        options={isAllowModelQueriesOptions}
-                                        isDisabled={isDisabled}
-                                        inputId={controlId}
-                                        placeholder="Default (True)"
-                                    />
-                                )}
-                            </OverridableField>
-                            <OverridableField
+                                options={isAllowModelQueriesOptions}
+                                defaultValueLabel="True"
+                            />
+                            <FormSelectWithDefault
                                 control={control}
-                                overrideName={`queries.${index}.isAddToInitialContextOverride`}
-                                valueName={`queries.${index}.isAddToInitialContext`}
-                                setValue={setValue}
+                                name={`queries.${index}.isAddToInitialContext`}
                                 label="Add to initial context"
                                 tooltip={<AddToInitialContextTooltip />}
-                            >
-                                {({ isDisabled, controlId }) => (
-                                    <FormSelect
-                                        control={control}
-                                        name={`queries.${index}.isAddToInitialContext`}
-                                        options={isAddToInitialContextOptions}
-                                        isDisabled={isDisabled}
-                                        inputId={controlId}
-                                        placeholder="Default (False)"
-                                    />
-                                )}
-                            </OverridableField>
+                                options={isAddToInitialContextOptions}
+                                defaultValueLabel="False"
+                            />
                         </div>
                     </Accordion.Body>
                 </Accordion.Item>

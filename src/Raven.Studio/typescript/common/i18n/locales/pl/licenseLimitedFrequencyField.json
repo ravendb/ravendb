@@ -1,0 +1,7 @@
+{
+    "licenseMinimum_one": "Minimum dla Twojej licencji: <strong>{{count}} godzina</strong>.",
+    "licenseMinimum_few": "Minimum dla Twojej licencji: <strong>{{count}} godziny</strong>.",
+    "licenseMinimum_many": "Minimum dla Twojej licencji: <strong>{{count}} godzin</strong>.",
+    "licenseMinimum_other": "Minimum dla Twojej licencji: <strong>{{count}} godziny</strong>.",
+    "seeFullComparison": "Zobacz pełne porównanie"
+}

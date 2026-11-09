@@ -16,16 +16,7 @@ const schema = yup.object({
             is: true,
             then: (schema) => schema.required(minimumEntriesAgeToKeepMessage),
         }),
-    isCleanerFrequencyInSecEnabled: yup.boolean(),
-    cleanerFrequencyInSec: yup
-        .number()
-        .nullable()
-        .positive()
-        .integer()
-        .when("isCleanerFrequencyInSecEnabled", {
-            is: true,
-            then: (schema) => schema.required(),
-        }),
+    cleanerFrequencyInSec: yup.number().nullable().positive().integer(),
 });
 
 export const revisionsBinCleanerYupResolver = yupResolver(schema);

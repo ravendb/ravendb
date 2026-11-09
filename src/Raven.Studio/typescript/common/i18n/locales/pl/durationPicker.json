@@ -2,5 +2,7 @@
     "days": "Dni",
     "hours": "Godziny",
     "minutes": "Minuty",
-    "seconds": "Sekundy"
+    "seconds": "Sekundy",
+    "nonNegativeNumberRequired": "Wprowadź liczbę nieujemną",
+    "wholeNumberRequired": "Wprowadź liczbę całkowitą"
 }

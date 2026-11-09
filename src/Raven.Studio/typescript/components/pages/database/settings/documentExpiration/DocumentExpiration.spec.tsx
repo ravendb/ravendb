@@ -31,7 +31,7 @@ describe("DocumentExpiration", () => {
         const { screen, fireClick } = rtlRender(<DefaultDocumentExpiration />);
 
         const deleteFrequencyBefore = getDeleteFrequencyInputs(
-            await screen.findByTestId("deleteFrequencyDurationPicker")
+            await screen.findByRole("group", { name: "Expiration frequency" })
         );
         deleteFrequencyBefore.forEach((input, index) => {
             expect(input).toBeEnabled();
@@ -40,7 +40,9 @@ describe("DocumentExpiration", () => {
 
         await fireClick(screen.getByRole("checkbox", { name: "Enable Document Expiration" }));
 
-        const deleteFrequencyAfter = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        const deleteFrequencyAfter = getDeleteFrequencyInputs(
+            screen.getByRole("group", { name: "Expiration frequency" })
+        );
         deleteFrequencyAfter.forEach((input) => {
             expect(input).toBeDisabled();
             expect(input).toHaveValue(null);
@@ -80,7 +82,7 @@ describe("DocumentExpiration", () => {
 
         await fireClick(await screen.findByRole("checkbox", { name: "Enable Document Expiration" }));
 
-        const inputs = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        const inputs = getDeleteFrequencyInputs(screen.getByRole("group", { name: "Expiration frequency" }));
         inputs.forEach((input) => {
             expect(input).toBeEnabled();
             expect(input).toHaveValue(null);
@@ -100,7 +102,9 @@ describe("DocumentExpiration", () => {
 
         await fireClick(await screen.findByRole("checkbox", { name: "Enable Document Expiration" }));
 
-        const [hours, minutes, seconds] = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        const [hours, minutes, seconds] = getDeleteFrequencyInputs(
+            screen.getByRole("group", { name: "Expiration frequency" })
+        );
         await user.type(hours, "123");
 
         expect(minutes).toHaveValue(null);
@@ -117,7 +121,9 @@ describe("DocumentExpiration", () => {
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        const deleteFrequency = getDeleteFrequencyInputs(await screen.findByTestId("deleteFrequencyDurationPicker"));
+        const deleteFrequency = getDeleteFrequencyInputs(
+            await screen.findByRole("group", { name: "Expiration frequency" })
+        );
         deleteFrequency.forEach((input, index) => {
             expect(input).toBeEnabled();
             expect(input).toHaveValue(expectedDeleteFrequency[index]);
@@ -142,13 +148,13 @@ describe("DocumentExpiration", () => {
         const documentExpirationSwitch = await screen.findByRole("checkbox", { name: "Enable Document Expiration" });
 
         await fireClick(documentExpirationSwitch);
-        getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker")).forEach((input) => {
+        getDeleteFrequencyInputs(screen.getByRole("group", { name: "Expiration frequency" })).forEach((input) => {
             expect(input).toHaveValue(null);
         });
 
         await fireClick(documentExpirationSwitch);
 
-        const deleteFrequency = getDeleteFrequencyInputs(screen.getByTestId("deleteFrequencyDurationPicker"));
+        const deleteFrequency = getDeleteFrequencyInputs(screen.getByRole("group", { name: "Expiration frequency" }));
         deleteFrequency.forEach((input, index) => {
             expect(input).toHaveValue(expectedLicenseMinimumDeleteFrequency[index]);
         });

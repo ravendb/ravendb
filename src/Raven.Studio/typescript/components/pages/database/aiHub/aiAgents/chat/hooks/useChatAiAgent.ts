@@ -1,4 +1,4 @@
-import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
 import { chatAiAgentActions, chatAiAgentSelectors } from "../store/chatAiAgentSlice";
 import { tryHandleSubmit } from "components/utils/common";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
@@ -149,7 +149,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
                 await databasesService.saveExpirationConfiguration(databaseName, {
                     Disabled: false,
                     DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
-                    MaxItemsToProcess: defaultItemsToProcess,
+                    MaxItemsToProcess: DEFAULT_ITEMS_TO_PROCESS,
                 });
             }
 

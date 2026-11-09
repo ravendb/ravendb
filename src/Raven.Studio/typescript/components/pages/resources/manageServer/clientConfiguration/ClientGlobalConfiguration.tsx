@@ -6,11 +6,9 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { FormInput, FormSelect } from "components/common/Form";
-import OverridableField from "components/common/OverridableField";
+import { FormInputWithDefault, FormSelectWithDefault } from "components/common/FieldWithDefault";
 import {
     IdentityPartsSeparatorTooltip,
-    LoadBalanceBehaviorTooltip,
     LoadBalancerSeedTooltip,
     MaximumNumberOfRequestsTooltip,
     ReadBalanceBehaviorTooltip,
@@ -24,7 +22,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import ClientConfigurationUtils from "components/common/clientConfiguration/ClientConfigurationUtils";
-import useClientConfigurationFormSideEffects from "components/common/clientConfiguration/useClientConfigurationFormSideEffects";
+import LoadBalanceBehaviorField from "components/common/clientConfiguration/LoadBalanceBehaviorField";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -43,7 +41,7 @@ export default function ClientGlobalConfiguration() {
     const { manageServerService } = useServices();
     const asyncGetGlobalClientConfiguration = useAsyncCallback(manageServerService.getGlobalClientConfiguration);
 
-    const { handleSubmit, control, formState, setValue, reset, watch } = useForm<ClientConfigurationFormData>({
+    const { handleSubmit, control, formState, setValue, reset } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "all",
         defaultValues: async () =>
@@ -54,8 +52,6 @@ export default function ClientGlobalConfiguration() {
     const clientConfigurationDocsLink = useRavenLink({ hash: "TS7SGF" });
 
     const formValues = useWatch({ control });
-
-    useClientConfigurationFormSideEffects(watch, setValue);
 
     useEffect(() => {
         if (formState.isSubmitSuccessful) {
@@ -122,44 +118,24 @@ export default function ClientGlobalConfiguration() {
                         </ConditionalPopover>
                         <div className={hasClientConfiguration ? "" : "item-disabled pe-none"}>
                             <Card className="p-4 vstack gap-3">
-                                <OverridableField
+                                <FormInputWithDefault
                                     control={control}
-                                    overrideName="identityPartsSeparatorEnabled"
-                                    valueName="identityPartsSeparatorValue"
-                                    setValue={setValue}
+                                    name="identityPartsSeparatorValue"
                                     tooltipPlacement="right"
                                     label="Identity parts separator"
                                     tooltip={<IdentityPartsSeparatorTooltip />}
-                                >
-                                    {({ isDisabled }) => (
-                                        <FormInput
-                                            type="text"
-                                            control={control}
-                                            name="identityPartsSeparatorValue"
-                                            placeholder="Default ('/')"
-                                            disabled={isDisabled}
-                                        />
-                                    )}
-                                </OverridableField>
-                                <OverridableField
+                                    type="text"
+                                    defaultValueLabel="'/'"
+                                />
+                                <FormInputWithDefault
                                     control={control}
-                                    overrideName="maximumNumberOfRequestsEnabled"
-                                    valueName="maximumNumberOfRequestsValue"
-                                    setValue={setValue}
+                                    name="maximumNumberOfRequestsValue"
                                     tooltipPlacement="right"
                                     label="Maximum number of requests per session"
                                     tooltip={<MaximumNumberOfRequestsTooltip />}
-                                >
-                                    {({ isDisabled }) => (
-                                        <FormInput
-                                            type="number"
-                                            control={control}
-                                            name="maximumNumberOfRequestsValue"
-                                            placeholder="Default (30)"
-                                            disabled={isDisabled}
-                                        />
-                                    )}
-                                </OverridableField>
+                                    type="number"
+                                    defaultValueLabel="30"
+                                />
                             </Card>
                             <div className="d-flex justify-content-between mt-4 position-relative">
                                 <h5>Load Balancing Client Requests</h5>
@@ -170,69 +146,28 @@ export default function ClientGlobalConfiguration() {
                                 </small>
                             </div>
                             <Card className="p-4 vstack gap-3">
-                                <OverridableField
-                                    control={control}
-                                    overrideName="loadBalancerEnabled"
-                                    valueName="loadBalancerValue"
-                                    setValue={setValue}
-                                    tooltipPlacement="right"
-                                    label="Load Balance Behavior"
-                                    tooltip={<LoadBalanceBehaviorTooltip />}
-                                >
-                                    {({ isDisabled, controlId }) => (
-                                        <FormSelect
-                                            control={control}
-                                            name="loadBalancerValue"
-                                            placeholder="Default (None)"
-                                            isDisabled={isDisabled}
-                                            inputId={controlId}
-                                            options={ClientConfigurationUtils.getLoadBalanceBehaviorOptions()}
-                                            isSearchable={false}
-                                        />
-                                    )}
-                                </OverridableField>
+                                <LoadBalanceBehaviorField control={control} setValue={setValue} />
                                 {formValues.loadBalancerValue === "UseSessionContext" && (
-                                    <OverridableField
+                                    <FormInputWithDefault
                                         control={control}
-                                        overrideName="loadBalancerSeedEnabled"
-                                        valueName="loadBalancerSeedValue"
-                                        setValue={setValue}
+                                        name="loadBalancerSeedValue"
                                         tooltipPlacement="right"
                                         label="Seed"
                                         tooltip={<LoadBalancerSeedTooltip />}
-                                    >
-                                        {({ isDisabled }) => (
-                                            <FormInput
-                                                type="number"
-                                                control={control}
-                                                name="loadBalancerSeedValue"
-                                                placeholder="Default (0)"
-                                                disabled={isDisabled}
-                                            />
-                                        )}
-                                    </OverridableField>
+                                        type="number"
+                                        defaultValueLabel="0"
+                                    />
                                 )}
-                                <OverridableField
+                                <FormSelectWithDefault
                                     control={control}
-                                    overrideName="readBalanceBehaviorEnabled"
-                                    valueName="readBalanceBehaviorValue"
-                                    setValue={setValue}
+                                    name="readBalanceBehaviorValue"
                                     tooltipPlacement="right"
                                     label="Read Balance Behavior"
                                     tooltip={<ReadBalanceBehaviorTooltip />}
-                                >
-                                    {({ isDisabled, controlId }) => (
-                                        <FormSelect
-                                            control={control}
-                                            name="readBalanceBehaviorValue"
-                                            placeholder="Default (None)"
-                                            isDisabled={isDisabled}
-                                            inputId={controlId}
-                                            options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
-                                            isSearchable={false}
-                                        />
-                                    )}
-                                </OverridableField>
+                                    defaultValueLabel="None"
+                                    options={ClientConfigurationUtils.getReadBalanceBehaviorOptions()}
+                                    isSearchable={false}
+                                />
                             </Card>
                         </div>
                     </Col>

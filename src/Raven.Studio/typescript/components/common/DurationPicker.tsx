@@ -4,6 +4,7 @@ import Form from "react-bootstrap/Form";
 import FormGroup from "react-bootstrap/FormGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
+import useUniqueId from "components/hooks/useUniqueId";
 
 interface Duration {
     days: number;
@@ -12,22 +13,29 @@ interface Duration {
     seconds: number;
 }
 
+type DurationPart = keyof Duration;
+
+type DurationPlaceholder = Partial<Record<DurationPart, string>>;
+
 export interface DurationPickerProps {
     onChange: (totalSeconds: number) => void;
     totalSeconds: number;
     showDays?: boolean;
     showSeconds?: boolean;
     disabled?: boolean;
-    placeholder?: {
-        days?: string;
-        hours?: string;
-        minutes?: string;
-        seconds?: string;
-    };
+    placeholder?: DurationPlaceholder;
+    defaultTotalSeconds?: number;
     isFlexGrow?: boolean;
     "aria-labelledby"?: string;
     onInvalidPartMessageChange?: (message: string) => void;
 }
+
+export const ZERO_DURATION_PLACEHOLDER: DurationPlaceholder = {
+    days: "0",
+    hours: "0",
+    minutes: "0",
+    seconds: "0",
+};
 
 export default function DurationPicker(props: DurationPickerProps) {
     const {
@@ -35,6 +43,7 @@ export default function DurationPicker(props: DurationPickerProps) {
         onChange,
         showDays,
         placeholder,
+        defaultTotalSeconds,
         showSeconds,
         disabled,
         isFlexGrow,
@@ -43,6 +52,8 @@ export default function DurationPicker(props: DurationPickerProps) {
     } = props;
 
     const t = useStudioTranslation("durationPicker");
+    const commonT = useStudioTranslation("common");
+    const controlIdPrefix = useUniqueId("duration-picker-");
     const initialValues = getInitialValues(totalSeconds, showDays);
 
     const [days, setDays] = useState(initialValues?.days ?? null);
@@ -51,11 +62,19 @@ export default function DurationPicker(props: DurationPickerProps) {
     const [seconds, setSeconds] = useState(initialValues?.seconds ?? null);
 
     // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
-    const lastTotalSecondsRef = useRef(totalSeconds);
+    const lastTotalSecondsRef = useRef(totalSeconds ?? null);
 
-    const visibleParts = [showDays ? days : null, hours, minutes, showSeconds ? seconds : null];
-    const isEmpty = visibleParts.every((part) => part == null);
-    const invalidPartMessage = getInvalidPartMessage(visibleParts);
+    const parts: { name: DurationPart; value: number; setValue: (value: number) => void }[] = [
+        { name: "days" as const, value: days, setValue: setDays, isVisible: showDays },
+        { name: "hours" as const, value: hours, setValue: setHours, isVisible: true },
+        { name: "minutes" as const, value: minutes, setValue: setMinutes, isVisible: true },
+        { name: "seconds" as const, value: seconds, setValue: setSeconds, isVisible: showSeconds },
+    ].filter((part) => part.isVisible);
+
+    const isEmpty = parts.every((part) => part.value == null);
+    const invalidPartMessageKey = getInvalidPartMessageKey(parts.map((part) => part.value));
+    const invalidPartMessage = invalidPartMessageKey ? t(invalidPartMessageKey) : null;
+    const hasInvalidPart = invalidPartMessageKey != null;
 
     useEffect(() => {
         onInvalidPartMessageChange?.(invalidPartMessage);
@@ -64,7 +83,7 @@ export default function DurationPicker(props: DurationPickerProps) {
     useEffect(() => {
         const calculatedTotalSeconds = isEmpty
             ? null
-            : invalidPartMessage
+            : hasInvalidPart
               ? NaN
               : seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
 
@@ -74,14 +93,15 @@ export default function DurationPicker(props: DurationPickerProps) {
 
         lastTotalSecondsRef.current = calculatedTotalSeconds;
         onChange(calculatedTotalSeconds);
-    }, [onChange, days, hours, minutes, seconds, isEmpty, invalidPartMessage]);
+    }, [onChange, days, hours, minutes, seconds, isEmpty, hasInvalidPart]);
 
     useEffect(() => {
-        if (Object.is(totalSeconds, lastTotalSecondsRef.current)) {
+        const consumerTotalSeconds = totalSeconds ?? null;
+        if (Object.is(consumerTotalSeconds, lastTotalSecondsRef.current)) {
             return;
         }
 
-        lastTotalSecondsRef.current = totalSeconds;
+        lastTotalSecondsRef.current = consumerTotalSeconds;
 
         const values = getInitialValues(totalSeconds, showDays);
         setDays(values?.days ?? null);
@@ -89,6 +109,16 @@ export default function DurationPicker(props: DurationPickerProps) {
         setMinutes(values?.minutes ?? null);
         setSeconds(values?.seconds ?? null);
     }, [totalSeconds, showDays]);
+
+    const getPlaceholder = (part: DurationPart): string => {
+        if (defaultTotalSeconds == null) {
+            return placeholder?.[part];
+        }
+        if (!isEmpty) {
+            return ZERO_DURATION_PLACEHOLDER[part];
+        }
+        return commonT("defaultPlaceholder", { value: getInitialValues(defaultTotalSeconds, showDays)[part] });
+    };
 
     const getInputValue = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.currentTarget.value;
@@ -101,77 +131,38 @@ export default function DurationPicker(props: DurationPickerProps) {
             aria-labelledby={ariaLabelledBy}
             className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}
         >
-            {showDays && (
-                <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
+            {parts.map((part) => (
+                <FormGroup
+                    key={part.name}
+                    controlId={controlIdPrefix + part.name}
+                    className={classNames({ "flex-grow-1": isFlexGrow })}
+                >
                     <InputGroup>
                         <Form.Control
                             type="number"
                             min={0}
-                            value={days ?? ""}
-                            placeholder={placeholder?.days}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
+                            value={part.value ?? ""}
+                            placeholder={getPlaceholder(part.name)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => part.setValue(getInputValue(e))}
                             disabled={disabled}
-                            aria-label={t("days")}
+                            aria-label={t(part.name)}
                         />
-                        <InputGroup.Text>{t("days")}</InputGroup.Text>
+                        <InputGroup.Text>{t(part.name)}</InputGroup.Text>
                     </InputGroup>
                 </FormGroup>
-            )}
-            <FormGroup controlId="hours" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <InputGroup>
-                    <Form.Control
-                        type="number"
-                        min={0}
-                        value={hours ?? ""}
-                        placeholder={placeholder?.hours}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
-                        disabled={disabled}
-                        aria-label={t("hours")}
-                    />
-                    <InputGroup.Text>{t("hours")}</InputGroup.Text>
-                </InputGroup>
-            </FormGroup>
-            <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <InputGroup>
-                    <Form.Control
-                        type="number"
-                        min={0}
-                        value={minutes ?? ""}
-                        placeholder={placeholder?.minutes}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
-                        disabled={disabled}
-                        aria-label={t("minutes")}
-                    />
-                    <InputGroup.Text>{t("minutes")}</InputGroup.Text>
-                </InputGroup>
-            </FormGroup>
-            {showSeconds && (
-                <FormGroup controlId="seconds" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                    <InputGroup>
-                        <Form.Control
-                            type="number"
-                            min={0}
-                            value={seconds ?? ""}
-                            placeholder={placeholder?.seconds}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
-                            disabled={disabled}
-                            aria-label={t("seconds")}
-                        />
-                        <InputGroup.Text>{t("seconds")}</InputGroup.Text>
-                    </InputGroup>
-                </FormGroup>
-            )}
+            ))}
         </div>
     );
 }
-function getInvalidPartMessage(parts: number[]): string {
+
+function getInvalidPartMessageKey(parts: number[]): "nonNegativeNumberRequired" | "wholeNumberRequired" {
     const filledParts = parts.filter((part) => part != null);
 
     if (filledParts.some((part) => part < 0)) {
-        return "Please enter positive number";
+        return "nonNegativeNumberRequired";
     }
     if (filledParts.some((part) => !Number.isInteger(part))) {
-        return "Please enter integer number";
+        return "wholeNumberRequired";
     }
     return null;
 }
@@ -204,26 +195,5 @@ function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
         hours,
         minutes,
         seconds,
-    };
-}
-
-export const overriddenDurationPlaceholder: DurationPickerProps["placeholder"] = {
-    days: "0",
-    hours: "0",
-    minutes: "0",
-    seconds: "0",
-};
-
-export function getDefaultDurationPlaceholder(
-    totalSeconds: number,
-    showDays = false
-): DurationPickerProps["placeholder"] {
-    const { days, hours, minutes, seconds } = getInitialValues(totalSeconds, showDays);
-
-    return {
-        days: `Default (${days})`,
-        hours: `Default (${hours})`,
-        minutes: `Default (${minutes})`,
-        seconds: `Default (${seconds})`,
     };
 }

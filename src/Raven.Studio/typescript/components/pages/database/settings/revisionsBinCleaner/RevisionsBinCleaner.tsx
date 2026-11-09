@@ -17,20 +17,21 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormGroup, FormSwitch } from "components/common/Form";
-import { getDefaultDurationPlaceholder, overriddenDurationPlaceholder } from "components/common/DurationPicker";
-import OverridableField from "components/common/OverridableField";
+import { FormDurationPicker, FormGroup, FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
+import moment from "moment";
+import FrequencyField from "components/common/FrequencyField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import useRevisionsBinCleanerFormSideEffects from "components/pages/database/settings/revisionsBinCleaner/useRevisionsBinCleanerFormSideEffects";
-import { revisionsBinCleanerUtils } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
+import {
+    DEFAULT_CLEANER_FREQUENCY_IN_SEC,
+    revisionsBinCleanerUtils,
+} from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Form from "react-bootstrap/Form";
-
-const defaultCleanerFrequencyPlaceholder = getDefaultDurationPlaceholder(300);
 
 export default function RevisionsBinCleaner() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -41,7 +42,9 @@ export default function RevisionsBinCleaner() {
         revisionsBinCleanerUtils.mapToFormData(await databasesService.getRevisionsBinCleanerConfiguration(databaseName))
     );
 
-    const { handleSubmit, control, formState, reset, setValue, watch } = useForm<Partial<RevisionsBinCleanerFormData>>({
+    const { handleSubmit, control, formState, reset, setValue, getValues } = useForm<
+        Partial<RevisionsBinCleanerFormData>
+    >({
         resolver: revisionsBinCleanerYupResolver,
         mode: "all",
         defaultValues: asyncGetRevisionsBinCleanerConfiguration.execute,
@@ -52,7 +55,23 @@ export default function RevisionsBinCleaner() {
 
     const { reportEvent } = useEventsCollector();
 
-    useRevisionsBinCleanerFormSideEffects(watch, setValue);
+    const resetSettingsOnToggle = (isEnabled: boolean) => {
+        if (isEnabled) {
+            return;
+        }
+
+        setValue("isMinimumEntriesAgeToKeepEnabled", false, DIRTY_AND_VALIDATE);
+        setValue("minimumEntriesAgeToKeep", null, DIRTY_AND_VALIDATE);
+        setValue("cleanerFrequencyInSec", null, DIRTY_AND_VALIDATE);
+    };
+
+    const toggleMinimumEntriesAgeToKeep = (isEnabled: boolean) => {
+        if (!isEnabled) {
+            setValue("minimumEntriesAgeToKeep", null, DIRTY_AND_VALIDATE);
+        } else if (getValues("minimumEntriesAgeToKeep") == null) {
+            setValue("minimumEntriesAgeToKeep", moment.duration(1, "month").asSeconds(), DIRTY_AND_VALIDATE);
+        }
+    };
 
     const handleSave: SubmitHandler<RevisionsBinCleanerFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -109,6 +128,7 @@ export default function RevisionsBinCleaner() {
                                                 name="isRevisionsBinCleanerEnabled"
                                                 disabled={!hasDatabaseAdminAccess}
                                                 control={control}
+                                                afterChange={resetSettingsOnToggle}
                                             >
                                                 Enable Revisions Bin Cleaner
                                             </FormSwitch>
@@ -118,6 +138,7 @@ export default function RevisionsBinCleaner() {
                                                 name="isMinimumEntriesAgeToKeepEnabled"
                                                 control={control}
                                                 color="primary"
+                                                afterChange={toggleMinimumEntriesAgeToKeep}
                                                 disabled={
                                                     !hasDatabaseAdminAccess ||
                                                     formState.isSubmitting ||
@@ -150,46 +171,22 @@ export default function RevisionsBinCleaner() {
                                                             formState.isSubmitting ||
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
-                                                        placeholder={{
-                                                            days: "0",
-                                                            hours: "0",
-                                                            minutes: "0",
-                                                        }}
+                                                        placeholder={ZERO_DURATION_PLACEHOLDER}
                                                         name="minimumEntriesAgeToKeep"
                                                         showDays
                                                     />
                                                 </FormGroup>
                                             </div>
                                         </Collapse>
-                                        <div className="align-self-start mw-100">
-                                            <OverridableField
-                                                control={control}
-                                                overrideName="isCleanerFrequencyInSecEnabled"
-                                                valueName="cleanerFrequencyInSec"
-                                                setValue={setValue}
-                                                label="Cleaner frequency"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled
-                                                }
-                                            >
-                                                {({ isOverridden, isDisabled, labelId }) => (
-                                                    <FormDurationPicker
-                                                        name="cleanerFrequencyInSec"
-                                                        control={control}
-                                                        disabled={isDisabled}
-                                                        aria-labelledby={labelId}
-                                                        placeholder={
-                                                            isOverridden
-                                                                ? overriddenDurationPlaceholder
-                                                                : defaultCleanerFrequencyPlaceholder
-                                                        }
-                                                        showSeconds
-                                                    />
-                                                )}
-                                            </OverridableField>
-                                        </div>
+                                        <FrequencyField
+                                            control={control}
+                                            name="cleanerFrequencyInSec"
+                                            label="Cleaner frequency"
+                                            disabled={
+                                                !hasDatabaseAdminAccess || !formValues.isRevisionsBinCleanerEnabled
+                                            }
+                                            defaultFrequencyInSec={DEFAULT_CLEANER_FREQUENCY_IN_SEC}
+                                        />
                                     </Card.Body>
                                 </Card>
                             </Col>

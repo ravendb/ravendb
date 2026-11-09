@@ -1,7 +1,7 @@
 @use "Content/scss/bs5variables";
 @use "Content/scss/sizes";
 
-.overridable-field-label-row {
+.field-with-default-label-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -11,7 +11,7 @@
     margin-bottom: sizes.$gutter-xxxs;
 }
 
-.overridable-field-has-hint {
+.field-with-default-has-hint {
     .input-group > .form-control,
     .input-group > .input-group-text {
         border-bottom-left-radius: 0;
@@ -19,7 +19,7 @@
     }
 }
 
-.overridable-field-hint {
+.field-with-default-hint {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -29,7 +29,7 @@
     border-radius: 0 0 bs5variables.$input-border-radius bs5variables.$input-border-radius;
     background-color: var(--faded-primary);
 
-    .overridable-field-use-optimal {
+    .field-with-default-use-optimal {
         font-size: inherit;
         line-height: inherit;
         font-weight: bs5variables.$font-weight-semibold;
