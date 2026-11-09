@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -28,6 +30,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static readonly ConcurrentDictionary<Type, byte[]> _typeNamePrefixes = new();
 
         private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
+
+        private static readonly ConcurrentDictionary<Type, TypeShape> _shapes = new();
+
+        private static readonly ConcurrentDictionary<Type, DictionaryShape> _dictionaryShapes = new();
+
+        private static readonly ConcurrentDictionary<Type, Func<IList>> _listFactories = new();
+
+        private static readonly ConcurrentDictionary<Type, Func<IList, object>> _collectionFactories = new();
+
+        private static readonly ConditionalWeakTable<JsonSerializerOptions, ConcurrentDictionary<Type, bool>> _writtenAsIs = new();
+
+        private static readonly ConditionalWeakTable<JsonSerializerOptions, ConcurrentDictionary<Type, JsonTypeInfo>> _typeInfos = new();
+
+        private static readonly ConcurrentDictionary<Type, TypedValue> _typedValues = new();
+
+        private static readonly ConcurrentDictionary<(Type KeyType, Type ValueType), DictionaryEntries> _dictionaryEntries = new();
 
         [ThreadStatic]
         private static HashSet<object> _writingWithTypeName;
@@ -114,7 +132,97 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return false;
         }
 
+        private static JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
+        {
+            ConcurrentDictionary<Type, JsonTypeInfo> cache = _typeInfos.GetValue(options, static _ => new ConcurrentDictionary<Type, JsonTypeInfo>());
+            return cache.TryGetValue(type, out JsonTypeInfo typeInfo) ? typeInfo : cache.GetOrAdd(type, options.GetTypeInfo(type));
+        }
+
+        private static TypedValue GetTypedValue(Type type)
+        {
+            return _typedValues.GetOrAdd(type, static t => (TypedValue)Activator.CreateInstance(typeof(TypedValue<>).MakeGenericType(t)));
+        }
+
+        private static void WriteTyped(Utf8JsonWriter writer, object value, Type type, JsonSerializerOptions options)
+        {
+            JsonTypeInfo typeInfo = GetTypeInfo(type, options);
+            if (GetTypedValue(type).TryWrite(writer, value, typeInfo, options) == false)
+                JsonSerializer.Serialize(writer, value, typeInfo);
+        }
+
+        private static object ReadTyped(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            JsonTypeInfo typeInfo = GetTypeInfo(type, options);
+            if (reader.TokenType != JsonTokenType.Null && GetTypedValue(type).TryRead(ref reader, typeInfo, options, out object value))
+                return value;
+
+            return JsonSerializer.Deserialize(ref reader, typeInfo);
+        }
+
+        private abstract class TypedValue
+        {
+            public abstract bool TryWrite(Utf8JsonWriter writer, object value, JsonTypeInfo typeInfo, JsonSerializerOptions options);
+
+            public abstract bool TryRead(ref Utf8JsonReader reader, JsonTypeInfo typeInfo, JsonSerializerOptions options, out object value);
+        }
+
+        private sealed class TypedValue<T> : TypedValue
+        {
+            public override bool TryWrite(Utf8JsonWriter writer, object value, JsonTypeInfo typeInfo, JsonSerializerOptions options)
+            {
+                if (typeInfo.Converter is not JsonConverter<T> converter)
+                    return false;
+
+                converter.Write(writer, (T)value, options);
+                return true;
+            }
+
+            public override bool TryRead(ref Utf8JsonReader reader, JsonTypeInfo typeInfo, JsonSerializerOptions options, out object value)
+            {
+                if (typeInfo.Converter is not JsonConverter<T> converter)
+                {
+                    value = null;
+                    return false;
+                }
+
+                value = converter.Read(ref reader, typeof(T), options);
+                return true;
+            }
+        }
+
+        private abstract class DictionaryEntries
+        {
+            public abstract bool TryWrite(Utf8JsonWriter writer, object dictionary, in ItemWriter values, JsonSerializerOptions options);
+        }
+
+        private sealed class DictionaryEntries<TKey, TValue> : DictionaryEntries
+        {
+            public override bool TryWrite(Utf8JsonWriter writer, object dictionary, in ItemWriter values, JsonSerializerOptions options)
+            {
+                if (dictionary is not IEnumerable<KeyValuePair<TKey, TValue>> pairs)
+                    return false;
+
+                foreach (KeyValuePair<TKey, TValue> pair in pairs)
+                {
+                    if (typeof(TKey) == typeof(string))
+                        writer.WritePropertyName((string)(object)pair.Key);
+                    else
+                        WriteKey(writer, pair.Key, typeof(TKey), options);
+
+                    values.Write(writer, pair.Value, options);
+                }
+
+                return true;
+            }
+        }
+
         private static bool IsWrittenAsIs(Type type, JsonSerializerOptions options)
+        {
+            ConcurrentDictionary<Type, bool> cache = _writtenAsIs.GetValue(options, static _ => new ConcurrentDictionary<Type, bool>());
+            return cache.TryGetValue(type, out bool writtenAsIs) ? writtenAsIs : cache.GetOrAdd(type, ComputeWrittenAsIs(type, options));
+        }
+
+        private static bool ComputeWrittenAsIs(Type type, JsonSerializerOptions options)
         {
             Type underlying = Nullable.GetUnderlyingType(type) ?? type;
             if (underlying.IsPrimitive || underlying.IsEnum || underlying == typeof(string) || underlying == typeof(decimal) ||
@@ -132,7 +240,116 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return IsSparrowType(underlying) || HasConverter(underlying, options);
         }
 
+        private static TypeShape GetShape(Type type) => _shapes.GetOrAdd(type, static t => new TypeShape(t));
+
+        private sealed class TypeShape
+        {
+            public readonly bool IsDictionary;
+
+            public readonly Type KeyType;
+
+            public readonly Type ValueType;
+
+            public readonly Type ItemType;
+
+            public readonly Type CreatedType;
+
+            public readonly bool IsPlainObject;
+
+            public TypeShape(Type type)
+            {
+                IsDictionary = ComputeDictionaryTypes(type, out KeyType, out ValueType);
+                ItemType = ComputeItemType(type);
+                CreatedType = ComputeCreatedType(type);
+                IsPlainObject = type != typeof(object) && type.IsInterface == false && type.IsAbstract == false && IsDictionary == false &&
+                                typeof(IEnumerable).IsAssignableFrom(type) == false;
+            }
+        }
+
+        private readonly struct ItemWriter
+        {
+            private readonly Type _itemType;
+
+            private readonly Type _runtimeType;
+
+            private readonly TypedValue _typed;
+
+            private readonly JsonTypeInfo _typeInfo;
+
+            private readonly bool _alwaysWriteObjectTypeName;
+
+            public ItemWriter(Type itemType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
+            {
+                _itemType = itemType;
+                _runtimeType = Nullable.GetUnderlyingType(itemType) ?? itemType;
+                _alwaysWriteObjectTypeName = alwaysWriteObjectTypeName;
+
+                bool exact = _runtimeType.IsSealed || _runtimeType.IsValueType;
+                bool direct = exact ? IsWrittenAsIs(_runtimeType, options) : alwaysWriteObjectTypeName == false && GetShape(itemType).IsPlainObject;
+                _typed = direct ? GetTypedValue(itemType) : null;
+                _typeInfo = direct ? GetTypeInfo(itemType, options) : null;
+            }
+
+            public void Write(Utf8JsonWriter writer, object item, JsonSerializerOptions options)
+            {
+                if (item == null)
+                    writer.WriteNullValue();
+                else if (_typed != null && item.GetType() == _runtimeType && _typed.TryWrite(writer, item, _typeInfo, options))
+                    return;
+                else
+                    WriteValue(writer, item, _itemType, _alwaysWriteObjectTypeName, options);
+            }
+        }
+
+        private readonly struct ItemReader
+        {
+            private readonly Type _itemType;
+
+            private readonly TypedValue _typed;
+
+            private readonly JsonTypeInfo _typeInfo;
+
+            private readonly bool _isPlainObject;
+
+            public ItemReader(Type itemType, JsonSerializerOptions options)
+            {
+                _itemType = itemType;
+                _typed = GetTypedValue(itemType);
+                _typeInfo = GetTypeInfo(itemType, options);
+                _isPlainObject = GetShape(itemType).IsPlainObject;
+            }
+
+            public object Read(ref Utf8JsonReader reader, JsonSerializerOptions options)
+            {
+                switch (reader.TokenType)
+                {
+                    case JsonTokenType.Null:
+                        return null;
+                    case JsonTokenType.StartArray:
+                        return TypeNameConverter.Read(ref reader, _itemType, options);
+                    case JsonTokenType.StartObject:
+                        if (_isPlainObject == false || TryPeekTypeName(reader, out _))
+                            return TypeNameConverter.Read(ref reader, _itemType, options);
+                        break;
+                }
+
+                return _typed.TryRead(ref reader, _typeInfo, options, out object value) ? value : TypeNameConverter.Read(ref reader, _itemType, options);
+            }
+        }
+
         private static bool TryGetDictionaryTypes(Type type, out Type keyType, out Type valueType)
+        {
+            TypeShape shape = GetShape(type);
+            keyType = shape.KeyType;
+            valueType = shape.ValueType;
+            return shape.IsDictionary;
+        }
+
+        private static Type GetItemType(Type type) => GetShape(type).ItemType;
+
+        private static Type GetCreatedType(Type declaredType) => GetShape(declaredType).CreatedType;
+
+        private static bool ComputeDictionaryTypes(Type type, out Type keyType, out Type valueType)
         {
             Type dictionaryInterface = type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(IDictionary<,>) || type.GetGenericTypeDefinition() == typeof(IReadOnlyDictionary<,>))
                 ? type
@@ -157,7 +374,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return true;
         }
 
-        private static Type GetItemType(Type type)
+        private static Type ComputeItemType(Type type)
         {
             if (type.IsArray)
                 return type.GetElementType();
@@ -192,7 +409,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         internal static object ReadItem(ref Utf8JsonReader reader, Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
         {
             return typeNameHandling == TypeNameHandling.None
-                ? JsonSerializer.Deserialize(ref reader, declaredType, options)
+                ? JsonSerializer.Deserialize(ref reader, GetTypeInfo(declaredType, options))
                 : Read(ref reader, declaredType, options);
         }
 
@@ -201,7 +418,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (item == null)
                 writer.WriteNullValue();
             else if (typeNameHandling == TypeNameHandling.None)
-                JsonSerializer.Serialize(writer, item, item.GetType(), options);
+                JsonSerializer.Serialize(writer, item, GetTypeInfo(item.GetType(), options));
             else
                 WriteValue(writer, item, declaredType, typeNameHandling == TypeNameHandling.Objects, options);
         }
@@ -217,7 +434,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             Type runtimeType = value.GetType();
             if (IsWrittenAsIs(runtimeType, options))
             {
-                JsonSerializer.Serialize(writer, value, runtimeType, options);
+                WriteTyped(writer, value, runtimeType, options);
                 return;
             }
 
@@ -252,10 +469,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (writeTypeName)
                 writer.WriteString(TypePropertyName, GetTypeName(runtimeType));
 
-            foreach (DictionaryEntry entry in dictionary)
+            var values = new ItemWriter(valueType, alwaysWriteObjectTypeName, options);
+            DictionaryEntries entries = _dictionaryEntries.GetOrAdd((keyType, valueType), static key => (DictionaryEntries)Activator.CreateInstance(typeof(DictionaryEntries<,>).MakeGenericType(key.KeyType, key.ValueType)));
+            if (entries.TryWrite(writer, dictionary, values, options) == false)
             {
-                WriteKey(writer, entry.Key, keyType, options);
-                WriteValue(writer, entry.Value, valueType, alwaysWriteObjectTypeName, options);
+                foreach (DictionaryEntry entry in dictionary)
+                {
+                    WriteKey(writer, entry.Key, keyType, options);
+                    values.Write(writer, entry.Value, options);
+                }
             }
 
             writer.WriteEndObject();
@@ -302,7 +524,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             private static JsonConverter<TKey> GetConverter(JsonSerializerOptions options) => (JsonConverter<TKey>)options.GetConverter(typeof(TKey));
         }
 
-        private static Type GetCreatedType(Type declaredType)
+        private static Type ComputeCreatedType(Type declaredType)
         {
             if (declaredType.IsInterface == false)
                 return declaredType;
@@ -346,9 +568,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 writer.WritePropertyName(ValuesPropertyName);
             }
 
+            var items = new ItemWriter(itemType, alwaysWriteObjectTypeName, options);
             writer.WriteStartArray();
             foreach (object item in enumerable)
-                WriteValue(writer, item, itemType, alwaysWriteObjectTypeName, options);
+                items.Write(writer, item, options);
             writer.WriteEndArray();
 
             if (wrapValues)
@@ -359,7 +582,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             if (writeTypeName == false)
             {
-                JsonSerializer.Serialize(writer, value, runtimeType, options);
+                JsonSerializer.Serialize(writer, value, GetTypeInfo(runtimeType, options));
                 return;
             }
 
@@ -374,7 +597,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 try
                 {
                     using (var valueWriter = new Utf8JsonWriter(buffer, SystemTextJsonSerializationConventions.WriterOptions))
-                        JsonSerializer.Serialize(valueWriter, value, runtimeType, options);
+                        JsonSerializer.Serialize(valueWriter, value, GetTypeInfo(runtimeType, options));
                 }
                 finally
                 {
@@ -431,13 +654,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType))
                     return ReadDictionary(ref reader, declaredType, keyType, valueType, options);
 
-                return JsonSerializer.Deserialize(ref reader, declaredType, options);
+                return JsonSerializer.Deserialize(ref reader, GetTypeInfo(declaredType, options));
             }
 
             if (reader.TokenType == JsonTokenType.StartArray && declaredType != typeof(object))
                 return ReadCollection(ref reader, declaredType, GetItemType(declaredType), options);
 
-            return JsonSerializer.Deserialize(ref reader, declaredType, options);
+            return ReadTyped(ref reader, declaredType, options);
         }
 
         internal static bool TryReadTypedObject(ref Utf8JsonReader reader, Type declaredType, JsonSerializerOptions options, out object value)
@@ -456,7 +679,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 value = ReadWrappedCollection(ref reader, type, options);
             else
             {
-                value = JsonSerializer.Deserialize(ref reader, type, options);
+                value = JsonSerializer.Deserialize(ref reader, GetTypeInfo(type, options));
                 RemoveTypeNameFromExtensionData(value, options);
             }
 
@@ -492,29 +715,53 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
         }
 
+        private sealed class DictionaryShape
+        {
+            public readonly Func<object> Create;
+
+            public readonly PropertyInfo Indexer;
+
+            public readonly Func<object, object> Finish;
+
+            public DictionaryShape(Type dictionaryType, Type keyType, Type valueType)
+            {
+                Type createdType = GetCreatedType(dictionaryType);
+                Type bufferType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
+                ConstructorInfo dictionaryConstructor = null;
+                MethodInfo immutableFactory = GetImmutableFactory(createdType);
+
+                if (immutableFactory != null || createdType.IsInterface || createdType.IsAbstract)
+                {
+                    createdType = bufferType;
+                }
+                else if (createdType.IsValueType == false && createdType.GetConstructor(Type.EmptyTypes) == null)
+                {
+                    dictionaryConstructor = createdType.GetConstructors()
+                        .FirstOrDefault(c => c.GetParameters() is { Length: 1 } parameters && parameters[0].ParameterType.IsAssignableFrom(bufferType));
+                    if (dictionaryConstructor != null)
+                        createdType = bufferType;
+                }
+
+                Type instanceType = createdType;
+                Create = instanceType.IsValueType == false && instanceType.GetConstructor(Type.EmptyTypes) is { } constructor
+                    ? Expression.Lambda<Func<object>>(Expression.New(constructor)).Compile()
+                    : () => Activator.CreateInstance(instanceType);
+                Indexer = typeof(IDictionary).IsAssignableFrom(instanceType) ? null : typeof(IDictionary<,>).MakeGenericType(keyType, valueType).GetProperty("Item");
+
+                if (immutableFactory != null)
+                    Finish = dictionary => immutableFactory.Invoke(null, [dictionary]);
+                else if (dictionaryConstructor != null)
+                    Finish = dictionary => dictionaryConstructor.Invoke([dictionary]);
+            }
+        }
+
         private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type keyType, Type valueType, JsonSerializerOptions options)
         {
-            Type createdType = GetCreatedType(dictionaryType);
-            Type bufferType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
-            ConstructorInfo dictionaryConstructor = null;
-            MethodInfo immutableFactory = GetImmutableFactory(createdType);
+            DictionaryShape shape = _dictionaryShapes.GetOrAdd(dictionaryType, t => new DictionaryShape(t, keyType, valueType));
+            object dictionary = shape.Create();
+            PropertyInfo indexer = shape.Indexer;
 
-            if (immutableFactory != null || createdType.IsInterface || createdType.IsAbstract)
-            {
-                createdType = bufferType;
-            }
-            else if (createdType.IsValueType == false && createdType.GetConstructor(Type.EmptyTypes) == null)
-            {
-                dictionaryConstructor = createdType.GetConstructors()
-                    .FirstOrDefault(c => c.GetParameters() is { Length: 1 } parameters && parameters[0].ParameterType.IsAssignableFrom(bufferType));
-                if (dictionaryConstructor != null)
-                    createdType = bufferType;
-            }
-
-            object dictionary = Activator.CreateInstance(createdType);
-
-            PropertyInfo indexer = dictionary is IDictionary ? null : typeof(IDictionary<,>).MakeGenericType(keyType, valueType).GetProperty("Item");
-
+            var values = new ItemReader(valueType, options);
             bool leading = true;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
@@ -527,17 +774,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (isTypeName)
                     continue;
 
-                object value = Read(ref reader, valueType, options);
+                object value = values.Read(ref reader, options);
                 if (dictionary is IDictionary nonGeneric)
                     nonGeneric[key] = value;
                 else
                     indexer.SetValue(dictionary, value, [key]);
             }
 
-            if (immutableFactory != null)
-                return immutableFactory.Invoke(null, [dictionary]);
-
-            return dictionaryConstructor == null ? dictionary : dictionaryConstructor.Invoke([dictionary]);
+            return shape.Finish == null ? dictionary : shape.Finish(dictionary);
         }
 
         private static MethodInfo GetImmutableFactory(Type type)
@@ -579,61 +823,72 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static object ReadCollection(ref Utf8JsonReader reader, Type collectionType, Type itemType, JsonSerializerOptions options)
         {
-            var items = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
+            IList items = _listFactories.GetOrAdd(itemType, static t => Expression.Lambda<Func<IList>>(Expression.New(typeof(List<>).MakeGenericType(t))).Compile())();
 
+            var itemReader = new ItemReader(itemType, options);
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                items.Add(Read(ref reader, itemType, options));
+                items.Add(itemReader.Read(ref reader, options));
 
-            return CreateCollection(collectionType, itemType, items);
+            return _collectionFactories.GetOrAdd(collectionType, t => CreateCollectionFactory(t, itemType))(items);
         }
 
-        private static object CreateCollection(Type collectionType, Type itemType, IList items)
+        private static Func<IList, object> CreateCollectionFactory(Type collectionType, Type itemType)
         {
             if (collectionType.IsArray)
             {
-                Array array = Array.CreateInstance(itemType, items.Count);
-                items.CopyTo(array, 0);
-                return array;
+                return items =>
+                {
+                    Array array = Array.CreateInstance(itemType, items.Count);
+                    items.CopyTo(array, 0);
+                    return array;
+                };
             }
 
-            if (collectionType.IsAssignableFrom(items.GetType()))
-                return items;
+            Type listType = typeof(List<>).MakeGenericType(itemType);
+            if (collectionType.IsAssignableFrom(listType))
+                return static items => items;
 
             MethodInfo immutableFactory = GetImmutableFactory(collectionType);
             if (immutableFactory != null)
-                return immutableFactory.Invoke(null, [items]);
+                return items => immutableFactory.Invoke(null, [items]);
 
             if (collectionType.IsInterface || collectionType.IsAbstract)
             {
                 Type setType = typeof(HashSet<>).MakeGenericType(itemType);
                 if (collectionType.IsAssignableFrom(setType))
-                    return Activator.CreateInstance(setType, items);
+                    return items => Activator.CreateInstance(setType, items);
 
-                throw new JsonException($"Cannot create an instance of collection type '{collectionType.FullName}'.");
+                return _ => throw new JsonException($"Cannot create an instance of collection type '{collectionType.FullName}'.");
             }
 
             ConstructorInfo enumerableConstructor = collectionType.GetConstructors()
-                .FirstOrDefault(c => c.GetParameters() is { Length: 1 } parameters && parameters[0].ParameterType.IsAssignableFrom(items.GetType()));
+                .FirstOrDefault(c => c.GetParameters() is { Length: 1 } parameters && parameters[0].ParameterType.IsAssignableFrom(listType));
             if (enumerableConstructor != null)
-                return enumerableConstructor.Invoke([items]);
+                return items => enumerableConstructor.Invoke([items]);
 
-            object collection = Activator.CreateInstance(collectionType);
-            if (collection is IList list)
+            if (typeof(IList).IsAssignableFrom(collectionType))
             {
-                foreach (object item in items)
-                    list.Add(item);
-                return collection;
+                return items =>
+                {
+                    var list = (IList)Activator.CreateInstance(collectionType);
+                    foreach (object item in items)
+                        list.Add(item);
+                    return list;
+                };
             }
 
             Type collectionInterface = typeof(ICollection<>).MakeGenericType(itemType);
             if (collectionInterface.IsAssignableFrom(collectionType) == false)
-                throw new JsonException($"Cannot populate collection type '{collectionType.FullName}'.");
+                return _ => throw new JsonException($"Cannot populate collection type '{collectionType.FullName}'.");
 
             MethodInfo add = collectionInterface.GetMethod("Add");
-            foreach (object item in items)
-                add.Invoke(collection, [item]);
-
-            return collection;
+            return items =>
+            {
+                object collection = Activator.CreateInstance(collectionType);
+                foreach (object item in items)
+                    add.Invoke(collection, [item]);
+                return collection;
+            };
         }
 
         internal static bool TryPeekTypeName(Utf8JsonReader reader, out string typeName)
