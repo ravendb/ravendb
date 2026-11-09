@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Acornima;
 using Acornima.Ast;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
 
@@ -12,7 +14,7 @@ namespace Raven.Server.Documents.Patch;
 /// <summary>
 /// A patch script made only of updates of top level fields, with values from the arguments or from literals:
 /// <c>this.F = v;</c> <c>this.F += v;</c> <c>this.F -= v;</c> <c>this.F++;</c> <c>this.F--;</c> <c>this.F = this.F + v;</c> <c>this.F = this.F - v;</c>
-/// where the field is <c>this.F</c>, <c>this['F']</c> or <c>this[args.f]</c>, and v is <c>args.x</c> or a literal.
+/// where the field is <c>this.F</c>, <c>this['F']</c> or <c>this[args.f]</c>, and v is <c>args.x</c> or a literal (string, number, boolean, null).
 /// Such a script needs no JavaScript engine, so we can build the patched document outside the transaction merger.
 /// The result follows the script engine: JavaScript number arithmetic, and <see cref="JsBlittableBridge"/>'s rule for
 /// writing a number back as an integer or a double. Anything else (other expressions, objects and arrays, missing or
@@ -49,7 +51,7 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     // the field is either a name or the name of the argument that holds it
     private readonly record struct Target(string Field, string FieldArgument);
 
-    // the value is either an argument or a literal (string or double)
+    // the value is either an argument or a literal (string, double, bool or null)
     private readonly record struct Operand(string Argument, object Literal);
 
     private readonly record struct Update(Target Target, UpdateKind Kind, Operand Value);
@@ -192,6 +194,12 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             case StringLiteral text:
                 operand = new Operand(null, text.Value);
                 return true;
+            case BooleanLiteral boolean:
+                operand = new Operand(null, boolean.Value);
+                return true;
+            case NullLiteral:
+                operand = new Operand(null, null);
+                return true;
             default:
                 operand = default;
                 return false;
@@ -206,8 +214,8 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         public int Offset;        // of the stored value: insertion order is descending offset
         public BlittableJsonToken OriginalType;
         public bool HasStored;    // false: undefined in JavaScript
-        public object Stored;
-        public object Value;      // null, string, bool or double, like Stored
+        public object Stored;     // null, bool, double, or a string: LazyStringValue, LazyCompressedStringValue or string
+        public object Value;      // like Stored
         public bool Unchanged;
     }
 
@@ -224,9 +232,6 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     public bool TryApply(JsonOperationContext context, BlittableJsonReaderObject document, BlittableJsonReaderObject args, out BlittableJsonReaderObject modified)
     {
         modified = null;
-        if (args == null)
-            return false;
-
         var buffer = new Changes();
         Span<Change> changes = buffer[.._updates.Length];
         for (var i = 0; i < _updates.Length; i++)
@@ -252,8 +257,8 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
                         return false;
                     change.Value = result;
                     break;
-                case (string a, string b) when update.Kind == UpdateKind.Add:
-                    change.Value = a + b;
+                case var (a, b) when update.Kind == UpdateKind.Add && IsString(a) && IsString(b):
+                    change.Value = a.ToString() + b.ToString();
                     break;
                 default:
                     return false; // JavaScript's conversions (undefined, null, bool, string with number) stay with the script runner
@@ -272,22 +277,7 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         if (changed == 0)
             return true; // not modified
 
-        var patched = Write(context, document, changes);
-        try
-        {
-            if (DocumentCompare.IsEqualTo(document, patched, DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata) == DocumentCompareResult.Equal)
-            {
-                patched.Dispose();
-                return true;
-            }
-        }
-        catch (InvalidOperationException)
-        {
-            patched.Dispose();
-            return false;
-        }
-
-        modified = patched;
+        modified = Write(context, document, changes);
         return true;
     }
 
@@ -368,6 +358,12 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             case string s:
                 writer.WriteValue(s);
                 break;
+            case LazyStringValue lsv:
+                writer.WriteValue(lsv.AsReadOnlySpan());
+                break;
+            case LazyCompressedStringValue lcsv:
+                writer.WriteValue(lcsv);
+                break;
             case bool b:
                 writer.WriteValue(b);
                 break;
@@ -387,7 +383,7 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         field = target.Field;
         if (field == null)
         {
-            if (args.TryGetMember(target.FieldArgument, out object name) == false)
+            if (args == null || args.TryGetMember(target.FieldArgument, out object name) == false)
                 return false;
             field = name switch
             {
@@ -409,7 +405,7 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             return true;
         }
 
-        if (args.TryGetMember(operand.Argument, out object argument) == false)
+        if (args == null || args.TryGetMember(operand.Argument, out object argument) == false)
         {
             value = null;
             return false; // undefined in JavaScript
@@ -422,10 +418,47 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     {
         (null, null) => true,
         (double x, double y) => x == y,
-        (string x, string y) => string.Equals(x, y, StringComparison.Ordinal),
         (bool x, bool y) => x == y,
-        _ => false
+        _ => IsString(a) && IsString(b) && StringEquals(a, b)
     };
+
+    private static bool IsString(object value) => value is LazyStringValue or LazyCompressedStringValue or string;
+
+    private static bool StringEquals(object a, object b)
+    {
+        if (a is LazyCompressedStringValue compressed)
+            return CompressedEquals(compressed, b);
+        if (b is LazyCompressedStringValue other)
+            return CompressedEquals(other, a);
+
+        return (a, b) switch
+        {
+            (LazyStringValue x, LazyStringValue y) => x.Equals(y),
+            (LazyStringValue x, string y) => x.Equals(y),
+            (string x, LazyStringValue y) => y.Equals(x),
+            _ => string.Equals((string)a, (string)b, StringComparison.Ordinal)
+        };
+    }
+
+    private static unsafe bool CompressedEquals(LazyCompressedStringValue compressed, object other)
+    {
+        // equal compressed bytes are equal strings; different ones may still be (another compressor version or setting)
+        if (other is LazyCompressedStringValue otherCompressed && otherCompressed.CompressedSize == compressed.CompressedSize &&
+            Memory.Compare(compressed.Buffer, otherCompressed.Buffer, compressed.CompressedSize) == 0)
+            return true;
+
+        var size = other switch
+        {
+            LazyStringValue lsv => lsv.Size,
+            LazyCompressedStringValue lcsv => lcsv.UncompressedSize,
+            _ => Encoding.UTF8.GetByteCount((string)other)
+        };
+        if (size != compressed.UncompressedSize)
+            return false; // no need to decompress
+
+        using (var uncompressed = compressed.ToLazyStringValue())
+            return StringEquals(uncompressed, other);
+    }
 
     // the value the script engine sees for a blittable value (BlittableObjectInstance), limited to the types we handle
     private static bool TryToJsValue(object raw, out object value)
@@ -444,11 +477,8 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             case LazyNumberValue lnv when lnv.TryParseDouble(out var d):
                 value = d;
                 return true;
-            case LazyStringValue lsv:
-                value = lsv.ToString();
-                return true;
-            case LazyCompressedStringValue lcsv:
-                value = lcsv.ToString();
+            case LazyStringValue or LazyCompressedStringValue:
+                value = raw;
                 return true;
             default:
                 value = null;
