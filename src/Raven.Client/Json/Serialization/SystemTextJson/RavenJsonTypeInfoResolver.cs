@@ -59,8 +59,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static readonly ConcurrentDictionary<Type, Dictionary<string, int>> _memberRanks = new();
 
-        private static readonly ConditionalWeakTable<object, HashSet<string>> _presentMembers = new();
-
         private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> _caseSensitiveOptions = new();
 
         private static readonly ConditionalWeakTable<JsonTypeInfo, BoundConstructor> _boundConstructors = new();
@@ -69,7 +67,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static object[] _pendingConstructorArguments;
 
         [ThreadStatic]
-        private static (JsonConverter Converter, JsonElement Json, HashSet<string> Present) _capturedMember;
+        private static (JsonConverter Converter, JsonElement Json, PresentMembers Present) _capturedMember;
+
+        [ThreadStatic]
+        private static (object Value, PresentMembers Present) _lastPresentMembers;
 
         private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
 
@@ -1510,7 +1511,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 property.Set = (target, value) =>
                 {
                     object existing = get(target);
-                    if (value == null && TryTakeCapturedJson(tracker, out JsonElement json, out HashSet<string> present))
+                    if (value == null && TryTakeCapturedJson(tracker, out JsonElement json, out PresentMembers present))
                         value = existing == null || existing is string || existing.GetType().IsValueType ? null : ReadCapturedJson(json, existing.GetType(), present, options);
 
                     PopulateExisting(existing, value, options);
@@ -1528,7 +1529,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return property.CustomConverter;
         }
 
-        private static bool TryTakeCapturedJson(JsonConverter converter, out JsonElement json, out HashSet<string> present)
+        private static bool TryTakeCapturedJson(JsonConverter converter, out JsonElement json, out PresentMembers present)
         {
             (JsonConverter owner, json, present) = _capturedMember;
             if (converter == null || ReferenceEquals(owner, converter) == false)
@@ -1542,16 +1543,65 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return true;
         }
 
-        private static object ReadCapturedJson(JsonElement json, Type type, HashSet<string> present, JsonSerializerOptions options)
+        private static object ReadCapturedJson(JsonElement json, Type type, PresentMembers present, JsonSerializerOptions options)
         {
             object value = json.Deserialize(type, options);
+            RememberPresentMembers(value, present);
+            return value;
+        }
+
+        private static void RememberPresentMembers(object value, PresentMembers present)
+        {
             if (value != null && present != null)
+                _lastPresentMembers = (value, present);
+        }
+
+        private static PresentMembers TakePresentMembers(object value)
+        {
+            (object lastValue, PresentMembers present) = _lastPresentMembers;
+            if (ReferenceEquals(lastValue, value) == false)
+                return null;
+
+            _lastPresentMembers = default;
+            return present;
+        }
+
+        private sealed class PresentMembers
+        {
+            private readonly JsonTypeInfo _typeInfo;
+
+            private readonly bool[] _flags;
+
+            private readonly HashSet<string> _names;
+
+            public PresentMembers(JsonTypeInfo typeInfo, bool[] flags)
             {
-                _presentMembers.Remove(value);
-                _presentMembers.Add(value, present);
+                _typeInfo = typeInfo;
+                _flags = flags;
             }
 
-            return value;
+            public PresentMembers(HashSet<string> names)
+            {
+                _names = names;
+            }
+
+            public bool Contains(JsonTypeInfo typeInfo, int index, string name)
+            {
+                if (_names != null)
+                    return _names.Contains(name);
+
+                if (ReferenceEquals(_typeInfo, typeInfo))
+                    return _flags[index];
+
+                StringComparison comparison = _typeInfo.Options.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+                for (int i = 0; i < _flags.Length; i++)
+                {
+                    if (_flags[i] && string.Equals(_typeInfo.Properties[i].Name, name, comparison))
+                        return true;
+                }
+
+                return false;
+            }
         }
 
         private sealed class PresentMembersConverter<T> : JsonConverter<T>
@@ -1560,6 +1610,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             private readonly JsonConverter<T> _inner;
 
+            private JsonTypeInfo _typeInfo;
+
             public PresentMembersConverter(JsonConverter<T> inner)
             {
                 _inner = inner;
@@ -1567,7 +1619,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                HashSet<string> present = ReadPropertyNames(reader, options);
+                PresentMembers present = ReadsIntoExisting
+                    ? ReadPropertyNames(reader, options) is { } names ? new PresentMembers(names) : null
+                    : ReadPresentMembers(reader, _typeInfo ??= GetObjectTypeInfo(options, typeof(T)), options);
                 if (ReadsIntoExisting && (reader.TokenType == JsonTokenType.StartArray || present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false))
                 {
                     using (JsonDocument document = JsonDocument.ParseValue(ref reader))
@@ -1577,13 +1631,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 }
 
                 T value = _inner != null ? _inner.Read(ref reader, typeToConvert, options) : JsonSerializer.Deserialize<T>(ref reader, options);
-
-                if (value != null && present != null)
-                {
-                    _presentMembers.Remove(value);
-                    _presentMembers.Add(value, present);
-                }
-
+                RememberPresentMembers(value, present);
                 return value;
             }
 
@@ -1593,6 +1641,43 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     _inner.Write(writer, value, options);
                 else
                     JsonSerializer.Serialize(writer, value, options);
+            }
+
+            private static PresentMembers ReadPresentMembers(Utf8JsonReader reader, JsonTypeInfo typeInfo, JsonSerializerOptions options)
+            {
+                if (reader.TokenType != JsonTokenType.StartObject)
+                    return null;
+
+                if (typeInfo.Kind != JsonTypeInfoKind.Object)
+                    return ReadPropertyNames(reader, options) is { } names ? new PresentMembers(names) : null;
+
+                var flags = new bool[typeInfo.Properties.Count];
+                Span<char> buffer = stackalloc char[128];
+                StringComparison comparison = options.PropertyNameCaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    MarkPresent(ref reader, typeInfo, flags, buffer, comparison);
+                    if (reader.Read() == false || reader.TrySkip() == false)
+                        return null;
+                }
+
+                return new PresentMembers(typeInfo, flags);
+            }
+
+            private static void MarkPresent(ref Utf8JsonReader reader, JsonTypeInfo typeInfo, bool[] flags, scoped Span<char> buffer, StringComparison comparison)
+            {
+                long length = reader.HasValueSequence ? reader.ValueSequence.Length : reader.ValueSpan.Length;
+                ReadOnlySpan<char> name = length <= buffer.Length ? buffer.Slice(0, reader.CopyString(buffer)) : reader.GetString().AsSpan();
+
+                for (int i = 0; i < flags.Length; i++)
+                {
+                    if (name.Equals(typeInfo.Properties[i].Name.AsSpan(), comparison))
+                    {
+                        flags[i] = true;
+                        return;
+                    }
+                }
             }
 
             private static HashSet<string> ReadPropertyNames(Utf8JsonReader reader, JsonSerializerOptions options)
@@ -1614,6 +1699,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static void PopulateExisting(object target, object value, JsonSerializerOptions options)
         {
+            PresentMembers present = TakePresentMembers(value);
             if (target == null || value == null || ReferenceEquals(target, value) || target is string)
                 return;
 
@@ -1633,12 +1719,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return;
 
-            _presentMembers.TryGetValue(value, out HashSet<string> present);
-
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(property.Name)))
+                if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(typeInfo, i, property.Name)))
                     property.Set(target, property.Get(value));
             }
         }
