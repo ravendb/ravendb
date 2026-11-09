@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using System.Globalization;
 using System.Numerics;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -21,8 +20,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             switch (reader.TokenType)
             {
                 case JsonTokenType.Number:
-                    string number = reader.HasValueSequence ? Encoding.UTF8.GetString(reader.ValueSequence.ToArray()) : Encoding.UTF8.GetString(reader.ValueSpan.ToArray());
-                    if (BigInteger.TryParse(number, NumberStyles.Integer, CultureInfo.InvariantCulture, out BigInteger integer))
+                    if (reader.TryGetInt64(out long int64))
+                        return int64;
+
+                    if (reader.TryGetUInt64(out ulong uint64))
+                        return uint64;
+
+                    if (TryParseInteger(ref reader, out BigInteger integer))
                         return integer;
 
                     return reader.TryGetDecimal(out decimal decimalValue) ? new BigInteger(decimalValue) : new BigInteger(reader.GetDouble());
@@ -31,6 +35,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 default:
                     throw new JsonException($"Expected a number or a string for '{typeof(BigInteger).FullName}' but got {reader.TokenType}.");
             }
+        }
+
+        private static bool TryParseInteger(ref Utf8JsonReader reader, out BigInteger integer)
+        {
+            ReadOnlySpan<byte> utf8 = reader.HasValueSequence ? reader.ValueSequence.ToArray() : reader.ValueSpan;
+            Span<char> chars = utf8.Length <= 256 ? stackalloc char[utf8.Length] : new char[utf8.Length];
+            for (int i = 0; i < utf8.Length; i++)
+                chars[i] = (char)utf8[i];
+
+#if NETSTANDARD2_0
+            return BigInteger.TryParse(chars.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out integer);
+#else
+            return BigInteger.TryParse(chars, NumberStyles.Integer, CultureInfo.InvariantCulture, out integer);
+#endif
         }
 
         public override void Write(Utf8JsonWriter writer, BigInteger value, JsonSerializerOptions options)
