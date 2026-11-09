@@ -126,28 +126,8 @@ namespace Raven.Client.Http
                     var requestBodyTask = bjc.EnsureCompletedAsync();
 
                     if (requestBodyTask.IsCompleted == false)
-                        await WaitForRequestBodyAsync(requestBodyTask, response, token).ConfigureAwait(false);
+                        await bjc.WaitForRequestBodyAsync(requestBodyTask, response, token).ConfigureAwait(false);
                 }
-            }
-        }
-
-        private static async Task WaitForRequestBodyAsync(Task requestBodyTask, HttpResponseMessage response, CancellationToken token)
-        {
-            if (response == null)
-            {
-                await requestBodyTask.ConfigureAwait(false);
-                return;
-            }
-
-            try
-            {
-                await requestBodyTask.WithCancellation(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
-            {
-                response.Dispose();
-                await requestBodyTask.ConfigureAwait(false);
-                throw;
             }
         }
 
