@@ -25,6 +25,7 @@ import {
     patchEdit,
     toEditorFieldPath,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-edits";
+import { toRavenDbTableJson } from "@/pages/setup/add-app-wizard/steps/map/collection/ravendb-table-json";
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 
 const editorSchema = z.object({ mapTables: z.object({ tables: tablesSchema }) });
@@ -204,7 +205,7 @@ function MappingJson({ name }: { name: string }) {
 
     return (
         <CopyableCode
-            code={JSON.stringify(mapFormTablesToDto([table])[0], null, 2)}
+            code={JSON.stringify(toRavenDbTableJson(mapFormTablesToDto([table])[0]), null, 2)}
             copyLabel={`Copy the ${name} mapping`}
             language="javascript"
         />
