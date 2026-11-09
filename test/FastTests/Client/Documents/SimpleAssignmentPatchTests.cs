@@ -79,6 +79,9 @@ namespace FastTests.Client.Documents
             yield return ["this.Note = args.v; this.Note++;", new Dictionary<string, object> { ["v"] = null }]; // null
             yield return ["this.Active += 1;", new Dictionary<string, object>()]; // bool
             yield return ["this.Age = this.Score + args.v;", new Dictionary<string, object> { ["v"] = 1L }]; // a different field
+            yield return ["this.Active = false;", new Dictionary<string, object>()]; // boolean literal
+            yield return ["this.Active = true;", new Dictionary<string, object>()]; // not modified
+            yield return ["this.Note = null; this.Extra = null;", new Dictionary<string, object>()]; // null literal, existing and new field
         }
 
         [RavenTheory(RavenTestCategory.Patching)]
@@ -343,9 +346,72 @@ namespace FastTests.Client.Documents
         [InlineData("this[args.f] = args.v; this.Age += 1;", false)] // the field from the arguments may be Age
         [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15;", true)]
         [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15; this.F16 = 16;", false)] // more updates than the fast path holds
+        [InlineData("this.Active = true; this.Done = false; this.Note = null;", true)]
         public void ScriptsThatTakeTheFastPath(string script, bool simple)
         {
             Assert.Equal(simple, SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch)) != null);
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData(false)]
+        [InlineData(true)] // repeated text: the stored string is compressed
+        public void LongStringsAreComparedAndWrittenWithoutAManagedCopy(bool repeated)
+        {
+            const int length = 100 * 1024;
+            var random = new byte[length / 4 * 3];
+            new Random(42).NextBytes(random);
+            var text = repeated ? new string('a', length) : Convert.ToBase64String(random); // random text does not compress
+            var other = text[..^1] + "!"; // same length, last character differs
+
+            var argsMode = repeated ? BlittableJsonDocumentBuilder.UsageMode.ToDisk : BlittableJsonDocumentBuilder.UsageMode.None; // compressed arguments too
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var document = context.ReadObject(new DynamicJsonValue { ["Text"] = text }, "items/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+            using (var same = context.ReadObject(new DynamicJsonValue { ["v"] = text }, "args", argsMode))
+            using (var changed = context.ReadObject(new DynamicJsonValue { ["v"] = other }, "args", argsMode))
+            {
+                document.TryGetMember("Text", out object stored);
+                Assert.Equal(repeated, stored is LazyCompressedStringValue);
+
+                var simple = SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest("this.Text = args.v;", PatchRequestType.Patch));
+                Assert.True(simple.TryApply(context, document, same, out var modified)); // warm up
+                Assert.Null(modified);
+
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                Assert.True(simple.TryApply(context, document, same, out modified));
+                var notModifiedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+                Assert.Null(modified);
+
+                before = GC.GetAllocatedBytesForCurrentThread();
+                Assert.True(simple.TryApply(context, document, changed, out modified));
+                var modifiedBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+                using (modified)
+                {
+                    Assert.NotNull(modified);
+                    Assert.True(modified.TryGet("Text", out string written));
+                    Assert.Equal(other, written);
+                }
+
+                // a UTF-16 copy of the stored or the argument value alone would be 200 KB
+                Output.WriteLine($"managed allocations: not modified {notModifiedBytes:#,#0} bytes, modified {modifiedBytes:#,#0} bytes");
+                Assert.True(notModifiedBytes < 16 * 1024, $"{notModifiedBytes:#,#0} bytes");
+                Assert.True(modifiedBytes < 16 * 1024, $"{modifiedBytes:#,#0} bytes");
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("this.Age++;", true)]
+        [InlineData("this.Active = false; this.Note = null;", true)]
+        [InlineData("this.Age += args.v;", false)] // reads an argument
+        public void ARequestWithoutValuesTakesTheFastPathWhenTheScriptReadsNoArgument(string script, bool applied)
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var document = context.ReadObject(new DynamicJsonValue { ["Age"] = 3L, ["Active"] = true, ["Note"] = "n" }, "items/1"))
+            {
+                var simple = SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch));
+                Assert.Equal(applied, simple.TryApply(context, document, args: null, out var modified));
+                Assert.Equal(applied, modified != null);
+                modified?.Dispose();
+            }
         }
 
         [RavenFact(RavenTestCategory.Patching)]
