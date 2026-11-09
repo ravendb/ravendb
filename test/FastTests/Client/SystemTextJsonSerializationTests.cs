@@ -289,6 +289,44 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.BulkInsert)]
+        public async Task DynamicJsonValueMetadataIsWrittenLikeNewtonsoft()
+        {
+            var metadata = new Raven.Client.Json.MetadataAsDictionary
+            {
+                ["Info"] = new DynamicJsonValue { ["a"] = 1, ["Tags"] = new DynamicJsonArray { "x", "y" } },
+                ["Names"] = new Dictionary<string, string> { ["first"] = "John" }
+            };
+
+            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
+            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject expected = newtonsoft.Serialization.DefaultConverter.ToBlittable(new User { Name = "user" }, metadata, context))
+            using (BlittableJsonReaderObject actual = systemTextJson.Serialization.DefaultConverter.ToBlittable(new User { Name = "user" }, metadata, context))
+            {
+                Assert.Equal(expected[Raven.Client.Constants.Documents.Metadata.Key].ToString(), actual[Raven.Client.Constants.Documents.Metadata.Key].ToString());
+            }
+
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            await using (var bulkInsert = store.BulkInsert())
+                await bulkInsert.StoreAsync(new User { Name = "bulk" }, "users/bulk", metadata);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var stored = (BlittableJsonReaderObject)(await session.LoadAsync<BlittableJsonReaderObject>("users/bulk"))[Raven.Client.Constants.Documents.Metadata.Key];
+                var info = (BlittableJsonReaderObject)stored["Info"];
+
+                Assert.Equal(1L, info["a"]);
+                Assert.Equal(2, ((BlittableJsonReaderArray)info["Tags"]).Length);
+                Assert.Equal("John", ((BlittableJsonReaderObject)stored["Names"])["first"].ToString());
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void FloatingPointNumbersAreWrittenLikeNewtonsoft()
         {
