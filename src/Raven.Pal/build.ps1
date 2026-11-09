@@ -68,11 +68,16 @@ New-Item -ItemType Directory -Path runtimes/osx-arm64/native -Force > $null
 Write-Output "Building Windows x86"
 zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86-windows-gnu -o runtimes/win-x86/native/librvnpal.dll $shared $win_files
 
+# 64-bit Windows DLLs use the MSVC default image base instead of lld's MinGW default (0x10000000, below 4GB):
+# - ARM64: newer Windows (e.g. build 28000) refuses to load an ARM64 image based below 4GB (ERROR_BAD_EXE_FORMAT)
+# - x64: an image based below 4GB is loaded at that fixed address instead of a randomized high-entropy ASLR address
+$win64_image_base = "-Wl,--image-base=0x180000000"
+
 Write-Output "Building Windows x64"
-zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows-gnu -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files
+zig cc -Wall -O3 -g -shared -fPIC -Iinc -target x86_64-windows-gnu $win64_image_base -o runtimes/win-x64/native/librvnpal.dll  $shared $win_files
 
 Write-Output "Building Windows ARM64"
-zig cc -Wall -O3 -g -shared -fPIC -Iinc -target aarch64-windows-gnu -o runtimes/win-arm64/native/librvnpal.dll $shared $win_files
+zig cc -Wall -O3 -g -shared -fPIC -Iinc -target aarch64-windows-gnu $win64_image_base -o runtimes/win-arm64/native/librvnpal.dll $shared $win_files
 
 Write-Output "Building Linux x64"
 zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target x86_64-linux-gnu ../../libs/liburing/liburing-2.8.1-x64.a -o runtimes/linux-x64/native/librvnpal.so $shared $posix_files $linux_only
