@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using Sparrow;
 using Sparrow.Extensions;
@@ -20,6 +21,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         void WriteString(LazyStringValue value);
 
         void WriteString(LazyCompressedStringValue value);
+
+        void WriteChar(char value);
 
         void WriteBoolean(bool value);
 
@@ -68,7 +71,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     sink.WriteString(s);
                     break;
                 case char c:
-                    sink.WriteString(c.ToString());
+                    sink.WriteChar(c);
                     break;
                 case bool b:
                     sink.WriteBoolean(b);
@@ -191,6 +194,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void WriteString(LazyCompressedStringValue value) => writer.WriteStringValue(value.ToString());
 
+        public void WriteChar(char value)
+        {
+            Span<char> chars = stackalloc char[1];
+            chars[0] = value;
+            writer.WriteStringValue(chars);
+        }
+
         public void WriteBoolean(bool value) => writer.WriteBooleanValue(value);
 
         public void WriteNumber(long value) => writer.WriteNumberValue(value);
@@ -243,6 +253,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WriteString(LazyStringValue value) => builder.WriteValue(value);
 
         public void WriteString(LazyCompressedStringValue value) => builder.WriteValue(value);
+
+        public unsafe void WriteChar(char value)
+        {
+            Span<byte> utf8 = stackalloc byte[4];
+            int length;
+            fixed (byte* bytes = utf8)
+                length = Encoding.UTF8.GetBytes(&value, 1, bytes, utf8.Length);
+
+            builder.WriteValue(utf8.Slice(0, length));
+        }
 
         public void WriteBoolean(bool value) => builder.WriteValue(value);
 
