@@ -590,7 +590,8 @@ export function ControlledDurationPicker<
     const { field, fieldState, isSubmitting, ...rest } = props;
 
     const [invalidPartMessage, setInvalidPartMessage] = useState<string>(null);
-    const message = (Number.isNaN(field.value) ? invalidPartMessage : null) ?? fieldState.error?.message;
+    const hasInvalidParts = Number.isNaN(field.value);
+    const message = (hasInvalidParts ? invalidPartMessage : null) ?? fieldState.error?.message;
 
     return (
         <div className="position-relative flex-grow-1">

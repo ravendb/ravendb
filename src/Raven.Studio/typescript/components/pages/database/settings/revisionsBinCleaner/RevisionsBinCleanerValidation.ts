@@ -7,15 +7,7 @@ const minimumEntriesAgeToKeepMessage =
 const schema = yup.object({
     isRevisionsBinCleanerEnabled: yup.boolean(),
     isMinimumEntriesAgeToKeepEnabled: yup.boolean(),
-    minimumEntriesAgeToKeep: yup
-        .number()
-        .nullable()
-        .positive(minimumEntriesAgeToKeepMessage)
-        .integer()
-        .when("isMinimumEntriesAgeToKeepEnabled", {
-            is: true,
-            then: (schema) => schema.required(minimumEntriesAgeToKeepMessage),
-        }),
+    minimumEntriesAgeToKeep: yup.number().nullable().positive(minimumEntriesAgeToKeepMessage).integer(),
     cleanerFrequencyInSec: yup.number().nullable().positive().integer(),
 });
 

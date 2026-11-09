@@ -2,7 +2,6 @@ import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as stories from "./RevisionsBinCleaner.stories";
-import { queryAllByClassName } from "test/byClassNameQueries";
 import { within } from "@testing-library/dom";
 
 const { DefaultRevisionsBinCleaner } = composeStories(stories);
@@ -18,48 +17,105 @@ describe("RevisionsBinCleaner", () => {
     });
 
     it("can disable 'set minimum entries age to keep' after disabling 'enable revisions bin cleaner'", async () => {
-        const durationPickerValues = [0, 0, 1];
-
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const durationPickerBefore = await screen.findByTestId("durationPicker");
-        const durationPickerInputsBefore = queryAllByClassName(durationPickerBefore, "form-control");
-        expect(durationPickerInputsBefore).toHaveLength(3);
+        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
+        const parts = within(minimumEntriesAge).getAllByRole("spinbutton");
+        expect(parts).toHaveLength(3);
 
         expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).toBeChecked();
 
-        durationPickerInputsBefore.forEach((input, index) => {
-            expect(input).toHaveValue(durationPickerValues[index]);
-            expect(input).not.toBeDisabled();
+        parts.forEach((part, index) => {
+            expect(part).toHaveValue([0, 0, 1][index]);
+            expect(part).toBeEnabled();
         });
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
         expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).not.toBeChecked();
 
-        const durationPickerAfter = await screen.findByTestId("durationPicker");
-        const durationPickerInputsAfter = queryAllByClassName(durationPickerAfter, "form-control");
-        expect(durationPickerInputsAfter).toHaveLength(3);
-
-        durationPickerInputsAfter.forEach((input) => {
-            expect(input).toHaveValue(null);
-            expect(input).toBeDisabled();
+        parts.forEach((part) => {
+            expect(part).toHaveValue(null);
+            expect(part).toBeDisabled();
         });
     });
 
-    it("asks for an age greater than 0 when the minimum age is cleared", async () => {
+    it("rejects a minimum entries age of zero", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const durationPicker = await screen.findByTestId("durationPicker");
-        const [, , minutesInput] = queryAllByClassName(durationPicker, "form-control");
-
-        await user.clear(minutesInput);
+        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
+        await user.clear(within(minimumEntriesAge).getByRole("spinbutton", { name: "Minutes" }));
 
         expect(
             await screen.findByText(
                 "The age must be greater than 0. To delete all items in the Revisions Bin, toggle 'Set minimum entries age to keep' off."
             )
         ).toBeInTheDocument();
+    });
+
+    it("shows the default minimum entries age after turning on 'set minimum entries age to keep'", async () => {
+        const { screen, user } = await rtlRender_WithWaitForLoad(
+            <DefaultRevisionsBinCleaner
+                revisionsBinCleanerDto={{
+                    Disabled: false,
+                    MinimumEntriesAgeToKeepInMin: 0,
+                    CleanerFrequencyInSec: 300,
+                }}
+            />
+        );
+
+        await user.click(screen.getByRole("checkbox", { name: "Set minimum entries age to keep" }));
+
+        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
+        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
+        expect(days).toHaveValue(null);
+        expect(days).toBeEnabled();
+        expect(days).toHaveAttribute("placeholder", "Default (30)");
+        expect(
+            screen.queryByRole("button", { name: "Reset to default", description: "Minimum entries age" })
+        ).not.toBeInTheDocument();
+    });
+
+    it("shows a stored minimum entries age of 30 days as the default", async () => {
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <DefaultRevisionsBinCleaner
+                revisionsBinCleanerDto={{
+                    Disabled: false,
+                    MinimumEntriesAgeToKeepInMin: 30 * 24 * 60,
+                    CleanerFrequencyInSec: 300,
+                }}
+            />
+        );
+
+        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
+        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
+        expect(days).toHaveValue(null);
+        expect(days).toHaveAttribute("placeholder", "Default (30)");
+    });
+
+    it("can reset minimum entries age to the default", async () => {
+        const { screen, user } = await rtlRender_WithWaitForLoad(
+            <DefaultRevisionsBinCleaner
+                revisionsBinCleanerDto={{
+                    Disabled: false,
+                    MinimumEntriesAgeToKeepInMin: 120,
+                    CleanerFrequencyInSec: 300,
+                }}
+            />
+        );
+
+        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
+        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
+        const hours = within(minimumEntriesAge).getByRole("spinbutton", { name: "Hours" });
+        expect(hours).toHaveValue(2);
+
+        await user.click(screen.getByRole("button", { name: "Reset to default", description: "Minimum entries age" }));
+
+        expect(hours).toHaveValue(null);
+        expect(days).toHaveAttribute("placeholder", "Default (30)");
+        expect(
+            screen.queryByRole("button", { name: "Reset to default", description: "Minimum entries age" })
+        ).not.toBeInTheDocument();
     });
 
     it("can disable cleaner frequency after disabling 'enable revisions bin cleaner'", async () => {
