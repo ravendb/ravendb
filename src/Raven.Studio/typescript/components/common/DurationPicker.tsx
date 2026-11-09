@@ -1,11 +1,10 @@
 import classNames from "classnames";
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, useEffect, useEffectEvent, useState } from "react";
 import Form from "react-bootstrap/Form";
 import FormGroup from "react-bootstrap/FormGroup";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useStudioTranslation } from "hooks/useStudioTranslation";
 import useUniqueId from "components/hooks/useUniqueId";
-import useIsomorphicLayoutEffect from "components/hooks/useIsomorphicLayoutEffect";
 
 interface Duration {
     days: number;
@@ -39,6 +38,15 @@ export const ZERO_DURATION_PLACEHOLDER: DurationPlaceholder = {
     seconds: "0",
 };
 
+const durationParts: DurationPart[] = ["days", "hours", "minutes", "seconds"];
+
+const emptyDuration: Duration = {
+    days: null,
+    hours: null,
+    minutes: null,
+    seconds: null,
+};
+
 export default function DurationPicker(props: DurationPickerProps) {
     const {
         totalSeconds,
@@ -57,89 +65,51 @@ export default function DurationPicker(props: DurationPickerProps) {
     const t = useStudioTranslation("durationPicker");
     const commonT = useStudioTranslation("common");
     const controlIdPrefix = useUniqueId("duration-picker-");
-    const initialValues = getInitialValues(totalSeconds, showDays);
 
-    const [days, setDays] = useState(initialValues?.days ?? null);
-    const [hours, setHours] = useState(initialValues?.hours ?? null);
-    const [minutes, setMinutes] = useState(initialValues?.minutes ?? null);
-    const [seconds, setSeconds] = useState(initialValues?.seconds ?? null);
+    const [duration, setDuration] = useState(() => toDuration(totalSeconds, showDays));
+    const [syncedTotalSeconds, setSyncedTotalSeconds] = useState(totalSeconds ?? null);
 
-    // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
-    const lastTotalSecondsRef = useRef(totalSeconds ?? null);
-    const onChangeRef = useRef(onChange);
+    const consumerTotalSeconds = totalSeconds ?? null;
+    if (!Object.is(consumerTotalSeconds, syncedTotalSeconds)) {
+        setSyncedTotalSeconds(consumerTotalSeconds);
+        setDuration(toDuration(consumerTotalSeconds, showDays));
+    }
 
-    useIsomorphicLayoutEffect(() => {
-        onChangeRef.current = onChange;
-    }, [onChange]);
-
-    useEffect(
-        () => () => {
-            if (Number.isNaN(lastTotalSecondsRef.current)) {
-                onChangeRef.current(null);
-            }
-        },
-        []
-    );
-
-    const parts: { name: DurationPart; value: number; setValue: (value: number) => void }[] = [
-        { name: "days" as const, value: days, setValue: setDays, isVisible: showDays },
-        { name: "hours" as const, value: hours, setValue: setHours, isVisible: true },
-        { name: "minutes" as const, value: minutes, setValue: setMinutes, isVisible: true },
-        { name: "seconds" as const, value: seconds, setValue: setSeconds, isVisible: showSeconds },
-    ].filter((part) => part.isVisible);
-
-    const isEmpty = parts.every((part) => part.value == null);
-    const invalidPartMessageKey = getInvalidPartMessageKey(parts.map((part) => part.value));
-    const invalidPartMessage = invalidPartMessageKey ? t(invalidPartMessageKey) : null;
-    const hasInvalidPart = invalidPartMessageKey != null;
-
-    useEffect(() => {
-        onInvalidPartMessageChange?.(invalidPartMessage);
-    }, [onInvalidPartMessageChange, invalidPartMessage]);
-
-    useEffect(() => {
-        const calculatedTotalSeconds = isEmpty
-            ? null
-            : hasInvalidPart
-              ? NaN
-              : seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
-
-        if (Object.is(calculatedTotalSeconds, toWholeSeconds(lastTotalSecondsRef.current))) {
-            return;
+    const clearInvalidTotalSeconds = useEffectEvent(() => {
+        if (Number.isNaN(totalSeconds)) {
+            onChange(null);
         }
+    });
 
-        lastTotalSecondsRef.current = calculatedTotalSeconds;
-        onChangeRef.current(calculatedTotalSeconds);
-    }, [days, hours, minutes, seconds, isEmpty, hasInvalidPart]);
+    useEffect(() => () => clearInvalidTotalSeconds(), []);
 
-    useEffect(() => {
-        const consumerTotalSeconds = totalSeconds ?? null;
-        if (Object.is(consumerTotalSeconds, lastTotalSecondsRef.current)) {
-            return;
-        }
-
-        lastTotalSecondsRef.current = consumerTotalSeconds;
-
-        const values = getInitialValues(totalSeconds, showDays);
-        setDays(values?.days ?? null);
-        setHours(values?.hours ?? null);
-        setMinutes(values?.minutes ?? null);
-        setSeconds(values?.seconds ?? null);
-    }, [totalSeconds, showDays]);
+    const isPartVisible: Record<DurationPart, boolean> = {
+        days: showDays,
+        hours: true,
+        minutes: true,
+        seconds: showSeconds,
+    };
+    const parts = durationParts.filter((part) => isPartVisible[part]);
 
     const getPlaceholder = (part: DurationPart): string => {
         if (defaultTotalSeconds == null) {
             return placeholder?.[part];
         }
-        if (!isEmpty) {
+        if (!isEmpty(duration, parts)) {
             return ZERO_DURATION_PLACEHOLDER[part];
         }
-        return commonT("defaultPlaceholder", { value: getInitialValues(defaultTotalSeconds, showDays)[part] });
+        return commonT("defaultPlaceholder", { value: toDuration(defaultTotalSeconds, showDays)[part] });
     };
 
-    const getInputValue = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.currentTarget.value;
-        return value === "" ? null : Number(value);
+    const handlePartChange = (part: DurationPart, inputValue: string) => {
+        const newDuration = { ...duration, [part]: inputValue === "" ? null : Number(inputValue) };
+        const newTotalSeconds = getTotalSeconds(newDuration, parts);
+        const invalidPartMessageKey = getInvalidPartMessageKey(newDuration, parts);
+
+        setDuration(newDuration);
+        setSyncedTotalSeconds(newTotalSeconds);
+        onInvalidPartMessageChange?.(invalidPartMessageKey ? t(invalidPartMessageKey) : null);
+        onChange(newTotalSeconds);
     };
 
     return (
@@ -150,21 +120,23 @@ export default function DurationPicker(props: DurationPickerProps) {
         >
             {parts.map((part, index) => (
                 <FormGroup
-                    key={part.name}
-                    controlId={index === 0 && id ? id : controlIdPrefix + part.name}
+                    key={part}
+                    controlId={index === 0 && id ? id : controlIdPrefix + part}
                     className={classNames({ "flex-grow-1": isFlexGrow })}
                 >
                     <InputGroup>
                         <Form.Control
                             type="number"
                             min={0}
-                            value={part.value ?? ""}
-                            placeholder={getPlaceholder(part.name)}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => part.setValue(getInputValue(e))}
+                            value={duration[part] ?? ""}
+                            placeholder={getPlaceholder(part)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                handlePartChange(part, e.currentTarget.value)
+                            }
                             disabled={disabled}
-                            aria-label={t(part.name)}
+                            aria-label={t(part)}
                         />
-                        <InputGroup.Text>{t(part.name)}</InputGroup.Text>
+                        <InputGroup.Text>{t(part)}</InputGroup.Text>
                     </InputGroup>
                 </FormGroup>
             ))}
@@ -172,49 +144,49 @@ export default function DurationPicker(props: DurationPickerProps) {
     );
 }
 
-function getInvalidPartMessageKey(parts: number[]): "nonNegativeNumberRequired" | "wholeNumberRequired" {
-    const filledParts = parts.filter((part) => part != null);
+function isEmpty(duration: Duration, parts: DurationPart[]): boolean {
+    return parts.every((part) => duration[part] == null);
+}
 
-    if (filledParts.some((part) => part < 0)) {
+function getInvalidPartMessageKey(
+    duration: Duration,
+    parts: DurationPart[]
+): "nonNegativeNumberRequired" | "wholeNumberRequired" {
+    const filledValues = parts.map((part) => duration[part]).filter((value) => value != null);
+
+    if (filledValues.some((value) => value < 0)) {
         return "nonNegativeNumberRequired";
     }
-    if (filledParts.some((part) => !Number.isInteger(part))) {
+    if (filledValues.some((value) => !Number.isInteger(value))) {
         return "wholeNumberRequired";
     }
     return null;
 }
 
-function toWholeSeconds(totalSeconds: number): number {
-    return totalSeconds == null ? null : Math.round(totalSeconds);
-}
-
-function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
-    if (totalSeconds == null || Number.isNaN(totalSeconds)) {
+function getTotalSeconds(duration: Duration, parts: DurationPart[]): number {
+    if (isEmpty(duration, parts)) {
         return null;
     }
-
-    let total = toWholeSeconds(totalSeconds),
-        hours = 0,
-        days = 0;
-
-    const seconds = total % 60;
-    total = Math.floor(total / 60);
-
-    const minutes = total % 60;
-    total = Math.floor(total / 60);
-
-    if (showDays) {
-        hours = total % 24;
-        days = Math.floor(total / 24);
-    } else {
-        hours = total;
-        days = 0;
+    if (getInvalidPartMessageKey(duration, parts)) {
+        return NaN;
     }
 
+    const { days, hours, minutes, seconds } = duration;
+    return seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
+}
+
+function toDuration(totalSeconds: number, showDays: boolean): Duration {
+    if (totalSeconds == null || Number.isNaN(totalSeconds)) {
+        return emptyDuration;
+    }
+
+    const wholeSeconds = Math.round(totalSeconds);
+    const totalHours = Math.floor(wholeSeconds / 3600);
+
     return {
-        days,
-        hours,
-        minutes,
-        seconds,
+        days: showDays ? Math.floor(totalHours / 24) : 0,
+        hours: showDays ? totalHours % 24 : totalHours,
+        minutes: Math.floor(wholeSeconds / 60) % 60,
+        seconds: wholeSeconds % 60,
     };
 }
