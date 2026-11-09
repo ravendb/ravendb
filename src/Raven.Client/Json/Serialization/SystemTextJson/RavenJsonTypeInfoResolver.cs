@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -60,6 +61,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static readonly ConditionalWeakTable<object, HashSet<string>> _presentMembers = new();
 
         private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> _caseSensitiveOptions = new();
+
+        private static readonly ConditionalWeakTable<JsonTypeInfo, BoundConstructor> _boundConstructors = new();
+
+        [ThreadStatic]
+        private static object[] _pendingConstructorArguments;
 
         [ThreadStatic]
         private static (JsonConverter Converter, JsonElement Json, HashSet<string> Present) _capturedMember;
@@ -140,15 +146,123 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (options.PropertyNameCaseInsensitive && HasPublicMembersWithCaseOnlyDifferentNames(type))
                 return CreateCaseSensitiveRedirect(type, options);
 
-            return RedirectCaseOnlyNameCollisions(base.GetTypeInfo(type, options));
+            return RedirectBoundConstructors(RedirectCaseOnlyNameCollisions(base.GetTypeInfo(type, options)));
         }
 
         internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type)
         {
             JsonTypeInfo typeInfo = options.GetTypeInfo(type);
-            return typeInfo.Converter is ICaseSensitiveRedirect redirect
-                ? redirect.Options.GetTypeInfo(type)
-                : typeInfo;
+            if (typeInfo.Converter is ICaseSensitiveRedirect redirect)
+                typeInfo = redirect.Options.GetTypeInfo(type);
+
+            return typeInfo.Converter is IBoundConstructorRedirect bound ? bound.ObjectTypeInfo : typeInfo;
+        }
+
+        private static JsonTypeInfo RedirectBoundConstructors(JsonTypeInfo typeInfo)
+        {
+            if (typeInfo.Kind != JsonTypeInfoKind.Object || _boundConstructors.TryGetValue(typeInfo, out BoundConstructor constructor) == false)
+                return typeInfo;
+
+            var redirect = (IBoundConstructorRedirect)Activator.CreateInstance(typeof(BoundConstructorConverter<>).MakeGenericType(typeInfo.Type), typeInfo, constructor);
+            return redirect.CreateTypeInfo(typeInfo.Options);
+        }
+
+        private interface IBoundConstructorRedirect
+        {
+            JsonTypeInfo ObjectTypeInfo { get; }
+
+            JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options);
+        }
+
+        private sealed class BoundConstructorConverter<T>(JsonTypeInfo objectTypeInfo, BoundConstructor constructor) : JsonConverter<T>, IBoundConstructorRedirect
+        {
+            public JsonTypeInfo ObjectTypeInfo => objectTypeInfo;
+
+            public JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options) => JsonMetadataServices.CreateValueInfo<T>(options, this);
+
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            {
+                if (reader.TokenType == JsonTokenType.Null)
+                    return default;
+
+                using (JsonDocument document = JsonDocument.ParseValue(ref reader))
+                {
+                    JsonElement json = document.RootElement;
+                    _pendingConstructorArguments = json.ValueKind == JsonValueKind.Object ? constructor.CreateArguments(json, options) : null;
+                    try
+                    {
+                        return (T)JsonSerializer.Deserialize(json, objectTypeInfo);
+                    }
+                    finally
+                    {
+                        _pendingConstructorArguments = null;
+                    }
+                }
+            }
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, objectTypeInfo);
+        }
+
+        private sealed class BoundConstructor(ParameterInfo[] parameters, JsonPropertyInfo[] properties, object[] defaults)
+        {
+            private readonly BoundParameterReader[] _readers = Array.ConvertAll(properties, property => property == null ? null : BoundParameterReader.Create(property));
+
+            public object[] CreateArguments(JsonElement json, JsonSerializerOptions options)
+            {
+                var arguments = (object[])defaults.Clone();
+                for (int i = 0; i < parameters.Length; i++)
+                {
+                    if (properties[i] != null && TryGetProperty(json, properties[i].Name, options.PropertyNameCaseInsensitive, out JsonElement value))
+                        arguments[i] = _readers[i].Read(value, options);
+                }
+
+                return arguments;
+            }
+
+            private static bool TryGetProperty(JsonElement json, string name, bool ignoreCase, out JsonElement value)
+            {
+                if (json.TryGetProperty(name, out value))
+                    return true;
+
+                if (ignoreCase)
+                {
+                    foreach (JsonProperty property in json.EnumerateObject())
+                    {
+                        if (string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            value = property.Value;
+                            return true;
+                        }
+                    }
+                }
+
+                value = default;
+                return false;
+            }
+        }
+
+        private abstract class BoundParameterReader
+        {
+            public static BoundParameterReader Create(JsonPropertyInfo property) =>
+                (BoundParameterReader)Activator.CreateInstance(typeof(BoundParameterReader<>).MakeGenericType(property.PropertyType), property.CustomConverter);
+
+            public abstract object Read(JsonElement json, JsonSerializerOptions options);
+        }
+
+        private sealed class BoundParameterReader<T>(JsonConverter converter) : BoundParameterReader
+        {
+            public override object Read(JsonElement json, JsonSerializerOptions options)
+            {
+                if (converter is not JsonConverter<T> typed)
+                    return json.Deserialize<T>(options);
+
+                if (json.ValueKind == JsonValueKind.Null && typed.HandleNull == false)
+                    return default(T);
+
+                var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json.GetRawText()));
+                reader.Read();
+                return typed.Read(ref reader, typeof(T), options);
+            }
         }
 
         private static JsonTypeInfo RedirectCaseOnlyNameCollisions(JsonTypeInfo typeInfo)
@@ -1272,42 +1386,50 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 return;
 
             ParameterInfo[] parameters = constructor.GetParameters();
-            if (parameters.Length == 0 || AllParametersBind(typeInfo, parameters))
+            if (parameters.Length == 0)
                 return;
 
-            var arguments = new object[parameters.Length];
+            var properties = new JsonPropertyInfo[parameters.Length];
+            var defaults = new object[parameters.Length];
+            bool allBound = true;
+            bool anyBound = false;
             for (int i = 0; i < parameters.Length; i++)
             {
                 ParameterInfo parameter = parameters[i];
-                arguments[i] = parameter.HasDefaultValue
+                properties[i] = FindBoundProperty(typeInfo, parameter);
+                allBound &= properties[i] != null;
+                anyBound |= properties[i] != null;
+                defaults[i] = parameter.HasDefaultValue
                     ? parameter.DefaultValue
                     : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
-
-                SetBackingFieldOfBoundReadOnlyProperty(typeInfo, parameter);
             }
 
-            typeInfo.CreateObject = () => constructor.Invoke(arguments);
+            if (allBound)
+                return;
+
+            typeInfo.CreateObject = () =>
+            {
+                object[] arguments = _pendingConstructorArguments ?? defaults;
+                _pendingConstructorArguments = null;
+                return constructor.Invoke(arguments);
+            };
+
+            if (anyBound)
+                _boundConstructors.Add(typeInfo, new BoundConstructor(parameters, properties, defaults));
         }
 
-        private static void SetBackingFieldOfBoundReadOnlyProperty(JsonTypeInfo typeInfo, ParameterInfo parameter)
+        private static JsonPropertyInfo FindBoundProperty(JsonTypeInfo typeInfo, ParameterInfo parameter)
         {
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.AttributeProvider is not PropertyInfo propertyInfo ||
-                    string.Equals(propertyInfo.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) == false ||
-                    property.PropertyType != parameter.ParameterType)
-                    continue;
-
-                if (property.Set == null)
-                {
-                    FieldInfo backingField = propertyInfo.DeclaringType?.GetField($"<{propertyInfo.Name}>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
-                    if (backingField != null)
-                        property.Set = backingField.SetValue;
-                }
-
-                return;
+                if (property.AttributeProvider is MemberInfo member &&
+                    string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) &&
+                    property.PropertyType == parameter.ParameterType)
+                    return property;
             }
+
+            return null;
         }
 
         private static ConstructorInfo GetParameterizedConstructor(Type type)
@@ -1320,26 +1442,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             ConstructorInfo[] publicConstructors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public);
             return publicConstructors.Length == 1 ? publicConstructors[0] : null;
-        }
-
-        private static bool AllParametersBind(JsonTypeInfo typeInfo, ParameterInfo[] parameters)
-        {
-            foreach (ParameterInfo parameter in parameters)
-            {
-                bool bound = false;
-                for (int i = 0; i < typeInfo.Properties.Count && bound == false; i++)
-                {
-                    JsonPropertyInfo property = typeInfo.Properties[i];
-                    bound = property.AttributeProvider is MemberInfo member &&
-                            string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) &&
-                            property.PropertyType == parameter.ParameterType;
-                }
-
-                if (bound == false)
-                    return false;
-            }
-
-            return true;
         }
 
         private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo, bool constructedWithParameters)
