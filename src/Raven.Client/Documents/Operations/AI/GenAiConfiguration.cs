@@ -99,6 +99,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     /// </summary>
     [JsonDeserializationIgnore]
     [IgnoreDataMember]
+    [System.Text.Json.Serialization.JsonIgnore]
     [Obsolete($"{nameof(GenAiConfiguration)} doesn't support multiple transformations. Please use {nameof(GenAiTransformation)} property instead.")]
 #pragma warning disable CS0809 // Obsolete member overrides non-obsolete member
     public override List<Transformation> Transforms
