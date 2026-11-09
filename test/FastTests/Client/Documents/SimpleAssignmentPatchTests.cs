@@ -414,6 +414,42 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("this.Name = foo(args.v);")]
+        [InlineData("if (this.Age) this.Age = 1;")]
+        [InlineData("this.Age = this.Age ? 1 : 2;")]
+        [InlineData("this.Tags = {};")]
+        public void ScriptsThatCannotBeSimpleAreNotParsedOrCached(string script)
+        {
+            script += $" // {Guid.NewGuid()}";
+            Assert.Null(SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch)));
+            Assert.False(SimpleAssignmentPatch.IsCached(script));
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void AScriptInUseOutlivesNewerScripts()
+        {
+            var cache = new SimpleAssignmentPatch.ScriptCache(size: 4);
+            cache.Add("hot", null);
+            for (var i = 0; i < 100; i++)
+            {
+                Assert.True(cache.TryGet("hot", out _)); // used between the arrivals of new scripts
+                cache.Add($"once/{i}", null);
+                Assert.True(cache.Count <= 4);
+            }
+            Assert.True(cache.Contains("hot"));
+            Assert.False(cache.Contains("once/0"));
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void ConcurrentMissesAddAScriptOnce()
+        {
+            var cache = new SimpleAssignmentPatch.ScriptCache(size: 4);
+            Parallel.For(0, 64, new ParallelOptions { MaxDegreeOfParallelism = 8 }, _ => cache.Add("script", null));
+            Assert.Equal(1, cache.Count);
+            Assert.Equal(1, cache.QueuedForEviction);
+        }
+
         [RavenFact(RavenTestCategory.Patching)]
         public void LowMemoryClearsTheScriptCache()
         {

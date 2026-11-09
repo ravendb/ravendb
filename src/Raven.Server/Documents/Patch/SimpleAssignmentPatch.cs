@@ -1,10 +1,11 @@
 using System;
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Acornima;
 using Acornima.Ast;
-using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Patch;
 /// </summary>
 internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
 {
-    private static readonly SimpleAssignmentPatch Scripts = new([], new(size: 1024, StringComparer.Ordinal)); // the notification holds its handlers weakly
+    private static readonly SimpleAssignmentPatch Scripts = new([], new ScriptCache(size: 1024)); // the notification holds its handlers weakly
     private static readonly SimpleAssignmentPatch NotSimple = new([]);
     private static readonly ParserOptions ParserOptions = ParserOptions.Default;
 
@@ -37,7 +38,7 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     {
     }
 
-    internal static bool IsCached(string script) => Scripts._cache.TryGetValue(script, out _);
+    internal static bool IsCached(string script) => Scripts._cache.Contains(script);
 
     internal static void LowMemoryForTesting() => Scripts.LowMemory(LowMemorySeverity.ExtremelyLow);
 
@@ -61,9 +62,9 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     private static readonly Operand One = new(null, 1d);
 
     private readonly Update[] _updates;
-    private readonly SizeLimitedConcurrentDictionary<string, SimpleAssignmentPatch> _cache; // the parsed scripts, only on Scripts
+    private readonly ScriptCache _cache; // the parsed scripts, only on Scripts
 
-    private SimpleAssignmentPatch(Update[] updates, SizeLimitedConcurrentDictionary<string, SimpleAssignmentPatch> cache = null)
+    private SimpleAssignmentPatch(Update[] updates, ScriptCache cache = null)
     {
         _updates = updates;
         _cache = cache;
@@ -71,16 +72,86 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
 
     public static SimpleAssignmentPatch TryGet(PatchRequest patch)
     {
-        if (patch?.Script == null || patch.Type != PatchRequestType.Patch || patch.HasFunctions)
+        if (patch?.Script == null || patch.Type != PatchRequestType.Patch || patch.HasFunctions || MayBeSimple(patch.Script) == false)
             return null;
 
-        if (Scripts._cache.TryGetValue(patch.Script, out var simple) == false)
-        {
-            simple = Parse(patch.Script) ?? NotSimple;
-            Scripts._cache.Set(patch.Script, simple);
-        }
+        if (Scripts._cache.TryGet(patch.Script, out var simple) == false)
+            simple = Scripts._cache.Add(patch.Script, Parse(patch.Script) ?? NotSimple);
 
         return ReferenceEquals(simple, NotSimple) ? null : simple;
+    }
+
+    private const int MaxScriptLength = 1024;
+    private static readonly SearchValues<char> NeverInASimpleScript = SearchValues.Create("({?");
+
+    
+    private static bool MayBeSimple(string script) => // a simple script is short and has no call, block, object or conditional
+        script.Length <= MaxScriptLength && script.AsSpan().IndexOfAny(NeverInASimpleScript) < 0;
+
+    /// <summary>
+    /// The parsed scripts, shared by all the databases. Second-chance eviction: a script used since the eviction last passed
+    /// it gets another round, so the scripts in use stay while one-off scripts go. Concurrent misses add a script once.
+    /// </summary>
+    internal sealed class ScriptCache(int size)
+    {
+        private sealed class Entry(SimpleAssignmentPatch value)
+        {
+            public readonly SimpleAssignmentPatch Value = value;
+            public volatile bool Used;
+        }
+
+        private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
+        private readonly ConcurrentQueue<string> _order = new();
+
+        public bool Contains(string script) => _entries.ContainsKey(script);
+
+        internal int Count => _entries.Count;
+
+        internal int QueuedForEviction => _order.Count;
+
+        public bool TryGet(string script, out SimpleAssignmentPatch value)
+        {
+            if (_entries.TryGetValue(script, out var entry) == false)
+            {
+                value = null;
+                return false;
+            }
+
+            if (entry.Used == false)
+                entry.Used = true; // written once, so we don't dirty the CPU cache line each time
+            value = entry.Value;
+            return true;
+        }
+
+        public SimpleAssignmentPatch Add(string script, SimpleAssignmentPatch value)
+        {
+            var entry = new Entry(value);
+            var current = _entries.GetOrAdd(script, entry);
+            if (ReferenceEquals(current, entry) == false)
+                return current.Value; // another thread added it
+
+            _order.Enqueue(script);
+            // two rounds at most: a round clears the used marks, so the next one finds a script to evict
+            for (var i = 0; _entries.Count > size && i < 2 * size && _order.TryDequeue(out var oldest); i++)
+            {
+                if (_entries.TryGetValue(oldest, out var candidate) == false)
+                    continue;
+                if (candidate.Used)
+                {
+                    candidate.Used = false;
+                    _order.Enqueue(oldest);
+                    continue;
+                }
+                _entries.TryRemove(oldest, out _);
+            }
+            return value;
+        }
+
+        public void Clear()
+        {
+            _entries.Clear();
+            _order.Clear();
+        }
     }
 
     private static SimpleAssignmentPatch Parse(string script)
