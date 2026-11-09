@@ -92,7 +92,7 @@ interface ActionGlobalStatusLoaded {
     type: "GlobalStatusLoaded";
 }
 
-type IndexesStatsReducerAction =
+export type IndexesStatsReducerAction =
     | ActionDeleteIndexes
     | ActionStatsLoaded
     | ActionProgressLoadError

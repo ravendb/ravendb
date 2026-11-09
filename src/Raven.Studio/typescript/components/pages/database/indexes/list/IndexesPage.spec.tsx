@@ -74,7 +74,7 @@ describe("IndexesPage", function () {
 
         await screen.findByText("StaleInProgress");
 
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
         await waitFor(() => expect(getProgress).toHaveBeenCalled());
 
         // the periodic refresh is not scoped to any index, so the server reports every stale index
@@ -101,7 +101,7 @@ describe("IndexesPage", function () {
 
     it("skips the indexes with exact progress in the estimated progress request", async () => {
         jest.useFakeTimers({ advanceTimers: true });
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
 
         try {
             const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
@@ -130,7 +130,7 @@ describe("IndexesPage", function () {
 
     it("keeps the estimated counts when the exact progress request fails", async () => {
         const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
 
         try {
             const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
@@ -161,7 +161,7 @@ describe("IndexesPage", function () {
 
     it("does not send a second exact progress request while the first is pending", async () => {
         jest.useFakeTimers({ advanceTimers: true });
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
 
         try {
             const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
@@ -176,7 +176,7 @@ describe("IndexesPage", function () {
                 const [, , , exact] = args;
                 if (exact) {
                     exactCalls++;
-                    return new Promise((resolve) => (resolveExactRequest = resolve));
+                    return new Promise<IndexProgress[]>((resolve) => (resolveExactRequest = resolve));
                 }
                 estimatedCalls++;
                 return Promise.resolve([staleProgress]);
@@ -206,9 +206,53 @@ describe("IndexesPage", function () {
         }
     });
 
+    it("waits for the pending exact progress request before sending the next one from the toggle", async () => {
+        jest.useFakeTimers({ advanceTimers: true });
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
+
+        try {
+            const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
+
+            await screen.findByText("StaleInProgress");
+
+            const [, staleProgress] = IndexesStubs.getStaleInProgressIndex();
+            const exactRequests: Array<(progress: IndexProgress[]) => void> = [];
+            getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
+                const [, , , exact] = args;
+                if (exact) {
+                    return new Promise<IndexProgress[]>((resolve) => exactRequests.push(resolve));
+                }
+                return Promise.resolve([staleProgress]);
+            });
+
+            const distributionItems = screen.queryAllByClassName("distribution-item");
+            await user.hover(distributionItems[0]);
+
+            await fireClick(await screen.findByText("show exact counts"));
+            await waitFor(() => expect(exactRequests).toHaveLength(1));
+            await act(async () => exactRequests[0]([staleProgress]));
+
+            act(() => {
+                jest.advanceTimersByTime(15_000);
+            });
+            await waitFor(() => expect(exactRequests).toHaveLength(2));
+
+            await fireClick(await screen.findByText("show estimated counts"));
+            await fireClick(await screen.findByText("show exact counts"));
+
+            expect(exactRequests).toHaveLength(2);
+
+            await act(async () => exactRequests[1]([staleProgress]));
+            await waitFor(() => expect(exactRequests).toHaveLength(3));
+        } finally {
+            getProgress.mockReset();
+            jest.useRealTimers();
+        }
+    });
+
     it("keeps the exact counts when a refresh started before the toggle completes after it", async () => {
         jest.useFakeTimers({ advanceTimers: true });
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
 
         try {
             const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
@@ -222,7 +266,9 @@ describe("IndexesPage", function () {
             let resolveRefresh: (progress: IndexProgress[]) => void;
             getProgress.mockImplementation((...args: Parameters<IndexesService["getProgress"]>) => {
                 const [, , , exact] = args;
-                return exact ? Promise.resolve([exactProgress]) : new Promise((resolve) => (resolveRefresh = resolve));
+                return exact
+                    ? Promise.resolve([exactProgress])
+                    : new Promise<IndexProgress[]>((resolve) => (resolveRefresh = resolve));
             });
 
             act(() => {
@@ -249,7 +295,7 @@ describe("IndexesPage", function () {
     it("falls back to the estimated counts when a periodic exact progress refresh fails", async () => {
         jest.useFakeTimers({ advanceTimers: true });
         const reportError = jest.spyOn(messagePublisher, "reportError").mockImplementation(() => {});
-        const getProgress = mockServices.indexesService.mock.getProgress as unknown as jest.Mock;
+        const getProgress = jest.mocked(mockServices.indexesService.mock.getProgress);
 
         try {
             const { screen, fireClick, user } = rtlRender(<StaleIndexWithEstimatedProgress />);
