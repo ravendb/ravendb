@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Operations;
@@ -205,8 +206,8 @@ namespace FastTests.Client.Documents
                                database.IdentityPartsSeparator, isTest: false, debugMode: false, collectResultsNeeded: true, returnDocument: false))
                     {
                         command.SetPrepared("items/1", changeVector, flags, prepared);
-                        if (simplePatchKnown)
-                            command.SetSimplePatch(SimpleAssignmentPatch.TryGet(patch)); // re-applied without the script engine
+                        if (simplePatchKnown == false)
+                            command.SetSimplePatchForTesting(null); // the merger runs the script engine, not the fast path
                         await database.TxMerger.Enqueue(command);
                         Assert.Equal(PatchStatus.Patched, command.PatchResult.Status);
                     }
@@ -411,6 +412,45 @@ namespace FastTests.Client.Documents
                 Assert.Equal(applied, simple.TryApply(context, document, args: null, out var modified));
                 Assert.Equal(applied, modified != null);
                 modified?.Dispose();
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task ASimplePatchBuildsNoScriptEngine(bool inABatch)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Item { Name = "original", Age = 1 }, "items/1");
+                    session.SaveChanges();
+                }
+
+                var request = new PatchRequest { Script = "this.Name = args.v; this.Age += 1;", Values = { ["v"] = "changed" } };
+                if (inABatch)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Advanced.Defer(new PatchCommandData("items/1", null, request, null));
+                        session.SaveChanges();
+                    }
+                }
+                else
+                {
+                    Assert.Equal(PatchStatus.Patched, store.Operations.Send(new PatchOperation("items/1", null, request)));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var item = session.Load<Item>("items/1");
+                    Assert.Equal("changed", item.Name);
+                    Assert.Equal(2, item.Age);
+                }
+
+                var database = await GetDatabase(store.Database);
+                Assert.Equal(0, database.Scripts.NumberOfCachedScripts);
             }
         }
 

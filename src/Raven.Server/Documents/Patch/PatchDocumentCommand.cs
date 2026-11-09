@@ -37,6 +37,10 @@ namespace Raven.Server.Documents.Patch
         protected BlittableJsonReaderObject CloneForResult(BlittableJsonReaderObject document, JsonOperationContext context) =>
             ModifiedDocumentRequired ? document.Clone(_externalContext ?? context) : null;
 
+        protected BlittableJsonReaderObject InCallerContextForResult(BlittableJsonReaderObject document, JsonOperationContext context) =>
+            ModifiedDocumentRequired == false ? null :
+            _externalContext != null && document.Modifications == null ? document : CloneForResult(document, context);
+
         protected readonly (PatchRequest Run, BlittableJsonReaderObject Args) _patchIfMissing;
         private readonly BlittableJsonReaderObject _createIfMissing;
         protected (PatchRequest Run, BlittableJsonReaderObject Args) _patch;
@@ -241,13 +245,7 @@ namespace Raven.Server.Documents.Patch
                     }
                 }
 
-                if (putResult != null)
-                {
-                    result.ChangeVector = putResult.Value.ChangeVector;
-                    result.Collection = putResult.Value.Collection.Name;
-                    result.LastModified = putResult.Value.LastModified;
-                    result.Etag = putResult.Value.Etag;
-                }
+                putResult?.CopyTo(result);
 
                 if (_isTest && result.Status == PatchStatus.NotModified)
                 {
@@ -477,7 +475,9 @@ namespace Raven.Server.Documents.Patch
             _prepared = new PreparedPatch(id, changeVector, flags, document, CollectionName.GetCollectionName(document), metadata);
         }
 
-        internal void SetSimplePatch(SimpleAssignmentPatch simplePatch)
+        internal SimpleAssignmentPatch SimplePatch => _simplePatch;
+
+        internal void SetSimplePatchForTesting(SimpleAssignmentPatch simplePatch)
         {
             _simplePatch = simplePatch;
         }
@@ -512,7 +512,9 @@ namespace Raven.Server.Documents.Patch
                     return true;
                 }
                 var currentChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)Schemas.Documents.DocumentsTable.ChangeVector, current);
-                if (ChangeVector.CompareVersion(currentChangeVector, prepared.ChangeVector, context) != 0)
+                // the same string in the common case: parse both only when they differ
+                if (string.Equals(currentChangeVector, prepared.ChangeVector, StringComparison.Ordinal) == false &&
+                    ChangeVector.CompareVersion(currentChangeVector, prepared.ChangeVector, context) != 0)
                     return false;
             }
 
@@ -522,15 +524,8 @@ namespace Raven.Server.Documents.Patch
                 flags: prepared.Flags.Strip(DocumentFlags.FromClusterTransaction),
                 knownCollectionName: prepared.Collection, knownMetadata: prepared.Metadata);
 
-            PatchResult = new PatchResult
-            {
-                Status = PatchStatus.Patched,
-                ModifiedDocument = CloneForResult(prepared.Document, context),
-                ChangeVector = putResult.ChangeVector,
-                Collection = putResult.Collection.Name,
-                LastModified = putResult.LastModified,
-                Etag = putResult.Etag
-            };
+            PatchResult = new PatchResult { Status = PatchStatus.Patched, ModifiedDocument = InCallerContextForResult(prepared.Document, context) };
+            putResult.CopyTo(PatchResult);
             return true;
         }
 
@@ -559,15 +554,8 @@ namespace Raven.Server.Documents.Patch
 
                 var putResult = storage.Put(context, current.Id, current.ChangeVector, modified,
                     flags: current.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                PatchResult = new PatchResult
-                {
-                    Status = PatchStatus.Patched,
-                    ModifiedDocument = CloneForResult(modified, context),
-                    ChangeVector = putResult.ChangeVector,
-                    Collection = putResult.Collection.Name,
-                    LastModified = putResult.LastModified,
-                    Etag = putResult.Etag
-                };
+                PatchResult = new PatchResult { Status = PatchStatus.Patched, ModifiedDocument = CloneForResult(modified, context) };
+                putResult.CopyTo(PatchResult);
                 return true;
             }
         }
@@ -611,8 +599,13 @@ namespace Raven.Server.Documents.Patch
             if (string.IsNullOrEmpty(id) || id.EndsWith(identityPartsSeparator) || id.EndsWith('|'))
                 throw new ArgumentException($"The ID argument has invalid value: '{id}'", nameof(id));
 
+            _simplePatch = isTest == false && debugMode == false && expectedChangeVector == null && patchIfMissing.run == null && createIfMissing == null
+                ? SimpleAssignmentPatch.TryGet(patch.run)
+                : null;
+
             // If the caller is a DocumentsOperationContext, then we can apply the optimization.
-            if (context is DocumentsOperationContext doContext)
+            // A simple patch needs no engine: one is rented in the merger only if the fast path falls back to the script.
+            if (_simplePatch == null && context is DocumentsOperationContext doContext)
                 InitializeCmd(doContext);
         }
 
@@ -627,17 +620,20 @@ namespace Raven.Server.Documents.Patch
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            // PERF: Since we were not able to apply the optimization of shifting the cost of the operations into the constructor
-            // we will do it here instead. 
-            if (_isInitialized == false)
-                InitializeCmd(context);
-
-            Debug.Assert(context.DocumentDatabase == _database);
+            Debug.Assert(_database == null || _database == context.DocumentDatabase);
+            _database = context.DocumentDatabase; // the reply needs it also when the fast path rented no engine
 
             if (_prepared is not { } prepared || TryWritePrepared(context, prepared) == false)
             {
                 if (_simplePatch == null || TryApplySimplePatch(context) == false)
+                {
+                    // PERF: Since we were not able to apply the optimization of shifting the cost of the operations into the constructor
+                    // we will do it here instead. 
+                    if (_isInitialized == false)
+                        InitializeCmd(context);
+
                     PatchResult = ExecuteOnDocument(context, _id, _expectedChangeVector, _run, _runIfMissing);
+                }
             }
 
             ReleaseScriptRunners();

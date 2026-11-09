@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -24,8 +24,9 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
     // The merger is a single thread: page faults and patch work done here do not stall the writes queued behind this one.
     // Returns a task that completes once the pages the update modifies are in memory.
-    private ValueTask PrepareOutsideOfMerger(DocumentsOperationContext context, string id, PatchDocumentCommand command, SimpleAssignmentPatch simplePatch, BlittableJsonReaderObject args)
+    private ValueTask PrepareOutsideOfMerger(DocumentsOperationContext context, string id, PatchDocumentCommand command, BlittableJsonReaderObject args)
     {
+        var simplePatch = command.SimplePatch;
         var storage = RequestHandler.Database.DocumentsStorage;
         var readAhead = Pager.CanReadPagesAhead(storage.Environment.Options);
         if (simplePatch == null && readAhead == false)
@@ -85,15 +86,8 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
         if (isTest == false)
         {
-            var simplePatch = debugMode == false && changeVector == null && patchIfMissing == null && createIfMissingCmd == null
-                ? SimpleAssignmentPatch.TryGet(patch)
-                : null;
-
-            if (simplePatch != null)
-                command.SetSimplePatch(simplePatch);
-            var pagesRead = debugMode == false ? PrepareOutsideOfMerger(context, id, command, simplePatch, patchArgs) : ValueTask.CompletedTask;
-
-            await pagesRead;
+            if (debugMode == false)
+                await PrepareOutsideOfMerger(context, id, command, patchArgs);
             if (command.PatchResult == null)
                 await RequestHandler.Database.TxMerger.Enqueue(command);
         }

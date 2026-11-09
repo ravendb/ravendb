@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.JsonPatch.Operations;
@@ -98,12 +98,9 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     _patchResult = new JsonPatchResult
                     {
                         Status = PatchStatus.Patched,
-                        ModifiedDocument = document.Data?.Clone(_externalContext),
-                        ChangeVector = putResult.Value.ChangeVector,
-                        Collection = putResult.Value.Collection.Name,
-                        LastModified = putResult.Value.LastModified,
-                        Etag = putResult.Value.Etag
+                        ModifiedDocument = document.Data?.Clone(_externalContext)
                     };
+                    putResult.Value.CopyTo(_patchResult);
                 }
             }
             catch (Exception ex) when (ex is not Raven.Client.Exceptions.SchemaValidation.SchemaValidationException)

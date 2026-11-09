@@ -2444,6 +2444,14 @@ namespace Raven.Server.Documents
             public DateTime LastModified;
             public string ChangeVector;
             public DocumentFlags Flags;
+
+            public readonly void CopyTo(PatchResultBase result)
+            {
+                result.ChangeVector = ChangeVector;
+                result.Collection = Collection.Name;
+                result.LastModified = LastModified;
+                result.Etag = Etag;
+            }
         }
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)
