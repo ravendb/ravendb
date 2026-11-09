@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Server.Documents;
 
@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Context
     public sealed class DocumentTransactionCache
     {
         public Dictionary<string, CollectionName> Collections;
+
+        public Dictionary<ulong, CollectionName> CollectionsByDocumentsTableOwnerHash;
 
         internal bool Published;
 

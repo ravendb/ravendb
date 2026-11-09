@@ -41,6 +41,7 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
+using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Impl.Paging;
@@ -375,9 +376,8 @@ namespace Raven.Server.Documents
             };
 
             llt.TryGetClientState(out DocumentTransactionCache previousCache);
-            var collectionsForReads = previousCache.Collections;
-            var collectionsForWrites = TryAddCollectionsCreatedInTransaction(tx, collectionsForReads);
-            var collections = collectionsForWrites ?? collectionsForReads;
+            var (collectionsForWrites, collectionsByOwnerHashForWrites) = TryAddCollectionsCreatedInTransaction(tx, previousCache);
+            var collections = collectionsForWrites ?? previousCache.Collections;
 
             currentCache.EtagsByCollectionIndex = 
                   RecomputeChangedCollectionEtags(tx, collections, collectionsForWrites, previousCache.EtagsByCollectionIndex);
@@ -385,43 +385,50 @@ namespace Raven.Server.Documents
             AssertIncrementalCacheMatchesFullScan(tx, collections, currentCache.EtagsByCollectionIndex);
 
             currentCache.Collections = collections;
+            currentCache.CollectionsByDocumentsTableOwnerHash = collectionsByOwnerHashForWrites ?? previousCache.CollectionsByDocumentsTableOwnerHash;
             currentCache.RevisionsCount = tx.ReadTree(Schemas.Revisions.RevisionsCountSlice)?.ReadHeader().NumberOfEntries ?? 0;
             currentCache.Published = true; // this instance is immutable from here on
 
             tx.LowLevelTransaction.UpdateClientState(currentCache);
         }
 
-        private Dictionary<string, CollectionName> TryAddCollectionsCreatedInTransaction(Transaction tx,
-            IReadOnlyDictionary<string, CollectionName> collectionsForReads)
+        private (Dictionary<string, CollectionName> ByName, Dictionary<ulong, CollectionName> ByOwnerHash) TryAddCollectionsCreatedInTransaction(Transaction tx,
+            DocumentTransactionCache previous)
         {
+            var collectionsForReads = previous?.Collections ?? EmptyCollections;
             var collectionsTable = tx.OpenTable(CollectionsSchema, CollectionsSlice);
             if (collectionsTable.NumberOfEntries == collectionsForReads.Count) // we only ever _add_ new collections
-                return null;
+                return default;
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 var collectionsForWrites = new Dictionary<string, CollectionName>(collectionsForReads, StringComparer.OrdinalIgnoreCase);
-               foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                var collectionsByOwnerHashForWrites = new Dictionary<ulong, CollectionName>(previous?.CollectionsByDocumentsTableOwnerHash ?? []);
+                foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
                     var collection = TableValueToId(ctx, (int)CollectionsTable.Name, entry).ToString();
                     if (collectionsForWrites.ContainsKey(collection))
                         continue;
 
-                    collectionsForWrites[collection] = new CollectionName(collection) { Index = collectionsForWrites.Count };
+                    var name = new CollectionName(collection) { Index = collectionsForWrites.Count };
+                    collectionsForWrites[collection] = name;
+                    using (Slice.From(tx.Allocator, name.GetTableName(CollectionTableType.Documents), ByteStringType.Immutable, out Slice tableName))
+                        collectionsByOwnerHashForWrites[RawDataSection.GetOwnerHash(tableName)] = name;
                 }
 
-                return collectionsForWrites;
+                return (collectionsForWrites, collectionsByOwnerHashForWrites);
             }
         }
 
         private void SeedTransactionCache(Transaction tx)
         {
-            var collections = TryAddCollectionsCreatedInTransaction(tx, EmptyCollections) ??
-                              new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+            var (existing, collectionsByOwnerHash) = TryAddCollectionsCreatedInTransaction(tx, previous: null);
+            var collections = existing ?? new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             tx.LowLevelTransaction.UpdateClientState(new DocumentTransactionCache
             {
                 Collections = collections,
+                CollectionsByDocumentsTableOwnerHash = collectionsByOwnerHash ?? [],
                 EtagsByCollectionIndex = ComputeAllCollectionEtags(tx, collections),
                 Published = true // this transaction's own commit hook will carry it forward, it must not be mutated in place
             });
@@ -1299,8 +1306,17 @@ namespace Raven.Server.Documents
         public ValueTask PrefetchDocumentAsync(DocumentsOperationContext context, Document document)
         {
             Span<long> pages = stackalloc long[PagesToUpdatePerDocument];
-            var count = GetPagesToUpdate(context, document, pages);
+            var count = GetPagesToUpdate(context, document.StorageId, ExtractCollectionName(context, document.Data), pages);
             return Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
+        }
+
+        public ValueTask PrefetchDocumentAsync(DocumentsOperationContext context, string id)
+        {
+            Span<long> pages = stackalloc long[PagesToUpdatePerDocument];
+            var count = GetPagesToUpdate(context, id, pages);
+            return count == 0
+                ? ValueTask.CompletedTask
+                : Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
         }
 
         /// <summary>
@@ -1317,13 +1333,7 @@ namespace Raven.Server.Documents
             {
                 var count = 0;
                 foreach (var id in ids)
-                {
-                    using (var document = Get(context, id, DocumentFields.Data, throwOnConflict: false))
-                    {
-                        if (document != null)
-                            count += GetPagesToUpdate(context, document, pages.Slice(count, PagesToUpdatePerDocument));
-                    }
-                }
+                    count += GetPagesToUpdate(context, id, pages.Slice(count, PagesToUpdatePerDocument));
                 return count == 0
                     ? ValueTask.CompletedTask
                     : Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
@@ -1337,12 +1347,26 @@ namespace Raven.Server.Documents
 
         private const int PagesToUpdatePerDocument = 4; // its page, its section header, its two etag index leaves
 
-        private int GetPagesToUpdate(DocumentsOperationContext context, Document document, Span<long> pages)
+        private int GetPagesToUpdate(DocumentsOperationContext context, string id, Span<long> pages)
         {
-            var collectionName = ExtractCollectionName(context, document.Data);
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            {
+                if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict: false, out TableValueReader tvr) == false)
+                    return 0;
+
+                var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+                if (llt.TryGetClientState(out DocumentTransactionCache cache) == false ||
+                    cache.CollectionsByDocumentsTableOwnerHash?.TryGetValue(RawDataSection.GetOwnerHash(llt, tvr.Id), out var collection) != true)
+                    return 0;
+                return GetPagesToUpdate(context, tvr.Id, collection, pages);
+            }
+        }
+
+        private int GetPagesToUpdate(DocumentsOperationContext context, long storageId, CollectionName collectionName, Span<long> pages)
+        {
             var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
                 collectionName.GetTableName(CollectionTableType.Documents));
-            return table?.GetPagesToUpdate(document.StorageId, pages, Schemas.Documents.AllDocsEtagsIndex, Schemas.Documents.CollectionEtagsIndex) ?? 0;
+            return table?.GetPagesToUpdate(storageId, pages, Schemas.Documents.AllDocsEtagsIndex, Schemas.Documents.CollectionEtagsIndex) ?? 0;
         }
 
         public Document GetByEtag(DocumentsOperationContext context, long etag)
