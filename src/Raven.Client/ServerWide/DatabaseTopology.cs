@@ -397,9 +397,11 @@ namespace Raven.Client.ServerWide
         public string ClusterTransactionIdBase64;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public int Count => Members.Count + Promotables.Count + Rehabs.Count;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public IEnumerable<string> AllNodes
         {
             get

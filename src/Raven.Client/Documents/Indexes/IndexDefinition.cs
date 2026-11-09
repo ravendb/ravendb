@@ -320,24 +320,31 @@ namespace Raven.Client.Documents.Indexes
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private byte[] _cachedHashCodeAsBytes;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private HashSet<string> _maps;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private Dictionary<string, IndexFieldOptions> _fields;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private Dictionary<string, string> _additionalSources;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private HashSet<AdditionalAssembly> _additionalAssemblies;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private IndexConfiguration _configuration;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         private List<string[]> _compoundFields;
 
         /// <summary>

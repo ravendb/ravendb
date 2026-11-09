@@ -166,9 +166,11 @@ namespace Raven.Client.ServerWide
         public HashSet<string> UnusedDatabaseIds = [];
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSharded => Sharding?.Shards?.Count > 0;
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         internal IEnumerable<(string Name, DatabaseTopology Topology)> Topologies
         {
             get

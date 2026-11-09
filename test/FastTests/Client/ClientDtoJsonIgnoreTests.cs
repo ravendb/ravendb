@@ -1,11 +1,16 @@
 using System;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -97,6 +102,43 @@ public class ClientDtoJsonIgnoreTests(ITestOutputHelper output) : NoDisposalNeed
             Assert.Equal("ai", conventions.Serialization.DefaultConverter.FromBlittable<GenAiConfiguration>(json).Name);
             Assert.Equal("ai", conventions.Serialization.DefaultConverter.FromBlittable<EmbeddingsGenerationConfiguration>(json).Name);
         }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void EveryIgnoredClientDtoMemberIsAlsoIgnoredByPlainSystemTextJson()
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+        var unpaired = typeof(DocumentStore).Assembly.GetTypes()
+            .SelectMany(type => type.GetProperties(all).Cast<MemberInfo>().Concat(type.GetFields(all)))
+            .Where(member => member.IsDefined(typeof(IgnoreDataMemberAttribute), inherit: false))
+            .Where(member => member.IsDefined(typeof(System.Text.Json.Serialization.JsonIgnoreAttribute), inherit: false) == false)
+            .Select(member => $"{member.DeclaringType.FullName}.{member.Name}")
+            .OrderBy(name => name)
+            .ToList();
+
+        Assert.Empty(unpaired);
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void PlainSystemTextJsonSkipsIgnoredClientDtoMembers()
+    {
+        var options = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+
+        var record = System.Text.Json.JsonSerializer.Serialize(new DatabaseRecord("db"), options);
+        Assert.DoesNotContain(nameof(DatabaseRecord.IsSharded), record);
+
+        var topology = System.Text.Json.JsonSerializer.Serialize(new DatabaseTopology(), options);
+        Assert.DoesNotContain(nameof(DatabaseTopology.AllNodes), topology);
+
+        var aggregation = System.Text.Json.JsonSerializer.Serialize(new TimeSeriesRangeAggregation<HeartRate>(), options);
+        Assert.DoesNotContain("not found in the results", aggregation);
+    }
+
+    private class HeartRate
+    {
+        [TimeSeriesValue(0)]
+        public double Value;
     }
 
     private static DocumentConventions CreateConventions(Serializer serializer)

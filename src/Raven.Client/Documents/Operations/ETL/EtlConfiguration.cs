@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         [JsonDeserializationIgnore]
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         internal T Connection { get; set; }
 
         public virtual void Initialize(T connectionString)

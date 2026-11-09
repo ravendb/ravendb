@@ -262,6 +262,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues First
         {
             get
@@ -277,6 +278,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Last
         {
             get
@@ -292,6 +294,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Min
         {
             get
@@ -307,6 +310,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Max
         {
             get
@@ -322,6 +326,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Sum
         {
             get
@@ -337,6 +342,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Count
         {
             get
@@ -352,6 +358,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         public TValues Average
         {
             get
