@@ -167,8 +167,6 @@ public class MigrationPlanAssemblyTests(ITestOutputHelper output) : NoDisposalNe
         var unmapped = PlanToCdcConfiguration.UnmappedTables(
             config, Discovered("orders", "order_lines", "customers"), "public");
 
-        // orders is a root and order_lines is embedded, so both are produced; customers is only
-        // referenced, so nothing in this plan writes it.
         Assert.Equal(["public.customers"], unmapped);
     }
 

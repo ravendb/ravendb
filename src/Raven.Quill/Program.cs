@@ -82,8 +82,6 @@ builder.Services.AddOpenApi(options =>
         return Task.CompletedTask;
     });
 
-    // A derived type's schema lists the discriminator the serializer writes, but as optional. Every
-    // derived type carries it, and a generated client tells the derived types apart by it.
     options.AddSchemaTransformer((schema, context, _) =>
     {
         var type = context.JsonTypeInfo.Type;

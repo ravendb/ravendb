@@ -723,7 +723,6 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
             turns ?? new MigrationTurns(),
             new QuillLogger<MigrationService>());
 
-    /// <summary>A browser-side stream over an in-memory response; a gone browser is one whose request is already aborted.</summary>
     private static (MigrationStream Stream, HttpContext Context) NewStream(bool browserGone = false)
     {
         var ctx = new DefaultHttpContext();

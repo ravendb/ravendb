@@ -17,7 +17,6 @@ using Raven.Server.Routing;
 
 namespace QuillTests;
 
-/// <summary>Builders for the migration-agent tests: a configuration that validates, a plan as the api answers it, and a planner to talk to.</summary>
 internal static class MigrationSamples
 {
     public const string PlanId = "planner/11111111-1111-1111-1111-111111111111";
@@ -121,7 +120,6 @@ internal static class MigrationSamples
     public static PlanEntry Entry(CdcSinkTableConfig config, PlanEntryStatus status = PlanEntryStatus.Registered) =>
         new() { Area = "Sales", Version = 1, Rationale = "because", Config = config, Status = status };
 
-    /// <summary>The plan/get answer as the api writes it: PascalCase, nulls written, enums by name, entries keyed by collection.</summary>
     public static string PlanGetBody(params PlanEntry[] entries) =>
         JsonSerializer.Serialize(new
         {
@@ -135,7 +133,6 @@ internal static class MigrationSamples
             Proposal = new MigrationProposal()
         }, ApiOptions);
 
-    /// <summary>The plan/save answer as the api writes it, on 200 and 422 alike.</summary>
     public static string PlanSaveBody(ValidationIssue[] issues, params string[] warnings) =>
         JsonSerializer.Serialize(new MigrationPlanSaveOutcome(issues, warnings), ApiOptions);
 
@@ -197,7 +194,6 @@ public sealed class StubPlannerHandler(HttpStatusCode status, string body, strin
     }
 }
 
-/// <summary>Holds every planner answer until the test releases it, so turns can be observed while they run.</summary>
 public sealed class GatedPlannerHandler(string body) : HttpMessageHandler
 {
     private int _arrivals;
@@ -225,7 +221,6 @@ public sealed class GatedPlannerHandler(string body) : HttpMessageHandler
     }
 }
 
-/// <summary>Holds the consent check until the test releases it, so the start of a turn can be observed.</summary>
 public sealed class GatedConsentClient : IAiHelperClient
 {
     public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -261,10 +256,8 @@ public sealed class ThrowingPlannerHandler(Exception failure) : HttpMessageHandl
         Task.FromException<HttpResponseMessage>(failure);
 }
 
-/// <summary>Sends <paramref name="before"/>, then never another byte and never closes: a stalled api.</summary>
 public sealed class HangingStreamPlannerHandler(string before) : HttpMessageHandler
 {
-    /// <summary>Set once everything in <c>before</c> was read and the stream hangs.</summary>
     public TaskCompletionSource Hanging { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>

@@ -2,7 +2,6 @@ using Raven.Quill.Contracts;
 
 namespace Raven.Quill.Wizard;
 
-/// <summary>What the wizard stored for an app, so a reloaded wizard continues where it was.</summary>
 public sealed record WizardDraftResponse(
     bool IsAppCreated,
     string AppName,

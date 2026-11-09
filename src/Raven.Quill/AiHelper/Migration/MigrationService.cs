@@ -15,11 +15,6 @@ using Raven.Quill.Wizard;
 
 namespace Raven.Quill.AiHelper.Migration;
 
-/// <summary>
-/// The Quill half of a planning session: which app it belongs to, which schema it reads, whether the operator
-/// has consented, and what to do with the plan once they are happy with it. The api owns the plan; Quill keeps
-/// its id per app and relays every turn, read and save.
-/// </summary>
 public sealed class MigrationService(
     HttpClient httpClient,
     IDocumentStore store,
@@ -31,19 +26,11 @@ public sealed class MigrationService(
 
     private const string ServiceUnreachable = "The AI service could not be reached.";
 
-    /// <summary>
-    /// The opening message from the design: the agent groups the tables and explains itself, and
-    /// registers nothing until the operator has chosen.
-    /// </summary>
     public const string DefaultStartPrompt =
         "Look at the set of tables, propose key areas to migrate, the specific collections to create " +
         "(and the tables they include). Explain briefly the reasoning and what sort of agents and " +
         "behaviours this allows.";
 
-    /// <summary>
-    /// Why a request was turned away. <see cref="Status"/> is set only when the AI service is the
-    /// reason, so the endpoint can tell "you have not consented" apart from "the service is down".
-    /// </summary>
     public sealed record Refusal(string Message, AiHelperStatus? Status = null, bool IsConflict = false);
 
     private static readonly Refusal NoPlanYet = new("no plan yet; call /api/setup/migration/proposal/start first");
@@ -209,12 +196,6 @@ public sealed class MigrationService(
         return await ReadAsync<MigrationPlanSaveOutcome>("/assistant/migration/plan/save", new PlannerPlanRequest { PlanId = planId, Changes = request.Changes }, token);
     }
 
-    /// <summary>
-    /// Turns the registered collections of the api's plan into the configuration the wizard carries on with.
-    /// The per-call validation the model saw is not enough on its own: only the assembled configuration can be
-    /// checked for names colliding across a table's own mappings, and for join columns that name a mapped
-    /// property instead of a source column.
-    /// </summary>
     public async Task<(MigrationApplyResponse? Response, Refusal? Refusal)> ApplyAsync(MigrationApplyRequest request, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(request.Slug))
@@ -261,15 +242,6 @@ public sealed class MigrationService(
         return (new MigrationApplyResponse(configuration, unmapped, []), null);
     }
 
-    /// <summary>
-    /// Reads the upstream stream to its end on its own, whether or not the browser is still there: a turn the
-    /// api started finishes, unless the operator stops it, which cancels the upstream request and with it the
-    /// api's turn. The lock is released at the done frame. The opening turn stores the plan id from its
-    /// done frame, or from an error frame that names the plan a failed start left, before the browser sees it and
-    /// asks for the plan. The client timeout only covers the headers of a streamed response, so the read keeps
-    /// its own clock, rewound at every line: a turn may take as long as it needs while the api keeps talking, and
-    /// a stalled one is cut after one silent timeout.
-    /// </summary>
     private async Task RelayAsync(TurnParameters turn, MigrationStream browserStream, MigrationTurns.Turn running)
     {
         using var silence = CancellationTokenSource.CreateLinkedTokenSource(running.Stopped);
@@ -377,7 +349,6 @@ public sealed class MigrationService(
         return (plan, refusal);
     }
 
-    /// <summary>A 422 is an answer too: it carries what the api refused.</summary>
     private async Task<(T? Answer, Refusal? Refusal)> ReadAsync<T>(string path, PlannerPlanRequest request, CancellationToken token) where T : class
     {
         var (response, refusal) = await PostAsync(path, JsonSerializer.Serialize(request, ApiJson), token);
@@ -425,7 +396,6 @@ public sealed class MigrationService(
         }
     }
 
-    // Without a token, a cancellation can only be the client's own timeout, so it counts as a failure too.
     private static bool IsTransportFailure(Exception e, CancellationToken token = default) =>
         e is HttpRequestException or IOException ||
         (e is OperationCanceledException && token.IsCancellationRequested == false);
@@ -493,10 +463,6 @@ public sealed class MigrationService(
         return buffer.ToArray();
     }
 
-    /// <summary>
-    /// The discovered schema, narrowed to the tables the operator selected. Discovery enumerates whole
-    /// schemas, so handing the AI everything it found would map tables the operator deliberately left out.
-    /// </summary>
     private async Task<(CdcSinkSourceSchema? Schema, Refusal? Refusal)> LoadSchemaAsync(string slug, SelectedSourceTable[]? selected, CancellationToken token)
     {
         WizardState? state;
@@ -523,7 +489,6 @@ public sealed class MigrationService(
         return state?.PlanId is null ? (null, NoPlanYet) : (state.PlanId, null);
     }
 
-    /// <summary>The same gate the one-shot path runs.</summary>
     private async Task<Refusal?> RequireConsentAsync(CancellationToken token)
     {
         var status = await aiClient.CheckConsentAsync(token);
