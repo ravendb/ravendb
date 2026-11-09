@@ -189,6 +189,23 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return type;
         }
 
+        internal static object ReadItem(ref Utf8JsonReader reader, Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
+        {
+            return typeNameHandling == TypeNameHandling.None
+                ? JsonSerializer.Deserialize(ref reader, declaredType, options)
+                : Read(ref reader, declaredType, options);
+        }
+
+        internal static void WriteItem(Utf8JsonWriter writer, object item, Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
+        {
+            if (item == null)
+                writer.WriteNullValue();
+            else if (typeNameHandling == TypeNameHandling.None)
+                JsonSerializer.Serialize(writer, item, item.GetType(), options);
+            else
+                WriteValue(writer, item, declaredType, typeNameHandling == TypeNameHandling.Objects, options);
+        }
+
         internal static void WriteValue(Utf8JsonWriter writer, object value, Type declaredType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
         {
             if (value == null)
