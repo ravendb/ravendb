@@ -929,8 +929,7 @@ namespace Voron.Data.Containers
                 if (it.MoveNext(out var pageNum) == false)
                     break;
 
-                var page = llt.ModifyPage(pageNum);
-                maybe = new Container(page);
+                maybe = new Container(llt.GetPage(pageNum));
 
                 // During indexing, we are going to very quickly shift between different pages 
                 // with multiple page-level-metadata, we can't remove it from the free list too soon 
@@ -945,14 +944,15 @@ namespace Voron.Data.Containers
                 // would be reasonably used by following requests. 
                 if (!isBigEntry)
                 {
-                    RemoveFromFreeList(llt, rootContainer, maybe._page.PageNumber);
+                    RemoveFromFreeList(llt, rootContainer, pageNum);
                 }
 
                 if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
                     continue;
 
+                maybe = new Container(llt.ModifyPage(pageNum));
                 // we register it as the next free page
-                rootContainer.UpdateNextFreePage(page.PageNumber);
+                rootContainer.UpdateNextFreePage(pageNum);
 
                 Debug.Assert(maybe.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
                 return true;
