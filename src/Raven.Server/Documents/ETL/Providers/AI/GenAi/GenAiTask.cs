@@ -568,6 +568,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 if (context.HasTransaction == false)
                     context.OpenReadTransaction();
 
+                EnsureThreadAllocationStats();
+
                 var genAiItem = new GenAiItem(document, Configuration.Collection);
                 var transformedResults = Transform([genAiItem], context, scope, new EtlProcessState());
 
