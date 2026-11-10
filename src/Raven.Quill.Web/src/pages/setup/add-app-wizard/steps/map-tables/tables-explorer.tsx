@@ -7,8 +7,8 @@ import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronsDownUp, ChevronsUpDown, Plus } from "lucide-react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/shadcn/ui/button";
-import { Input } from "@/components/shadcn/ui/input";
 import { Text } from "@/components/typography";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -74,12 +74,12 @@ export function TablesExplorer() {
                     <ChevronsUpDown className="size-4" aria-hidden="true" />
                 </Button>
             </div>
-            <Input
-                type="search"
+            <SearchInput
                 placeholder="Filter tables"
+                clearLabel="Clear the filter"
                 value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="h-8"
+                onValueChange={setFilter}
+                className="shrink-0"
             />
             {tables.length === 0 ? (
                 <EmptyExplorerMessage>No tables configured. Add a table to get started.</EmptyExplorerMessage>
