@@ -56,9 +56,9 @@ internal sealed class ResolutionContext
 
     public void Report(string error) => Errors.Add(error);
 
-    public void RecordPendingBoost(List<ClauseInfo> innerClauses, ParameterBinding factor)
+    public void RecordPendingBoost(List<ClauseInfo> innerClauses, ParameterBinding factor, bool innerIsOr)
     {
         PendingBoosts ??= [];
-        PendingBoosts.Add(new PendingBoost(innerClauses, factor));
+        PendingBoosts.Add(new PendingBoost(innerClauses, factor, innerIsOr));
     }
 }

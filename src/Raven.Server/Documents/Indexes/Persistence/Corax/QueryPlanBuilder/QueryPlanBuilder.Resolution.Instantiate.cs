@@ -42,7 +42,9 @@ internal static partial class QueryPlanBuilder
                 var innerMatch = ConstructCompoundExact(ref ctx);
                 if (innerMatch is null) goto default;
                 exec.ActualStrategy = ExecutionStrategy.CompoundKeyLookup;
-                return (innerMatch, innerMatch);
+                return ctx.OrderByFields == null
+                    ? (innerMatch, innerMatch)
+                    : (ApplyForcedSort(OrderBy(ctx.BuilderParams, innerMatch, ctx.OrderByFields), forcedSort), innerMatch);
             }
             // On the cases rather than in SelectExecutionStrategy: a forced $rvn_corax_strategy skips selection.
             case ExecutionStrategy.CompoundSortedScan when orderByFields != null && compiledPlan.SortElisionDiverged == false: // no order by -> bitmap is more efficient 
