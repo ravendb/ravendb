@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -244,36 +243,19 @@ internal abstract class
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        if (result.ReadTransaction == null)
-        {
-            var writeDocumentsByIdResult = WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result, RequestHandler.ResponseBodyStream());
+        var writeDocumentsByIdResult = WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result);
 
-            return writeDocumentsByIdResult.IsCompletedSuccessfully
-                ? writeDocumentsByIdResult.Result
-                : await writeDocumentsByIdResult;
-        }
-
-        await using (var buffer = new TempFileBufferingWriteStream(GetTempFileForResponseBuffering))
-        {
-            var stats = await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result, buffer);
-
-            result.ReadTransaction.Dispose();
-
-            await buffer.DrainToAsync(RequestHandler.ResponseBodyStream(), CancellationToken);
-
-            return stats;
-        }
+        return writeDocumentsByIdResult.IsCompletedSuccessfully
+            ? writeDocumentsByIdResult.Result
+            : await writeDocumentsByIdResult;
     }
 
-    protected virtual StreamsTempFile GetTempFileForResponseBuffering() =>
-        throw new NotSupportedException($"{GetType().Name} returned a read transaction, so it must override {nameof(GetTempFileForResponseBuffering)}");
-
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(
-        TOperationContext context, bool metadataOnly, bool clusterWideTx, DocumentsByIdResult<TDocumentType> result, Stream output)
+        TOperationContext context, bool metadataOnly, bool clusterWideTx, DocumentsByIdResult<TDocumentType> result)
     {
         long numberOfResults;
         long totalDocumentsSizeInBytes;
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, output, CancellationToken))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), CancellationToken))
         {
             writer.WriteStartObject();
 

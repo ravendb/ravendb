@@ -28,7 +28,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     public DocumentHandlerProcessorForGet(HttpMethod method, [NotNull] DocumentHandler requestHandler, [CanBeNull] List<ReadOnlyMemory<char>> ids = null) : base(method, requestHandler, ids)
     {
-        _cts = RequestHandler.CreateHttpRequestBoundOperationToken();
+        _cts = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationToken();
     }
 
     protected override bool SupportsShowingRequestInTrafficWatch => true;
@@ -222,8 +222,6 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             ReadTransaction = readTx
         });
     }
-
-    protected override StreamsTempFile GetTempFileForResponseBuffering() => RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("docs");
 
     public override void Dispose()
     {
