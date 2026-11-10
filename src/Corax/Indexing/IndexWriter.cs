@@ -161,6 +161,12 @@ namespace Corax.Indexing
         /// </summary>
         private ContextBoundNativeList<long> _entriesToDelete;
 
+        /// <summary>
+        /// Entry id -> location of its entry terms, for entries deleted in this batch. They are kept until WriteIndexEntries(), where
+        /// updated entries can reuse them in place and the rest are released.
+        /// </summary>
+        private readonly Dictionary<long, long> _deletedEntriesTermsLocations = new();
+
         private HashSet<long> _nullTermsMarkers;
         private HashSet<long> _nonExistingTermsMarkers;
         private Dictionary<long, IndexedField> _fieldsByRootPage;
@@ -583,8 +589,10 @@ namespace Corax.Indexing
             foreach (var entryToDelete in _entriesToDelete)
             {
                 _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
-                if (_entryIdToLocation.TryRemove(entryToDelete, out var entryTermsIdLong) == false)
+                if (_entryIdToLocation.TryGetValue(entryToDelete, out var entryTermsIdLong) == false)
                     ThrowUnableToLocateEntry(entryToDelete);
+                // The location and the entry terms are released (or reused in place, for updates) in WriteIndexEntries()
+                _deletedEntriesTermsLocations.Add(entryToDelete, entryTermsIdLong);
 
                 var documentToDelete = new DocumentEntryId(entryToDelete);
                 ContainerEntryId entryTermsId = (ContainerEntryId)entryTermsIdLong;
@@ -593,9 +601,6 @@ namespace Corax.Indexing
                 var termsPerEntryIndex = InsertTermsPerEntry(documentToDelete);
                 RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers,
                     _compactTreeDictionaryId, documentToDelete, termsPerEntryIndex);
-
-
-                Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, entryTermsId);
             }
 
             _entriesToDelete.Clear();
@@ -1251,12 +1256,47 @@ namespace Corax.Indexing
                     continue;
 
                 int size = writer.Encode(termsRef);
+                long entryId = (long)termsPerEntryIds[i];
+
+                if (_deletedEntriesTermsLocations.Remove(entryId, out var previousLocation))
+                {
+                    Container.Get(_transaction.LowLevelTransaction, (ContainerEntryId)previousLocation, out var previousEntryTerms);
+                    if (previousEntryTerms.ToSpan().SequenceEqual(writer.Encoded))
+                        continue;
+
+                    if (Container.TryUpdateInPlace(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)previousLocation, size, out var existingSpace))
+                    {
+                        writer.Write(existingSpace);
+                        continue;
+                    }
+
+                    Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)previousLocation);
+                }
 
                 ContainerEntryId entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
                 writer.Write(space);
 
-                _entryIdToLocation.Add((long)termsPerEntryIds[i], (long)entryTermsId);
+                _entryIdToLocation.Add(entryId, (long)entryTermsId);
             }
+
+            ReleaseDeletedEntriesTerms();
+        }
+
+        private void ReleaseDeletedEntriesTerms()
+        {
+            if (_deletedEntriesTermsLocations.Count == 0)
+                return;
+
+            var entryIds = _deletedEntriesTermsLocations.Keys.ToArray();
+            Array.Sort(entryIds);
+            foreach (var entryId in entryIds)
+            {
+                Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)_deletedEntriesTermsLocations[entryId]);
+                bool removed = _entryIdToLocation.TryRemove(entryId);
+                Debug.Assert(removed, "The location of a deleted entry must exist until it is released.");
+            }
+
+            _deletedEntriesTermsLocations.Clear();
         }
 
         private void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField, CancellationToken token)

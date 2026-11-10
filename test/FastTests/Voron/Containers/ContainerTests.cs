@@ -261,5 +261,114 @@ namespace FastTests.Voron.Containers
                 Assert.DoesNotContain(fragmentedPages, wtx.LowLevelTransaction.IsDirty);
             }
         }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1337)]
+        [InlineData(42)]
+        [InlineDataWithRandomSeed]
+        public void CanUpdateInPlaceWhenTheNewSizeFits(int seed)
+        {
+            var random = new Random(seed);
+            var model = new Dictionary<long, byte[]>();
+            long containerId;
+            int inPlace = 0, notInPlace = 0;
+
+            byte[] RandomBytes(int size)
+            {
+                var bytes = new byte[size];
+                random.NextBytes(bytes);
+                return bytes;
+            }
+
+            int RandomSize() => random.Next(4) switch
+            {
+                0 => random.Next(1, 30), // size stored in the metadata
+                1 => random.Next(25, 40), // around the switch to a size prefix
+                2 => random.Next(250, 262), // around the switch to a two bytes size prefix
+                _ => random.Next(1, 600)
+            };
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
+                for (int i = 0; i < 2000; i++)
+                {
+                    var data = RandomBytes(RandomSize());
+                    var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), data.Length, out var space);
+                    data.CopyTo(space);
+                    model[id] = data;
+                }
+
+                wtx.Commit();
+            }
+
+            for (int round = 0; round < 20; round++)
+            {
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var llt = wtx.LowLevelTransaction;
+                    foreach (var id in model.Keys.OrderBy(_ => random.Next()).Take(600).ToList())
+                    {
+                        switch (random.Next(10))
+                        {
+                            case 0: // delete
+                                Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                                model.Remove(id);
+                                break;
+                            case 1: // allocate a new item
+                            {
+                                var data = RandomBytes(RandomSize());
+                                var newId = (long)Container.Allocate(llt, new ContainerId(containerId), data.Length, out var space);
+                                data.CopyTo(space);
+                                model[newId] = data;
+                                break;
+                            }
+                            default: // update, in place if possible
+                            {
+                                var newSize = random.Next(4) == 0 ? RandomSize() : Math.Max(1, model[id].Length + random.Next(-6, 7));
+                                var data = RandomBytes(newSize);
+                                if (Container.TryUpdateInPlace(llt, new ContainerId(containerId), new ContainerEntryId(id), newSize, out var space))
+                                {
+                                    Assert.Equal(newSize, space.Length);
+                                    data.CopyTo(space);
+                                    model[id] = data;
+                                    inPlace++;
+                                }
+                                else
+                                {
+                                    Container.Get(llt, new ContainerEntryId(id), out var unchanged);
+                                    Assert.Equal(model[id], unchanged.ToSpan().ToArray());
+                                    Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                                    model.Remove(id);
+                                    var newId = (long)Container.Allocate(llt, new ContainerId(containerId), data.Length, out var newSpace);
+                                    data.CopyTo(newSpace);
+                                    model[newId] = data;
+                                    notInPlace++;
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+
+                    wtx.Commit();
+                }
+
+                using (var rtx = Env.ReadTransaction())
+                {
+                    foreach (var (id, expected) in model)
+                    {
+                        Container.Get(rtx.LowLevelTransaction, new ContainerEntryId(id), out var actual);
+                        Assert.Equal(expected, actual.ToSpan().ToArray());
+                    }
+
+                    var ids = Container.GetAllIds(rtx.LowLevelTransaction, new ContainerId(containerId));
+                    Assert.Equal(model.Keys.OrderBy(x => x), ids.OrderBy(x => x));
+                }
+            }
+
+            Assert.True(inPlace > 0, "expected some in place updates");
+            Assert.True(notInPlace > 0, "expected some updates that don't fit");
+        }
     }
 }

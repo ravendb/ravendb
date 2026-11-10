@@ -107,8 +107,10 @@ public unsafe struct EntryTermsWriter : IDisposable
         _scope.Dispose();
     }
 
+    public ReadOnlySpan<byte> Encoded => new(_bs.Ptr, _offset);
+
     public void Write(Span<byte> space)
     {
-        new Span<byte>(_bs.Ptr, _offset).CopyTo(space);
+        Encoded.CopyTo(space);
     }
 }
