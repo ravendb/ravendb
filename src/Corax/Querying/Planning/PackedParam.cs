@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 
@@ -75,49 +76,50 @@ public readonly struct PackedParam
         };
     }
 
-    public IQueryMatch RangeQuery(ClauseType op, FieldMetadata fieldMeta, IndexSearcher indexSearcher, QueryExecution exec, bool forward = true)
+    public IQueryMatch RangeQuery(ClauseType op, FieldMetadata fieldMeta, IndexSearcher indexSearcher, QueryExecution exec, bool forward = true, CancellationToken token = default)
     {
         return op switch
         {
             ClauseType.GreaterThan => ValueType switch
             {
-                TypeLong => indexSearcher.GreaterThanQuery(fieldMeta, exec.LongValues[Param1], forward),
-                TypeDouble => indexSearcher.GreaterThanQuery(fieldMeta, exec.DoubleValues[Param1], forward),
-                _ => indexSearcher.GreaterThanQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward)
+                TypeLong => indexSearcher.GreaterThanQuery(fieldMeta, exec.LongValues[Param1], forward, token),
+                TypeDouble => indexSearcher.GreaterThanQuery(fieldMeta, exec.DoubleValues[Param1], forward, token),
+                _ => indexSearcher.GreaterThanQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward, token)
             },
             ClauseType.GreaterThanOrEqual => ValueType switch
             {
-                TypeLong => indexSearcher.GreaterThanOrEqualsQuery(fieldMeta, exec.LongValues[Param1], forward),
-                TypeDouble => indexSearcher.GreaterThanOrEqualsQuery(fieldMeta, exec.DoubleValues[Param1], forward),
-                _ => indexSearcher.GreaterThanOrEqualsQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward)
+                TypeLong => indexSearcher.GreaterThanOrEqualsQuery(fieldMeta, exec.LongValues[Param1], forward, token),
+                TypeDouble => indexSearcher.GreaterThanOrEqualsQuery(fieldMeta, exec.DoubleValues[Param1], forward, token),
+                _ => indexSearcher.GreaterThanOrEqualsQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward, token)
             },
             ClauseType.LessThan => ValueType switch
             {
-                TypeLong => indexSearcher.LessThanQuery(fieldMeta, exec.LongValues[Param1], forward),
-                TypeDouble => indexSearcher.LessThanQuery(fieldMeta, exec.DoubleValues[Param1], forward),
-                _ => indexSearcher.LessThanQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward)
+                TypeLong => indexSearcher.LessThanQuery(fieldMeta, exec.LongValues[Param1], forward, token),
+                TypeDouble => indexSearcher.LessThanQuery(fieldMeta, exec.DoubleValues[Param1], forward, token),
+                _ => indexSearcher.LessThanQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward, token)
             },
             ClauseType.LessThanOrEqual => ValueType switch
             {
-                TypeLong => indexSearcher.LessThanOrEqualsQuery(fieldMeta, exec.LongValues[Param1], forward),
-                TypeDouble => indexSearcher.LessThanOrEqualsQuery(fieldMeta, exec.DoubleValues[Param1], forward),
-                _ => indexSearcher.LessThanOrEqualsQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward)
+                TypeLong => indexSearcher.LessThanOrEqualsQuery(fieldMeta, exec.LongValues[Param1], forward, token),
+                TypeDouble => indexSearcher.LessThanOrEqualsQuery(fieldMeta, exec.DoubleValues[Param1], forward, token),
+                _ => indexSearcher.LessThanOrEqualsQuerySlice(fieldMeta, exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1), forward, token)
             },
             _ => throw new InvalidOperationException($"RangeQuery does not handle {op}")
         };
     }
 
-    public IQueryMatch BetweenQuery(FieldMetadata fieldMeta, IndexSearcher indexSearcher, QueryExecution exec, bool forward = true)
+    public IQueryMatch BetweenQuery(FieldMetadata fieldMeta, IndexSearcher indexSearcher, QueryExecution exec, bool forward = true, CancellationToken token = default)
     {
         return ValueType switch
         {
-            TypeLong => indexSearcher.BetweenQuery(fieldMeta, exec.LongValues[Param1], exec.LongValues[Param2], forward: forward),
-            TypeDouble => indexSearcher.BetweenQuery(fieldMeta, exec.DoubleValues[Param1], exec.DoubleValues[Param2], forward: forward),
+            TypeLong => indexSearcher.BetweenQuery(fieldMeta, exec.LongValues[Param1], exec.LongValues[Param2], forward: forward, token: token),
+            TypeDouble => indexSearcher.BetweenQuery(fieldMeta, exec.DoubleValues[Param1], exec.DoubleValues[Param2], forward: forward, token: token),
             _ => indexSearcher.BetweenQuerySlice(
                 fieldMeta,
                 exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param1),
                 exec.GetAnalyzedSlice(indexSearcher, fieldMeta, Param2),
-                forward)
+                forward,
+                token)
         };
     }
 

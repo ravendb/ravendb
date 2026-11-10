@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
@@ -14,22 +15,22 @@ namespace Corax.Querying;
 public partial class IndexSearcher
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch BetweenQuery<TValue>(in FieldMetadata field, TValue low, TValue high, ComparisonOperator leftSide = ComparisonOperator.GreaterThanOrEqual, ComparisonOperator rightSide = ComparisonOperator.LessThanOrEqual, bool forward = true) {
+    public IQueryMatch BetweenQuery<TValue>(in FieldMetadata field, TValue low, TValue high, ComparisonOperator leftSide = ComparisonOperator.GreaterThanOrEqual, ComparisonOperator rightSide = ComparisonOperator.LessThanOrEqual, bool forward = true, in CancellationToken token = default) {
         if (typeof(TValue) == typeof(long))
         {
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, forward),
+                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, forward, token),
 
                 //<x, y)
-                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, forward),
+                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (long)(object)low, (long)(object)high, forward, token),
 
                 //<x, y>
-                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, forward),
+                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, forward, token),
 
                 //(x, y>
-                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, forward),
+                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (long)(object)low, (long)(object)high, forward, token),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
@@ -39,16 +40,16 @@ public partial class IndexSearcher
             return (leftSide, rightSide) switch
             {
                 // (x, y)
-                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, forward),
+                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, forward, token),
 
                 //<x, y)
-                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, forward),
+                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, (double)(object)low, (double)(object)high, forward, token),
 
                 //<x, y>
-                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, forward),
+                (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, forward, token),
 
                 //(x, y>
-                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, forward),
+                (ComparisonOperator.GreaterThan, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, (double)(object)low, (double)(object)high, forward, token),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
 
             };
@@ -63,19 +64,19 @@ public partial class IndexSearcher
             {
                 // (x, y)
                 (ComparisonOperator.GreaterThan, ComparisonOperator.LessThan) => RangeBuilder<Range.Exclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, forward),
+                    leftValue, rightValue, forward, token),
 
                 //<x, y)
                 (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThan) => RangeBuilder<Range.Inclusive, Range.Exclusive>(field,
-                    leftValue, rightValue, forward),
+                    leftValue, rightValue, forward, token),
 
                 //<x, y>
                 (ComparisonOperator.GreaterThanOrEqual, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Inclusive, Range.Inclusive>(
-                    field, leftValue, rightValue, forward),
+                    field, leftValue, rightValue, forward, token),
 
                 //(x, y>
                 (ComparisonOperator.GreaterThan, ComparisonOperator.LessThanOrEqual) => RangeBuilder<Range.Exclusive, Range.Inclusive>(field,
-                    leftValue, rightValue, forward),
+                    leftValue, rightValue, forward, token),
                 _ => throw new ArgumentOutOfRangeException($"Unknown operation at {nameof(BetweenQuery)}.")
             };
         }
@@ -84,88 +85,88 @@ public partial class IndexSearcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch GreaterThanQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true)
+    public IQueryMatch GreaterThanQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, in CancellationToken token = default)
     {
-        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, forward);
+        return GreatBuilder<Range.Exclusive, Range.Inclusive, TValue>(field, value, forward, token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch GreaterThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true)
+    public IQueryMatch GreaterThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, in CancellationToken token = default)
     {
-        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward);
+        return GreatBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward, token);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private IQueryMatch GreatBuilder<TLeftRange, TRightRange, TValue>(in FieldMetadata field, TValue value, bool forward = true)
+    private IQueryMatch GreatBuilder<TLeftRange, TRightRange, TValue>(in FieldMetadata field, TValue value, bool forward, in CancellationToken token)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
         if (typeof(TValue) == typeof(long))
         {
-            return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (long)(object)value, long.MaxValue, forward, token);
         }
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, (double)(object)value, double.MaxValue, forward, token);
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, sliceValue, Slices.AfterAllKeys, forward, token);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch LessThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true)
-        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward);
+    public IQueryMatch LessThanOrEqualsQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, in CancellationToken token = default)
+        => LessBuilder<Range.Inclusive, Range.Inclusive, TValue>(field, value, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch LessThanQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true)
-        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, forward);
+    public IQueryMatch LessThanQuery<TValue>(in FieldMetadata field, TValue value, bool forward = true, in CancellationToken token = default)
+        => LessBuilder<Range.Inclusive, Range.Exclusive, TValue>(field, value, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IQueryMatch LessBuilder<TLeftRange, TRightRange, TValue>(in FieldMetadata field, TValue value,
-        bool forward)
+        bool forward, in CancellationToken token)
         where TLeftRange : struct, Range.Marker
         where TRightRange : struct, Range.Marker
     {
         if (typeof(TValue) == typeof(long))
-            return RangeBuilder<TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, long.MinValue, (long)(object)value, forward, token);
 
         if (typeof(TValue) == typeof(double))
-            return RangeBuilder<TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, double.MinValue, (double)(object)value, forward, token);
 
         if (typeof(TValue) == typeof(string))
         {
             var sliceValue = EncodeAndApplyAnalyzer(field, (string)(object)value);
-            return RangeBuilder<TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, forward);
+            return RangeBuilder<TLeftRange, TRightRange>(field, Slices.BeforeAllKeys, sliceValue, forward, token);
         }
 
         throw new ArgumentException("Range queries are supporting strings, longs or doubles only");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch GreaterThanQuerySlice(in FieldMetadata field, Slice value, bool forward = true)
-        => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, value, Slices.AfterAllKeys, forward);
+    public IQueryMatch GreaterThanQuerySlice(in FieldMetadata field, Slice value, bool forward = true, in CancellationToken token = default)
+        => RangeBuilder<Range.Exclusive, Range.Inclusive>(field, value, Slices.AfterAllKeys, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch GreaterThanOrEqualsQuerySlice(in FieldMetadata field, Slice value, bool forward = true)
-        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, value, Slices.AfterAllKeys, forward);
+    public IQueryMatch GreaterThanOrEqualsQuerySlice(in FieldMetadata field, Slice value, bool forward = true, in CancellationToken token = default)
+        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, value, Slices.AfterAllKeys, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch LessThanQuerySlice(in FieldMetadata field, Slice value, bool forward = true)
-        => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, Slices.BeforeAllKeys, value, forward);
+    public IQueryMatch LessThanQuerySlice(in FieldMetadata field, Slice value, bool forward = true, in CancellationToken token = default)
+        => RangeBuilder<Range.Inclusive, Range.Exclusive>(field, Slices.BeforeAllKeys, value, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch LessThanOrEqualsQuerySlice(in FieldMetadata field, Slice value, bool forward = true)
-        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, Slices.BeforeAllKeys, value, forward);
+    public IQueryMatch LessThanOrEqualsQuerySlice(in FieldMetadata field, Slice value, bool forward = true, in CancellationToken token = default)
+        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, Slices.BeforeAllKeys, value, forward, token);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IQueryMatch BetweenQuerySlice(in FieldMetadata field, Slice low, Slice high, bool forward = true)
-        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, low, high, forward);
+    public IQueryMatch BetweenQuerySlice(in FieldMetadata field, Slice low, Slice high, bool forward = true, in CancellationToken token = default)
+        => RangeBuilder<Range.Inclusive, Range.Inclusive>(field, low, high, forward, token);
 
-    public IQueryMatch RangeBuilder<TLow, THigh>(in FieldMetadata field, Slice low, Slice high, bool forward)
+    public IQueryMatch RangeBuilder<TLow, THigh>(in FieldMetadata field, Slice low, Slice high, bool forward, in CancellationToken token = default)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -177,10 +178,10 @@ public partial class IndexSearcher
             ? new TermsRangeProvider<Lookup<CompactKeyLookup>.ForwardIterator, TLow, THigh>(this, terms, field, low, high)
             : (ITermsProvider)new TermsRangeProvider<Lookup<CompactKeyLookup>.BackwardIterator, TLow, THigh>(this, terms, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field));
     }
 
-    private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool forward)
+    private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, long low, long high, bool forward, in CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -193,10 +194,10 @@ public partial class IndexSearcher
             ? new TermsNumericRangeProvider<Lookup<Int64LookupKey>.ForwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high)
             : (ITermsProvider)new TermsNumericRangeProvider<Lookup<Int64LookupKey>.BackwardIterator, TLow, THigh, Int64LookupKey>(this, set, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field));
     }
 
-    private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool forward)
+    private IQueryMatch RangeBuilder<TLow, THigh>(FieldMetadata field, double low, double high, bool forward, in CancellationToken token)
         where TLow : struct, Range.Marker
         where THigh : struct, Range.Marker
     {
@@ -209,6 +210,6 @@ public partial class IndexSearcher
             ? new TermsNumericRangeProvider<Lookup<DoubleLookupKey>.ForwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high)
             : (ITermsProvider)new TermsNumericRangeProvider<Lookup<DoubleLookupKey>.BackwardIterator, TLow, THigh, DoubleLookupKey>(this, set, field, low, high);
 
-        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, scoringSearcher: GetScoringSearcher(field));
+        return new TermsProviderMatch(provider, _transaction.LowLevelTransaction, _transaction.Allocator, token, scoringSearcher: GetScoringSearcher(field));
     }
 }

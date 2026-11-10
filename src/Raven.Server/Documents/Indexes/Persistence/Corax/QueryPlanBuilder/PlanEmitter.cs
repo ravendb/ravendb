@@ -8,22 +8,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
 
 internal sealed class PlanEmitter
 {
+    private const int NoScoringGroup = -1;
+
     private readonly List<PlanOp> _ops = [];
     private int _nextRangeIdx; // index for ctx.InRangeCounts[idx] at runtime.
     private int _matchIndex;
-    private readonly bool _hasBoost;
+    private int _nextScoringGroup;
 
     private int _nextScratch = QueryPrimitives.EphemeralBitmapSlot + 1;
     private int _maxScratchUsed = QueryPrimitives.EphemeralBitmapSlot;
-
-    private PlanEmitter(bool hasBoost) => _hasBoost = hasBoost;
 
     public static (PlanOp[] Ops, int RequiredBitmaps) Emit(PlanTemplate template, List<ClauseExecution> executions, PlanParameters planParams, bool scanEligible)
     {
         if (executions.Count is 0) // a genuinely clause-less query (no WHERE) — match every doc.
             return ([new PlanOp { Kind = PlanOpKind.FillFromMatch, ParamIndex = 0 }], 2);
 
-        var emitter = new PlanEmitter(planParams.HasBoost);
+        var emitter = new PlanEmitter();
         // Entry scan filters candidates without going through the matches, so a scored query cannot use it either:
         // the scanned clauses would contribute nothing to the score.
         var (ops, bitmaps) = template.IsOr
@@ -39,10 +39,6 @@ internal sealed class PlanEmitter
         }
         return (ops, bitmaps);
     }
-
-    private MatchDispatch Dispatch(ClauseExecution exec) => _hasBoost 
-    ? MatchDispatch.QueryMatch 
-    : QueryPlanBuilder.GetDispatch(exec, planHasBoost: false);
 
     private (PlanOp[] Ops, int RequiredBitmaps) Complete()
     {
@@ -248,7 +244,7 @@ internal sealed class PlanEmitter
             default:
                 _ops.Add(new PlanOp
                 {
-                    Kind = ToPlanOpKind(merge, Dispatch(exec)),
+                    Kind = ToPlanOpKind(merge, QueryPlanBuilder.GetDispatch(exec)),
                     ParamIndex = _matchIndex++,
                     BitmapLocal = destSlot,
                     SkipEarlyExit = merge == MergeKind.AndInto && suppressEarlyExit,
@@ -260,10 +256,11 @@ internal sealed class PlanEmitter
 
     private void EmitGroupInto(ClauseExecution exec, List<ClauseExecution> subExecs, MergeKind merge, bool suppressEarlyExit, int destSlot)
     {
-        bool isScoringGroup = _hasBoost && exec.Clause.ScoringGroupIndex >= 0;
-        if (merge == MergeKind.Fill && isScoringGroup == false)
+        int scoringGroup = exec.IsScoringGroup ? _nextScoringGroup++ : NoScoringGroup;
+        if (merge == MergeKind.Fill)
         {
             EmitGroupContents(exec, subExecs, suppressEarlyExit, destSlot);
+            EmitSaveScoringGroup(destSlot, scoringGroup);
             return;
         }
 
@@ -277,16 +274,10 @@ internal sealed class PlanEmitter
         // Build the group into a fresh scratch slot, then merge it into destSlot directly — which holds the accumulator.
         using var _ = AllocateScratchSlot(out int groupSlot);
         EmitGroupContents(exec, subExecs, suppressEarlyExit: true, groupSlot);
-
-        // An AND group under an OR of a scored plan saves its result for the score pass before the merge consumes it
-        if (isScoringGroup)
-            _ops.Add(new PlanOp { Kind = PlanOpKind.SaveScoringGroup, BitmapLocal = groupSlot, ParamIndex = exec.Clause.ScoringGroupIndex });
+        EmitSaveScoringGroup(groupSlot, scoringGroup);
 
         switch (merge)
         {
-            case MergeKind.Fill:
-                _ops.Add(new PlanOp { Kind = PlanOpKind.ClearBitmap, BitmapLocal = destSlot });
-                goto case MergeKind.OrInto;
             case MergeKind.OrInto:
                 _ops.Add(new PlanOp { Kind = PlanOpKind.LazyOrBitmaps, BitmapLocal = destSlot, ParamIndex2 = groupSlot });
                 break;
@@ -298,6 +289,20 @@ internal sealed class PlanEmitter
                 _ops.Add(new PlanOp { Kind = PlanOpKind.AndNotBitmaps, BitmapLocal = destSlot, ParamIndex2 = groupSlot });
                 break;
         }
+    }
+
+    private void EmitSaveScoringGroup(int bitmapSlot, int scoringGroup)
+    {
+        if (scoringGroup == NoScoringGroup)
+            return;
+
+        Debug.Assert(int.IsNegative(scoringGroup) == false);
+        _ops.Add(new PlanOp
+        {
+            Kind = PlanOpKind.SaveScoringGroup,
+            BitmapLocal = bitmapSlot,
+            ParamIndex = scoringGroup
+        });
     }
 
     // Fold an all-negated OR sub-group (¬A ∨ ¬B ∨ … = ¬(A ∧ B ∧ …)) into the accumulator without materializing the universe
@@ -389,15 +394,18 @@ internal sealed class PlanEmitter
     /// <summary>AllIn clause leaf — logically (term0 ∩ term1 ∩ … ∩ termN).</summary>
     private void EmitAllInLeaf(ClauseExecution exec, MergeKind merge, bool suppressEarlyExit, int destSlot)
     {
+        int scoringGroup = exec.IsScoringGroup ? _nextScoringGroup++ : NoScoringGroup;
         if (merge == MergeKind.Fill)
         {
             EmitCommonInOps(exec.InTermCount, destSlot, PlanOpKind.FillFromPostingSource, PlanOpKind.AllInRangeFromPostingSource, suppressEarlyExit, Label(exec));
+            EmitSaveScoringGroup(destSlot, scoringGroup);
             return;
         }
 
         using var _ = AllocateScratchSlot(out int saveSlot);
 
         EmitCommonInOps(exec.InTermCount, saveSlot, PlanOpKind.FillFromPostingSource, PlanOpKind.AllInRangeFromPostingSource, suppressEarlyExit: true, Label(exec));
+        EmitSaveScoringGroup(saveSlot, scoringGroup);
 
         switch (merge)
         {
@@ -449,7 +457,7 @@ internal sealed class PlanEmitter
             default:
                 _ops.Add(new PlanOp
                 {
-                    Kind = ToPlanOpKind(MergeKind.AndNotInto, Dispatch(exec)),
+                    Kind = ToPlanOpKind(MergeKind.AndNotInto, QueryPlanBuilder.GetDispatch(exec)),
                     ParamIndex = _matchIndex++,
                     BitmapLocal = destSlot,
                     DebugLabel = Label(exec)
