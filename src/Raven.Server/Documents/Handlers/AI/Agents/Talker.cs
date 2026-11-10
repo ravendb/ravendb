@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
@@ -38,7 +39,8 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             Tools = _preparedTools,
             UseTools = document.RemainingToolIterations-- > 0,
             Schema = schema,
-            PromptCacheKey = document.Id,
+            // The provider rejects a prompt_cache_key longer than 64 characters; a conversation id has no such bound.
+            PromptCacheKey = AttachmentsStorageHelper.CalculateHash(Encoding.UTF8.GetBytes(document.Id)),
             MayRepeatPrompt = handler.MayRepeatPrompt(_preparedTools),
             ParsedJson = _parsedJson
         };
