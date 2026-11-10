@@ -12,6 +12,7 @@ import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 import { ClusterStubs } from "test/stubs/ClusterStubs";
+import { LicenseStubs } from "test/stubs/LicenseStubs";
 import moment from "moment";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
@@ -37,6 +38,8 @@ interface AboutPageStoryProps {
     securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
     licenseServerConnection: boolean;
     passiveServer: boolean;
+    devBuild: boolean;
+    stableReleaseAvailable: boolean;
     latestServerBuildNumber: number;
     isIsv: boolean;
     cloud: boolean;
@@ -58,7 +61,7 @@ function commonInit(props: AboutPageStoryProps) {
 
     accessManager.with_securityClearance(props.securityClearance);
     cluster.with_ClientVersion();
-    cluster.with_ServerVersion();
+    cluster.with_ServerVersion(props.devBuild ? ClusterStubs.devServerVersion() : ClusterStubs.serverVersion());
     cluster.with_PassiveServer(props.passiveServer);
     license.with_License({
         Type: props.licenseType,
@@ -71,7 +74,11 @@ function commonInit(props: AboutPageStoryProps) {
         Status: props.supportStatus,
     });
 
-    licenseService.withGetChangeLog();
+    if (props.stableReleaseAvailable) {
+        licenseService.withGetChangeLog();
+    } else {
+        licenseService.withGetChangeLog(LicenseStubs.changeLogWithoutStableRelease());
+    }
 
     if (props.licenseServerConnection) {
         licenseService.withConnectivityCheck();
@@ -82,11 +89,15 @@ function commonInit(props: AboutPageStoryProps) {
         });
     }
 
-    licenseService.withLatestVersion((x) => {
-        if (props.latestServerBuildNumber) {
-            x.BuildNumber = props.latestServerBuildNumber;
-        }
-    });
+    if (props.devBuild) {
+        licenseService.withLatestVersion(LicenseStubs.latestVersionNotChecked());
+    } else {
+        licenseService.withLatestVersion((x) => {
+            if (props.latestServerBuildNumber) {
+                x.BuildNumber = props.latestServerBuildNumber;
+            }
+        });
+    }
     licenseService.withGetConfigurationSettings();
 }
 
@@ -95,6 +106,8 @@ const defaultArgs: AboutPageStoryProps = {
     isIsv: false,
     cloud: false,
     passiveServer: false,
+    devBuild: false,
+    stableReleaseAvailable: true,
     supportStatus: "NoSupport",
     latestServerBuildNumber: undefined,
     licenseServerConnection: true,
@@ -278,6 +291,25 @@ export const AboutToExpireLicense: StoryObj<AboutPageStoryProps> = {
     args: {
         ...defaultArgs,
         subscriptionExpiration: moment.utc().add(3, "days").format(),
+    },
+    argTypes: defaultArgTypes,
+};
+
+export const DevelopmentBuild: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        devBuild: true,
+    },
+    argTypes: defaultArgTypes,
+};
+
+export const DevelopmentBuildWithoutStableRelease: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        devBuild: true,
+        stableReleaseAvailable: false,
     },
     argTypes: defaultArgTypes,
 };

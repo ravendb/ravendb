@@ -7,8 +7,8 @@ export class MockClusterManager {
         globalDispatch(clusterActions.clientVersionLoaded(version));
     }
 
-    with_ServerVersion() {
-        globalDispatch(clusterActions.serverVersionLoaded(ClusterStubs.serverVersion()));
+    with_ServerVersion(version: serverBuildVersionDto = ClusterStubs.serverVersion()) {
+        globalDispatch(clusterActions.serverVersionLoaded(version));
     }
 
     with_PassiveServer(passive: boolean) {

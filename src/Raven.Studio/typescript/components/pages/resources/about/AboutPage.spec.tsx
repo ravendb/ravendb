@@ -1,4 +1,4 @@
-﻿import { rtlRender } from "test/rtlTestUtils";
+﻿import { rtlRender, within } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./AboutPage.stories";
 import React from "react";
@@ -18,6 +18,8 @@ const {
     EssentialLicense,
     CommunityLicense,
     UsingLatestVersion,
+    DevelopmentBuild,
+    DevelopmentBuildWithoutStableRelease,
 } = composeStories(stories);
 
 describe("AboutPage", function () {
@@ -135,6 +137,37 @@ describe("AboutPage", function () {
         });
     });
 
+    describe("development build", function () {
+        it("shows the latest stable releases without upgrade badges", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuild />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.developmentBuildNote)).toBeInTheDocument();
+            expect(changelog.getByText(/6\.0\.5/)).toBeInTheDocument();
+            expect(changelog.queryAllByText(selectors.versions.upgradeBadge)).toHaveLength(0);
+            expect(changelog.queryAllByText(selectors.versions.downgradeBadge)).toHaveLength(0);
+        });
+
+        it("explains when there's no stable release yet", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuildWithoutStableRelease />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelog)).toBeInTheDocument();
+        });
+
+        it("hides the update check", async function () {
+            const { screen } = rtlRender(<DevelopmentBuild />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: selectors.versions.checkForUpdates })).not.toBeInTheDocument();
+        });
+    });
+
     describe("support", function () {
         it("no support - on premise", async function () {
             const { screen, fireClick } = rtlRender(<NoSupportOnPremise />);
@@ -227,6 +260,11 @@ const selectors = {
         updateInstructions: /Update instructions/,
         close: "Close",
         changelog: /Changelog/,
+        checkForUpdates: /Check for updates/,
+        developmentBuildNote: /Nightly and development builds don't have their own changelog/,
+        noChangelog: /No changelog yet/,
+        upgradeBadge: /Can upgrade|license needs to be upgraded/,
+        downgradeBadge: /Can downgrade|Can't downgrade/,
     },
     agplLicense: /No license - AGPLv3 Restrictions/,
     licenseId: /License ID/,
