@@ -51,15 +51,16 @@ export function createReplyTurn(isOpening: boolean): PlannerReplyTurn {
         gaps: [],
         questions: [],
         error: null,
+        errorCode: null,
     };
 }
 
-export function isAreaNotStartedError(message: string): boolean {
-    return /^The area .+ has not started; start it first\.$/.test(message.trim());
+export function isAreaNotStartedError(errorCode: string | null): boolean {
+    return errorCode === "AreaNotStarted";
 }
 
-export function isAreaAlreadyStartedError(message: string): boolean {
-    return /^The area .+ has already started; ask in it instead\.$/.test(message.trim());
+export function isAreaAlreadyStartedError(errorCode: string | null): boolean {
+    return errorCode === "AreaAlreadyStarted";
 }
 
 /**
@@ -214,7 +215,7 @@ export function applyPlannerFrame(
         case "error":
             return updateChat(state, chatId, (chat) => ({
                 ...chat,
-                turns: updateReplyTurn(chat.turns, (turn) => failTurn(turn, frame.message)),
+                turns: updateReplyTurn(chat.turns, (turn) => failTurn(turn, frame.message, frame.code ?? null)),
             }));
     }
 }
@@ -244,7 +245,7 @@ export function endPlannerTurn(
 export function endReplyTurn(turns: PlannerTurn[], { error, isStopped }: PlannerTurnEnding): PlannerTurn[] {
     return updateReplyTurn(turns, (turn): PlannerReplyTurn => {
         if (error !== null) {
-            return failTurn(turn, error);
+            return failTurn(turn, error, null);
         }
 
         if (turn.status !== "working") {
@@ -302,12 +303,16 @@ export function applyStoredPlan(
 }
 
 /** A turn the agent already finished keeps its outcome: the plan is saved by then. */
-function failTurn(turn: PlannerReplyTurn, error: string): PlannerReplyTurn {
+function failTurn(turn: PlannerReplyTurn, error: string, errorCode: string | null): PlannerReplyTurn {
     if (turn.status === "done") {
         return { ...turn, activity: [...turn.activity, { type: "lateError", message: error }] };
     }
 
-    return error === STOPPED_TURN_ERROR ? { ...turn, status: "stopped" } : { ...turn, status: "failed", error };
+    if (error === STOPPED_TURN_ERROR) {
+        return { ...turn, status: "stopped" };
+    }
+
+    return { ...turn, status: "failed", error, errorCode };
 }
 
 function toPlannerQuestion({ question, options, recommended }: OpenQuestion): PlannerQuestion {

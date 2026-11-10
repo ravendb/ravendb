@@ -238,7 +238,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         // first, and the prompt, which never reached the agent, can be sent again once it is built.
         const reply = getLatestReply(selectChat(getStore(), area).turns);
 
-        if (reply?.status === "failed" && reply.error && isAreaNotStartedError(reply.error)) {
+        if (reply?.status === "failed" && isAreaNotStartedError(reply.errorCode)) {
             getStore().markPlannerAreaStarted(area, false);
             void startArea(area);
             return false;
@@ -260,8 +260,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
             // An area that started but mapped nothing looks new after a reload; its agent's answer settles it.
             const reply = getLatestReply(selectChat(getStore(), area).turns);
-            const hasStartedBefore =
-                reply?.status === "failed" && reply.error !== null && isAreaAlreadyStartedError(reply.error);
+            const hasStartedBefore = reply?.status === "failed" && isAreaAlreadyStartedError(reply.errorCode);
 
             if (!hasStartedBefore) {
                 return;
