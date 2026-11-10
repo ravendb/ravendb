@@ -23,12 +23,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 var o = new BlittablePath(path).Evaluate(res);
                 if (WellKnownTypeForQuoting(o))
-                    csv.WriteField(o?.ToString(), shouldQuote: true);
+                    csv.WriteField(o?.ToString(), CsvQuoting.Always);
                 else
                     csv.WriteField(o?.ToString());
             }
 
-            await csv.NextRecordAsync();
+            await EndCsvRecordAsync(token);
         }
 
         public StreamCsvBlittableQueryResultWriter(HttpResponse response, Stream stream, string[] properties = null,

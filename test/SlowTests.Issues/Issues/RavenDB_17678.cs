@@ -5,9 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CsvHelper;
-using CsvHelper.Configuration;
-using CsvHelper.Configuration.Attributes;
-using CsvHelper.TypeConversion;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
@@ -16,7 +13,7 @@ using Xunit;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_17678 : RavenTestBase
+public partial class RavenDB_17678 : RavenTestBase
 {
     public RavenDB_17678(ITestOutputHelper output) : base(output)
     {
@@ -58,7 +55,7 @@ public class RavenDB_17678 : RavenTestBase
         var httpClient = store.GetRequestExecutor().HttpClient;
         await using var stream = await httpClient.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={q2}&format=csv");
 
-        using var csvReader = new CsvReader(new StreamReader(stream), new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", });
+        using var csvReader = CsvReader.Create(stream, new CsvReaderOptions { Separator = ',' });
 
         var hasValues = false;
         await foreach (var r in csvReader.GetRecordsAsync<ExportedAggregatedTimeSeries>())
@@ -82,7 +79,7 @@ public class RavenDB_17678 : RavenTestBase
         var httpClient = store.GetRequestExecutor().HttpClient;
         await using var stream = await httpClient.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query={q1}&format=csv");
 
-        using var csvReader = new CsvReader(new StreamReader(stream), new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = ",", });
+        using var csvReader = CsvReader.Create(stream, new CsvReaderOptions { Separator = ',' });
         
         var hasValues = false;
         await foreach (var r in csvReader.GetRecordsAsync<ExportedRawTimeSeries>())
@@ -98,35 +95,38 @@ public class RavenDB_17678 : RavenTestBase
         Assert.True(hasValues);
     }
 
-    private class ExportedAggregatedTimeSeries
+    [CsvRecord]
+    internal partial class ExportedAggregatedTimeSeries
     {
-        [Name("@id")]
+        [CsvColumn("@id")]
         public string Id { get; set; }
         public DateTime From { get; set; }
         public DateTime To { get; set; }
-        [TypeConverter(typeof(TimeSeriesValuesConverter))]
+        [CsvConverter(typeof(TimeSeriesValuesConverter))]
         public double[] Count { get; set; }
-        [TypeConverter(typeof(TimeSeriesValuesConverter))]
+        [CsvConverter(typeof(TimeSeriesValuesConverter))]
         public double[] First { get; set; }
-        [TypeConverter(typeof(TimeSeriesValuesConverter))]
+        [CsvConverter(typeof(TimeSeriesValuesConverter))]
         public double[] Average { get; set; }
     }
 
-    private class ExportedRawTimeSeries
+    [CsvRecord]
+    internal partial class ExportedRawTimeSeries
     {
-        [Name("@id")]
+        [CsvColumn("@id")]
         public string Id { get; set; }
         public string Tag { get; set; }
         public DateTime Timestamp { get; set; }
-        [TypeConverter(typeof(TimeSeriesValuesConverter))]
+        [CsvConverter(typeof(TimeSeriesValuesConverter))]
         public double[] Values { get; set; }
         public bool IsRollup { get; set; }
     }
 
-    private class TimeSeriesValuesConverter : DefaultTypeConverter
+    private sealed class TimeSeriesValuesConverter : ICsvConverter<double[]>
     {
-        public override object ConvertFromString(string text, IReaderRow row, MemberMapData memberMapData)
+        public double[] Read(CsvReader reader, int index)
         {
+            var text = reader.GetString(index);
             if (string.IsNullOrEmpty(text))
                 return null;
 
@@ -162,6 +162,6 @@ public class RavenDB_17678 : RavenTestBase
             return result.ToArray();
         }
 
-        public override string ConvertToString(object value, IWriterRow row, MemberMapData memberMapData) => throw new NotImplementedException();
+        public void Write(CsvWriter writer, double[] value) => throw new NotImplementedException();
     }
 }

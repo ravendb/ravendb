@@ -20,7 +20,7 @@
     <PackageVersion Include="CloudNative.CloudEvents.Kafka" Version="3.9.0" />
     <PackageVersion Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.9.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.16.0" />
-    <PackageVersion Include="CsvHelper" Version="33.1.0" />
+    <PackageVersion Include="CsvHelper" Version="34.0.0" />
     <PackageVersion Include="Discord.Net.WebSocket" Version="3.20.2" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.5.3" />
     <PackageVersion Include="FluentFTP" Version="55.1.0" />

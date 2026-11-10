@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (Constants.Documents.Metadata.Id == property)
                     {
-                        csvWriter.WriteField(res.Id.ToString(), shouldQuote: true);
+                        csvWriter.WriteField(res.Id.ToString(), CsvQuoting.Always);
                     }
                     else
                     {
@@ -43,13 +43,13 @@ namespace Raven.Server.Documents.Handlers
                             : new BlittablePath(path).Evaluate(res.Data);
 
                         if (WellKnownTypeForQuoting(o))
-                            csvWriter.WriteField(o?.ToString(), shouldQuote: true);
+                            csvWriter.WriteField(o?.ToString(), CsvQuoting.Always);
                         else
                             csvWriter.WriteField(o?.ToString());
                     }
                 }
 
-                await csvWriter.NextRecordAsync();
+                await EndCsvRecordAsync(token);
             } while (tsCsvWriter.MoveNext());
         }
 
