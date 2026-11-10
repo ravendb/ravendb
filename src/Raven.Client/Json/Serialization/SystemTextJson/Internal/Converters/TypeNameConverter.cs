@@ -50,6 +50,23 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         [ThreadStatic]
         private static HashSet<object> _writingWithTypeName;
 
+        [ThreadStatic]
+        private static object _writingTypeNameFor;
+
+        internal static readonly JsonConverter<string> TypeNameProperty = new TypeNamePropertyConverter();
+
+        internal static object TypeNameFor(object target) => ReferenceEquals(target, _writingTypeNameFor) ? GetTypeName(target.GetType()) : null;
+
+        private static bool HasTypeNameProperty(JsonTypeInfo typeInfo) =>
+            typeInfo.Kind == JsonTypeInfoKind.Object && typeInfo.Properties.Count > 0 && ReferenceEquals(typeInfo.Properties[0].CustomConverter, TypeNameProperty);
+
+        private sealed class TypeNamePropertyConverter : JsonConverter<string>
+        {
+            public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => reader.GetString();
+
+            public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) => writer.WriteStringValue(value);
+        }
+
         private static readonly ConcurrentDictionary<Type, MethodInfo> _immutableFactories = new();
 
         private static readonly Dictionary<string, string> ImmutableInterfaceImplementations = new(StringComparer.Ordinal)
@@ -589,6 +606,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             HashSet<object> writing = _writingWithTypeName ??= new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
             if (writing.Add(value) == false)
                 throw new JsonException($"Self referencing loop detected for type '{runtimeType.FullName}'.");
+
+            if (HasTypeNameProperty(RavenJsonTypeInfoResolver.GetObjectTypeInfo(options, runtimeType)))
+            {
+                RavenSerializationBinder.Instance.ValidateType(runtimeType);
+                object previous = _writingTypeNameFor;
+                _writingTypeNameFor = value;
+                try
+                {
+                    JsonSerializer.Serialize(writer, value, GetTypeInfo(runtimeType, options));
+                }
+                finally
+                {
+                    _writingTypeNameFor = previous;
+                    writing.Remove(value);
+                }
+
+                return;
+            }
 
             byte[] prefix = GetTypeNamePrefix(runtimeType);
             using (var buffer = new PooledByteBufferWriter(prefix.Length + 256))

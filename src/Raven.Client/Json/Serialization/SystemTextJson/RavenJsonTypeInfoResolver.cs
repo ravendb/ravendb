@@ -418,6 +418,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyNewtonsoftDefaultValueHandling(typeInfo);
             ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
+            AddTypeNameProperty(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
         }
 
@@ -1296,6 +1297,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 dictionary[key] = value;
             }
+        }
+
+        private static void AddTypeNameProperty(JsonTypeInfo typeInfo)
+        {
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                if (typeInfo.Properties[i].Name == TypeNameConverter.TypePropertyName)
+                    return;
+            }
+
+            JsonPropertyInfo typeName = typeInfo.CreateJsonPropertyInfo(typeof(string), TypeNameConverter.TypePropertyName);
+            typeName.CustomConverter = TypeNameConverter.TypeNameProperty;
+            typeName.Get = TypeNameConverter.TypeNameFor;
+            typeName.ShouldSerialize = static (_, value) => value != null;
+            typeInfo.Properties.Insert(0, typeName);
         }
 
         private void AddMetadataIdentityProperties(JsonTypeInfo typeInfo, NewtonsoftExtensionData extensionData)
