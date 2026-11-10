@@ -5,6 +5,7 @@ using System.Text;
 using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
 
@@ -175,6 +176,89 @@ namespace FastTests.Voron.Containers
                     Assert.Equal(currentAllocations[releasedPage], "Freed Page");
                 }
 
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanReuseFreeListPageFromPreviousTransaction()
+        {
+            const int smallSize = 64, bigSize = 4000;
+            ContainerId containerId;
+            ContainerEntryId first;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var llt = wtx.LowLevelTransaction;
+                containerId = Container.Create(llt);
+                do
+                {
+                    first = Container.Allocate(llt, containerId, smallSize, out _);
+                }
+                while ((long)first / Constants.Storage.PageSize == (long)containerId);
+
+                for (int i = 0; i < 60; i++)
+                    Container.Allocate(llt, containerId, smallSize, out _);
+                Container.Allocate(llt, containerId, bigSize, out _);
+                Container.Allocate(llt, containerId, bigSize, out _);
+                wtx.Commit();
+            }
+
+            long pageWithSpace = (long)first / Constants.Storage.PageSize;
+            bool IsOnFreeList(LowLevelTransaction llt) => Container.GetPagesFor(llt, containerId).FreePages.TryGetValue(pageWithSpace, out _);
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                Assert.False(IsOnFreeList(wtx.LowLevelTransaction));
+                Container.Delete(wtx.LowLevelTransaction, containerId, first);
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+                Assert.True(IsOnFreeList(rtx.LowLevelTransaction));
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, bigSize / 2, out _);
+                Assert.Equal(pageWithSpace, (long)id / Constants.Storage.PageSize);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void AllocationDoesNotModifyFreeListPagesWithoutEnoughSpace()
+        {
+            const int itemSize = 64;
+            ContainerId containerId;
+            var ids = new List<ContainerEntryId>();
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = Container.Create(wtx.LowLevelTransaction);
+                for (int i = 0; i < 2000; i++)
+                    ids.Add(Container.Allocate(wtx.LowLevelTransaction, containerId, itemSize, out _));
+                wtx.Commit();
+            }
+
+            // half of the items deleted from full pages, so they are on the free list, but their free space isn't in one piece
+            var fragmentedPages = new HashSet<long>();
+            using (var wtx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < ids.Count; i += 2)
+                {
+                    Container.Delete(wtx.LowLevelTransaction, containerId, ids[i]);
+                    fragmentedPages.Add((long)ids[i] / Constants.Storage.PageSize);
+                }
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var expectedModifiedPages = new HashSet<long> { (long)containerId }; // the root page is modified by every allocation
+                for (int i = 0; i < 500; i++)
+                    expectedModifiedPages.Add((long)Container.Allocate(wtx.LowLevelTransaction, containerId, itemSize, out _) / Constants.Storage.PageSize);
+
+                fragmentedPages.ExceptWith(expectedModifiedPages);
+                Assert.NotEmpty(fragmentedPages);
+                Assert.DoesNotContain(fragmentedPages, wtx.LowLevelTransaction.IsDirty);
             }
         }
     }
