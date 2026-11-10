@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Extensions;
-using Sparrow;
 using Sparrow.Json.Sync;
 using System;
 using System.Collections.Generic;
@@ -479,29 +478,8 @@ internal class AiConversation : IAiConversationOperations
 
     private string SerializeToJson(object value)
     {
-        ISerializationConventions serialization = _aiOperations._store.Conventions.Serialization;
-
         using (_aiOperations.AllocateOperationContext(out JsonOperationContext context))
-        using (IJsonWriter writer = serialization.CreateWriter(context))
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(value));
-            serialization.CreateSerializer().Serialize(writer, value);
-            writer.WriteEndObject();
-            writer.FinalizeDocument();
-
-            using (BlittableJsonReaderObject json = writer.CreateReader())
-            using (MemoryStream stream = RecyclableMemoryStreamFactory.GetRecyclableStream())
-            {
-                var property = new BlittableJsonReaderObject.PropertyDetails();
-                json.GetPropertyByIndex(0, ref property);
-
-                using (var textWriter = new BlittableJsonTextWriter(context, stream))
-                    textWriter.WriteValue(property.Token & BlittableJsonReaderBase.TypesMask, property.Value);
-
-                return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
-            }
-        }
+            return _aiOperations._store.Conventions.Serialization.SerializeToJson(value, context);
     }
 
     internal class AiActionContext<TActionParametersSchema>
