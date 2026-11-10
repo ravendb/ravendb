@@ -107,7 +107,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             else if (connectorType == AiConnectorType.Anthropic)
                 Assert.Equal("ephemeral", (string)cacheField["type"]);
             else
-                Assert.False(string.IsNullOrEmpty((string)cacheField), $"prompt_cache_key should be the conversation id, got: {cacheField}");
+            {
+                // A GenAi conversation id embeds the document being processed.
+                var key = (string)cacheField;
+                Assert.False(string.IsNullOrEmpty(key), $"prompt_cache_key should be sent, got: {cacheField}");
+                Assert.True(key.Length <= 64, $"got {key.Length} characters: {key}");
+                Assert.DoesNotContain("posts/1", key);
+            }
         }
 
         private class Post
@@ -178,8 +184,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 await handler.HandleRequestAsync(context, CancellationToken.None);
 
+                // AiAgentPromptCacheKey pins how the key is derived; this one only needs its shape.
                 Assert.NotNull(capturedPromptCacheKey);
-                Assert.Equal("conversations/1-A", capturedPromptCacheKey);
+                Assert.NotEqual("conversations/1-A", capturedPromptCacheKey);
+                Assert.True(capturedPromptCacheKey.Length <= 64, $"got {capturedPromptCacheKey.Length} characters: {capturedPromptCacheKey}");
             }
         }
 
