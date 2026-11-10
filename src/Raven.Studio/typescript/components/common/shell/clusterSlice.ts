@@ -71,5 +71,6 @@ export const clusterSelectors = {
     localNodeTag: selectLocalNodeTag,
     clientVersion: (store: RootState) => store.cluster.clientVersion,
     serverVersion: (store: RootState) => store.cluster.serverVersion,
+    isDevBuild: (store: RootState) => store.cluster.serverVersion?.BuildVersion < 100,
     isPassive: (store: RootState) => store.cluster.passive,
 };
