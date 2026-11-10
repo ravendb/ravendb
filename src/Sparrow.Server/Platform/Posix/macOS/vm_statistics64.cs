@@ -28,11 +28,11 @@ namespace Sparrow.Server.Platform.Posix.macOS
          */
         uint speculative_count; /* # of pages speculative */
 
-        public uint FreePagesCount => free_count;
-        public uint ActivePagesCount => active_count;
-        public uint InactivePagesCount => inactive_count;
-        public uint WirePagesCount => wire_count;
-        public uint SpeculativePagesCount => speculative_count;
-        public uint PurgeablePagesCount => purgeable_count;
+        public long FreePagesCount => free_count;
+        public long ActivePagesCount => active_count;
+        public long InactivePagesCount => inactive_count;
+        public long WirePagesCount => wire_count;
+        public long SpeculativePagesCount => speculative_count;
+        public long PurgeablePagesCount => purgeable_count;
     }
 }

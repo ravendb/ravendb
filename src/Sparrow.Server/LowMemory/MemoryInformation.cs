@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -472,7 +472,7 @@ namespace Sparrow.Server.LowMemory
                 return FailedResult;
             }
 
-            uint pageSize;
+            nuint pageSize;
             var vmStats = new vm_statistics64();
 
             var machPort = macSyscall.mach_host_self();
@@ -503,11 +503,11 @@ namespace Sparrow.Server.LowMemory
              * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
              * Active memory: This information is currently in memory, and has been recently used.
              * Inactive memory: This information in memory is not actively being used, but was recently used. */
-            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount + vmStats.PurgeablePagesCount + vmStats.SpeculativePagesCount) * pageSize, SizeUnit.Bytes);
+            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount + vmStats.PurgeablePagesCount + vmStats.SpeculativePagesCount) * (long)pageSize, SizeUnit.Bytes);
 
             // there is no commited memory value in OSX,
             // this is an approximation: wired + active + swap used
-            var commitedMemoryInBytes = (vmStats.WirePagesCount + vmStats.ActivePagesCount) * pageSize + (long)compressedMemoryInBytes + (long)swapu.xsu_used;
+            var commitedMemoryInBytes = (vmStats.WirePagesCount + vmStats.ActivePagesCount) * (long)pageSize + (long)compressedMemoryInBytes + (long)swapu.xsu_used;
             var commitedMemory = new Size(commitedMemoryInBytes, SizeUnit.Bytes);
 
             // commit limit: physical memory + swap
