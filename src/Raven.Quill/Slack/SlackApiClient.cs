@@ -16,7 +16,7 @@ internal sealed class SlackApiClient(SlackSdk sdk) : ISlackClient
 
     public async Task<string> OpenSocketAsync(string appToken, CancellationToken ct)
     {
-        var payload = await GuardAsync(Api(appToken).AppsConnectionsApi.Open(ct));
+        var payload = await GuardAsync(Api(appToken).AppsConnections.Open(ct));
         return payload.Url;
     }
 
