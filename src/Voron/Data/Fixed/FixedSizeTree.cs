@@ -1303,51 +1303,49 @@ namespace Voron.Data.Fixed
 
         public byte* ReadPtr(TVal key, out int size)
         {
-            byte* ptr;
-            switch (Type)
-            {
-                case null:
-                    size = 0;
-                    return null;
+            byte* ptr = _parent.DirectRead(_treeName);
+            if (ptr == null)
+                goto NotFound;
 
+            byte* dataStart;
+            int position;
+            switch (((FixedSizeTreeHeader.Embedded*)ptr)->RootObjectType)
+            {
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    ptr = _parent.DirectRead(_treeName);
-                    var header = (FixedSizeTreeHeader.Embedded*)ptr;
-                    var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
-                    var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
-                    if (_lastMatch != 0)
-                        goto case null;
-                    
-                    ptr = dataStart + (pos * _entrySize) + sizeof(long);
+                    dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+                    position = BinarySearch(dataStart, ((FixedSizeTreeHeader.Embedded*)ptr)->NumberOfEntries, key, _entrySize);
                     break;
 
                 case RootObjectType.FixedSizeTree:
-                    var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-
-                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
-                    while (page.IsLeaf == false)
+                    byte* page = _tx.GetPage(((FixedSizeTreeHeader.Large*)ptr)->RootPageNumber).Pointer;
+                    var pageHeader = (FixedSizeTreePageHeader*)page;
+                    while ((pageHeader->TreeFlags & FixedSizeTreePageFlags.Leaf) != FixedSizeTreePageFlags.Leaf)
                     {
-                        BinarySearch(page, key);
-                        if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                            page.LastSearchPosition--;
-                        var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                        page = GetReadOnlyPage(childPageNumber);
+                        dataStart = page + pageHeader->StartPosition;
+                        position = BinarySearch(dataStart, pageHeader->NumberOfEntries, key, BranchEntrySize);
+                        if (_lastMatch < 0 && position > 0)
+                            position--;
+                        page = _tx.GetPage(FixedSizeTreePage<TVal>.GetEntry(dataStart, position, BranchEntrySize)->PageNumber).Pointer;
+                        pageHeader = (FixedSizeTreePageHeader*)page;
                     }
-                    dataStart = page.Pointer + page.StartPosition;
 
-                    BinarySearch(page, key);
-                    if (_lastMatch != 0)
-                        goto case null;
-
-                    ptr = dataStart + (page.LastSearchPosition * _entrySize) + sizeof(long);
+                    dataStart = page + pageHeader->StartPosition;
+                    position = BinarySearch(dataStart, pageHeader->NumberOfEntries, key, _entrySize);
                     break;
 
                 default:
-                    throw new ArgumentOutOfRangeException(Type?.ToString());
+                    throw new ArgumentOutOfRangeException(((FixedSizeTreeHeader.Embedded*)ptr)->RootObjectType.ToString());
             }
 
+            if (_lastMatch != 0)
+                goto NotFound;
+
             size = _valSize;
-            return ptr;
+            return dataStart + (position * _entrySize) + sizeof(long);
+
+        NotFound:
+            size = 0;
+            return null;
         }
 
         public ByteStringContext.ExternalScope Read(TVal key, out Slice slice)
