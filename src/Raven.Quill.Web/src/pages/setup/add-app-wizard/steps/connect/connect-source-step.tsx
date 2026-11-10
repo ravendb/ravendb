@@ -1,6 +1,7 @@
-import { useController, useFormContext } from "react-hook-form";
+import { useController, useFormContext, useWatch } from "react-hook-form";
 import { CARD_LABEL_CLASSES, SELECTED_CARD_CLASSES } from "@/components/form/form-radio-cards";
 import { FormInput } from "@/components/form/form-input";
+import { GenerateFromNameButton } from "@/components/form/generate-from-name-button";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
 import { cn } from "@/lib/utils";
@@ -12,9 +13,7 @@ import { TestConnectionButton } from "@/pages/setup/add-app-wizard/steps/connect
 import { useConnectionSync } from "@/pages/setup/add-app-wizard/steps/connect/use-connection-sync";
 import { toSlug } from "@/pages/setup/add-app-wizard/slugify";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
-import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
-import { RefreshCw } from "lucide-react";
 
 export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
     const { control, setValue, getValues } = useFormContext<AppFormData>();
@@ -31,6 +30,11 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
         field: { value },
         fieldState: { error, invalid },
     } = useController({ control, name: "externalConnection.provider" });
+
+    const [appName, slug] = useWatch({
+        control,
+        name: ["externalConnection.appName", "externalConnection.slug"],
+    });
 
     const isProviderSelected = Boolean(value);
 
@@ -54,7 +58,9 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 label="Public URL slug"
                 placeholder="e.g. acme-shop"
                 disabled={isBusy || isEditingApp}
-                afterChange={() => setHasEditedSlug(true)}
+                afterChange={(event) =>
+                    setHasEditedSlug(event.target.value !== toSlug(getValues("externalConnection.appName")))
+                }
                 description={
                     isEditingApp
                         ? "Appears in every public embed URL and is the app's database name, so it cannot be changed."
@@ -63,21 +69,15 @@ export function ConnectSourceStep({ isBusy }: WizardBodyComponentProps) {
                 addons={
                     !isEditingApp && (
                         <InputGroupAddon align="inline-end">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => {
-                                    setValue(
-                                        "externalConnection.slug",
-                                        toSlug(getValues("externalConnection.appName")),
-                                        { shouldValidate: true },
-                                    );
+                            <GenerateFromNameButton
+                                isAlreadyGenerated={slug === toSlug(appName)}
+                                alreadyGeneratedTooltip="The slug is already generated from the app name."
+                                isBusy={isBusy}
+                                onGenerate={() => {
+                                    setValue("externalConnection.slug", toSlug(appName), { shouldValidate: true });
                                     setHasEditedSlug(false);
                                 }}
-                            >
-                                <RefreshCw />
-                                Regenerate
-                            </Button>
+                            />
                         </InputGroupAddon>
                     )
                 }
