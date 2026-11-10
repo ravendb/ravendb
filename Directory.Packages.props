@@ -100,11 +100,11 @@
     <PackageVersion Include="NLog.Web.AspNetCore" Version="5.5.0" />
     <PackageVersion Include="NodaTime" Version="3.3.7" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="NuGet.Commands" Version="7.9.0" />
-    <PackageVersion Include="NuGet.PackageManagement" Version="7.9.0" />
-    <PackageVersion Include="NuGet.ProjectModel" Version="7.9.0" />
-    <PackageVersion Include="NuGet.Protocol" Version="7.9.0" />
-    <PackageVersion Include="NuGet.Resolver" Version="7.9.0" />
+    <PackageVersion Include="NuGet.Commands" Version="8.0.0" />
+    <PackageVersion Include="NuGet.PackageManagement" Version="8.0.0" />
+    <PackageVersion Include="NuGet.ProjectModel" Version="8.0.0" />
+    <PackageVersion Include="NuGet.Protocol" Version="8.0.0" />
+    <PackageVersion Include="NuGet.Resolver" Version="8.0.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
