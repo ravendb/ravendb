@@ -42,6 +42,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         void WritePropertyName(string name);
 
+        void WritePropertyName(LazyStringValue name);
+
         void WriteEndObject();
 
         void WriteStartArray();
@@ -160,6 +162,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     }
                     sink.WriteEndObject();
                     break;
+                case BlittableJsonReaderObject json:
+                    WriteBlittable(ref sink, json);
+                    break;
                 case IEnumerable items:
                     sink.WriteStartArray();
                     foreach (object item in items)
@@ -169,6 +174,20 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 default:
                     throw new NotSupportedException($"The value type {value.GetType().FullName} of key {key} is not supported in the metadata");
             }
+        }
+
+        public static void WriteBlittable<TSink>(ref TSink sink, BlittableJsonReaderObject json)
+            where TSink : struct, IMetadataValueSink
+        {
+            var property = new BlittableJsonReaderObject.PropertyDetails();
+            sink.WriteStartObject();
+            for (int i = 0; i < json.Count; i++)
+            {
+                json.GetPropertyByIndex(i, ref property);
+                sink.WritePropertyName(property.Name);
+                Write(ref sink, property.Name, property.Value);
+            }
+            sink.WriteEndObject();
         }
 
         public static void WriteDictionary<TSink>(ref TSink sink, IEnumerable<KeyValuePair<string, object>> dictionary)
@@ -190,7 +209,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void WriteString(string value) => writer.WriteStringValue(value);
 
-        public void WriteString(LazyStringValue value) => writer.WriteStringValue(value.ToString());
+        public unsafe void WriteString(LazyStringValue value) => writer.WriteStringValue(new ReadOnlySpan<byte>(value.Buffer, value.Size));
 
         public void WriteString(LazyCompressedStringValue value) => writer.WriteStringValue(value.ToString());
 
@@ -230,6 +249,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WriteStartObject() => writer.WriteStartObject();
 
         public void WritePropertyName(string name) => writer.WritePropertyName(name);
+
+        public unsafe void WritePropertyName(LazyStringValue name) => writer.WritePropertyName(new ReadOnlySpan<byte>(name.Buffer, name.Size));
 
         public void WriteEndObject() => writer.WriteEndObject();
 
@@ -281,6 +302,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WriteStartObject() => builder.StartWriteObject();
 
         public void WritePropertyName(string name) => builder.WritePropertyName(name);
+
+        public void WritePropertyName(LazyStringValue name) => builder.WritePropertyName(name);
 
         public void WriteEndObject() => builder.WriteObjectEnd();
 
