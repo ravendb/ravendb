@@ -3,7 +3,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
@@ -50,61 +49,39 @@ namespace Raven.Client.Json
                 return;
             }
 
-            Task<HttpContent> bufferResponseContentTask = null;
+            Task bufferResponseTask = null;
             try
             {
                 if (response.IsSuccessStatusCode == false)
                 {
-                    bufferResponseContentTask = BufferResponseContentAsync(response.Content);
-                    response.Content = await bufferResponseContentTask.WithCancellation(token).ConfigureAwait(false);
+                    bufferResponseTask = response.Content.LoadIntoBufferAsync();
+                    await bufferResponseTask.WithCancellation(token).ConfigureAwait(false);
 
                     _abortUpload.Cancel();
                 }
 
                 await requestBodyTask.WithCancellation(token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            catch (Exception e)
             {
                 _abortUpload.Cancel();
                 response.Dispose();
 
                 await requestBodyTask.ConfigureAwait(false);
 
-                if (bufferResponseContentTask != null)
-                    (await bufferResponseContentTask.ConfigureAwait(false)).Dispose();
+                bufferResponseTask?.IgnoreUnobservedExceptions();
 
+                if (e is OperationCanceledException && token.IsCancellationRequested)
+                {
 #if NETSTANDARD2_0 || NETSTANDARD2_1
-                throw new TaskCanceledException(new OperationCanceledException().Message);
+                    throw new TaskCanceledException(new OperationCanceledException().Message);
 #else
-                throw new TaskCanceledException(new OperationCanceledException().Message, null, token);
+                    throw new TaskCanceledException(new OperationCanceledException().Message, null, token);
 #endif
+                }
+
+                throw;
             }
-        }
-
-        private static async Task<HttpContent> BufferResponseContentAsync(HttpContent content)
-        {
-            var buffer = new MemoryStream();
-            ExceptionDispatchInfo error = null;
-
-            try
-            {
-                using (var stream = await content.ReadAsStreamAsync().ConfigureAwait(false))
-                    await stream.CopyToAsync(buffer).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                error = ExceptionDispatchInfo.Capture(e);
-            }
-
-            buffer.Position = 0;
-
-            var bufferedContent = new StreamContent(error == null ? buffer : new ThrowAtEndStream(buffer, error));
-            foreach (var header in content.Headers)
-                bufferedContent.Headers.TryAddWithoutValidation(header.Key, header.Value);
-
-            content.Dispose();
-
-            return bufferedContent;
         }
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
@@ -112,7 +89,8 @@ namespace Raven.Client.Json
             if (Interlocked.CompareExchange(ref _tcs, new(TaskCreationOptions.RunContinuationsAsynchronously), null) is not null)
                 throw new InvalidOperationException($"Already called previously, or called after {nameof(EnsureCompletedAsync)}");
 
-            stream = new AbortableWriteStream(stream, _abortUpload.Token);
+            var abortableStream = new AbortableWriteStream(stream, _abortUpload.Token);
+            stream = abortableStream;
 
             try
             {
@@ -163,6 +141,7 @@ namespace Raven.Client.Json
             }
             finally
             {
+                abortableStream.Dispose();
                 _tcs!.TrySetResult(null);
             }
         }
@@ -177,6 +156,8 @@ namespace Raven.Client.Json
         {
             private readonly Stream _inner;
             private readonly CancellationToken _abort;
+            private CancellationTokenSource _linked;
+            private CancellationToken _linkedFor;
 
             public AbortableWriteStream(Stream inner, CancellationToken abort)
             {
@@ -198,122 +179,46 @@ namespace Raven.Client.Json
                 set => throw new NotSupportedException();
             }
 
-            public override void Flush() => _inner.FlushAsync(_abort).GetAwaiter().GetResult();
-
-            public override Task FlushAsync(CancellationToken token)
+            private CancellationToken Abortable(CancellationToken token)
             {
                 if (token.CanBeCanceled == false)
-                    return _inner.FlushAsync(_abort);
+                    return _abort;
 
-                return FlushLinkedAsync(token);
+                if (_linked == null || _linkedFor != token)
+                {
+                    _linked?.Dispose();
+                    _linked = CancellationTokenSource.CreateLinkedTokenSource(token, _abort);
+                    _linkedFor = token;
+                }
+
+                return _linked.Token;
             }
 
-            private async Task FlushLinkedAsync(CancellationToken token)
-            {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, _abort))
-                    await _inner.FlushAsync(cts.Token).ConfigureAwait(false);
-            }
+            public override void Flush() => _inner.FlushAsync(_abort).GetAwaiter().GetResult();
+
+            public override Task FlushAsync(CancellationToken token) => _inner.FlushAsync(Abortable(token));
 
             public override void Write(byte[] buffer, int offset, int count) => _inner.WriteAsync(buffer, offset, count, _abort).GetAwaiter().GetResult();
 
-            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken token)
-            {
-                if (token.CanBeCanceled == false)
-                    return _inner.WriteAsync(buffer, offset, count, _abort);
-
-                return WriteLinkedAsync(buffer, offset, count, token);
-            }
-
-            private async Task WriteLinkedAsync(byte[] buffer, int offset, int count, CancellationToken token)
-            {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, _abort))
-                    await _inner.WriteAsync(buffer, offset, count, cts.Token).ConfigureAwait(false);
-            }
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken token) => _inner.WriteAsync(buffer, offset, count, Abortable(token));
 
 #if !NETSTANDARD2_0
-            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken token = default)
-            {
-                if (token.CanBeCanceled == false)
-                    return _inner.WriteAsync(buffer, _abort);
-
-                return WriteLinkedAsync(buffer, token);
-            }
-
-            private async ValueTask WriteLinkedAsync(ReadOnlyMemory<byte> buffer, CancellationToken token)
-            {
-                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, _abort))
-                    await _inner.WriteAsync(buffer, cts.Token).ConfigureAwait(false);
-            }
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken token = default) => _inner.WriteAsync(buffer, Abortable(token));
 #endif
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                    _linked?.Dispose();
+
+                base.Dispose(disposing);
+            }
 
             public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
             public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
             public override void SetLength(long value) => throw new NotSupportedException();
-        }
-
-        private sealed class ThrowAtEndStream : Stream
-        {
-            private readonly MemoryStream _inner;
-            private readonly ExceptionDispatchInfo _error;
-
-            public ThrowAtEndStream(MemoryStream inner, ExceptionDispatchInfo error)
-            {
-                _inner = inner;
-                _error = error;
-            }
-
-            public override bool CanRead => true;
-
-            public override bool CanSeek => false;
-
-            public override bool CanWrite => false;
-
-            public override long Length => throw new NotSupportedException();
-
-            public override long Position
-            {
-                get => throw new NotSupportedException();
-                set => throw new NotSupportedException();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                var read = _inner.Read(buffer, offset, count);
-                if (read == 0 && count > 0)
-                    _error.Throw();
-
-                return read;
-            }
-
-            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken token)
-            {
-                try
-                {
-                    return Task.FromResult(Read(buffer, offset, count));
-                }
-                catch (Exception e)
-                {
-                    return Task.FromException<int>(e);
-                }
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                if (disposing)
-                    _inner.Dispose();
-
-                base.Dispose(disposing);
-            }
-
-            public override void Flush() => throw new NotSupportedException();
-
-            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-            public override void SetLength(long value) => throw new NotSupportedException();
-
-            public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         }
     }
 }
