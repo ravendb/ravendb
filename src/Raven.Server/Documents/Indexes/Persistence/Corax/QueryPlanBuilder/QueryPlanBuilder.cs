@@ -145,8 +145,14 @@ internal static partial class QueryPlanBuilder
         RuntimeHelpers.EnsureSufficientExecutionStack();
         foreach (ClauseInfo clause in clauses ?? [])
         {
-            if (parentIsOr && clause.ClauseType == ClauseType.AndGroup)
-                clause.ScoringGroupIndex = count++;
+            if (clause.IsNegated) // the excluded side of a negation is never scored
+                continue;
+
+            if (parentIsOr && clause.ClauseType is ClauseType.AndGroup or ClauseType.AllIn)
+            {
+                clause.IsScoringGroup = true;
+                count++;
+            }
 
             count = AssignScoringGroups(clause.SubClauses, clause.ClauseType == ClauseType.OrGroup, count);
         }
@@ -203,7 +209,8 @@ internal static partial class QueryPlanBuilder
 
         // `where a OR b` cannot drive a sorted scan from one of its branches: the scan would only emit that
         // branch's documents, and the residual predicate can only filter what it walks - never re-admit the rest.
-        if (walkerCtx.IsOr)
+        // A scored plan needs every clause to score its matches, which the lookups and scans below cannot do.
+        if (walkerCtx.IsOr || p.HasBoost)
             return flags;
 
         // Collect non-negated, non-boosted Equals clause indices for compound lookups.
@@ -214,9 +221,6 @@ internal static partial class QueryPlanBuilder
         for (int i = 0; i < clauses.Count; i++)
         {
             ClauseInfo c = clauses[i];
-
-            if (HasBoostRecursive(c)) // Any boost anywhere rules out FieldSortedScan and CompoundSortedScan (no scoring stage).
-                return PlanOptimizationFlags.None;
 
             if (c.IsNegated)
                 continue;
@@ -316,19 +320,6 @@ internal static partial class QueryPlanBuilder
         }
 
         return flags;
-
-        static bool HasBoostRecursive(ClauseInfo c)
-        {
-            if (c.HasBoost)
-                return true;
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-            foreach (ClauseInfo t in c.SubClauses ?? [])
-            {
-                if (HasBoostRecursive(t))
-                    return true;
-            }
-            return false;
-        }
 
         void TryFindCompoundFieldEqualMatches(Span<int> eqBuf)
         {
@@ -854,7 +845,7 @@ internal static partial class QueryPlanBuilder
         {
             // copy - survives the regrouping below
             List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, walkerCtx.Clauses.Count - beforeCount);
-            walkerCtx.RecordPendingBoost(inner, boostBinding);
+            walkerCtx.RecordPendingBoost(inner, boostBinding, innerOp == BooleanOp.Or);
         }
 
         GroupWrapperOperands(walkerCtx, beforeCount, innerOp);

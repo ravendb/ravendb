@@ -72,8 +72,13 @@ public sealed class ClauseInfo
     /// in an unscored one the clause is planned as if it was not boosted.</summary>
     public bool HasBoost { get; set; }
 
-    /// <summary>Index into <c>CompiledQueryMatch.ScoringGroups</c> of an AND group under an OR of a scored plan, which scores only the documents it matched; -1 otherwise.</summary>
-    public int ScoringGroupIndex { get; set; } = -1;
+    /// <summary>The boost() reaches this clause through an OR group, so it boosts the group rather than the clause itself.</summary>
+    public bool IsBoostedThroughOr { get; set; }
+
+    /// <summary>An AND group or ALL IN under an OR of a scored plan, which scores only the documents it matched.
+    /// Its saved result is <c>CompiledQueryMatch.ScoringGroups</c>[n] where n is its position among the scoring groups in the
+    /// depth-first order of the executions, so a cached plan stays valid whatever order the executions are sorted in.</summary>
+    public bool IsScoringGroup { get; set; }
 
     /// <summary>Optional WHEN condition delegate, called with the query's BlittableJsonReaderObject parameters; returns false to eliminate the clause.</summary>
     public Func<BlittableJsonReaderObject, bool> WhenCondition { get; set; }

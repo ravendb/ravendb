@@ -49,6 +49,8 @@ public sealed class ClauseExecution : IComparable<ClauseExecution>
     // A clause is a sentinal if it is a false WHEN() clause, or known upfront to be impossible (like contradictory BETWEEN) 
     public bool IsSentinel => ClauseType is ClauseType.MatchAll or ClauseType.MatchNothing;
 
+    public bool IsScoringGroup => Clause.IsScoringGroup && IsSentinel == false;
+
     public void MarkAsSentinel(ClauseType sentinel, long cardinality)
     {
         ClauseType = sentinel;

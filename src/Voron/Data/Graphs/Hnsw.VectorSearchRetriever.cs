@@ -65,9 +65,6 @@ public partial class Hnsw
         public float DistanceToScore(float distance) => _searchState.DistanceToScore(distance);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Fill(Span<long> matches, Span<float> distances, ref RoaringBitmap filter)
         {
             return FillWithFilter(matches, distances, ref filter);

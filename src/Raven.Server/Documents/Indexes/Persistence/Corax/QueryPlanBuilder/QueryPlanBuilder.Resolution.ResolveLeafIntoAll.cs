@@ -37,7 +37,7 @@ internal static partial class QueryPlanBuilder
             }
             default:
             {
-                AddDefaultSlot(planHasBoost ? MatchDispatch.QueryMatch : GetDispatch(clauseExec, planHasBoost: false));
+                AddDefaultSlot(planHasBoost ? MatchDispatch.QueryMatch : GetDispatch(clauseExec));
                 break;
             }
         }
@@ -138,7 +138,16 @@ internal static partial class QueryPlanBuilder
             }
         }
 
-        IQueryMatch Boosted(IQueryMatch match) => clauseExec.Clause.HasBoost && clauseExec.BoostFactor is not 0 ? walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor) : match;
+        IQueryMatch Boosted(IQueryMatch match)
+        {
+            if (clauseExec.Clause.HasBoost == false || clauseExec.BoostFactor is 0)
+                return match;
+
+            if (match is VectorSearchMatch && clauseExec.Clause.IsBoostedThroughOr)
+                return match;
+
+            return walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor);
+        }
 
         static bool IsCalibratedRangeClause(ClauseType type) => type switch
         {

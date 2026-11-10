@@ -137,60 +137,50 @@ public partial class IndexSearcher
     }
 
     /// <summary>
+    /// Builds the result of a <c>search()</c> from the collected terms and disposes the temporaries.
     /// When the field needs relevance scoring, a <c>search()</c> that reduces to plain terms must preserve per-document
     /// BM25 instead of collapsing into a flat-scored <see cref="BitmapMatch"/> (RavenDB-26975): a single term returns the
-    /// scored <see cref="TermMatch"/> directly, and an OR of terms returns a <see cref="BoostedSearchMatch"/> that unions
-    /// them for Fill while summing their BM25 for Score. Scored wildcards of an OR are summed the same way. Anything richer -
-    /// exists, phrases - has already accumulated into <paramref name="searchBitmap"/>, then the scored wildcards join it,
-    /// and AND-combined multi-term searches keep the bitmap path.
+    /// scored <see cref="TermMatch"/> directly, and several terms return a <see cref="BoostedSearchMatch"/> that combines
+    /// them with the search operator for Fill while summing their BM25 for Score. Scored wildcards are summed the same way.
+    /// Anything richer - exists, phrases - has already accumulated into <paramref name="searchBitmap"/>, then the scored
+    /// wildcards and the terms join it.
     /// </summary>
-    private IQueryMatch TryBuildScoredSearch(in FieldMetadata field, List<Slice> termMatches, List<IQueryMatch> scoredWildcards, ref BitmapMatch searchBitmap,
+    private IQueryMatch FinalizeSearchQuery(in FieldMetadata field, List<Slice> termMatches, List<IQueryMatch> scoredWildcards, ref BitmapMatch searchBitmap,
         ref Voron.Data.RoaringBitmaps.RoaringBitmap tempBitmapData, Constants.Search.Operator @operator, CancellationToken token)
     {
         int count = (termMatches?.Count ?? 0) + (scoredWildcards?.Count ?? 0);
-        if (field.HasBoost == false || searchBitmap.IsAllocated || count == 0)
+        if (field.HasBoost && searchBitmap.IsAllocated == false && count > 0)
         {
-            foreach (var wildcard in scoredWildcards ?? [])
-                AccumulateIntoSearchBitmap(wildcard, ref searchBitmap, ref tempBitmapData, @operator, token);
-            return null;
+            if (count == 1)
+                return scoredWildcards?[0] ?? TermQuery(field, termMatches[0]);
+
+            scoredWildcards ??= [];
+            foreach (var term in termMatches ?? [])
+                scoredWildcards.Add(TermQuery(field, term));
+
+            return new BoostedSearchMatch(Allocator, scoredWildcards, @operator, token);
         }
 
-        if (count == 1)
-            return scoredWildcards?[0] ?? TermQuery(field, termMatches[0]);
+        foreach (var wildcard in scoredWildcards ?? [])
+            AccumulateIntoSearchBitmap(wildcard, ref searchBitmap, ref tempBitmapData, @operator, token);
+        MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, token);
 
-        // Only an OR union has a well-defined "any term contributes" scoring here; AND keeps the bitmap path.
-        if (@operator != Constants.Search.Operator.Or)
-            return null;
+        tempBitmapData.Dispose();
+        if (searchBitmap.IsAllocated)
+            return searchBitmap;
 
-        var terms = new IQueryMatch[count];
-        int index = 0;
-        foreach (var term in termMatches ?? [])
-            terms[index++] = TermQuery(field, term);
-        scoredWildcards?.CopyTo(terms, index);
-
-        return new BoostedSearchMatch(Allocator, terms, token);
+        searchBitmap.Dispose();
+        return EmptyQueryMatch.Instance;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AccumulateWildcard(IQueryMatch wildcard, ref List<IQueryMatch> scoredWildcards, ref BitmapMatch searchBitmap,
         ref Voron.Data.RoaringBitmaps.RoaringBitmap tempBitmapData, Constants.Search.Operator @operator, CancellationToken token)
     {
-        if (wildcard.IsBoosting && @operator == Constants.Search.Operator.Or)
+        if (wildcard.IsBoosting)
             (scoredWildcards ??= []).Add(wildcard);
         else
             AccumulateIntoSearchBitmap(wildcard, ref searchBitmap, ref tempBitmapData, @operator, token);
-    }
-
-    /// <summary>Dispose temporaries and return the final search result.</summary>
-    private IQueryMatch FinalizeSearchResult(ref BitmapMatch searchBitmap,
-        ref Voron.Data.RoaringBitmaps.RoaringBitmap tempBitmapData)
-    {
-        tempBitmapData.Dispose();
-        if (searchBitmap.IsAllocated == false)
-        {
-            searchBitmap.Dispose();
-            return EmptyQueryMatch.Instance;
-        }
-        return searchBitmap;
     }
 
     private IQueryMatch SearchQueryLegacy(FieldMetadata field, IEnumerable<string> values, Constants.Search.Operator @operator, in CancellationToken cancellationToken)
@@ -255,16 +245,8 @@ public partial class IndexSearcher
             }
         }
 
-        if (TryBuildScoredSearch(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken) is { } scoredTerm)
-        {
-            wildcardAnalyzer?.Dispose();
-            tempBitmapData.Dispose();
-            return scoredTerm;
-        }
-
-        MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         wildcardAnalyzer?.Dispose();
-        return FinalizeSearchResult(ref searchBitmap, ref tempBitmapData);
+        return FinalizeSearchQuery(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
 
         static IEnumerable<Token> GetTokens(string source)
         {
@@ -374,16 +356,8 @@ public partial class IndexSearcher
             AccumulatePhraseQuery(field, terms, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         }
 
-        if (TryBuildScoredSearch(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken) is { } scoredTerm)
-        {
-            wildcardAnalyzer?.Dispose();
-            tempBitmapData.Dispose();
-            return scoredTerm;
-        }
-
-        MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         wildcardAnalyzer?.Dispose();
-        return FinalizeSearchResult(ref searchBitmap, ref tempBitmapData);
+        return FinalizeSearchQuery(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
 
         static int CountTokens(in string source, out Token termToken)
         {
@@ -476,14 +450,7 @@ public partial class IndexSearcher
             AccumulatePhraseQuery(field, terms, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
         }
 
-        if (TryBuildScoredSearch(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken) is { } scoredTerm)
-        {
-            tempBitmapData.Dispose();
-            return scoredTerm;
-        }
-
-        MergeTermMatches(termMatches, field, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
-        return FinalizeSearchResult(ref searchBitmap, ref tempBitmapData);
+        return FinalizeSearchQuery(field, termMatches, scoredWildcards, ref searchBitmap, ref tempBitmapData, @operator, cancellationToken);
     }
 
     private static void AssertFieldIsSearched(in FieldMetadata field)

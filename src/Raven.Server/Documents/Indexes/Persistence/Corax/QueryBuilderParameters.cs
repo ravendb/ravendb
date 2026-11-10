@@ -30,7 +30,6 @@ public sealed class QueryBuilderParameters
     public readonly bool HasDynamics;
     public readonly Lazy<List<string>> DynamicFields;
     public readonly ByteStringContext Allocator;
-    public readonly bool QueryHasBoost;
     public readonly bool AllowImplicitScoreOrdering;
     public readonly bool HasBoost;
     // Per-index compound numeric encoding mask, resolved once on the index definition (not recomputed per
@@ -48,7 +47,6 @@ public sealed class QueryBuilderParameters
         Metadata = metadata;
         QueryParameters = queryParameters;
         IndexFieldsMapping = indexFieldsMapping ?? throw new ArgumentNullException(nameof(indexFieldsMapping));
-        QueryHasBoost = hasBoost;
         HasBoost = hasBoost;
         // HasDynamics and IsVectorSingleClause default to false; Index/Query and other
         // production-only fields stay null — the planner's direct-test path does not exercise
@@ -85,12 +83,12 @@ public sealed class QueryBuilderParameters
                                          || (Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically));
 
         // in case when we've implicitly boosted, we've built primitives with scoring enabled
-        QueryHasBoost = index.HasBoostedFields
-                        || query.Metadata.HasBoost
-                        || IsVectorSingleClause
-                        || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
-                        || HasBoostingAsOrderingType(query.Metadata.OrderBy);
-        HasBoost = QueryHasBoost && (IsVectorSingleClause || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
+        bool queryHasBoost = index.HasBoostedFields
+                             || query.Metadata.HasBoost
+                             || IsVectorSingleClause
+                             || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
+                             || HasBoostingAsOrderingType(query.Metadata.OrderBy);
+        HasBoost = queryHasBoost && (IsVectorSingleClause || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
         Allocator = allocator;
         IndexReadOperation = indexReadOperation;
         CompoundFieldNumericXorMask = index.Definition.CompoundFieldNumericXorMask;

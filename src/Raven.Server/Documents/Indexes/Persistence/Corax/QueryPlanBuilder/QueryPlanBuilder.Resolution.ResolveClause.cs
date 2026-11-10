@@ -38,31 +38,31 @@ internal static partial class QueryPlanBuilder
             case ClauseType.GreaterThanOrEqual:
             case ClauseType.LessThan:
             case ClauseType.LessThanOrEqual:
-                return packed.RangeQuery(clause.ClauseType, fieldMeta, indexSearcher, root);
+                return packed.RangeQuery(clause.ClauseType, fieldMeta, indexSearcher, root, token: builderParams.Token);
 
             case ClauseType.Between:
                 if (cur.SentinelRewriteType != null)
-                    return ResolveSentinelRewrittenBetween(cur, fieldMeta, indexSearcher, root, forward: true);
-                return packed.BetweenQuery(fieldMeta, indexSearcher, root);
+                    return ResolveSentinelRewrittenBetween(cur, fieldMeta, indexSearcher, root, forward: true, builderParams.Token);
+                return packed.BetweenQuery(fieldMeta, indexSearcher, root, token: builderParams.Token);
 
             case ClauseType.In:
             case ClauseType.AllIn:
                 throw new InvalidOperationException($"In/AllIn should be expanded by {nameof(ResolveLeafIntoAll)} (per-term slot loop), not resolved as a single clause.");
 
             case ClauseType.Exists:
-                return indexSearcher.ExistsQuery(fieldMeta);
+                return indexSearcher.ExistsQuery(fieldMeta, token: builderParams.Token);
 
             case ClauseType.StartsWith:
-                return indexSearcher.StartWithQuery(fieldMeta, root.StringValues[packed.Param1]);
+                return indexSearcher.StartWithQuery(fieldMeta, root.StringValues[packed.Param1], token: builderParams.Token);
 
             case ClauseType.EndsWith:
-                return indexSearcher.EndsWithQuery(fieldMeta, root.StringValues[packed.Param1]);
+                return indexSearcher.EndsWithQuery(fieldMeta, root.StringValues[packed.Param1], token: builderParams.Token);
 
             case ClauseType.Search:
                 return HandleSearch();
 
             case ClauseType.Regex:
-                return indexSearcher.RegexQuery(fieldMeta, builderParams.Factories.GetRegexFactory(root.StringValues[packed.Param1]));
+                return indexSearcher.RegexQuery(fieldMeta, builderParams.Factories.GetRegexFactory(root.StringValues[packed.Param1]), token: builderParams.Token);
 
             case ClauseType.Spatial:
                 return HandleSpatial(clause.SpatialMethodType);
@@ -140,7 +140,8 @@ internal static partial class QueryPlanBuilder
             return indexSearcher.SearchQuery(searchMeta,
                 QueryBuilderHelper.SplitSearchValue(searchTerm),
                 clause.SearchOperator,
-                builderParams.Index.CoraxSearchQueryOptions);
+                builderParams.Index.CoraxSearchQueryOptions,
+                builderParams.Token);
         }
     }
 }

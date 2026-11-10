@@ -162,45 +162,48 @@ public class CompiledQueryMatch(
 
     private void Score(Span<long> matches, Span<float> scores, float boostFactor, bool sorted)
     {
-        int slot = 0;
-        ScoreClauses(Exec.Executions ?? [], matches, scores, boostFactor, sorted, ref slot);
+        int slot = 0, group = 0;
+        ScoreClauses(Exec.Executions ?? [], matches, scores, boostFactor, sorted, ref slot, ref group);
     }
 
-    // The slots of ResolvedMatches follow the depth-first order of the executions, see QueryPlanBuilder.ResolveAllSlots
-    private void ScoreClauses(List<ClauseExecution> executions, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot)
+    private void ScoreClauses(List<ClauseExecution> executions, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot, ref int group)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         foreach (var exec in executions)
         {
             if (exec.IsNegated) // the excluded side of a negation is never scored
                 slot += SlotCount(exec);
-            else if (exec.ClauseType is not (ClauseType.OrGroup or ClauseType.AndGroup))
-            {
-                for (int end = slot + SlotCount(exec); slot < end; slot++)
-                    ScoreSlot(slot, matches, scores, boostFactor, sorted);
-            }
-            else if (exec.Clause.ScoringGroupIndex >= 0)
-                ScoreGroup(exec, ScoringGroups[exec.Clause.ScoringGroupIndex], matches, scores, boostFactor, sorted, ref slot);
+            else if (exec.IsScoringGroup)
+                ScoreGroup(exec, ScoringGroups[group++], matches, scores, boostFactor, sorted, ref slot, ref group);
             else
-                ScoreClauses(exec.SubExecutions, matches, scores, boostFactor, sorted, ref slot);
+                ScoreExecution(exec, matches, scores, boostFactor, sorted, ref slot, ref group);
         }
     }
 
-    private void ScoreGroup(ClauseExecution exec, in RoaringBitmap group, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot)
+    private void ScoreExecution(ClauseExecution exec, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot, ref int group)
     {
-        var buffer = ArrayPool<float>.Shared.Rent(matches.Length);
-        var groupScores = buffer.AsSpan(0, matches.Length);
-        groupScores.Clear();
+        if (exec.ClauseType is ClauseType.OrGroup or ClauseType.AndGroup)
+            ScoreClauses(exec.SubExecutions, matches, scores, boostFactor, sorted, ref slot, ref group);
+        else
+        {
+            for (int end = slot + SlotCount(exec); slot < end; slot++)
+                ScoreSlot(slot, matches, scores, boostFactor, sorted);
+        }
+    }
 
-        ScoreClauses(exec.SubExecutions, matches, groupScores, boostFactor, sorted, ref slot);
+    private void ScoreGroup(ClauseExecution exec, in RoaringBitmap scoringGroup, Span<long> matches, Span<float> scores, float boostFactor, bool sorted, ref int slot, ref int group)
+    {
+        using var _ = Searcher.Allocator.Allocate(matches.Length, out Span<float> groupScores);
+        groupScores.Fill(0);
+
+        ScoreExecution(exec, matches, groupScores, boostFactor, sorted, ref slot, ref group);
 
         for (int i = 0; i < matches.Length; i++)
         {
-            if (group.Contains(matches[i]))
+            if (scoringGroup.Contains(matches[i]))
                 scores[i] += groupScores[i];
         }
 
-        ArrayPool<float>.Shared.Return(buffer);
     }
 
     private void ScoreSlot(int slot, Span<long> matches, Span<float> scores, float boostFactor, bool sorted)

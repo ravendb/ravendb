@@ -839,15 +839,15 @@ internal static partial class QueryPlanBuilder
     }
 
     private static IQueryMatch ResolveSentinelRewrittenBetween(ClauseExecution exec, FieldMetadata fieldMeta,
-        IndexSearcher indexSearcher, QueryExecution queryExec, bool forward)
+        IndexSearcher indexSearcher, QueryExecution queryExec, bool forward, CancellationToken token = default)
     {
         if (exec.SentinelRewriteType == ClauseType.Exists)
             return indexSearcher.AllEntries();
         if (exec.SentinelRewriteType == ClauseType.LessThanOrEqual)
-            return exec.PackedParamValue.RangeQuery(ClauseType.LessThanOrEqual, fieldMeta, indexSearcher, queryExec, forward);
+            return exec.PackedParamValue.RangeQuery(ClauseType.LessThanOrEqual, fieldMeta, indexSearcher, queryExec, forward, token);
 
         Debug.Assert(exec.SentinelRewriteType == ClauseType.GreaterThanOrEqual);
-        IQueryMatch rangeMatch = exec.PackedParamValue.RangeQuery(ClauseType.GreaterThanOrEqual, fieldMeta, indexSearcher, queryExec, forward);
+        IQueryMatch rangeMatch = exec.PackedParamValue.RangeQuery(ClauseType.GreaterThanOrEqual, fieldMeta, indexSearcher, queryExec, forward, token);
         if (indexSearcher.TryGetPostingListForNull(in fieldMeta, out _) is false) // no null in this field, we can do a tree scan directly
             return rangeMatch;
         
@@ -935,10 +935,8 @@ internal static partial class QueryPlanBuilder
             or ClauseType.Between;
     }
 
-    internal static MatchDispatch GetDispatch(ClauseExecution exec, bool planHasBoost)
+    internal static MatchDispatch GetDispatch(ClauseExecution exec)
     {
-        Debug.Assert(planHasBoost == false, "A scored plan dispatches every leaf to a query match, boost() has no effect on the dispatch of an unscored one.");
-
         var clause = exec.Clause;
         if (clause.ClauseType is ClauseType.Equals or ClauseType.NotEquals)
             return MatchDispatch.PostingList;
