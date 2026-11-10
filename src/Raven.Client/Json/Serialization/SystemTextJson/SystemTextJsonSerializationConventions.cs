@@ -21,7 +21,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson
 {
-    public class SystemTextJsonSerializationConventions : ISerializationConventions, IJsonPropertyNameResolver
+    public class SystemTextJsonSerializationConventions : ISerializationConventions, IJsonPropertyNameResolver, IEntityStreamWriter
     {
         internal static readonly JsonWriterOptions WriterOptions = new() { Encoder = SupplementaryPlaneJavaScriptEncoder.Instance };
 
@@ -223,12 +223,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{nameof(JsonSerializerOptions)}.{nameof(JsonSerializerOptions.PropertyNamingPolicy)} renames document fields, while queries, indexes and patches address them by member name. " +
                 $"Set {nameof(DocumentConventions)}.{nameof(DocumentConventions.PropertyNameConverter)} instead, which RavenDB applies to both.");
 
-        internal bool TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
+        bool IEntityStreamWriter.TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
         {
-            if (entity is IDynamicMetaObjectProvider)
+            if (entity is IDynamicMetaObjectProvider || serializer is not SystemTextJsonJsonSerializer stjSerializer)
                 return false;
 
-            var options = ((SystemTextJsonJsonSerializer)serializer).Options;
+            JsonSerializerOptions options = stjSerializer.Options;
             Type type = entity.GetType();
             bool hasIdentityProperty = Conventions.GetIdentityProperty(type) != null;
             long start = stream.Position;

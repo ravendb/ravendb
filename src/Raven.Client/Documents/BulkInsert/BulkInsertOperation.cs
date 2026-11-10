@@ -21,7 +21,6 @@ using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -413,8 +412,8 @@ namespace Raven.Client.Documents.BulkInsert
                 if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _writer.StreamWriter) == false)
                 {
                     bool written = entity is not BlittableJsonReaderObject &&
-                                   _conventions.Serialization is SystemTextJsonSerializationConventions stjConventions &&
-                                   stjConventions.TryWriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer);
+                                   _conventions.Serialization is IEntityStreamWriter streamWriter &&
+                                   streamWriter.TryWriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer);
 
                     if (written == false)
                     {
