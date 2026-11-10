@@ -127,16 +127,11 @@ export function selectWorkingChats(state: PlannerState): PlannerChatId[] {
 }
 
 /**
- * Area agents write only their own area's collections and retry when another write got in first, so different
- * areas run side by side. The planner's turn can replace the proposal they build from, so it runs alone.
+ * The chat at work, which a new turn in any chat must wait for; undefined when there is none. Every agent saves to
+ * one plan document, and a save in one turn bounces the saves in progress in the others, so one turn runs at a time.
  */
-export function canRunSideBySide(first: PlannerChatId, second: PlannerChatId): boolean {
-    return first !== null && second !== null && first !== second;
-}
-
-/** The working chat a new turn in this chat must wait for, the chat itself included; undefined when there is none. */
-export function selectBlockingChat(state: PlannerState, chatId: PlannerChatId): PlannerChatId | undefined {
-    return selectWorkingChats(state).find((workingChatId) => !canRunSideBySide(workingChatId, chatId));
+export function selectWorkingChat(state: PlannerState): PlannerChatId | undefined {
+    return selectWorkingChats(state).at(0);
 }
 
 /** The prompt or answers the chat's latest turn replied to. An opening turn replies to none. */

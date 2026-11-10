@@ -445,24 +445,48 @@ describe("createPlannerSession", () => {
         });
     });
 
-    it("stops every running turn on the server when the session is reset", async () => {
+    it("builds one area at a time, and asks no other area meanwhile", async () => {
+        const { stream, stop } = stoppableStream();
+        migration.areaStart.mockImplementationOnce(stream).mockImplementation(() => streamOf(DONE));
+        setup.migrationStop.mockImplementation(async () => stop());
+        const store = useSetupWizardStore.getState();
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.markPlannerAreaStarted("Shipping", true);
+        const session = newSession();
+
+        const salesBuild = session.buildArea("Sales", ["Orders"]);
+        await session.buildArea("Billing", ["Invoices"]);
+        const isKeptInChat = await session.askArea("Shipping", { text: "Embed the parcels.", mentions: [] });
+
+        expect(migration.areaStart).toHaveBeenCalledOnce();
+        expect(migration.areaStart).toHaveBeenCalledWith({ slug: "shop", area: "Sales" }, expect.any(AbortSignal));
+        expect(isKeptInChat).toBe(false);
+        expect(migration.areaAsk).not.toHaveBeenCalled();
+
+        await session.stop("Sales");
+        await salesBuild;
+        await session.buildArea("Billing", ["Invoices"]);
+
+        expect(migration.areaStart).toHaveBeenLastCalledWith(
+            { slug: "shop", area: "Billing" },
+            expect.any(AbortSignal),
+        );
+    });
+
+    it("stops the running turn on the server when the session is reset", async () => {
         const sales = stoppableStream();
-        const billing = stoppableStream();
-        migration.areaStart.mockImplementationOnce(sales.stream).mockImplementationOnce(billing.stream);
+        migration.areaStart.mockImplementation(sales.stream);
         const store = useSetupWizardStore.getState();
         store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
         const session = newSession();
 
         void session.buildArea("Sales", ["Orders"]);
-        void session.buildArea("Billing", ["Invoices"]);
-        await vi.waitFor(() => expect(migration.areaStart).toHaveBeenCalledTimes(2));
+        await vi.waitFor(() => expect(migration.areaStart).toHaveBeenCalledOnce());
         store.resetPlannerState();
 
-        await vi.waitFor(() => expect(setup.migrationStop).toHaveBeenCalledTimes(2));
+        await vi.waitFor(() => expect(setup.migrationStop).toHaveBeenCalledOnce());
         expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Area", area: "Sales" });
-        expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Area", area: "Billing" });
         sales.stop();
-        billing.stop();
     });
 
     it("stops the planner's turn on the server as the proposal agent", async () => {

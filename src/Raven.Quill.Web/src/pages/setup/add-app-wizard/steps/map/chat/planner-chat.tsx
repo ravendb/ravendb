@@ -25,7 +25,7 @@ import {
     selectHasUnsavedEdits,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 
-/** Several chats can work at once, and switching to another chat never stops the one left. */
+/** Switching to another chat never stops the one left. */
 export function PlannerChat({ plan }: { plan: Plan }) {
     const chatId = useShownChatId();
     const viewedArea = useSetupWizardStore((state) => state.plannerView.area);

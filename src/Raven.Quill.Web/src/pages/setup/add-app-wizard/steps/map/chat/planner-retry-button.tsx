@@ -10,7 +10,7 @@ import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/sessio
 /** Runs the chat's failed turn again. A failed build that left nothing to build has nothing to run again. */
 export function PlannerRetryButton({ chatId, area }: { chatId: PlannerChatId; area: PlanArea | null }) {
     const session = usePlannerSession();
-    const canSendMessage = useCanSendMessage(chatId);
+    const canSendMessage = useCanSendMessage();
     const isBuild = useSetupWizardStore((state) => area !== null && isBuildTurn(selectChat(state, chatId)));
     const pendingCollections = area?.pendingCollections ?? [];
 

@@ -31,7 +31,6 @@ import {
     getLatestUserTurn,
     isAreaStarted,
     isBuildTurn,
-    selectBlockingChat,
     selectChat,
     selectHasUnsavedEdits,
     selectIsAnyChatWorking,
@@ -58,7 +57,7 @@ export type PlannerSession = ReturnType<typeof createPlannerSession>;
 let latestPlanRead = 0;
 
 /**
- * Drives the proposal agent's chat and one chat per area; areas run side by side, the planner alone. Requests
+ * Drives the proposal agent's chat and one chat per area, one turn at a time. Requests
  * carry only the slug, since the server holds the plan and the conversations. A turn's frames move the plan
  * forward.
  */
@@ -173,16 +172,14 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         prompt.mentions.forEach((collection) => store.addPlannerMention(chatId, collection));
     };
 
-    const canStartTurn = (chatId: PlannerChatId) => {
+    const canStartTurn = () => {
         const store = getStore();
 
-        return (
-            !store.plannerIsSaving && !selectHasUnsavedEdits(store) && selectBlockingChat(store, chatId) === undefined
-        );
+        return !store.plannerIsSaving && !selectHasUnsavedEdits(store) && !selectIsAnyChatWorking(store);
     };
 
     const start = async () => {
-        if (!canStartTurn(null)) {
+        if (!canStartTurn()) {
             return;
         }
 
@@ -196,7 +193,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
     /** Resolves to whether the chat kept the prompt, sent or failed with Retry to send it again. */
     const askProposal = async (prompt: PlannerPrompt): Promise<boolean> => {
-        if (!canStartTurn(null)) {
+        if (!canStartTurn()) {
             return false;
         }
 
@@ -209,7 +206,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
     };
 
     const startArea = async (area: string) => {
-        if (!canStartTurn(area)) {
+        if (!canStartTurn()) {
             return;
         }
 
@@ -226,7 +223,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
     /** Resolves to whether the chat kept the prompt, sent or failed with Retry to send it again. */
     const sendAreaPrompt = async (area: string, turn: PlannerPromptTurn): Promise<boolean> => {
-        if (!canStartTurn(area)) {
+        if (!canStartTurn()) {
             return false;
         }
 
@@ -309,7 +306,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         askProposal,
 
         answer: async (chatId: PlannerChatId, answers: PlannerAnswer[]) => {
-            if (!canStartTurn(chatId) || getChatPhase(selectChat(getStore(), chatId)) !== "awaitingAnswers") {
+            if (!canStartTurn() || getChatPhase(selectChat(getStore(), chatId)) !== "awaitingAnswers") {
                 return;
             }
 
@@ -318,7 +315,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
         /** Runs a chat's failed turn again, as a new turn. A build asks only for what is still missing by now. */
         retry: async (chatId: PlannerChatId, pendingCollections: string[]) => {
-            if (!canStartTurn(chatId)) {
+            if (!canStartTurn()) {
                 return;
             }
 
@@ -355,7 +352,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
         askArea,
 
         sendDraft: async (chatId: PlannerChatId) => {
-            if (!canStartTurn(chatId)) {
+            if (!canStartTurn()) {
                 return;
             }
 

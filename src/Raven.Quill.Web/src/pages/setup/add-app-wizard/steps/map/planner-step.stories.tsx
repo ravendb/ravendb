@@ -211,32 +211,34 @@ export const AreaBuilding: Story = {
     ),
 };
 
-// While an area builds, other areas' chats stay open, but the planner waits: it could change what the area builds from.
-export const ChatsWhileAreaBuilds: Story = {
+// While an area builds, every other chat and Build waits: all agents save to one plan, one turn at a time.
+export const OtherAreasWaitWhileAreaBuilds: Story = {
     tags: ["test-only"],
     render: () => (
         <PlannerAtStep
             turns={[
-                ...ANSWERED,
-                { area: CUSTOMERS, frames: plannerCustomersBuildFrames },
-                { area: SALES, frames: plannerBuildFrames.slice(0, 3), isWorking: true },
+                ...SALES_STOPPED,
+                { area: CUSTOMERS, frames: plannerCustomersBuildFrames.slice(0, 1), isWorking: true },
             ]}
-            view={{ area: CUSTOMERS, collection: null }}
+            view={{ area: SALES, collection: null }}
         />
     ),
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
+        const waitForCustomers = `The ${CUSTOMERS} agent is working. Wait for it to finish, or stop it from its area, to send a message.`;
 
-        expect(canvas.getByRole("textbox", { name: `Message for the ${CUSTOMERS} agent` })).toBeEnabled();
+        const salesComposer = canvas.getByRole("textbox", { name: `Message for the ${SALES} agent` });
+        expect(salesComposer).toBeDisabled();
+        expect(salesComposer).toHaveAttribute("placeholder", waitForCustomers);
+        expect(canvas.getByRole("button", { name: "Build the rest" })).toHaveAttribute("aria-disabled", "true");
 
         await userEvent.click(canvas.getByRole("button", { name: "Back to plan" }));
 
         const plannerComposer = await canvas.findByRole("textbox", { name: "Message for the planner" });
         expect(plannerComposer).toBeDisabled();
-        expect(plannerComposer).toHaveAttribute(
-            "placeholder",
-            `The ${SALES} agent is working. Wait for it to finish, or stop it from its area, to send a message.`,
-        );
+        expect(plannerComposer).toHaveAttribute("placeholder", waitForCustomers);
+        const sales = within(canvas.getByRole("region", { name: SALES }));
+        expect(sales.getByRole("button", { name: "Build the rest" })).toHaveAttribute("aria-disabled", "true");
     },
 };
 
