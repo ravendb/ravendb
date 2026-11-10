@@ -24,9 +24,11 @@ import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/sessio
 
 type CaseOption = { value: Exclude<PropertyCase, "Unspecified">; label: string; example: string };
 
+const DEFAULT_CASE_OPTION: CaseOption = { value: "PascalCase", label: "PascalCase", example: "OrderDate" };
+
 const CASE_OPTIONS: CaseOption[] = [
     { value: "CamelCase", label: "camelCase", example: "orderDate" },
-    { value: "PascalCase", label: "PascalCase", example: "OrderDate" },
+    DEFAULT_CASE_OPTION,
     { value: "SnakeCase", label: "snake_case", example: "order_date" },
 ];
 
@@ -43,8 +45,9 @@ export function PlanConventionsMenu() {
     const setPlannerChatOpen = useSetupWizardStore((state) => state.setPlannerChatOpen);
 
     const isDisabled = isLocked || !canAsk;
-    const current = CASE_OPTIONS.find((option) => option.value === conventions?.propertyCase);
-    const label = [current?.label ?? "Default", conventions?.propertyLanguage].filter(Boolean).join(", ");
+    const chosen = CASE_OPTIONS.find((option) => option.value === conventions?.propertyCase);
+    const current = chosen ?? DEFAULT_CASE_OPTION;
+    const label = [current.label, conventions?.propertyLanguage].filter(Boolean).join(", ");
     const trigger = (
         <Button
             variant="outline"
@@ -80,7 +83,7 @@ export function PlanConventionsMenu() {
                     A column named order_date becomes
                 </DropdownMenuLabel>
                 <DropdownMenuRadioGroup
-                    value={current?.value ?? ""}
+                    value={current.value}
                     onValueChange={(value) => {
                         const option = CASE_OPTIONS.find((item) => item.value === value);
 
@@ -100,7 +103,7 @@ export function PlanConventionsMenu() {
                     ))}
                 </DropdownMenuRadioGroup>
                 <Text variant="caption" className="border-t px-2 pt-2 pb-1">
-                    {current ? `Chosen with your answers. ${OPEN_NOTE}` : OPEN_NOTE}
+                    {chosen ? "Chosen with your answers." : `${DEFAULT_CASE_OPTION.label} is the default.`} {OPEN_NOTE}
                 </Text>
             </DropdownMenuContent>
         </DropdownMenu>
