@@ -702,7 +702,7 @@ public static class QueryPrimitives
         try
         {
             int read;
-            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (read = provider.FillPostingListIds(plIds)) > 0)
+            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (read = provider.FillPostingListIds(plIds, termLengths: Span<int>.Empty)) > 0)
             {
                 token.ThrowIfCancellationRequested();
                 for (int b = 0; b < buckets.Length; b++)

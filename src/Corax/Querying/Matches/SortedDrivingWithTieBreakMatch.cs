@@ -215,7 +215,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
             {
                 if (_providerExhausted)
                     break;
-                _plIdsRead = _provider.FillPostingListIds(new Span<long>(_plIdsBuffer.RawItems, _plIdsBuffer.Capacity));
+                _plIdsRead = _provider.FillPostingListIds(new Span<long>(_plIdsBuffer.RawItems, _plIdsBuffer.Capacity), termLengths: Span<int>.Empty);
                 if (_plIdsRead == 0)
                 {
                     _providerExhausted = true;

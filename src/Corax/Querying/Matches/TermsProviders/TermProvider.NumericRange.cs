@@ -151,8 +151,9 @@ namespace Corax.Querying.Matches.TermsProviders
             }
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
+            Debug.Assert(termLengths.IsEmpty, "A numeric range does not report term lengths.");
             if (_isEmpty) return 0;
             return _iterator.Fill(postingListIds, _lastTermId, _includeLastTerm);
         }
