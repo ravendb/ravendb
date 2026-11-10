@@ -28,6 +28,9 @@ unsafe partial struct SortingMatch<TInner>
         Slice GetSortFieldName(ref SortingMatch<TInner> match);
         void Init(ref SortingMatch<TInner> match);
 
+        // The spatial comparer sorts through a heap of 'take' entries and allocates what it needs itself
+        static virtual bool UsesBatchBuffers => true;
+
         void SortBatch(ref SortingMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator, Span<long> batchResults, Span<long> batchTermIds,
             UnmanagedSpan* batchTerms,
             bool descending = false);
@@ -42,6 +45,8 @@ unsafe partial struct SortingMatch<TInner>
         {
             _cmp = cmp;
         }
+
+        public static bool UsesBatchBuffers => TInnerCmp.UsesBatchBuffers;
 
         public Slice GetSortFieldName(ref SortingMatch<TInner> match)
         {
@@ -550,6 +555,8 @@ unsafe partial struct SortingMatch<TInner>
     {
         private SpatialDistanceReader _reader;
 
+        public static bool UsesBatchBuffers => false;
+
         public Slice GetSortFieldName(ref SortingMatch<TInner> match) => match._orderMetadata.Field.FieldName;
 
         public void Init(ref SortingMatch<TInner> match)
@@ -570,11 +577,10 @@ unsafe partial struct SortingMatch<TInner>
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<int> indexes);
+            using var __ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
-
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match.NullIsSmallest);
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes, terms, descending, match.NullIsSmallest);
             
             for (int i = 0; i < batchResults.Length; i++)
             {

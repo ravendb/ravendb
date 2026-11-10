@@ -30,6 +30,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         Slice GetSortFieldName(ref SortingMultiMatch<TInner> match);
         void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId);
 
+        // The spatial comparer sorts through a heap of 'take' entries and allocates what it needs itself
+        static virtual bool UsesBatchBuffers => true;
+
         void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
             UnmanagedSpan<long> batchResults, Span<long> batchTermIds, UnmanagedSpan* batchTerms, OrderMetadata[] orderMetadata, TComparer2 comparer2,
             TComparer3 comparer3)
@@ -51,6 +54,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             this.cmp = cmp;
         }
+
+        public static bool UsesBatchBuffers => TInnerCmp.UsesBatchBuffers;
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
         {
@@ -546,6 +551,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private UnmanagedSpan<long> _batchResults;
         private double _missingValueForInnerSorter;
 
+        public static bool UsesBatchBuffers => false;
+
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
         public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
@@ -590,11 +597,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<int> indexes);
+            using var __ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
-
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match.GetNullIsSmallestForClause(_comparerId));
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes, terms, descending, match.GetNullIsSmallestForClause(_comparerId));
             
 
 
