@@ -6,6 +6,7 @@ using System.Text.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -85,18 +86,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
             if (metadata != null && metadata.Count > 0)
             {
-                ReadOnlySpan<byte> written = bufferWriter.WrittenSpan;
-                if (written.Length < 2 || written[written.Length - 1] != '}')
-                    throw new InvalidOperationException($"Entity of type '{objectType}' must serialize to a JSON object.");
-
-                bool hasProperties = written.Length > 2;
-                bufferWriter.Truncate(1);
-                if (hasProperties)
-                    bufferWriter.WriteByte((byte)',');
-
-                using (var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions))
+                using (Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType))
                 {
-                    metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);
                     SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
                 }
 
@@ -104,6 +95,90 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
 
             return ParseBufferToBlittable(bufferWriter, context);
+        }
+
+        internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, DocumentInfo documentInfo, JsonOperationContext context)
+        {
+            using var bufferWriter = new ContextMemoryBufferWriter(context);
+            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
+            {
+                SerializeValue(utf8Writer, value, objectType);
+            }
+
+            if (documentInfo != null)
+                AppendMetadata(bufferWriter, objectType, documentInfo);
+
+            return ParseBufferToBlittable(bufferWriter, context);
+        }
+
+        private static void AppendMetadata(ContextMemoryBufferWriter bufferWriter, Type objectType, DocumentInfo documentInfo)
+        {
+            DynamicJsonValue modifications = documentInfo.Metadata?.Modifications;
+            bool hasModifications = modifications != null && modifications.Properties.Count > 0;
+            if (hasModifications == false && documentInfo.Metadata == null && documentInfo.MetadataInstance == null && documentInfo.Collection == null)
+                return;
+
+            using (Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType))
+            {
+                var sink = new Utf8JsonMetadataValueSink(metadataWriter);
+                if (hasModifications)
+                {
+                    sink.WriteStartObject();
+                    foreach ((string name, object propertyValue) in modifications.Properties)
+                    {
+                        sink.WritePropertyName(name);
+                        MetadataValueWriter.Write(ref sink, name, propertyValue);
+                    }
+
+                    if (documentInfo.Collection != null)
+                    {
+                        sink.WritePropertyName(Constants.Documents.Metadata.Collection);
+                        sink.WriteString(documentInfo.Collection);
+                    }
+
+                    sink.WriteEndObject();
+                    documentInfo.Metadata.Modifications = null;
+                }
+                else if (documentInfo.Metadata != null)
+                {
+                    MetadataValueWriter.WriteBlittable(ref sink, documentInfo.Metadata);
+                }
+                else if (documentInfo.MetadataInstance != null)
+                {
+                    MetadataValueWriter.WriteDictionary(ref sink, documentInfo.MetadataInstance);
+                }
+                else
+                {
+                    sink.WriteStartObject();
+                    sink.WritePropertyName(Constants.Documents.Metadata.Collection);
+                    sink.WriteString(documentInfo.Collection);
+                    if (documentInfo.Id != null)
+                    {
+                        sink.WritePropertyName(Constants.Documents.Metadata.Id);
+                        sink.WriteString(documentInfo.Id);
+                    }
+
+                    sink.WriteEndObject();
+                }
+            }
+
+            bufferWriter.WriteByte((byte)'}');
+        }
+
+        private static Utf8JsonWriter OpenMetadata(ContextMemoryBufferWriter bufferWriter, Type objectType)
+        {
+            ReadOnlySpan<byte> written = bufferWriter.WrittenSpan;
+            if (written.Length < 2 || written[written.Length - 1] != '}')
+                throw new InvalidOperationException($"Entity of type '{objectType}' must serialize to a JSON object.");
+
+            bool hasProperties = written.Length > 2;
+            bufferWriter.Truncate(1);
+            if (hasProperties)
+                bufferWriter.WriteByte((byte)',');
+
+            var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions);
+            metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);
+            return metadataWriter;
         }
 
         private static unsafe BlittableJsonReaderObject ParseBufferToBlittable(ContextMemoryBufferWriter bufferWriter, JsonOperationContext context)
