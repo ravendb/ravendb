@@ -996,6 +996,7 @@ namespace Voron.Data.Containers
                 {
                     _hasPersistentIt = true;
                     _persistentEnum = _txState.GetFreePages(_llt).Iterate();
+                    _persistentEnum.Reset();
                 }
 
                 while (_persistentEnum.MoveNext(out Int64LookupKey key, out var pageLevelMetadata, out _))
