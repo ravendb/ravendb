@@ -162,7 +162,7 @@ public sealed unsafe class SortedDrivingMatch : IQueryMatch, IDisposable
         {
             if (_plIdsIdx >= _plIdsRead)
             {
-                _plIdsRead = _provider.FillPostingListIds(new Span<long>(_plIdsBuffer.RawItems, _plIdsBuffer.Capacity));
+                _plIdsRead = _provider.FillPostingListIds(new Span<long>(_plIdsBuffer.RawItems, _plIdsBuffer.Capacity), termLengths: Span<int>.Empty);
                 if (_plIdsRead == 0)
                 {
                     _providerExhausted = true;
