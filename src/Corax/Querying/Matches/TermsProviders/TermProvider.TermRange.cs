@@ -158,8 +158,9 @@ public struct TermsRangeProvider<TLookupIterator, TLow, THigh> : ITermsProvider,
         }
     }
 
-    public int FillPostingListIds(Span<long> postingListIds)
+    public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
     {
+        Debug.Assert(termLengths.IsEmpty, "A range does not report term lengths.");
         if (_isEmpty)
             return 0;
 

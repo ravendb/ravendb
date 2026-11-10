@@ -50,8 +50,9 @@ namespace Corax.Querying.Matches.TermsProviders
             _iterator.Reset();
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
+            Debug.Assert(termLengths.IsEmpty, "exists() is scored as a constant and does not report term lengths.");
             if (_fetchNulls)
             {
                 postingListIds[0] = _nullPostingListId;

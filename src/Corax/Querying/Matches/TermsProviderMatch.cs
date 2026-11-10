@@ -119,14 +119,16 @@ public sealed class TermsProviderMatch(ITermsProvider provider, LowLevelTransact
     {
         using var _ = allocator.Allocate(QueryPrimitives.FillBufferSize * (sizeof(long) + sizeof(int)), out ByteString buffer);
         var termIds = MemoryMarshal.Cast<byte, long>(buffer.ToSpan())[..QueryPrimitives.FillBufferSize];
-        var termLengths = MemoryMarshal.Cast<byte, int>(buffer.ToSpan()[(QueryPrimitives.FillBufferSize * sizeof(long))..]);
+        var termLengths = averageTermLength == 0
+            ? Span<int>.Empty
+            : MemoryMarshal.Cast<byte, int>(buffer.ToSpan()[(QueryPrimitives.FillBufferSize * sizeof(long))..]);
         int read;
         while ((read = provider.FillPostingListIds(termIds, termLengths)) > 0)
         {
             for (int i = 0; i < read; i++)
             {
                 token.ThrowIfCancellationRequested();
-                double termRatio = termLengths[i] < 0 || averageTermLength == 0 ? 1 : termLengths[i] / averageTermLength;
+                double termRatio = averageTermLength == 0 ? 1 : termLengths[i] / averageTermLength;
                 if ((termIds[i] & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
                 {
                     var (entryId, frequency) = EntryIdEncodings.Decode(termIds[i]);

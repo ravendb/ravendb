@@ -28,7 +28,7 @@ namespace Corax.Querying.Matches.TermsProviders
             _term = term;
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
             var contains = _term.Decoded();
             int count = 0;
@@ -44,6 +44,8 @@ namespace Corax.Querying.Matches.TermsProviders
                 if (key.Decoded().Contains(contains))
                     continue;
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = key.Decoded().Length;
                 postingListIds[count++] = postingListId;
             }
 
