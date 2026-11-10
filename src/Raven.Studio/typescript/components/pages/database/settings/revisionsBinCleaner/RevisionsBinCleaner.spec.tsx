@@ -134,20 +134,31 @@ describe("RevisionsBinCleaner", () => {
         ).not.toBeInTheDocument();
     });
 
-    it("can hide 'Save' button when has access below database admin", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
-            <DefaultRevisionsBinCleaner databaseAccess="DatabaseReadWrite" />
-        );
+    it.each(["DatabaseRead", "DatabaseReadWrite"] as const)(
+        "disables 'Save' and explains the required access for %s",
+        async (databaseAccess) => {
+            const { screen, user } = await rtlRender_WithWaitForLoad(
+                <DefaultRevisionsBinCleaner databaseAccess={databaseAccess} />
+            );
 
-        expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
-    });
+            const saveButton = await screen.findByRole("button", { name: "Save" });
+            expect(saveButton).toBeDisabled();
 
-    it("can show 'Save' button when has database admin access", async () => {
-        const { screen } = await rtlRender_WithWaitForLoad(
+            await user.hover(saveButton);
+            expect(await screen.findByRole("tooltip")).toHaveTextContent(
+                "You don't have the required permissions (Database Admin access required)"
+            );
+        }
+    );
+
+    it("enables 'Save' for database admin after a change", async () => {
+        const { screen, user } = await rtlRender_WithWaitForLoad(
             <DefaultRevisionsBinCleaner databaseAccess="DatabaseAdmin" />
         );
 
-        expect(await screen.findByRole("button", { name: "Save" })).toBeInTheDocument();
+        await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
+
+        expect(await screen.findByRole("button", { name: "Save" })).toBeEnabled();
     });
 
     it("can't click any switch when has access below database admin", async () => {
