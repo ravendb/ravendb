@@ -24,6 +24,7 @@ import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/r
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { AccessPopover } from "components/common/AccessPopover";
 import {
     DEFAULT_CLEANER_FREQUENCY_IN_SEC,
     DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC,
@@ -104,18 +105,18 @@ export default function RevisionsBinCleaner() {
                     <Col>
                         <Form onSubmit={handleSubmit(handleSave)} autoComplete="off">
                             <AboutViewHeading title="Revisions Bin Cleaner" icon="revisions-bin" />
-                            {hasDatabaseAdminAccess && (
+                            <AccessPopover accessRequired="DatabaseAdmin">
                                 <ButtonWithSpinner
                                     type="submit"
                                     variant="primary"
                                     className="mb-3"
                                     icon="save"
-                                    disabled={!formState.isDirty}
+                                    disabled={!hasDatabaseAdminAccess || !formState.isDirty}
                                     isSpinning={formState.isSubmitting}
                                 >
                                     Save
                                 </ButtonWithSpinner>
-                            )}
+                            </AccessPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
