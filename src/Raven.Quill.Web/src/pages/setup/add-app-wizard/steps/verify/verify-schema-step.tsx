@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useFormContext, useFormState } from "react-hook-form";
-import { CheckIcon, CircleAlertIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import { CheckIcon, CircleAlertIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
+import { SearchInput } from "@/components/search-input";
 import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { countSelectedRows } from "@/components/table/row-range-selection";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
@@ -149,17 +149,13 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                     )}
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <InputGroup className="max-w-xs grow basis-48">
-                            <InputGroupAddon>
-                                <SearchIcon aria-hidden="true" />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Search by table name..."
-                                type="search"
-                            />
-                        </InputGroup>
+                        <SearchInput
+                            placeholder="Search by table name..."
+                            clearLabel="Clear the search"
+                            value={search}
+                            onValueChange={setSearch}
+                            className="max-w-xs grow basis-48"
+                        />
                         {isWarningsFilterShown && (
                             <WarningsFilterToggle
                                 value={currentWarningsFilter}

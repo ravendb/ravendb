@@ -1,6 +1,6 @@
-import { ChevronsDownUp, ChevronsUpDown, RotateCcw, Search, X } from "lucide-react";
+import { ChevronsDownUp, ChevronsUpDown, RotateCcw } from "lucide-react";
+import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/shadcn/ui/button";
-import { Input } from "@/components/shadcn/ui/input";
 import { Skeleton } from "@/components/shadcn/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { Heading, Text } from "@/components/typography";
@@ -93,34 +93,14 @@ function PlanFilter() {
     const setPlannerFilter = useSetupWizardStore((state) => state.setPlannerFilter);
 
     return (
-        <div className="relative flex min-w-50 flex-[0_1_17.5rem] items-center">
-            <Search className="pointer-events-none absolute left-2.5 size-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-                type="search"
-                aria-label="Filter the plan by collection or table name"
-                placeholder="Filter by collection or table"
-                value={filter}
-                className="pr-8 pl-8"
-                onChange={(event) => setPlannerFilter(event.target.value)}
-                onKeyDown={(event) => {
-                    if (event.key === "Escape" && filter) {
-                        event.preventDefault();
-                        setPlannerFilter("");
-                    }
-                }}
-            />
-            {filter && (
-                <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="absolute right-0.5 text-muted-foreground"
-                    aria-label="Clear the filter"
-                    onClick={() => setPlannerFilter("")}
-                >
-                    <X aria-hidden="true" />
-                </Button>
-            )}
-        </div>
+        <SearchInput
+            aria-label="Filter the plan by collection or table name"
+            placeholder="Filter by collection or table"
+            clearLabel="Clear the filter"
+            value={filter}
+            onValueChange={setPlannerFilter}
+            className="min-w-50 flex-[0_1_17.5rem]"
+        />
     );
 }
 
