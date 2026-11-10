@@ -450,9 +450,17 @@ namespace Raven.Server.Documents.ETL
                             Statistics.RecordItemTransformationError(e, item.DocumentId);
 
                             stats.RecordTransformationError();
+                            stats.RecordChangeVector(context, changeVector);
+                            stats.RecordLastTransformationErrorEtag(item.Etag);
 
                             if (Logger.IsWarnEnabled)
                                 Logger.Warn($"Could not process ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+
+                            if (CanContinueBatch(stats, item, extractedItemsSize, context) == false)
+                            {
+                                batchStopped = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -852,7 +860,8 @@ namespace Raven.Server.Documents.ETL
 
                                     var noFailures = Load(transformations, context, stats);
 
-                                    var lastProcessedInBatch = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
+                                    var lastLoadedOrFilteredInBatch = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
+                                    var lastProcessedInBatch = Math.Max(lastLoadedOrFilteredInBatch, stats.LastTransformationErrorEtag);
 
                                     if (lastProcessedInBatch > startEtag && noFailures)
                                     {
@@ -860,7 +869,9 @@ namespace Raven.Server.Documents.ETL
 
                                         Statistics.LastProcessedEtag = lastProcessedInBatch;
                                         Statistics.LastChangeVector = stats.ChangeVector;
-                                        RecordSuccessfulBatch(stats);
+
+                                        if (lastLoadedOrFilteredInBatch > startEtag)
+                                            RecordSuccessfulBatch(stats);
 
                                         UpdateMetrics(startTime, stats);
 
