@@ -126,7 +126,11 @@ describe("createPlannerSession", () => {
 
     it("starts an area its agent says never started, keeping what the operator wrote for later", async () => {
         migration.areaAsk.mockImplementation(() =>
-            streamOf({ type: "error", message: "The area Sales has not started; start it first." }),
+            streamOf({
+                type: "error",
+                message: "The area Sales has not started; start it first.",
+                code: "AreaNotStarted",
+            }),
         );
         migration.areaStart.mockImplementation(() => streamOf(DONE));
         const store = useSetupWizardStore.getState();
@@ -146,7 +150,11 @@ describe("createPlannerSession", () => {
 
     it("leaves the composer empty when a prompt the operator did not write does not reach the agent", async () => {
         migration.areaAsk.mockImplementation(() =>
-            streamOf({ type: "error", message: "The area Sales has not started; start it first." }),
+            streamOf({
+                type: "error",
+                message: "The area Sales has not started; start it first.",
+                code: "AreaNotStarted",
+            }),
         );
         migration.areaStart.mockImplementation(() => streamOf(DONE));
         useSetupWizardStore
@@ -162,7 +170,11 @@ describe("createPlannerSession", () => {
 
     it("asks an area its agent says already started to build what is missing", async () => {
         migration.areaStart.mockImplementation(() =>
-            streamOf({ type: "error", message: "The area Sales has already started; ask in it instead." }),
+            streamOf({
+                type: "error",
+                message: "The area Sales has already started; ask in it instead.",
+                code: "AreaAlreadyStarted",
+            }),
         );
         migration.areaAsk.mockImplementation(() => streamOf(DONE));
         useSetupWizardStore

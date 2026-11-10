@@ -215,6 +215,19 @@ describe("applyPlannerFrame", () => {
         ).toMatchObject({ status: "failed", error: "The AI service could not be reached." });
     });
 
+    it("keeps the code an error frame carries, and none when the frame has none", () => {
+        const message = "The area Sales has not started; start it first.";
+        const withCode = fold(session(), "Sales", { type: "error", message, code: "AreaNotStarted" });
+        const withoutCode = fold(session(), "Sales", { type: "error", message });
+
+        expect(lastTurn(withCode, "Sales")).toMatchObject({
+            status: "failed",
+            error: message,
+            errorCode: "AreaNotStarted",
+        });
+        expect(lastTurn(withoutCode, "Sales")).toMatchObject({ status: "failed", error: message, errorCode: null });
+    });
+
     it("keeps a finished turn finished when the stream fails after it", () => {
         const state = fold(
             session(),
@@ -232,7 +245,13 @@ describe("endReplyTurn", () => {
     it("fails a turn whose stream ended before the agent said it was done", () => {
         const [turn] = endReplyTurn([createReplyTurn(false)], { error: null, isStopped: false });
 
-        expect(turn).toMatchObject({ status: "failed" });
+        expect(turn).toMatchObject({ status: "failed", errorCode: null });
+    });
+
+    it("fails a turn whose stream broke, without an error code", () => {
+        const [turn] = endReplyTurn([createReplyTurn(false)], { error: "Connection lost.", isStopped: false });
+
+        expect(turn).toMatchObject({ status: "failed", error: "Connection lost.", errorCode: null });
     });
 
     it("marks a disconnected stream as stopped", () => {
@@ -298,15 +317,19 @@ describe("applyStoredPlan", () => {
 });
 
 describe("isAreaNotStartedError", () => {
-    it("recognizes the answer for an area that never started", () => {
-        expect(isAreaNotStartedError("The area Sales has not started; start it first.")).toBe(true);
-        expect(isAreaNotStartedError("The turn was stopped.")).toBe(false);
+    it("recognizes only the code for an area that never started", () => {
+        expect(isAreaNotStartedError("AreaNotStarted")).toBe(true);
+        expect(isAreaNotStartedError("AreaAlreadyStarted")).toBe(false);
+        expect(isAreaNotStartedError("SomeNewCode")).toBe(false);
+        expect(isAreaNotStartedError(null)).toBe(false);
     });
 });
 
 describe("isAreaAlreadyStartedError", () => {
-    it("recognizes the answer for an area that started before", () => {
-        expect(isAreaAlreadyStartedError("The area Sales has already started; ask in it instead.")).toBe(true);
-        expect(isAreaAlreadyStartedError("The area Sales has not started; start it first.")).toBe(false);
+    it("recognizes only the code for an area that started before", () => {
+        expect(isAreaAlreadyStartedError("AreaAlreadyStarted")).toBe(true);
+        expect(isAreaAlreadyStartedError("AreaNotStarted")).toBe(false);
+        expect(isAreaAlreadyStartedError("SomeNewCode")).toBe(false);
+        expect(isAreaAlreadyStartedError(null)).toBe(false);
     });
 });

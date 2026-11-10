@@ -101,6 +101,7 @@ export type PlannerReplyTurn = {
     gaps: string[];
     questions: PlannerQuestion[];
     error: string | null;
+    errorCode: string | null;
 };
 
 export type PlannerTurn = PlannerPromptTurn | PlannerAnswersTurn | PlannerReplyTurn;
