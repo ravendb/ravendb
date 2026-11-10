@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Operations
                         await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteStartObject();
-                            writer.WritePropertyName("Operations");
+                            writer.WritePropertyName(nameof(JsonPatchDocument.Operations));
                             writer.WriteStartArray();
                             var isFirst = true;
                             foreach (BlittableJsonReaderObject operation in _jsonPatchDocument.ToBlittable(_conventions.Serialization, ctx))
