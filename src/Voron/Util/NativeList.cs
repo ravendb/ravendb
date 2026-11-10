@@ -117,8 +117,7 @@ public unsafe struct NativeList<T>
 
     public void AddRangeUnsafe(ReadOnlySpan<T> range)
     {
-        Debug.Assert(Count + range.Length <= Capacity);
-        Debug.Assert((uint)(range.Length * sizeof(T)) > (uint)range.Length || range.Length == 0);
+        Debug.Assert((uint)range.Length <= (uint)(Capacity - Count));
 
         Unsafe.CopyBlockUnaligned(
             ref Unsafe.AsRef<byte>(RawItems + Count),
@@ -130,8 +129,7 @@ public unsafe struct NativeList<T>
 
     public void AddRangeUnsafe(T* items, int count)
     {
-        Debug.Assert(Count + count <= Capacity);
-        Debug.Assert((uint)(count * sizeof(T)) > (uint)count || count == 0);
+        Debug.Assert((uint)count <= (uint)(Capacity - Count));
 
         Unsafe.CopyBlock(RawItems + Count, items, (uint)(count * sizeof(T)));
         Count += count;
