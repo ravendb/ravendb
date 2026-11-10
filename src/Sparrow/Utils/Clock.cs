@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace Sparrow.Utils
 {
-    public sealed class Clock
+    internal sealed class Clock
     {
         public const int NanosecondsInSecond = 1000 * 1000 * 1000;
         public const int NanosecondsInMillisecond = 1000 * 1000;
