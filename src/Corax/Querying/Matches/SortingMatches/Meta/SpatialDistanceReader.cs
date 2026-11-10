@@ -1,6 +1,7 @@
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches.SortingMatches.Meta;
 
@@ -33,7 +34,8 @@ internal struct SpatialDistanceReader
 
     public bool IsValid => _reader.IsValid;
 
-    public bool TryGetDistance(long entryId, out SpatialResult result)
+    /// <param name="key">Reused for the entries of a sort, read only when using the nearest point.</param>
+    public bool TryGetDistance(long entryId, CompactKey key, out SpatialResult result)
     {
         if (_useNearestPoint == false)
         {
@@ -50,7 +52,7 @@ internal struct SpatialDistanceReader
         var found = false;
         result = default;
 
-        var termsReader = _searcher.GetEntryTermsReader(entryId, ref _lastPage);
+        var termsReader = _searcher.GetEntryTermsReader(entryId, ref _lastPage, key);
         while (termsReader.FindNextSpatial(_fieldRootPage))
         {
             var coordinates = (termsReader.Latitude, termsReader.Longitude);

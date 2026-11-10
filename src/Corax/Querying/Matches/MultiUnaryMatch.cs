@@ -10,6 +10,7 @@ using Corax.Utils;
 using Sparrow.Server.Utils;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches;
 
@@ -466,12 +467,13 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             comparerFieldsRootPage = fieldRoot;
         }
         
+        using var keyScope = new CompactKeyCacheScope(_searcher.Transaction.LowLevelTransaction);
         do
         {
             int currentMatchesIdx = 0;
             for (int docIdx = 0; docIdx < read; ++docIdx)
             {
-                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage);
+                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage, keyScope.Key);
                 var documentMatched = true;
                 
                 for (int comparerId = 0; comparerId < _comparers.Length; ++comparerId)

@@ -18,6 +18,7 @@ using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
 using Voron.Util;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -582,9 +583,10 @@ unsafe partial struct SortingMatch<TInner>
 
             var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes, terms, descending, match.NullIsSmallest);
             
+            using var keyScope = new CompactKeyCacheScope(llt);
             for (int i = 0; i < batchResults.Length; i++)
             {
-                if (_reader.TryGetDistance(batchResults[i], out var distance) == false)
+                if (_reader.TryGetDistance(batchResults[i], keyScope.Key, out var distance) == false)
                 {
                     distance = new SpatialResult() { Distance = match.NullIsSmallest ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
                 }

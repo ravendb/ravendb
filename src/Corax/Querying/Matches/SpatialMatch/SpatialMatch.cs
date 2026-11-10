@@ -24,6 +24,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private readonly double _error;
     private readonly IShape _shape;
     private Page _lastPage;
+    private readonly CompactKey _key = new();
     private Point _point;
     private readonly CompactTree _tree;
     private readonly FieldMetadata _field;
@@ -180,7 +181,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     // The first point of the entry that satisfies the relation.
     private bool TryGetMatchingPoint(long id, out double latitude, out double longitude)
     {
-        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
+        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage, _key);
         while (termsReader.MoveNextSpatial())
         {
             if (termsReader.FieldRootPage != _fieldRootPage)

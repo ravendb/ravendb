@@ -17,6 +17,7 @@ using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
 using Voron.Util;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -546,6 +547,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private struct EntryComparerBySpatial : IEntryComparer, IComparer<UnmanagedSpan>
     {
         private SpatialDistanceReader _reader;
+        private CompactKey _key;
         private Dictionary<long, double> _distances;
         private int _comparerId;
         private UnmanagedSpan<long> _batchResults;
@@ -564,6 +566,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             if (comparerId > 0)
             {
+                // a later clause is only called through Compare(int, int), SortBatch is not called and uses its own key
+                _key = _distances != null ? new CompactKey() : null;
                 _missingValueForInnerSorter = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
             }
         }
@@ -573,7 +577,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             if (_distances != null && _distances.TryGetValue(entryId, out var cached))
                 return cached;
 
-            var distance = _reader.TryGetDistance(entryId, out var result) == false
+            var distance = _reader.TryGetDistance(entryId, _key, out var result) == false
                 ? _missingValueForInnerSorter
                 : result.Distance;
 
@@ -604,9 +608,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             
 
 
+            using var keyScope = new CompactKeyCacheScope(llt);
             for (int i = 0; i < batchResults.Length; i++)
             {
-                if (_reader.TryGetDistance(batchResults[i], out var distance) == false)
+                if (_reader.TryGetDistance(batchResults[i], keyScope.Key, out var distance) == false)
                 {
                     var distanceForMissing = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
                     distance = new SpatialResult() { Distance = distanceForMissing, Latitude = Double.NaN, Longitude = Double.NaN };
