@@ -196,10 +196,11 @@ public partial class IndexSearcher
             // and then filter the documents stored in the posting list of each node individually.
             // Ideally, each node represents only a single document.
             Page p = default;
+            using var keyScope = new CompactKeyCacheScope(indexSearcher.Transaction.LowLevelTransaction);
             var it = filterResults.GetIterator(0);
             while (it.MoveNext())
             {
-                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p);
+                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p, keyScope.Key);
                 while (entryTermsReader.FindNextStored(vectorRootPage))
                 {
                     var vectorHash = entryTermsReader.StoredField.Value;
