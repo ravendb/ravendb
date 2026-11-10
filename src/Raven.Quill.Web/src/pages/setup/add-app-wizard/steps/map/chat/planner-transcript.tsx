@@ -79,7 +79,7 @@ export function PlannerTranscript({ chatId, plan }: { chatId: PlannerChatId; pla
 
 function SuggestedReplies({ chatId, plan }: { chatId: string; plan: Plan }) {
     const session = usePlannerSession();
-    const canSendMessage = useCanSendMessage(chatId);
+    const canSendMessage = useCanSendMessage();
     const latestReply = useSetupWizardStore((state) => getLatestReply(selectChat(state, chatId).turns));
 
     if (latestReply?.status !== "done") {

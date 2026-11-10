@@ -7,6 +7,7 @@ import {
     getChatPhase,
     PLAN_VIEW,
     selectHasUnsavedEdits,
+    selectWorkingChat,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
@@ -78,6 +79,7 @@ export function usePlannerActions() {
 export function useBuildBlockReason(): string {
     const { isBusy } = usePlannerWorkspace();
     const proposalPhase = useSetupWizardStore((state) => getChatPhase(state.plannerProposalChat));
+    const workingChatId = useSetupWizardStore(selectWorkingChat);
     const isSaving = useSetupWizardStore((state) => state.plannerIsSaving);
     const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
 
@@ -87,6 +89,10 @@ export function useBuildBlockReason(): string {
 
     if (proposalPhase === "working") {
         return "Wait for the planner to finish the plan.";
+    }
+
+    if (workingChatId !== undefined) {
+        return `Wait for the ${workingChatId} agent to finish. Areas build one at a time.`;
     }
 
     if (isSaving) {

@@ -22,9 +22,9 @@ import {
 import type { PlanCollection } from "@/pages/setup/add-app-wizard/steps/map/session/planner-plan";
 import { describeMentionPlaceholder } from "@/pages/setup/add-app-wizard/steps/map/session/planner-prompts";
 import {
-    selectBlockingChat,
     selectChat,
     selectHasUnsavedEdits,
+    selectWorkingChat,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
 import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
@@ -38,7 +38,7 @@ const MENTION_TRIGGER = "@";
 export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId; collections: PlanCollection[] }) {
     const { composerRef, isBusy } = usePlannerWorkspace();
     const session = usePlannerSession();
-    const canSendMessage = useCanSendMessage(chatId);
+    const canSendMessage = useCanSendMessage();
     const phase = useChatPhase(chatId);
     const hasProposal = useSetupWizardStore((state) => state.plannerProposal !== null);
     const hasUnsavedEdits = useSetupWizardStore(selectHasUnsavedEdits);
@@ -52,7 +52,7 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
     const mentionTriggerIndexRef = useRef<number | null>(null);
     const caretAfterPickerRef = useRef<number | null>(null);
 
-    const blockingChatId = useSetupWizardStore((state) => selectBlockingChat(state, chatId));
+    const blockingChatId = useSetupWizardStore(selectWorkingChat);
 
     const isWorking = phase === "working";
     // Until the first plan is there, there is nothing yet to ask the planner about.

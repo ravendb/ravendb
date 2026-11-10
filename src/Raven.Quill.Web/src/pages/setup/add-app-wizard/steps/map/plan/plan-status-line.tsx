@@ -89,7 +89,7 @@ export function PlanStatusLine({ plan }: { plan: Plan }) {
             <StatusLine
                 tone="working"
                 title={`Building ${describeAreas(buildingAreas)}`}
-                text="Open an area to watch it build. Other areas keep going while you look around."
+                text="Open the area to watch it build. Areas build one at a time, so the others wait until it is done."
             />
         );
     }
@@ -120,7 +120,7 @@ export function PlanStatusLine({ plan }: { plan: Plan }) {
             <StatusLine
                 tone="next"
                 title="The plan is ready"
-                text="Build an area to map its collections. Each area builds in its own chat, and several can build at once."
+                text="Build an area to map its collections. Each area builds in its own chat, one area at a time."
                 action={buildFirst(areasToBuild[0], true)}
             />
         );

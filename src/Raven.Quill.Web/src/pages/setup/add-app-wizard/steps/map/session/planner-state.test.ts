@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { createReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-frames";
 import {
-    canRunSideBySide,
     EMPTY_CHAT,
     getChatPhase,
     initialPlannerState,
     isAreaStarted,
     selectAreConventionsLocked,
     selectCanEditPlan,
+    selectWorkingChat,
     selectWorkingChats,
     type PlannerState,
 } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
@@ -44,7 +44,7 @@ describe("getChatPhase", () => {
 });
 
 describe("selectWorkingChats", () => {
-    it("lists the proposal agent and every area agent at work, side by side", () => {
+    it("lists the proposal agent and every area agent at work", () => {
         const state: PlannerState = {
             ...initialPlannerState,
             plannerProposalChat: chatWith({ status: "working" }),
@@ -59,12 +59,19 @@ describe("selectWorkingChats", () => {
     });
 });
 
-describe("canRunSideBySide", () => {
-    it("lets different areas run together, but never the planner beside another turn", () => {
-        expect(canRunSideBySide("Sales", "Billing")).toBe(true);
-        expect(canRunSideBySide("Sales", "Sales")).toBe(false);
-        expect(canRunSideBySide(null, "Sales")).toBe(false);
-        expect(canRunSideBySide("Sales", null)).toBe(false);
+describe("selectWorkingChat", () => {
+    it("makes every chat wait for the one at work, whichever area it belongs to", () => {
+        const state: PlannerState = {
+            ...initialPlannerState,
+            plannerAreaChats: {
+                Sales: chatWith({ status: "working" }),
+                Billing: chatWith({ status: "done" }),
+            },
+        };
+
+        expect(selectWorkingChat(state)).toBe("Sales");
+        expect(selectWorkingChat({ ...state, plannerProposalChat: chatWith({ status: "working" }) })).toBeNull();
+        expect(selectWorkingChat(initialPlannerState)).toBeUndefined();
     });
 });
 

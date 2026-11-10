@@ -39,7 +39,7 @@ export function PlannerQuestions({
     ref?: Ref<HTMLElement>;
 }) {
     const session = usePlannerSession();
-    const canSendMessage = useCanSendMessage(chatId);
+    const canSendMessage = useCanSendMessage();
     const canAnswer = useChatPhase(chatId) === "awaitingAnswers" && canSendMessage;
     const asker = describeAsker(chatId);
     const titleId = useId();
