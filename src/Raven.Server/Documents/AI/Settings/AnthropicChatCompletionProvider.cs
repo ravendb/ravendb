@@ -54,7 +54,7 @@ internal sealed partial class AnthropicChatCompletionProvider : AbstractChatComp
         };
 
         // same rule as the OpenAI-compatible providers
-        if (ChatCompletionClient.CanUseStrictTool(parametersSchema))
+        if (ChatCompletionClient.CanUseStrictTool(inputSchema))
             tool[Wire.Strict] = true;
 
         return tool;

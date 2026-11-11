@@ -133,6 +133,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
 
     public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
     {
+        var parameters = ctx.Sync.ReadForMemory(parametersSchema, "params/schema");
         var tool = new DynamicJsonValue
         {
             [ChatCompletionClient.Constants.JsonSchemaFields.Type] = Wire.RequestFields.ToolTypeFunction,
@@ -140,12 +141,12 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             {
                 [ChatCompletionClient.Constants.ResponseFields.Name] = name,
                 [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
-                [Wire.RequestFields.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
+                [Wire.RequestFields.Parameters] = parameters
             }
         };
 
         // Chat Completions reads strict inside "function" (FunctionObject), a tool-level strict is ignored
-        if (SupportStrictTools && ChatCompletionClient.CanUseStrictTool(parametersSchema))
+        if (SupportStrictTools && ChatCompletionClient.CanUseStrictTool(parameters))
             ((DynamicJsonValue)tool[ChatCompletionClient.Constants.ResponseFields.Function])[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
 
         return tool;
