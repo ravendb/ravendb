@@ -407,10 +407,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             };
 
             statsScope.Usage ??= new AiUsage();
-            statsScope.Usage.CachedTokens += result.Usage.CachedTokens;
-            statsScope.Usage.CompletionTokens += result.Usage.CompletionTokens;
-            statsScope.Usage.PromptTokens += result.Usage.PromptTokens;
-            statsScope.Usage.TotalTokens += result.Usage.TotalTokens;
+            statsScope.Usage.Add(result.Usage);
 
             var currentResolvedAttachmentDurationInMs = item.ContextOutput.Attachments?.Sum(a => a.DownloadDurationInMs) ?? 0;
             // Max aggregation is used. The tasks are run in parallel so we pick the longest of all of them.

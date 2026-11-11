@@ -103,14 +103,9 @@ public class ChatCompletionClient : IDisposable
     {
         if (ShouldSendToolsWithoutSchema(request))
         {
-            // added only when this request ends the turn: AiUsage.GetUsageDifference expects the usage of one request
-            var textUsage = new AiUsage();
-            var r = await SendAsync(streamingContext, request with { Schema = null }, textUsage, traces?.CreateTrace(), token);
+            var r = await SendToolsWithoutSchemaAsync(streamingContext, request, usage, traces, token);
             if (r.Type is AiResponseType.Tool)
-            {
-                usage.Add(textUsage);
                 return r;
-            }
 
             request = FinalRequest(streamingContext, request, r);
         }
@@ -343,14 +338,9 @@ public class ChatCompletionClient : IDisposable
     {
         if (ShouldSendToolsWithoutSchema(request))
         {
-            // added only when this request ends the turn: AiUsage.GetUsageDifference expects the usage of one request
-            var textUsage = new AiUsage();
-            var r = await SendAsync(context, request with { Schema = null }, textUsage, traces?.CreateTrace(), token);
+            var r = await SendToolsWithoutSchemaAsync(context, request, usage, traces, token);
             if (r.Type is AiResponseType.Tool)
-            {
-                usage.Add(textUsage);
                 return r;
-            }
 
             request = FinalRequest(context, request, r);
         }
@@ -361,16 +351,33 @@ public class ChatCompletionClient : IDisposable
     private bool ShouldSendToolsWithoutSchema(AiChatRequest request) =>
         _provider.SupportsToolsWithStructuredOutput == false && request.Schema != null && request.UseTools && request.Tools?.Count > 0;
 
+    // the usage is added only when this request ends the turn: AiUsage.GetUsageDifference expects the usage of one request
+    private async Task<AiResponse> SendToolsWithoutSchemaAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        var textUsage = new AiUsage();
+        var r = await SendAsync(context, request with { Schema = null }, textUsage, traces?.CreateTrace(), token);
+        if (r.Type is AiResponseType.Tool)
+            usage.Add(textUsage);
+        return r;
+    }
+
     // Ollama continues a trailing assistant message instead of answering
     private static AiChatRequest FinalRequest(JsonOperationContext context, AiChatRequest request, AiResponse textAnswer)
     {
+        // not textAnswer.Message: an answer taken from 'reasoning' is only in its Modifications, which aren't sent
+        var draft = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleAssistantValue,
+            [Constants.RequestFields.Content] = textAnswer.Result.ToString()
+        }, "assistant/draft");
+
         var finalAnswerPrompt = context.ReadObject(new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
             [Constants.RequestFields.Content] = "Reply now with your final answer as JSON matching the schema."
         }, "user/final-answer");
 
-        return request with { UseTools = false, Messages = request.Messages.Append(textAnswer.Message).Append(finalAnswerPrompt) };
+        return request with { UseTools = false, Messages = request.Messages.Append(draft).Append(finalAnswerPrompt) };
     }
 
     private async Task<AiResponse> SendAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
