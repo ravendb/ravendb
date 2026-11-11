@@ -13,11 +13,13 @@ public class DatabaseExistsPolicy : IDatabaseBackupPolicy
 
     public string Name => "DatabaseExists";
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
-        if (serverStore.Cluster.DatabaseExists(backupState.DatabaseName) == false)
+        category = BackupDecisionCategory.HeldBack;
+
+        if (serverStore.Cluster.DatabaseExists(context, backupState.DatabaseName) == false)
         {
-            reason = $"Cannot start backup {backupState} because database doesn't exist.";
+            reason = "The database doesn't exist.";
             return false;
         }
 

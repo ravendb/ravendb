@@ -8,7 +8,7 @@ public class ServerStartupPolicy : IServerBackupPolicy
 
     public static bool Disabled = false;
 
-    private const string Reason = "Cannot start any backup(s) because server just started.";
+    private const string Reason = "The server just started.";
 
     private ServerStartupPolicy()
     {
@@ -16,8 +16,10 @@ public class ServerStartupPolicy : IServerBackupPolicy
 
     public string Name => "Startup";
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
+        category = BackupDecisionCategory.Waiting;
+
         if (Disabled)
         {
             reason = null;

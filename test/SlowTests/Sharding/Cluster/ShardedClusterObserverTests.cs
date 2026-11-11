@@ -798,7 +798,7 @@ namespace SlowTests.Sharding.Cluster
                 
                 //trigger periodic backup again on leader
                 var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
-                leader.ServerStore.ServerBackupRunner.StartBackupTask(documentDatabase.Name, backupTaskId, isFullBackup: false, documentDatabase.Operations.GetNextOperationId());
+                leader.ServerStore.ServerBackupRunner.StartBackupNowTask(documentDatabase, backupTaskId, isFullBackup: false, documentDatabase.Operations.GetNextOperationId());
 
                 PeriodicBackupStatus backupStatus = null;
 

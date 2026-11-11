@@ -24,7 +24,6 @@ internal abstract class AbstractOperationsHandlerProcessorForState<TRequestHandl
     {
         var id = RequestHandler.GetLongQueryString("id");
 
-
         var state = GetOperationState(id);
 
         if (state == null)

@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         }
                         finally
                         {
-                            ServerStore.ConcurrentBackupsCounter.FinishBackup(RequestHandler.DatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
+                            ServerStore.ConcurrentBackupsCounter.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
                         }
                     }, null, ThreadNames.ForBackup(threadName, backupName, RequestHandler.DatabaseName));
                     return tcs.Task;

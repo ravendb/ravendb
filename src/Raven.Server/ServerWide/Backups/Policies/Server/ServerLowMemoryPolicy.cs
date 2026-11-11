@@ -5,33 +5,34 @@ namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
 public class ServerLowMemoryPolicy : IServerBackupPolicy
 {
-    public static readonly ServerLowMemoryPolicy Instance = new();
+    private const string Reason = "The server is low on memory.";
 
-    public static bool Disabled;
-
-    private const string Reason = "Cannot start any backup(s) because server is in low memory state.";
-
-    private ServerLowMemoryPolicy()
-    {
-    }
+    private DateTime _heldUntil;
 
     public string Name => "LowMemory";
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
+    internal DateTime HeldUntil => _heldUntil;
+
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
-        if (Disabled)
+        category = BackupDecisionCategory.HeldBack;
+
+        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
         {
             reason = null;
             return true;
         }
 
-        reason = null;
-        if (LowMemoryNotification.Instance.LowMemoryState)
+        if (LowMemoryNotification.Instance.LowMemoryState && now >= _heldUntil)
+            _heldUntil = now + serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
+
+        if (now < _heldUntil)
         {
-            reason = Reason;
+            reason = $"{Reason} Backups are held until '{_heldUntil}' UTC and then checked again.";
             return false;
         }
 
+        reason = null;
         return true;
     }
 }

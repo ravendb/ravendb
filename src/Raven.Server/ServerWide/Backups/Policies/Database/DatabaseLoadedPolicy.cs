@@ -13,8 +13,10 @@ public class DatabaseLoadedPolicy : IDatabaseBackupPolicy
 
     public string Name => "DatabaseLoaded";
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
+        category = BackupDecisionCategory.Waiting;
+
         if (serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(backupState.DatabaseName, out var database) == false)
         {
             reason = null; // we want to wake-up the database
@@ -24,7 +26,7 @@ public class DatabaseLoadedPolicy : IDatabaseBackupPolicy
         var gracePeriod = serverStore.Configuration.Backup.DatabaseLoadedGracePeriod.AsTimeSpan;
         if (now - database.StartTime < gracePeriod)
         {
-            reason = $"Cannot start backup {backupState} because the database was loaded less than {gracePeriod.TotalSeconds:F0} seconds ago.";
+            reason = $"The database was loaded less than {gracePeriod.TotalSeconds:F0} seconds ago.";
             return false;
         }
 

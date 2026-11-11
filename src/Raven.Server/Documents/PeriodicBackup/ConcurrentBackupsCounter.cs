@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void StartBackup(string databaseName, string backupName, RavenLogger logger)
+        public void StartBackup(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
         {
             lock (_locker)
             {
@@ -70,6 +70,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups + 1;
                     return;
+                }
+
+                if (enforceLimit && MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
+                {
+                    throw new BackupDelayException(
+                        $"Failed to start Backup Task: '{backupName}'. " +
+                        $"The task exceeds the maximum number of concurrent backup tasks configured. " +
+                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
                 }
 
                 _runningBackupsPerDatabase[databaseName] = 1;

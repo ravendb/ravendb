@@ -13,10 +13,23 @@ public class BackupRunningPolicy : IDatabaseBackupPolicy
 
     public string Name => "BackupRunning";
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
-        var running = backupState.Running;
-        reason = running ? "Cannot start another backup while a backup is already running." : null;
-        return running == false;
+        category = BackupDecisionCategory.Waiting;
+
+        if (backupState.Running)
+        {
+            reason = "A backup of this task is already running.";
+            return false;
+        }
+
+        if (backupState.StatusUpdateInProgress)
+        {
+            reason = "The status of a skipped incremental backup of this task is being saved.";
+            return false;
+        }
+
+        reason = null;
+        return true;
     }
 }

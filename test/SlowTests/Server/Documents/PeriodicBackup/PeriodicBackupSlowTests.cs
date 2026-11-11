@@ -2875,7 +2875,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var testingStuff = new TestingStuffInternal() { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
                     documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
+                    config.TaskId = taskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
@@ -2931,7 +2932,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var testingStuff = new TestingStuffInternal() { SimulateDisableNodeStatus_UpdateConfigurations = true };
                     responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
 
-                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
+                    config.TaskId = taskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
@@ -3056,6 +3058,48 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(backupStatus);
                     Assert.NotNull(backupStatus.DelayUntil);
                     Assert.Equal(backupStatus.DelayUntil, afterDelayTaskBackupInfo.NextBackup.DateTime);
+                }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task CanDelayBackupTaskThatWasDisabledWhileRunning()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store.OpenAsyncSession())
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                Assert.NotNull(database);
+
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
+                {
+                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId);
+
+                    await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Backup, disable: true));
+
+                    var backupState = server.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
+                    Assert.NotNull(backupState);
+                    Assert.True(await WaitForValueAsync(() => backupState.Configuration.Disabled, true),
+                        "The disabled configuration was not applied to the in-memory backup state.");
+                    Assert.NotNull(backupState.RunningTask);
+
+                    await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, TimeSpan.FromDays(1)));
+
+                    OngoingTaskBackup afterDelayTaskBackupInfo = null;
+                    Assert.True(await WaitForValueAsync(async () =>
+                    {
+                        afterDelayTaskBackupInfo =
+                            await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+
+                        return afterDelayTaskBackupInfo != null && afterDelayTaskBackupInfo.OnGoingBackup == null;
+                    }, true), "The running backup was not killed by the delay operation.");
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
             }
         }
@@ -3576,6 +3620,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var backupTaskId = await Backup.UpdateConfigAsync(server, config, store);
                     var pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
                     Assert.NotNull(pb);
+                    var backupScheduled = await WaitForValueAsync(() => pb.NextBackup != null, true, timeout: 8000);
+                    Assert.True(backupScheduled, "Backup is not scheduled");
 
                     await Backup.RunBackupAsync(server, backupTaskId, store, opStatus: OperationStatus.InProgress);
 
@@ -3589,10 +3635,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     var dbTestingStuff = new TestingStuffInternal { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
                     responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = dbTestingStuff;
-                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
+                    config.TaskId = backupTaskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     dbTestingStuff.SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
                     dbTestingStuff.SimulateActiveByCurrentNode_UpdateConfigurations = true;
-                    responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
                     responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
@@ -3925,7 +3972,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
-        //[InlineData(BackupType.Snapshot)]
+        [InlineData(BackupType.Snapshot)]
         [InlineData(BackupType.Backup)]
         public async Task can_backup_and_restore_with_subscription(BackupType backupType)
         {

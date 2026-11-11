@@ -145,6 +145,7 @@ namespace StressTests.Issues
                 {
                     [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
                     [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+                    [RavenConfiguration.GetKey(x => x.Backup.KeepIdleDatabaseLoadedBeforeBackup)] = "0",
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });

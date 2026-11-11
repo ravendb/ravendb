@@ -790,7 +790,7 @@ namespace SlowTests.Server.Replication
                 {
                     await Task.Delay(1000);
                     var hubDb = hubServer.ServerStore.DatabasesLandlord.LastRecentlyUsed.FirstOrDefault();
-                    hubServer.ServerStore.CanUnloadDatabase(hubDb.Key, hubDb.Value, statistics, out _);
+                    hubServer.ServerStore.CanUnloadDatabase(hubDb.Key, hubDb.Value, statistics, out _, out _);
 
                     now = DateTime.Now;
                 }
@@ -928,7 +928,7 @@ namespace SlowTests.Server.Replication
                             Name = databaseKvp.Key.ToString()
                         };
 
-                        server.ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _);
+                        server.ServerStore.CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out _, out _);
 
                         if (statistics.CanUnload == false)
                             continue;

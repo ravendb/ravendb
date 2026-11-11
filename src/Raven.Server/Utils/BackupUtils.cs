@@ -36,8 +36,6 @@ namespace Raven.Server.Utils;
 
 public static class BackupUtils
 {
-    internal static bool IgnoreHealthChecksBeforeBackup = false;
-
     internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null)
     {
         return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
@@ -319,8 +317,7 @@ public static class BackupUtils
         if (timeSpan.Ticks <= 0 && parameters.BackupStatus != null)
         {
             // overdue backup of current node or first backup
-            if (parameters.BackupStatus.NodeTag == parameters.NodeTag ||
-                (parameters.BackupStatus.NodeTag == null && parameters.BackupStatus.LastFullBackupInternal == null))
+            if (parameters.BackupStatus.NodeTag == parameters.NodeTag || parameters.BackupStatus.NodeTag == null)
             {
                 // the backup will run now
                 nextBackupTimeSpan = TimeSpan.Zero;
@@ -328,6 +325,7 @@ public static class BackupUtils
             }
             else
             {
+                // overdue backup from other node
                 nextBackupTimeSpan = TimeSpan.FromMinutes(1);
                 nextBackupTimeUtc = nowUtc + nextBackupTimeSpan;
             }
@@ -410,9 +408,26 @@ public static class BackupUtils
                (nextIncrementalBackup == null || nextFullBackup <= nextIncrementalBackup);
     }
 
+    internal static bool IsFullBackupRequired(PeriodicBackupStatus backupStatus, PeriodicBackupConfiguration configuration)
+    {
+        // check if we need to do a new full backup
+        return backupStatus.LastFullBackup == null || // no full backup was previously performed
+               backupStatus.BackupType != configuration.BackupType || // the backup type has changed
+               backupStatus.LastEtag == null || // last document etag wasn't updated
+               BackupConfiguration.CanBackupUsing(configuration.LocalSettings) &&
+               BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup?.BackupDirectory, Raven.Client.Documents.Smuggler.BackupUtils.IsFullBackupOrSnapshot) == false; // the local folder already includes a full backup or snapshot
+    }
+
+    internal static bool HasChangesSinceLastBackup(PeriodicBackupStatus backupStatus, long lastEtag, string lastChangeVector, long etagForBackup)
+    {
+        return lastEtag != backupStatus.LastEtag ||
+               lastChangeVector != backupStatus.LastDatabaseChangeVector ||
+               etagForBackup != backupStatus.LastRaftIndex?.LastEtag;
+    }
+
     internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
     {
-        if (IgnoreHealthChecksBeforeBackup)
+        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
             return;
 
         if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())

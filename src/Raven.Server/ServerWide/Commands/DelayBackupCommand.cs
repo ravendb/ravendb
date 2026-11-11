@@ -52,7 +52,6 @@ public sealed class DelayBackupCommand : UpdateValueForDatabaseCommand
 
         var status = new PeriodicBackupStatus
         {
-            TaskId = TaskId,
             DelayUntil = DelayUntil,
             OriginalBackupTime = OriginalBackupTime
         };

@@ -1011,9 +1011,12 @@ namespace Raven.Server.ServerWide
 
         public void TriggerDatabases()
         {
+            _engine.StateMachine.Changes.DatabaseChanged += ServerBackupRunner.OnClusterDatabaseChanged;
             _engine.StateMachine.Changes.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.Changes.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.Changes.ValueChanged += OnValueChanged;
+
+            ServerBackupRunner.RegisterAllDatabases();
 
             _engine.TopologyChanged += (_, __) => NotifyAboutClusterTopologyAndConnectivityChanges();
             _engine.StateChanged += OnStateChanged;
@@ -2873,7 +2876,7 @@ namespace Raven.Server.ServerWide
                                     stats[databaseKvp.Key] = statistics = new DatabasesDebugHandler.IdleDatabaseStatistics();
                             }
 
-                            if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: statistics, out DocumentDatabase database) == false)
+                            if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out DocumentDatabase database, out var idleSnapshot) == false)
                                 continue;
 
                             var dbIdEtagDictionary = new Dictionary<string, long>();
@@ -2885,7 +2888,16 @@ namespace Raven.Server.ServerWide
                             }
 
                             if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key))
+                            {
                                 IdleDatabases[database.Name] = dbIdEtagDictionary;
+
+                                if (idleSnapshot is { } snapshot &&
+                                    database.LastAccessTime == snapshot.LastAccessTime &&
+                                    DatabasesLandlord.DatabasesCache.TryGetValue(database.Name, out _) == false)
+                                    ServerBackupRunner.OnIdleDatabaseUnloaded(database, snapshot);
+                                else
+                                    ServerBackupRunner.OnIdleDatabaseChangedWhileUnloading(database);
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -2916,9 +2928,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database)
+        internal bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database,
+            out ServerBackupRunner.IdleDatabaseSnapshot? idleSnapshot)
         {
             database = null;
+            idleSnapshot = null;
             var now = SystemTime.UtcNow;
 
             if (statistics != null)
@@ -3055,10 +3069,32 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            if (ShouldKeepLoadedForBackup(database, out idleSnapshot))
+            {
+                if (statistics == null)
+                    return false;
+
+                statistics.Explanations.Add($"Cannot unload database because a backup of it is due within '{Configuration.Backup.KeepIdleDatabaseLoadedBeforeBackup}'.");
+            }
+
             if (statistics != null)
                 return statistics.Explanations.Count == 0;
 
             return true;
+        }
+
+        private bool ShouldKeepLoadedForBackup(DocumentDatabase database, out ServerBackupRunner.IdleDatabaseSnapshot? idleSnapshot)
+        {
+            idleSnapshot = null;
+
+            if (ServerBackupRunner.HasBackupTasks(database) == false)
+                return false;
+
+            var lastAccessTime = database.LastAccessTime;
+            var (lastEtag, lastChangeVector) = database.ReadLastEtagAndChangeVector();
+            idleSnapshot = new ServerBackupRunner.IdleDatabaseSnapshot(lastAccessTime, lastEtag, lastChangeVector);
+
+            return ServerBackupRunner.ShouldKeepLoadedForBackup(database, lastEtag, lastChangeVector);
         }
 
         private bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
@@ -3861,6 +3897,7 @@ namespace Raven.Server.ServerWide
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
             internal Action<ClusterObserver.CompareExchangeTombstonesCleanupState> AfterCompareExchangeTombstonesResult;
             internal bool IgnoreClusterTransactionIndexInCompareExchangeCleaner;
+            internal bool IgnoreHealthChecksBeforeBackup;
         }
 
 #if DEBUG

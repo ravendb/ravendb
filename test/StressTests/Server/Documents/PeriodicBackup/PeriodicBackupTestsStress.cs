@@ -131,13 +131,17 @@ namespace StressTests.Server.Documents.PeriodicBackup
 
                 var pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).First();
                 Assert.NotNull(pb);
-                Assert.True(pb.NextBackup == null, "PeriodicBackup should not have a scheduled next backup when task status is simulated as ActiveByOtherNode");
+
+                var val = WaitForValue(() => pb.NextBackup != null, false, timeout: 66666, interval: 444);
+                Assert.False(val, "PeriodicBackup should cancel the ScheduledBackup if the task status is ActiveByOtherNode, " +
+                                  "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
 
                 responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
-                responsibleDatabase.ServerStore.ServerBackupRunner.HandleDatabaseRecordChange(record1);
+                var serverWideConfiguration = (await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation())).Single();
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideConfiguration));
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
 
-                var val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
+                val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
                 Assert.True(val, "Failed to complete the backup in time");
             }
         }
@@ -194,7 +198,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                         $"Expected PeriodicBackup with pinned to mentor node '{mentorNode}' to have no scheduled next backup " +
                         $"on Node '{server.ServerStore.NodeTag}', but it did.");
 
-                    Assert.True(backup.BackupStatus?.LastFullBackup == null,
+                    Assert.True(backup.BackupStatus?.LastFullBackup == null && backup.BackupStatus?.LastIncrementalBackup == null && backup.BackupStatus?.LastOperationId == null,
                         $"Expected no backup on Node '{server.ServerStore.NodeTag}' as " +
                         $"PeriodicBackup is pinned to mentor node '{mentorNode}', but a backup was performed.");
                 }

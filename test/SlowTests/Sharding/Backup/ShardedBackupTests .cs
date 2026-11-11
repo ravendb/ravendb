@@ -561,7 +561,6 @@ namespace SlowTests.Sharding.Backup
 
                 GetShardedPeriodicBackupStatusOperationResult status = null;
 
-                // the status is read from the cluster storage of the node that serves the request, it may lag behind
                 var shardsWithStatus = await WaitForValueAsync(async () =>
                 {
                     status = await store.Maintenance.SendAsync(new GetShardedPeriodicBackupStatusOperation(backupTaskId));
@@ -734,11 +733,11 @@ namespace SlowTests.Sharding.Backup
                 using (var store4 = Sharding.GetDocumentStore(new Options { Server = server }))
                 using (var store5 = GetDocumentStore(new Options { Server = server }))
                 {
-                    // sharded db should be excluded
+                    // sharded db should be excluded 
                     var databaseRecord = await store4.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store4.Database));
                     Assert.Equal(0, databaseRecord.PeriodicBackups.Count);
 
-                    // non-sharded db should not be excluded
+                    // non-sharded db should not be excluded 
                     databaseRecord = await store4.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store5.Database));
                     Assert.Equal(1, databaseRecord.PeriodicBackups.Count);
                     Assert.Equal($"Server Wide Backup, {name}", databaseRecord.PeriodicBackups[0].Name);

@@ -13,17 +13,20 @@ public class BackupDisabledPolicy : IDatabaseBackupPolicy
 
     public string Name => "BackupDisabled";
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
+        category = BackupDecisionCategory.Waiting;
+
         if (backupState.Configuration.Disabled)
         {
-            reason = $"Cannot start backup {backupState} because it is disabled.";
+            reason = "The task is disabled.";
             return false;
         }
 
         if (backupState.Configuration.HasBackup() == false)
         {
-            reason = $"Cannot start backup {backupState} because all destinations are disabled.";
+            reason = "All destinations of the task are disabled.";
+            category = BackupDecisionCategory.HeldBack;
             return false;
         }
 

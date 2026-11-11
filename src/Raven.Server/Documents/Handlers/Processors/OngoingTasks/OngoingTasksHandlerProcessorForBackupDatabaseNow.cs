@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (nodeTag == ServerStore.NodeTag)
             {
-                operationId = ServerStore.ServerBackupRunner.StartBackupTask(RequestHandler.DatabaseName, taskId, isFullBackup, operationId, startTime);
+                operationId = ServerStore.ServerBackupRunner.StartBackupNowTask(RequestHandler.Database, taskId, isFullBackup, operationId, startTime);
                 return (operationId, IsResponsibleNode: true);
             }
 
