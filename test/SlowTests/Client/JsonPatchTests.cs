@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.Threading.Tasks;
 using FastTests;
 using Microsoft.AspNetCore.JsonPatch;
 using Newtonsoft.Json;
@@ -12,6 +13,9 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -1039,6 +1043,233 @@ namespace SlowTests.Client
                     AssertExpandosEqual(originalObject2, dbObject);
                 }
             }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void PatchingWithTheSameValueLeavesTheDocumentAsItWas()
+        {
+            using (var store = GetDocumentStore())
+            {
+                dynamic company = new ExpandoObject();
+                company.Name = "The Wall";
+                string documentId, changeVector;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(company);
+                    session.SaveChanges();
+                    documentId = company.Id;
+                    changeVector = session.Advanced.GetChangeVectorFor(company);
+                }
+
+                var jpd = new JsonPatchDocument();
+                jpd.Replace("/Name", "The Wall");
+                var result = store.Operations.Send(new JsonPatchOperation(documentId, jpd));
+                Assert.Equal(PatchStatus.NotModified, result.Status);
+
+                using (var session = store.OpenSession())
+                {
+                    var stored = session.Load<ExpandoObject>(documentId);
+                    Assert.Equal(changeVector, session.Advanced.GetChangeVectorFor(stored)); // not written again
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void OperationsSeeTheChangesOfThePreviousOnes()
+        {
+            dynamic original = new ExpandoObject();
+            original.Name = "Hibernating";
+            original.Other = "unchanged";
+            original.Numbers = new List<int> { 1, 2, 3 };
+
+            using (var store = GetDocumentStore())
+            {
+                string documentId;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(original);
+                    session.SaveChanges();
+                    documentId = original.Id;
+                }
+
+                dynamic address = new ExpandoObject();
+                address.City = "Netanya";
+
+                var jpd = new JsonPatchDocument();
+                jpd.Replace("/Name", "Rhinos");
+                jpd.Add("/Address", address);
+                jpd.Replace("/Address/City", "Hadera");      // inside a value added before
+                jpd.Copy("/Name", "/NameCopy");               // from a field replaced before
+                jpd.Test("/Other", "unchanged");              // unrelated to the changes
+                jpd.Add("/Numbers/0", 0);                     // shifts the indexes of the array
+                jpd.Replace("/Numbers/1", 10);                // the element that was at index 0
+                jpd.Move("/Numbers/3", "/Last");              // from an array changed before
+                jpd.Test("/NameCopy", "Rhinos");
+
+                var converter = new ExpandoObjectConverter();
+                dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
+                jpd.ApplyTo(expected);
+
+                Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
+
+                using (var session = store.OpenSession())
+                {
+                    dynamic stored = session.Load<ExpandoObject>(documentId);
+                    AssertExpandosEqual(expected, stored);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void RemovingAPropertyAddedByThePatch()
+        {
+            dynamic original = new ExpandoObject();
+            original.Name = "Hibernating";
+
+            using (var store = GetDocumentStore())
+            {
+                string documentId;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(original);
+                    session.SaveChanges();
+                    documentId = original.Id;
+                }
+
+                var jpd = new JsonPatchDocument();
+                jpd.Add("/Tag", "new");
+                jpd.Replace("/Tag", "newer");
+                jpd.Remove("/Tag");
+                jpd.Replace("/Name", "Rhinos");
+
+                var converter = new ExpandoObjectConverter();
+                dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
+                jpd.ApplyTo(expected);
+
+                Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
+
+                using (var session = store.OpenSession())
+                {
+                    dynamic stored = session.Load<ExpandoObject>(documentId);
+                    AssertExpandosEqual(expected, stored);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void ChangingTheSourceOfACopyDoesNotChangeTheCopy()
+        {
+            dynamic address = new ExpandoObject();
+            address.City = "Netanya";
+            dynamic original = new ExpandoObject();
+            original.Address = address;
+            original.Numbers = new List<int> { 1, 2 };
+
+            using (var store = GetDocumentStore())
+            {
+                string documentId;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(original);
+                    session.SaveChanges();
+                    documentId = original.Id;
+                }
+
+                dynamic shipping = new ExpandoObject();
+                shipping.City = "Haifa";
+
+                var jpd = new JsonPatchDocument();
+                jpd.Copy("/Address", "/Billing");
+                jpd.Replace("/Address/City", "Hadera");
+                jpd.Add("/Shipping", shipping);
+                jpd.Copy("/Shipping", "/Return");
+                jpd.Replace("/Return/City", "Eilat");
+                jpd.Copy("/Numbers", "/MoreNumbers");
+                jpd.Add("/Numbers/-", 3);
+
+                var converter = new ExpandoObjectConverter();
+                dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
+                jpd.ApplyTo(expected);
+
+                Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
+
+                using (var session = store.OpenSession())
+                {
+                    dynamic stored = session.Load<ExpandoObject>(documentId);
+                    AssertExpandosEqual(expected, stored);
+                    Assert.Equal("Netanya", (string)stored.Billing.City);
+                    Assert.Equal("Haifa", (string)stored.Shipping.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public void TestingAnObjectChangedByThePatch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "people/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Address = new SinglePropClass { City = "Netanya" } }, documentId);
+                    session.SaveChanges();
+                }
+
+                var jpd = new JsonPatchDocument();
+                jpd.Replace("/Address/City", "Hadera");
+                jpd.Test("/Address", new SinglePropClass { City = "Netanya" });
+
+                var error = Assert.ThrowsAny<RavenException>(() => store.Operations.Send(new JsonPatchOperation(documentId, jpd)));
+                Assert.Contains("is not equal to the test value", error.Message);
+
+                jpd = new JsonPatchDocument();
+                jpd.Replace("/Address/City", "Hadera");
+                jpd.Test("/Address", new SinglePropClass { City = "Hadera" });
+
+                Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
+        public async Task RunningTheOperationsAgainGivesTheSameDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new MyTestClass { Name = "Hibernating" }, "items/1");
+                    session.SaveChanges();
+                }
+
+                var database = await GetDatabase(store.Database);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    var patch = context.ReadObject(new DynamicJsonValue
+                    {
+                        ["Operations"] = new DynamicJsonArray
+                        {
+                            new DynamicJsonValue { ["op"] = "add", ["path"] = "/MyArray", ["value"] = new DynamicJsonArray { 1, 2 } },
+                            new DynamicJsonValue { ["op"] = "add", ["path"] = "/MyArray/-", ["value"] = 3 }
+                        }
+                    }, "patch");
+                    var commands = JsonPatchCommand.Parse(patch);
+
+                    // the merger runs a command again when the transaction it was merged into fails
+                    await database.TxMerger.Enqueue(new JsonPatchCommand("items/1", commands, returnDocument: false, context));
+                    await database.TxMerger.Enqueue(new JsonPatchCommand("items/1", commands, returnDocument: false, context));
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var stored = session.Load<MyTestClass>("items/1");
+                    Assert.Equal(new List<int> { 1, 2, 3 }, stored.MyArray);
+                }
+            }
+        }
+
+        private class Person
+        {
+            public SinglePropClass Address;
         }
 
         private class MyTestClass

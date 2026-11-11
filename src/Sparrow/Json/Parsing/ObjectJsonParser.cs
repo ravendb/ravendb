@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -62,12 +62,7 @@ namespace Sparrow.Json.Parsing
                 throw new InvalidOperationException(
                     "Cannot remove property when not setup with a source blittable json object");
 
-            var propertyIndex = _source.GetPropertyIndex(property);
-            if (propertyIndex == -1)
-                return;
-
-            Removals ??= new HashSet<int>();
-            Removals.Add(propertyIndex);
+            // also a property that was set here and is not in the source
             for (int i = 0; i < Properties.Count; i++)
             {
                 if (Properties[i].Name == property)
@@ -76,6 +71,13 @@ namespace Sparrow.Json.Parsing
                     break;
                 }
             }
+
+            var propertyIndex = _source.GetPropertyIndex(property);
+            if (propertyIndex == -1)
+                return;
+
+            Removals ??= new HashSet<int>();
+            Removals.Add(propertyIndex);
         }
 
         internal void RemoveInMemoryPropertyByName(string property)
