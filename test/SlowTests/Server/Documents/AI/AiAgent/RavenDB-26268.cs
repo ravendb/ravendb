@@ -121,6 +121,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string Text;
         }
 
+        // longer than the 64 characters the provider accepts in prompt_cache_key
+        private const string LongConversationId =
+            "UserChats/marcus@example.com/support/escalations/semrush-specialist/4716-A";
+
         [RavenFact(RavenTestCategory.Ai)]
         public async Task ShouldIncludePromptCacheKeyInRequest()
         {
@@ -175,7 +179,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Authentication = null
                 };
 
-                handler.Initialize(agent, "conversations/1-A", new RequestBody
+                handler.Initialize(agent, LongConversationId, new RequestBody
                 {
                     Parameters = parameters,
                     CreationOptions = new AiConversationCreationOptions(),
@@ -184,9 +188,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 await handler.HandleRequestAsync(context, CancellationToken.None);
 
-                // AiAgentPromptCacheKey pins how the key is derived; this one only needs its shape.
                 Assert.NotNull(capturedPromptCacheKey);
-                Assert.NotEqual("conversations/1-A", capturedPromptCacheKey);
+                Assert.NotEqual(LongConversationId, capturedPromptCacheKey);
                 Assert.True(capturedPromptCacheKey.Length <= 64, $"got {capturedPromptCacheKey.Length} characters: {capturedPromptCacheKey}");
             }
         }
