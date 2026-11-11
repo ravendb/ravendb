@@ -139,6 +139,22 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
             }
 
             var fullText = state.RawText?.ToString() ?? string.Empty;
+
+            // Stored and re-sent with the whole history on every later turn, so accepting it kills the conversation.
+            if (fullText.Length == 0)
+            {
+                if (lengthTruncated)
+                    throw new TooManyTokensException(
+                        "The model response was truncated (finish_reason='length') before producing any content.")
+                    {
+                        RequestId = GetRequestId(response.Headers)
+                    };
+
+                throw UnexpectedResponseException.Create(
+                    $"No response content (finish_reason='{state.StopReason}')",
+                    response, content: (string)null, GetRequestId(response.Headers));
+            }
+
             return new AiResponse(AiResponseType.Result)
             {
                 Message = CreateAssistantMessage(streamingCtx, fullText, "persisted/streamed/message"),
