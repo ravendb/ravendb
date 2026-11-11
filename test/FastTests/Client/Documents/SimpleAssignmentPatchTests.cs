@@ -482,6 +482,21 @@ namespace FastTests.Client.Documents
         }
 
         [RavenFact(RavenTestCategory.Patching)]
+        public void ANewScriptIsKeptWhenEveryCachedScriptIsInUse()
+        {
+            var cache = new SimpleAssignmentPatch.ScriptCache(size: 4);
+            for (var i = 0; i < 4; i++)
+                cache.Add($"hot/{i}", null);
+            for (var i = 0; i < 4; i++)
+                Assert.True(cache.TryGet($"hot/{i}", out _));
+
+            cache.Add("new", null);
+
+            Assert.True(cache.Contains("new"));
+            Assert.Equal(4, cache.Count);
+        }
+
+        [RavenFact(RavenTestCategory.Patching)]
         public void ConcurrentMissesAddAScriptOnce()
         {
             var cache = new SimpleAssignmentPatch.ScriptCache(size: 4);
