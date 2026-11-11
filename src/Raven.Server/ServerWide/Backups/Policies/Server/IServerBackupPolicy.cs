@@ -6,5 +6,5 @@ public interface IServerBackupPolicy
 {
     string Name { get; }
 
-    bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason);
+    bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category);
 }

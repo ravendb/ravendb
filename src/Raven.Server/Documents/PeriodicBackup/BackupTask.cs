@@ -120,7 +120,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (backupState != null && task != null)
                 {
                     backupState.RunningTask = new ServerBackupRunner.RunningBackupTask { Id = backupState.OperationId, Task = task };
-                    backupState.RunningCancel = TaskCancelToken;
                 }
 
                 if (_forTestingPurposes != null &&
@@ -152,9 +151,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var (currentLastEtag, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
                     var currentLastRaftIndex = GetDatabaseEtagForBackup();
 
-                    if (currentLastEtag == _previousBackupStatus.LastEtag
-                        && currentChangeVector == _previousBackupStatus.LastDatabaseChangeVector
-                        && currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag)
+                    if (BackupUtils.HasChangesSinceLastBackup(_previousBackupStatus, currentLastEtag, currentChangeVector, currentLastRaftIndex) == false)
                     {
                         var message = $"Skipping incremental backup because no changes were made from last full backup on {_previousBackupStatus.LastFullBackup}.";
 

@@ -572,7 +572,6 @@ namespace Raven.Server.Documents
             var tempPath = Utils.BackupUtils.GetBackupTempPath(Configuration, "PeriodicBackupTemp", out _);
             IOExtensions.DeleteDirectory(tempPath.FullPath);
             IOExtensions.CreateDirectory(tempPath.FullPath);
-            _serverStore.ServerBackupRunner?.EnsureDatabaseRegistered(Name);
         }
 
         public IDisposable PreventFromUnloadingByIdleOperations()
@@ -1784,7 +1783,6 @@ namespace Raven.Server.Documents
             try
             {
                 UpdateSchemaValidation(record.SchemaValidation);
-                _serverStore.ServerBackupRunner.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
@@ -1884,7 +1882,6 @@ namespace Raven.Server.Documents
 
                     SubscriptionStorage?.HandleDatabaseRecordChange();
                     EtlLoader?.HandleDatabaseValueChanged();
-                    _serverStore.ServerBackupRunner.HandleDatabaseValueChanged(type, changeState, Name);
                     LastValueChangeIndex = index;
                 }
                 finally
@@ -2304,8 +2301,6 @@ namespace Raven.Server.Documents
             internal bool EnableWritesToTheWrongShard = false;
             
             internal TimeSpan? EtlFallbackTime;
-
-            internal Action AfterBackupBatchCompleted;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

@@ -37,7 +37,6 @@ public class RavenDbInstance : IDisposable
     {
         LicenseManager.IgnoreProcessorAffinityChanges = true;
         LicenseManager.IgnoreCompressionLicenseLimit = true;
-        BackupUtils.IgnoreHealthChecksBeforeBackup = true;
 
         //RequestExecutor.HttpClientFactory = RavenServerHttpClientFactory.Instance;
         LicenseManager.AddLicenseStatusToLicenseLimitsException = true;
@@ -148,6 +147,7 @@ public class RavenDbInstance : IDisposable
             DebugTag = "A"
         };
 
+        Server.ServerStore.ForTestingPurposesOnly().IgnoreHealthChecksBeforeBackup = true;
         Server.Initialize();
         Server.ServerStore.ValidateFixedPort = false;
         AsyncHelpers.RunSync(() => Server.ServerStore.EnsureNotPassiveAsync());

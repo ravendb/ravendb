@@ -55,19 +55,19 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         var manualDoneUtc = DateTime.UtcNow;
 
         Assert.True(await WaitForValueAsync(() => Task.FromResult(Decisions(server, store.Database, taskId)
-                .Any(d => d.Kind == BackupDecisionKind.Completed && d.Time > manualDoneUtc)), true, timeout: 90_000, interval: 250),
+                .Any(d => d.Category == BackupDecisionCategory.Completed && d.LastTime > manualDoneUtc)), true, timeout: 90_000, interval: 250),
             "precondition: the scheduler should run the next backup at the minute boundary");
 
         await Task.Delay(TimeSpan.FromSeconds(15));
 
         var decisions = Decisions(server, store.Database, taskId);
-        var scheduledStarts = decisions.Where(d => d.Kind == BackupDecisionKind.Started && d.Time > manualDoneUtc).OrderBy(d => d.Time).ToList();
+        var scheduledStarts = decisions.Where(d => d.Category == BackupDecisionCategory.Started && d.LastTime > manualDoneUtc).OrderBy(d => d.LastTime).ToList();
         var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
         var files = Directory.GetFiles(backupPath, "*", SearchOption.AllDirectories).GroupBy(Path.GetExtension).Select(g => $"{g.Key}={g.Count()}");
 
         Assert.True(status.IsFull && scheduledStarts.Count == 1,
             $"Expected one scheduled FULL backup at the minute boundary. Got {scheduledStarts.Count} scheduled start(s) within ~15s " +
-            $"(first at {scheduledStarts.FirstOrDefault().Time:O}); last status IsFull={status.IsFull}, " +
+            $"(first at {scheduledStarts.FirstOrDefault()?.LastTime:O}); last status IsFull={status.IsFull}, " +
             $"LastFullBackup={status.LastFullBackup:O}, LastIncrementalBackup={status.LastIncrementalBackup:O}. " +
             $"Files: {string.Join(", ", files)}{Environment.NewLine}{Dump(decisions)}");
     }
@@ -164,8 +164,8 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
         await WaitUntilNextMinuteBoundary(extra: TimeSpan.FromSeconds(15));
 
-        var afterDisable = Decisions(server, store.Database, taskId).Where(d => d.Time >= disabledAtUtc).ToList();
-        var attempts = afterDisable.Where(d => d.Kind is BackupDecisionKind.Started or BackupDecisionKind.Failed).ToList();
+        var afterDisable = Decisions(server, store.Database, taskId).Where(d => d.LastTime >= disabledAtUtc).ToList();
+        var attempts = afterDisable.Where(d => d.Category is BackupDecisionCategory.Started or BackupDecisionCategory.Failed).ToList();
         var localStatus = server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
 
         Assert.True(attempts.Count == 0,
@@ -180,12 +180,18 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false });
         using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
         await StoreDocument(store);
-        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath), store);
+        // Backup Now runs on the loaded database and registers before it returns, so it can no longer start on an unloaded database (that was the bug in finding 3);
+        // the backup held while starting is now the scheduled one, so the task runs every minute and the database instance is taken before it's unloaded
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *"), store);
 
         var runner = server.ServerStore.ServerBackupRunner;
         var landlord = server.ServerStore.DatabasesLandlord;
         var state = await WaitForStateAsync(runner, store.Database, taskId);
         Assert.NotNull(state);
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+        await WaitUntilNextMinuteBoundary(extra: TimeSpan.FromSeconds(10));
+        Assert.False(WaitForValue(() => state.Running.IsRaised(), false, timeout: 60_000, interval: 100), "precondition: no backup is running");
         Assert.True(landlord.UnloadDirectly(store.Database), "precondition: unload database");
 
         // block database loading, so the first backup stays between Running.Raise() and the RunningTask assignment
@@ -198,20 +204,18 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
         try
         {
-            const long firstOperationId = 1_000_001;
             const long secondOperationId = 1_000_002;
 
-            runner.StartBackupTask(store.Database, taskId, isFullBackup: true, firstOperationId);
-            Assert.True(state.Running.IsRaised(), "precondition: first backup is marked as running");
+            Assert.True(WaitForValue(() => state.Running.IsRaised(), true, timeout: 75_000, interval: 50), "precondition: first backup is marked as running");
             Assert.Null(state.RunningTask);
 
-            var error = Record.Exception(() => runner.StartBackupTask(store.Database, taskId, isFullBackup: true, secondOperationId));
+            var error = Record.Exception(() => runner.StartBackupNowTask(database, taskId, isFullBackup: true, secondOperationId));
 
             Release();
 
             Assert.False(WaitForValue(() => state.Running.IsRaised(), false, timeout: 60_000, interval: 100), "first backup should finish");
-            var database = await landlord.TryGetOrCreateResourceStore(store.Database);
-            var secondRegistered = database.Operations.GetOperation(secondOperationId) != null;
+            var loadedDatabase = await landlord.TryGetOrCreateResourceStore(store.Database);
+            var secondRegistered = loadedDatabase.Operations.GetOperation(secondOperationId) != null;
 
             Assert.True(error is BackupAlreadyRunningException,
                 $"The second StartBackupTask call returned operation id {secondOperationId} without throwing (error: {error?.GetType().Name ?? "none"}); " +
@@ -275,13 +279,13 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
             await Task.Delay(TimeSpan.FromSeconds(10));
 
             var started = StartedShards();
-            var capRejections = runner.GetDecisionLog(int.MaxValue, out _).Count(d => d.Detail == "ConcurrentBackup" && d.Time >= startUtc);
+            var capRejections = runner.Decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Take = BackupDecisionTracker.MaxDecisionLogSize }, afterEtag: null).Entries.Count(d => d.Source == BackupDecisionSource.Server && d.Detail == "ConcurrentBackup" && d.LastTime >= startUtc);
 
             Assert.True(started == shardNames.Count,
                 $"Only {started} of {shardNames.Count} shards of '{store.Database}' started; the server log has {capRejections} 'ConcurrentBackup' rejections. " +
                 $"Running backups per counter: {server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups} (limit {server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}).");
 
-            int StartedShards() => shardNames.Count(name => Decisions(server, name, result.TaskId).Any(d => d.Kind == BackupDecisionKind.Started && d.Time >= startUtc));
+            int StartedShards() => shardNames.Count(name => Decisions(server, name, result.TaskId).Any(d => d.Category == BackupDecisionCategory.Started && d.LastTime >= startUtc));
         }
         finally
         {
@@ -297,7 +301,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         using var server = GetNewServer(new ServerCreationOptions
         {
             RunInMemory = false,
-            CustomSettings = IdleSettings()
+            CustomSettings = new Dictionary<string, string>(IdleSettings()) { [RavenConfiguration.GetKey(x => x.Backup.KeepIdleDatabaseLoadedBeforeBackup)] = "0" }
         });
         using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
         await StoreDocument(store);
@@ -341,8 +345,8 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
         await WaitUntilNextMinuteBoundary(extra: TimeSpan.FromSeconds(20));
 
-        var afterDisable = Decisions(server, store.Database, taskId).Where(d => d.Time >= disabledAtUtc).ToList();
-        var started = afterDisable.Count(d => d.Kind == BackupDecisionKind.Started);
+        var afterDisable = Decisions(server, store.Database, taskId).Where(d => d.LastTime >= disabledAtUtc).ToList();
+        var started = afterDisable.Count(d => d.Category == BackupDecisionCategory.Started);
 
         Assert.True(started == 0,
             $"The runner started {started} backup(s) of task {taskId} after it was disabled at {disabledAtUtc:O} while the database was idle " +
@@ -380,7 +384,8 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         Assert.False(WaitForValue(() => state.Stale.IsRaised(), false, timeout: 30_000), "precondition: re-enabled task is not stale");
 
         var count = CountInQueue(runner, state);
-        var queue = runner.GetDecisionLogDetails(store.Database, 0).Queue;
+        // the debug endpoint that returned the queue info was removed; the decision log is now served over a WebSocket, so the numbers are read here
+        var queue = (QueueLength: GetQueue(runner).Count, TrackedTasks: runner.BackupsPerDatabasePerTaskId.Sum(x => x.Value.Count));
         Assert.True(count == 1,
             $"Task {taskId} appears {count} times in the runner queue after disable+enable within one tick (QueueLength={queue.QueueLength}, TrackedTasks={queue.TrackedTasks}).");
     }
@@ -410,7 +415,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         try
         {
             var database1 = await Databases.GetDocumentDatabaseInstanceFor(server, store1);
-            runner.StartBackupTask(store1.Database, taskId, isFullBackup: true, database1.Operations.GetNextOperationId());
+            runner.StartBackupNowTask(database1, taskId, isFullBackup: true, database1.Operations.GetNextOperationId());
             Assert.Equal(1, counter.MaxNumberOfConcurrentBackups);
             Assert.Equal(1, WaitForValue(() => counter.CurrentNumberOfRunningBackups, 1));
 
@@ -436,7 +441,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Finding09_BackupNowMustRespectServerHealthChecks()
     {
-        using var server = GetNewServer();
+        using var server = GetNewServer(new ServerCreationOptions { IgnoreHealthChecksBeforeBackup = false });
         using var store = GetDocumentStore(new Options { Server = server });
         await StoreDocument(store);
         var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
@@ -477,17 +482,17 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         await Task.Delay(TimeSpan.FromSeconds(20));
 
         var log = Decisions(server, store.Database, taskId);
-        var notDue = log.Where(d => d.Kind == BackupDecisionKind.Policy && d.Time >= startUtc).ToList();
-        var distinctMessages = notDue.Select(d => d.Message).Distinct().Count();
+        var notDue = log.Where(d => d.Category is BackupDecisionCategory.Waiting or BackupDecisionCategory.HeldBack && d.LastTime >= startUtc).ToList();
+        var distinctMessages = notDue.Select(d => d.Reason).Distinct().Count();
 
         // record struct (time, kind, two references) + string header + UTF-16 payload
-        var bytesPerEntry = notDue.Count == 0 ? 0 : notDue.Average(d => 32 + 22 + 2 * (d.Message?.Length ?? 0));
-        var projectedKbPerTask = bytesPerEntry * ServerBackupRunner.MaxDecisionLogSize / 1024;
-        var hoursUntilLifecycleEntriesAreEvicted = ServerBackupRunner.MaxDecisionLogSize * 60 / 3600.0;
+        var bytesPerEntry = notDue.Count == 0 ? 0 : notDue.Average(d => 32 + 22 + 2 * (d.Reason?.Length ?? 0));
+        var projectedKbPerTask = bytesPerEntry * BackupDecisionTracker.MaxDecisionLogSize / 1024;
+        var hoursUntilLifecycleEntriesAreEvicted = BackupDecisionTracker.MaxDecisionLogSize * 60 / 3600.0;
 
         Assert.True(notDue.Count <= 1,
             $"{notDue.Count} 'not due' policy entries were added in 20s for a single task ({distinctMessages} distinct message(s)). " +
-            $"~{bytesPerEntry:N0} bytes per entry, ~{projectedKbPerTask:N0} KB retained per task at the {ServerBackupRunner.MaxDecisionLogSize}-entry cap; " +
+            $"~{bytesPerEntry:N0} bytes per entry, ~{projectedKbPerTask:N0} KB retained per task at the {BackupDecisionTracker.MaxDecisionLogSize}-entry cap; " +
             $"at the default 60s frequency the Started/Completed entries are pushed out after ~{hoursUntilLifecycleEntriesAreEvicted:N1}h.");
     }
 
@@ -558,7 +563,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
         await Task.Delay(TimeSpan.FromSeconds(150));
 
-        var started = Decisions(server, store.Database, taskId).Count(d => d.Kind == BackupDecisionKind.Started && d.Time >= startUtc);
+        var started = Decisions(server, store.Database, taskId).Count(d => d.Category == BackupDecisionCategory.Started && d.LastTime >= startUtc);
         Assert.True(reloads.IsEmpty,
             $"With no writes, database '{store.Database}' was unloaded and reloaded {reloads.Count} time(s) in 150s " +
             $"(at {string.Join(", ", reloads.Select(r => $"{r.Time:HH:mm:ss}"))}) to run {started} incremental backup(s).");
@@ -585,12 +590,12 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
     private static List<BackupDecision> Decisions(RavenServer server, string database, long taskId)
     {
-        return server.ServerStore.ServerBackupRunner.GetDecisionLogFor(database, taskId) ?? new List<BackupDecision>();
+        return BackupTestBase.GetDecisionLog(server.ServerStore.ServerBackupRunner, database, taskId) ?? new List<BackupDecision>();
     }
 
     private static string Dump(IEnumerable<BackupDecision> decisions, int take = 15)
     {
-        return string.Join(Environment.NewLine, decisions.Take(take).Select(d => $"{d.Time:HH:mm:ss.fff} {d.Kind} {d.Detail} {d.Message}"));
+        return string.Join(Environment.NewLine, decisions.Take(take).Select(d => $"{d.LastTime:HH:mm:ss.fff} {d.Category} {d.Detail} {d.Reason}"));
     }
 
     private static async Task<DatabaseBackupState> WaitForStateAsync(ServerBackupRunner runner, string database, long taskId)
@@ -613,6 +618,12 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         var field = typeof(ServerBackupRunner).GetField("_backupQueue", BindingFlags.NonPublic | BindingFlags.Instance);
         var queue = (ConcurrentQueue<DatabaseBackupState>)field!.GetValue(runner);
         return queue!.Count(x => ReferenceEquals(x, state));
+    }
+
+    private static ConcurrentQueue<DatabaseBackupState> GetQueue(ServerBackupRunner runner)
+    {
+        var field = typeof(ServerBackupRunner).GetField("_backupQueue", BindingFlags.NonPublic | BindingFlags.Instance);
+        return (ConcurrentQueue<DatabaseBackupState>)field!.GetValue(runner);
     }
 
     private static PeriodicBackupConfiguration GetSingleBackupConfiguration(RavenServer server, string database)

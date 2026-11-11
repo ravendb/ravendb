@@ -13,8 +13,10 @@ public class ClusterHealthPolicy : IServerBackupPolicy
 
     public string Name => "ClusterHealth";
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
+        category = BackupDecisionCategory.HeldBack;
+
         var state = serverStore.CurrentRachisState;
         if (state is RachisState.Leader or RachisState.Follower)
         {
@@ -22,7 +24,7 @@ public class ClusterHealthPolicy : IServerBackupPolicy
             return true;
         }
 
-        reason = $"Cannot start any backup(s) because cluster is in '{state}' state.";
+        reason = $"The cluster is in '{state}' state.";
         return false;
     }
 }

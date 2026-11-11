@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Exceptions;
+using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Backups;
@@ -11,150 +14,502 @@ public enum BackupDecisionSource
     Task
 }
 
-public enum BackupDecisionKind
+public enum BackupDecisionCategory
 {
-    Info,
-    Policy,
+    Waiting,
+    HeldBack,
     Started,
     Completed,
     Failed,
     Cancelled
 }
 
-public readonly record struct BackupDecision(DateTime Time, BackupDecisionKind Kind, string Detail, string Message);
+public sealed class BackupDecision
+{
+    public long Id { get; init; }
+
+    public DateTime FirstTime { get; init; }
+
+    public DateTime LastTime { get; internal set; }
+
+    public int Count { get; internal set; }
+
+    public BackupDecisionCategory Category { get; init; }
+
+    public string Detail { get; init; }
+
+    public string Reason { get; init; }
+
+    internal long Etag { get; set; }
+
+    internal bool IsSameAs(BackupDecisionCategory category, string detail, string reason)
+    {
+        return Category == category &&
+               string.Equals(Detail, detail, StringComparison.Ordinal) &&
+               string.Equals(Reason, reason, StringComparison.Ordinal);
+    }
+}
+
+public sealed class BackupDecisionLog
+{
+    private readonly BackupDecision[] _decisions;
+
+    private int _newestIndex = -1;
+
+    private int _count;
+
+    public BackupDecisionLog(int maxSize)
+    {
+        _decisions = new BackupDecision[maxSize];
+    }
+
+    internal BackupDecision Add(BackupDecisionCategory category, string detail, string reason, DateTime time, Func<long> nextId, Func<long> nextEtag)
+    {
+        lock (_decisions)
+        {
+            if (_count > 0 && _decisions[_newestIndex].IsSameAs(category, detail, reason))
+            {
+                var latest = _decisions[_newestIndex];
+                latest.Count++;
+                latest.LastTime = time;
+                latest.Etag = nextEtag();
+
+                return latest;
+            }
+
+            var decision = new BackupDecision
+            {
+                Id = nextId(),
+                FirstTime = time,
+                LastTime = time,
+                Count = 1,
+                Category = category,
+                Detail = detail,
+                Reason = reason,
+                Etag = nextEtag()
+            };
+
+            _newestIndex = (_newestIndex + 1) % _decisions.Length;
+            _decisions[_newestIndex] = decision;
+
+            if (_count < _decisions.Length)
+                _count++;
+
+            return decision;
+        }
+    }
+
+    public List<BackupDecision> GetDecisions(long? afterEtag = null)
+    {
+        lock (_decisions)
+        {
+            var decisions = new List<BackupDecision>();
+
+            for (var i = 0; i < _count; i++)
+            {
+                var decision = GetNewest(i);
+                if (afterEtag != null && decision.Etag <= afterEtag)
+                    break;
+
+                decisions.Add(Copy(decision));
+            }
+
+            return decisions;
+        }
+    }
+
+    public bool TryGetLatest(out BackupDecision decision)
+    {
+        lock (_decisions)
+        {
+            if (_count == 0)
+            {
+                decision = null;
+                return false;
+            }
+
+            decision = Copy(_decisions[_newestIndex]);
+            return true;
+        }
+    }
+
+    private BackupDecision GetNewest(int index)
+    {
+        return _decisions[(_newestIndex - index + _decisions.Length) % _decisions.Length];
+    }
+
+    private static BackupDecision Copy(BackupDecision decision)
+    {
+        return new BackupDecision
+        {
+            Id = decision.Id,
+            FirstTime = decision.FirstTime,
+            LastTime = decision.LastTime,
+            Count = decision.Count,
+            Category = decision.Category,
+            Detail = decision.Detail,
+            Reason = decision.Reason,
+            Etag = decision.Etag
+        };
+    }
+}
+
+public sealed class BackupDecisionLogFilter
+{
+    public HashSet<string> Databases { get; set; }
+
+    public HashSet<long> TaskIds { get; set; }
+
+    public HashSet<BackupDecisionCategory> Categories { get; set; }
+
+    public string Reason { get; set; }
+
+    public DateTime? From { get; set; }
+
+    public DateTime? To { get; set; }
+
+    public int Take { get; set; }
+
+    internal bool MatchesTask(string database, long taskId)
+    {
+        return (Databases is not { Count: > 0 } || Databases.Contains(database)) &&
+               (TaskIds is not { Count: > 0 } || TaskIds.Contains(taskId));
+    }
+
+    public bool Matches(BackupDecisionLogEntry entry)
+    {
+        if (entry.Source == BackupDecisionSource.Task && MatchesTask(entry.Database, entry.TaskId.Value) == false)
+            return false;
+
+        if (Categories is { Count: > 0 } && Categories.Contains(entry.Category) == false)
+            return false;
+
+        if (string.IsNullOrEmpty(Reason) == false && (entry.Reason == null || entry.Reason.Contains(Reason, StringComparison.OrdinalIgnoreCase) == false))
+            return false;
+
+        if (From != null && entry.LastTime < From.Value)
+            return false;
+
+        if (To != null && entry.FirstTime > To.Value)
+            return false;
+
+        return true;
+    }
+
+    internal static long ParseTaskId(string value)
+    {
+        if (long.TryParse(value, out var taskId) == false)
+            throw new BadRequestException($"Invalid task id '{value}'. A task id must be a number.");
+
+        return taskId;
+    }
+
+    internal static BackupDecisionCategory ParseCategory(string value)
+    {
+        if (Enum.TryParse<BackupDecisionCategory>(value, ignoreCase: true, out var category) == false || Enum.IsDefined(category) == false)
+            throw new BadRequestException($"Invalid category '{value}'. Valid categories are: {string.Join(", ", Enum.GetNames<BackupDecisionCategory>())}.");
+
+        return category;
+    }
+}
 
 public sealed class BackupDecisionLogDetails : IDynamicJson
 {
     public string NodeTag { get; set; }
 
-    public int MaxEntriesPerLog { get; set; }
+    public DateTime RunnerStartTime { get; set; }
 
-    public BackupQueueSummary Queue { get; set; }
-
-    public List<string> Databases { get; set; } = new();
+    public BackupDecisionLogSummary Summary { get; set; }
 
     public List<BackupDecisionLogEntry> Entries { get; set; } = new();
 
     public int TotalResults { get; set; }
+
+    public List<string> Databases { get; set; } = new();
+
+    public List<BackupDecisionLogTask> Tasks { get; set; } = new();
 
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(NodeTag)] = NodeTag,
-            [nameof(MaxEntriesPerLog)] = MaxEntriesPerLog,
-            [nameof(Queue)] = Queue?.ToJson(),
-            [nameof(Databases)] = new DynamicJsonArray(Databases),
+            [nameof(RunnerStartTime)] = RunnerStartTime,
+            [nameof(Summary)] = Summary?.ToJson(),
             [nameof(Entries)] = new DynamicJsonArray(Entries.Select(x => x.ToJson())),
-            [nameof(TotalResults)] = TotalResults
+            [nameof(TotalResults)] = TotalResults,
+            [nameof(Databases)] = Databases == null ? null : new DynamicJsonArray(Databases),
+            [nameof(Tasks)] = Tasks == null ? null : new DynamicJsonArray(Tasks.Select(x => x.ToJson()))
         };
     }
 }
 
-public sealed class BackupQueueSummary : IDynamicJson
+public sealed class BackupDecisionLogTask : IDynamicJson
 {
-    public int QueueLength { get; set; }
+    public string Database { get; set; }
 
-    public int TrackedTasks { get; set; }
+    public long TaskId { get; set; }
 
-    public int TrackedDatabases { get; set; }
-
-    public int StaleTasks { get; set; }
-
-    public int RunningTasks { get; set; }
-
-    public int BlockedTasks { get; set; }
-
-    public int CurrentNumberOfRunningBackups { get; set; }
-
-    public int MaxNumberOfConcurrentBackups { get; set; }
-
-    public double RunnerFrequencyInSec { get; set; }
-
-    public DateTime? NextBackupUtc { get; set; }
-
-    public string NextBackupDatabase { get; set; }
-
-    public string NextBackupTaskName { get; set; }
+    public string TaskName { get; set; }
 
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
-            [nameof(QueueLength)] = QueueLength,
-            [nameof(TrackedTasks)] = TrackedTasks,
-            [nameof(TrackedDatabases)] = TrackedDatabases,
-            [nameof(StaleTasks)] = StaleTasks,
-            [nameof(RunningTasks)] = RunningTasks,
-            [nameof(BlockedTasks)] = BlockedTasks,
-            [nameof(CurrentNumberOfRunningBackups)] = CurrentNumberOfRunningBackups,
-            [nameof(MaxNumberOfConcurrentBackups)] = MaxNumberOfConcurrentBackups,
-            [nameof(RunnerFrequencyInSec)] = RunnerFrequencyInSec,
-            [nameof(NextBackupUtc)] = NextBackupUtc,
-            [nameof(NextBackupDatabase)] = NextBackupDatabase,
-            [nameof(NextBackupTaskName)] = NextBackupTaskName
+            [nameof(Database)] = Database,
+            [nameof(TaskId)] = TaskId,
+            [nameof(TaskName)] = TaskName
         };
+    }
+}
+
+public sealed class BackupDecisionLogSummary : IDynamicJson
+{
+    public RunningSummary Running { get; set; } = new();
+
+    public WaitingForScheduleSummary WaitingForSchedule { get; set; } = new();
+
+    public HeldBackSummary HeldBack { get; set; } = new();
+
+    public ServerBlockSummary ServerBlock { get; set; }
+
+    public OutcomeSummary Failed { get; set; } = new();
+
+    public OutcomeSummary Completed { get; set; } = new();
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Running)] = Running.ToJson(),
+            [nameof(WaitingForSchedule)] = WaitingForSchedule.ToJson(),
+            [nameof(HeldBack)] = HeldBack.ToJson(),
+            [nameof(ServerBlock)] = ServerBlock?.ToJson(),
+            [nameof(Failed)] = Failed.ToJson(),
+            [nameof(Completed)] = Completed.ToJson()
+        };
+    }
+
+    public sealed class RunningSummary
+    {
+        public int Current { get; set; }
+
+        public int Max { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Current)] = Current,
+                [nameof(Max)] = Max
+            };
+        }
+    }
+
+    public sealed class WaitingForScheduleSummary
+    {
+        public int Count { get; set; }
+
+        public DateTime? NextBackupUtc { get; set; }
+
+        public string NextBackupDatabase { get; set; }
+
+        public string NextBackupTaskName { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Count)] = Count,
+                [nameof(NextBackupUtc)] = NextBackupUtc,
+                [nameof(NextBackupDatabase)] = NextBackupDatabase,
+                [nameof(NextBackupTaskName)] = NextBackupTaskName
+            };
+        }
+    }
+
+    public sealed class HeldBackSummary
+    {
+        public int Count { get; set; }
+
+        public HeldBackTask Longest { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Count)] = Count,
+                [nameof(Longest)] = Longest?.ToJson()
+            };
+        }
+    }
+
+    public sealed class HeldBackTask
+    {
+        public string Database { get; set; }
+
+        public long TaskId { get; set; }
+
+        public string TaskName { get; set; }
+
+        public string Detail { get; set; }
+
+        public string Reason { get; set; }
+
+        public DateTime Since { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Database)] = Database,
+                [nameof(TaskId)] = TaskId,
+                [nameof(TaskName)] = TaskName,
+                [nameof(Detail)] = Detail,
+                [nameof(Reason)] = Reason,
+                [nameof(Since)] = Since
+            };
+        }
+    }
+
+    public sealed class ServerBlockSummary
+    {
+        public string Detail { get; set; }
+
+        public string Reason { get; set; }
+
+        public DateTime Since { get; set; }
+
+        public DateTime? Until { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Detail)] = Detail,
+                [nameof(Reason)] = Reason,
+                [nameof(Since)] = Since,
+                [nameof(Until)] = Until
+            };
+        }
+    }
+
+    public sealed class OutcomeSummary
+    {
+        public long Count { get; set; }
+
+        public Outcome Latest { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Count)] = Count,
+                [nameof(Latest)] = Latest?.ToJson()
+            };
+        }
+    }
+
+    public sealed class Outcome
+    {
+        public string Database { get; set; }
+
+        public long TaskId { get; set; }
+
+        public string TaskName { get; set; }
+
+        public DateTime Time { get; set; }
+
+        public string Error { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Database)] = Database,
+                [nameof(TaskId)] = TaskId,
+                [nameof(TaskName)] = TaskName,
+                [nameof(Time)] = Time,
+                [nameof(Error)] = Error
+            };
+        }
     }
 }
 
 public sealed class BackupDecisionLogEntry : IDynamicJson
 {
-    public DateTime Time { get; set; }
+    public long Id { get; set; }
 
-    public BackupDecisionSource Source { get; set; }
+    public DateTime FirstTime { get; set; }
 
-    public string Database { get; set; }
+    public DateTime LastTime { get; set; }
 
-    public long? TaskId { get; set; }
+    public int Count { get; set; }
 
-    public string TaskName { get; set; }
-
-    public BackupDecisionKind Kind { get; set; }
+    public BackupDecisionCategory Category { get; set; }
 
     public string Detail { get; set; }
 
     public string Reason { get; set; }
 
-    public static BackupDecisionLogEntry ForServer(BackupDecision decision)
-    {
-        return Create(decision, BackupDecisionSource.Server);
-    }
+    public BackupDecisionSource Source { get; set; }
 
-    public static BackupDecisionLogEntry ForTask(BackupDecision decision, string database, long taskId, string taskName)
-    {
-        var entry = Create(decision, BackupDecisionSource.Task);
+    public string Database { get; set; }
 
-        entry.Database = database;
-        entry.TaskId = taskId;
-        entry.TaskName = taskName;
+    public int? Shard { get; set; }
+
+    public long? TaskId { get; set; }
+
+    public string TaskName { get; set; }
+
+    public string NodeTag { get; set; }
+
+    internal long Etag { get; set; }
+
+    public static BackupDecisionLogEntry Create(BackupDecision decision, string nodeTag, DatabaseBackupState backupState = null)
+    {
+        var entry = new BackupDecisionLogEntry
+        {
+            Id = decision.Id,
+            FirstTime = decision.FirstTime,
+            LastTime = decision.LastTime,
+            Count = decision.Count,
+            Category = decision.Category,
+            Detail = decision.Detail,
+            Reason = decision.Reason,
+            Source = backupState == null ? BackupDecisionSource.Server : BackupDecisionSource.Task,
+            NodeTag = nodeTag,
+            Etag = decision.Etag
+        };
+
+        if (backupState == null)
+            return entry;
+
+        entry.Database = backupState.OriginalDatabaseName;
+        entry.Shard = ShardHelper.TryGetShardNumberFromDatabaseName(backupState.DatabaseName, out var shardNumber) ? shardNumber : null;
+        entry.TaskId = backupState.Configuration.TaskId;
+        entry.TaskName = backupState.Configuration.Name;
 
         return entry;
-    }
-
-    private static BackupDecisionLogEntry Create(BackupDecision decision, BackupDecisionSource source)
-    {
-        return new BackupDecisionLogEntry
-        {
-            Time = decision.Time,
-            Source = source,
-            Kind = decision.Kind,
-            Detail = decision.Detail,
-            Reason = decision.Message
-        };
     }
 
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
-            [nameof(Time)] = Time,
+            [nameof(Id)] = Id,
+            [nameof(FirstTime)] = FirstTime,
+            [nameof(LastTime)] = LastTime,
+            [nameof(Count)] = Count,
+            [nameof(Category)] = Category,
+            [nameof(Detail)] = Detail,
+            [nameof(Reason)] = Reason,
             [nameof(Source)] = Source,
             [nameof(Database)] = Database,
+            [nameof(Shard)] = Shard,
             [nameof(TaskId)] = TaskId,
             [nameof(TaskName)] = TaskName,
-            [nameof(Kind)] = Kind,
-            [nameof(Detail)] = Detail,
-            [nameof(Reason)] = Reason
+            [nameof(NodeTag)] = NodeTag
         };
     }
 }

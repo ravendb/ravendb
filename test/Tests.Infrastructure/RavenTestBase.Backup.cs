@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -38,6 +37,21 @@ namespace FastTests
 
         public class BackupTestBase
         {
+            public static DatabaseBackupState GetBackupState(ServerBackupRunner runner, string databaseName, long taskId)
+            {
+                return runner.GetDatabaseStateByTaskId(databaseName, taskId);
+            }
+
+            public static List<DatabaseBackupState> GetBackupStates(ServerBackupRunner runner, string databaseName)
+            {
+                return runner.GetDatabaseBackups(databaseName);
+            }
+
+            public static List<BackupDecision> GetDecisionLog(ServerBackupRunner runner, string databaseName, long taskId)
+            {
+                return GetBackupState(runner, databaseName, taskId)?.GetDecisionLog();
+            }
+
             private readonly RavenTestBase _parent;
             private readonly int _reasonableTimeout = Debugger.IsAttached ? 60000 : 30000;
 
@@ -62,13 +76,10 @@ namespace FastTests
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var serverBackupRunner = documentDatabase.ServerStore.ServerBackupRunner;
 
-                if (documentDatabase.DisableOngoingTasks)
-                    throw new InvalidOperationException($"Backup task is disabled via marker file for database '{documentDatabase.Name}'.");
-
                 long opId;
                 try
                 {
-                    opId = server.ServerStore.ServerBackupRunner.StartBackupTask(documentDatabase.Name, taskId, isFullBackup, documentDatabase.Operations.GetNextOperationId());
+                    opId = server.ServerStore.ServerBackupRunner.StartBackupNowTask(documentDatabase, taskId, isFullBackup, documentDatabase.Operations.GetNextOperationId());
                 }
                 catch (BackupAlreadyRunningException alreadyRunningException)
                 {
@@ -597,8 +608,7 @@ namespace FastTests
                 // Check if backup didn't complete within the timeout period
                 if (expected == OperationStatus.Completed && actual == OperationStatus.InProgress)
                 {
-                    serverBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(store.Database, out ConcurrentDictionary<long, DatabaseBackupState> backupPerDatabase);
-                    var pb = backupPerDatabase?.Values.FirstOrDefault(x => x.RunningBackupStatus != null && x.BackupStatus.TaskId == taskId);
+                    var pb = serverBackupRunner == null ? null : GetBackupStates(serverBackupRunner, store.Database).FirstOrDefault(x => x.RunningBackupStatus != null && x.BackupStatus.TaskId == taskId);
                     if (pb == null)
                     {
                         var operation = new GetPeriodicBackupStatusOperation(taskId);
@@ -623,9 +633,7 @@ namespace FastTests
                 var actualString = actual?.ToString() ?? "null";
 
                 // failed to save backup status, lets fetch it from memory
-                serverBackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(databaseName, out ConcurrentDictionary<long, DatabaseBackupState> backupPerDatabase);
-
-                var pb = backupPerDatabase?.FirstOrDefault(x => x.Value.OperationId == opId).Value;
+                var pb = serverBackupRunner == null ? null : GetBackupStates(serverBackupRunner, databaseName).FirstOrDefault(x => x.OperationId == opId);
                 if (pb == null)
                 {
                     Assert.Fail($"Backup status expected: '{expected}', actual '{actualString}',{Environment.NewLine}" +
@@ -662,11 +670,10 @@ namespace FastTests
                 var mre = new ManualResetEventSlim();
                 waitHandles.Add(mre.WaitHandle);
 
-                database.ServerStore.ServerBackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
+                var testingStuffInternal = database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals
+                    .GetOrAdd(database.Name, _ => new ServerBackupRunner.TestingStuffInternal());
 
-                var testingStuffInternal = new ServerBackupRunner.TestingStuffInternal { AfterBackupBatchCompleted = () => mre.Set() };
-
-                database.ServerStore.ServerBackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
+                testingStuffInternal.AfterBackupBatchCompleted = () => mre.Set();
             }
 
             public async Task FillDatabaseWithRandomDataAsync(int databaseSizeInMb, IAsyncDocumentSession session, int? timeout = default)

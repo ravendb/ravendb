@@ -6,8 +6,6 @@ namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
 public class ServerConcurrentBackupPolicy : IServerBackupPolicy
 {
-    public static bool Disabled;
-
     private readonly ConcurrentBackupsCounter _concurrentBackupsCounter;
 
     public ServerConcurrentBackupPolicy([NotNull] ConcurrentBackupsCounter concurrentBackupsCounter)
@@ -17,17 +15,13 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
 
     public string Name => "ConcurrentBackup";
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
-        if (Disabled)
-        {
-            reason = null;
-            return true;
-        }
+        category = BackupDecisionCategory.Waiting;
 
         if (_concurrentBackupsCounter.CanRunBackup(databaseName) == false)
         {
-            reason = $"Cannot start backup(s) because the maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
+            reason = $"The maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
             return false;
         }
 

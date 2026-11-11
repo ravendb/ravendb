@@ -14,18 +14,21 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
 
     public string Name => "ShouldRunOnThisNode";
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
+        category = BackupDecisionCategory.Waiting;
+
         var nodeTag = BackupUtils.GetResponsibleNodeTag(context, backupState.DatabaseName, backupState.Configuration.TaskId);
         if (nodeTag == null)
         {
-            reason = $"Cannot start backup {backupState} because no node is responsible for this task.";
+            reason = "No node is responsible for the task.";
+            category = BackupDecisionCategory.HeldBack;
             return false;
         }
 
         if (nodeTag != serverStore.NodeTag)
         {
-            reason = $"Cannot start backup {backupState} because this node is not responsible for this task.";
+            reason = $"Node '{nodeTag}' is responsible for the task.";
             return false;
         }
 
