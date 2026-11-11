@@ -130,9 +130,16 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             if (ReferenceEquals(current, entry) == false)
                 return current.Value; // another thread added it
 
-            _order.Enqueue(script);
-            // two rounds at most: a round clears the used marks, so the next one finds a script to evict
-            for (var i = 0; _entries.Count > size && i < 2 * size && _order.TryDequeue(out var oldest); i++)
+            if (_order.Count >= size)
+                EvictOne();
+            _order.Enqueue(script); // after the eviction, so the new script is not the one evicted
+            return value;
+        }
+
+        // Approximate under concurrent adds. Two rounds at most: the first clears the used marks, so the second finds a script.
+        private void EvictOne()
+        {
+            for (var i = 0; i < 2 * size && _order.TryDequeue(out var oldest); i++)
             {
                 if (_entries.TryGetValue(oldest, out var candidate) == false)
                     continue;
@@ -142,9 +149,9 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
                     _order.Enqueue(oldest);
                     continue;
                 }
-                _entries.TryRemove(oldest, out _);
+                if (_entries.TryRemove(oldest, out _))
+                    return;
             }
-            return value;
         }
 
         public void Clear()
