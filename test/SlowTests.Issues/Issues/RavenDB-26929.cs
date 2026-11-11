@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using FastTests.Voron;
 using Sparrow.Platform;
 using Tests.Infrastructure;
@@ -15,6 +15,7 @@ public class RavenDB_26929(ITestOutputHelper output) : StorageTest(output)
     [RavenFact(RavenTestCategory.Voron)]
     public void PrefetchingShouldBeEnabledWhenPlatformSupportsItAndOptionsAllowIt()
     {
+        RequireFileBasedPager(); // a memory-only data file is not read ahead
         Assert.True(Options.EnablePrefetching);
         Assert.Equal(PlatformDetails.CanPrefetch, GetCanPrefetchValue(Env.DataPager));
     }
