@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -39,14 +40,20 @@ namespace Raven.Server.Documents.AI.Settings
             if (toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Index, out int index) == false)
                 return;
 
-            if (index != _toolCallIndex)
+            var hasId = toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id) &&
+                        string.IsNullOrEmpty(id) == false;
+
+            // Providers reuse an index across consecutive calls, so it cannot be the only boundary - but it is
+            // still what opens the first call, and what separates calls that carry no id at all.
+            var startsAnotherCall = hasId && _id is { Length: > 0 } && _id.Equals(id.AsSpan()) == false;
+
+            if (startsAnotherCall || index != _toolCallIndex)
             {
                 AddAndReset();
                 _toolCallIndex = index;
             }
 
-
-            if (toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id))
+            if (hasId)
             {
                 _id.Append(id);
             }

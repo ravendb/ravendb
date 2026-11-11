@@ -65,7 +65,6 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
 
         if (delta.TryGet(ChatCompletionClient.Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
         {
-            state.ToolCalls.AddAndReset();
             state.SawContent = true;
             state.ReasoningFallback = null;
             textDelta = content;
@@ -75,8 +74,6 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
         }
         else if (TryGetDeltaReasoning(delta, out var reasoning))
         {
-            state.ToolCalls.AddAndReset();
-
             // reasoning is held aside: it becomes the answer only if the model produced nothing else
             if (state.SawContent == false)
                 (state.ReasoningFallback ??= new StringBuilder()).Append(reasoning);

@@ -300,6 +300,11 @@ internal static class Wire
     public static string ToolCallDelta(int index, string id, string name, string arguments) =>
         Chunk($"{{\"tool_calls\":[{{\"index\":{index},\"id\":{JsonConvert.ToString(id)},\"type\":\"function\",\"function\":{{\"name\":{JsonConvert.ToString(name)},\"arguments\":{JsonConvert.ToString(arguments)}}}}}]}}");
 
+    /// <summary>A continuation chunk: arguments only, which is how a provider spreads one call's arguments
+    /// over several chunks.</summary>
+    public static string ToolCallArgumentsDelta(int index, string arguments) =>
+        Chunk($"{{\"tool_calls\":[{{\"index\":{index},\"function\":{{\"arguments\":{JsonConvert.ToString(arguments)}}}}}]}}");
+
     private static string Chunk(string delta, string finishReason = null, bool usage = false)
     {
         var finish = finishReason == null ? "null" : $"\"{finishReason}\"";
