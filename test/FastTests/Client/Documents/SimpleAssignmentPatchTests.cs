@@ -348,6 +348,17 @@ namespace FastTests.Client.Documents
         [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15;", true)]
         [InlineData("this.F0 = 0; this.F1 = 1; this.F2 = 2; this.F3 = 3; this.F4 = 4; this.F5 = 5; this.F6 = 6; this.F7 = 7; this.F8 = 8; this.F9 = 9; this.F10 = 10; this.F11 = 11; this.F12 = 12; this.F13 = 13; this.F14 = 14; this.F15 = 15; this.F16 = 16;", false)] // more updates than the fast path holds
         [InlineData("this.Active = true; this.Done = false; this.Note = null;", true)]
+        [InlineData("this.Name = '}';", true)]
+        [InlineData(" { this.Name = args.v; this.Age += 1; }", true)] // patch by query sends the update body as a block
+        [InlineData("{ this.Name = args.v; }\r\n  ", true)] // whitespace after the block
+        [InlineData("var i = this;\r\n { i.Name = args.v; i.Age += 1; }", true)] // and declares the from alias
+        [InlineData("var i = this; i.Age++; this.Name = args.v;", true)]
+        [InlineData("var args = this;\r\n { args.Name = args.v; }", false)] // the alias hides the arguments
+        [InlineData("var i = this; var j = this; { j.Name = args.v; }", false)]
+        [InlineData("{ this.Name = args.v; } this.Age += 1;", false)] // a block that does not end the script
+        [InlineData("{ { this.Name = args.v; } }", false)]
+        [InlineData("this.Tags = { A: 1 }", false)] // an object, not a block
+        [InlineData("this.Age = 1 { this.Name = args.v; }", false)]
         public void ScriptsThatTakeTheFastPath(string script, bool simple)
         {
             Assert.Equal(simple, SimpleAssignmentPatch.TryGet(new Raven.Server.Documents.Patch.PatchRequest(script, PatchRequestType.Patch)) != null);
@@ -454,11 +465,46 @@ namespace FastTests.Client.Documents
             }
         }
 
+        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.Querying)]
+        [InlineData("from Items update { this.Name = 'changed'; this.Age += 1; }")]
+        [InlineData("from Items as i update { i.Name = 'changed'; i.Age += 1; }")]
+        [InlineData("from Items where Age >= 0 update { this.Name = 'changed'; this.Age += 1; }")]
+        [InlineData("from Items as i where i.Age >= 0 update { i.Name = 'changed'; i.Age += 1; }")]
+        public async Task ASimplePatchByQueryBuildsNoScriptEngine(string query)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 32; i++)
+                        session.Store(new Item { Name = "original", Age = i }, $"items/{i}");
+                    session.SaveChanges();
+                }
+
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(query));
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Load<Item>(Enumerable.Range(0, 32).Select(i => $"items/{i}"));
+                    for (var i = 0; i < 32; i++)
+                    {
+                        Assert.Equal("changed", items[$"items/{i}"].Name);
+                        Assert.Equal(i + 1, items[$"items/{i}"].Age);
+                    }
+                }
+
+                var database = await GetDatabase(store.Database);
+                Assert.Equal(0, database.Scripts.NumberOfCachedScripts);
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Patching)]
         [InlineData("this.Name = foo(args.v);")]
         [InlineData("if (this.Age) this.Age = 1;")]
         [InlineData("this.Age = this.Age ? 1 : 2;")]
         [InlineData("this.Tags = {};")]
+        [InlineData("{ this.Tags = {}; }")]
         public void ScriptsThatCannotBeSimpleAreNotParsedOrCached(string script)
         {
             script += $" // {Guid.NewGuid()}";

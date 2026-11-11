@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Patch;
 /// A patch script made only of updates of top level fields, with values from the arguments or from literals:
 /// <c>this.F = v;</c> <c>this.F += v;</c> <c>this.F -= v;</c> <c>this.F++;</c> <c>this.F--;</c> <c>this.F = this.F + v;</c> <c>this.F = this.F - v;</c>
 /// where the field is <c>this.F</c>, <c>this['F']</c> or <c>this[args.f]</c>, and v is <c>args.x</c> or a literal (string, number, boolean, null).
+/// The updates may be in a block, after <c>var a = this;</c> (patch by query sends its update body so), and then <c>a.F</c> is <c>this.F</c>.
 /// Such a script needs no JavaScript engine, so we can build the patched document outside the transaction merger.
 /// The result follows the script engine: JavaScript number arithmetic, and <see cref="JsBlittableBridge"/>'s rule for
 /// writing a number back as an integer or a double. Anything else (other expressions, objects and arrays, missing or
@@ -82,11 +83,26 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     }
 
     private const int MaxScriptLength = 1024;
-    private static readonly SearchValues<char> NeverInASimpleScript = SearchValues.Create("({?");
+    private static readonly SearchValues<char> NeverInASimpleScript = SearchValues.Create("(?");
+    private static readonly SearchValues<char> NeverAroundTheBlock = SearchValues.Create("({}?");
 
-    
-    private static bool MayBeSimple(string script) => // a simple script is short and has no call, block, object or conditional
-        script.Length <= MaxScriptLength && script.AsSpan().IndexOfAny(NeverInASimpleScript) < 0;
+    // a simple script is short and has no call, object or conditional, and at most one block, which ends the script
+    private static bool MayBeSimple(string script)
+    {
+        if (script.Length > MaxScriptLength)
+            return false;
+
+        var span = script.AsSpan().TrimEnd();
+        var open = span.IndexOf('{');
+        if (open < 0) // no block: look for a call or a conditional
+            return span.IndexOfAny(NeverInASimpleScript) < 0;
+
+        if (span[^1] != '}') // the block must end the script, otherwise the brace opens an object, e.g. 'this.Tags = {};'
+            return false;
+
+        // before the block and inside it: no call, object, conditional or other block
+        return span[..open].IndexOfAny(NeverAroundTheBlock) < 0 && span[(open + 1)..^1].IndexOfAny(NeverAroundTheBlock) < 0;
+    }
 
     /// <summary>
     /// The parsed scripts, shared by all the databases. Second-chance eviction: a script used since the eviction last passed
@@ -173,14 +189,29 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             return null; // the script runner reports the error
         }
 
-        var updates = new List<Update>();
-        foreach (var statement in program.Body)
+        var body = program.Body;
+        string alias = null;
+        var start = 0;
+        // 'args' would hide the arguments
+        if (body.Count > 0 && body[0] is VariableDeclaration { Kind: VariableDeclarationKind.Var, Declarations: [{ Id: Identifier { Name: not "args" } id, Init: ThisExpression }] })
         {
-            if (statement is EmptyStatement)
-                continue;
-            if (statement is not ExpressionStatement { Expression: var expression } || TryParseUpdate(expression, out var update) == false)
+            alias = id.Name;
+            start = 1;
+        }
+
+        var updates = new List<Update>();
+        for (var i = start; i < body.Count; i++)
+        {
+            if (body[i] is BlockStatement block)
+            {
+                foreach (var statement in block.Body)
+                {
+                    if (TryAddUpdate(statement, alias, updates) == false)
+                        return null;
+                }
+            }
+            else if (TryAddUpdate(body[i], alias, updates) == false)
                 return null;
-            updates.Add(update);
         }
 
         if (updates.Count == 0 || updates.Count > MaxUpdates)
@@ -200,24 +231,34 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         return new SimpleAssignmentPatch(updates.ToArray());
     }
 
-    private static bool TryParseUpdate(Expression expression, out Update update)
+    private static bool TryAddUpdate(Statement statement, string alias, List<Update> updates)
+    {
+        if (statement is EmptyStatement)
+            return true;
+        if (statement is not ExpressionStatement { Expression: var expression } || TryParseUpdate(expression, alias, out var update) == false)
+            return false;
+        updates.Add(update);
+        return true;
+    }
+
+    private static bool TryParseUpdate(Expression expression, string alias, out Update update)
     {
         update = default;
         switch (expression)
         {
-            case UpdateExpression { Operator: Operator.Increment or Operator.Decrement } increment when TryParseTarget(increment.Argument, out var target):
+            case UpdateExpression { Operator: Operator.Increment or Operator.Decrement } increment when TryParseTarget(increment.Argument, alias, out var target):
                 // as a statement, prefix and postfix forms have the same effect
                 update = new Update(target, increment.Operator == Operator.Increment ? UpdateKind.Add : UpdateKind.Subtract, One);
                 return true;
 
-            case AssignmentExpression assignment when TryParseTarget(assignment.Left, out var target):
+            case AssignmentExpression assignment when TryParseTarget(assignment.Left, alias, out var target):
                 switch (assignment.Operator)
                 {
                     case Operator.Assignment when TryParseOperand(assignment.Right, out var value):
                         update = new Update(target, UpdateKind.Assign, value);
                         return true;
                     case Operator.Assignment when assignment.Right is NonLogicalBinaryExpression { Operator: Operator.Addition or Operator.Subtraction } binary &&
-                                                  TryParseTarget(binary.Left, out var self) && self == target && TryParseOperand(binary.Right, out var value):
+                                                  TryParseTarget(binary.Left, alias, out var self) && self == target && TryParseOperand(binary.Right, out var value):
                         update = new Update(target, binary.Operator == Operator.Addition ? UpdateKind.Add : UpdateKind.Subtract, value);
                         return true;
                     case Operator.AdditionAssignment when TryParseOperand(assignment.Right, out var value):
@@ -234,10 +275,10 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
         }
     }
 
-    private static bool TryParseTarget(Node node, out Target target)
+    private static bool TryParseTarget(Node node, string alias, out Target target)
     {
         target = default;
-        if (node is not MemberExpression { Object: ThisExpression } member)
+        if (node is not MemberExpression member || IsThis(member.Object, alias) == false)
             return false;
 
         switch (member.Property)
@@ -255,6 +296,9 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
                 return false;
         }
     }
+
+    private static bool IsThis(Expression expression, string alias) =>
+        expression is ThisExpression || alias != null && expression is Identifier { Name: var name } && name == alias;
 
     private static bool TryParseOperand(Node node, out Operand operand)
     {
