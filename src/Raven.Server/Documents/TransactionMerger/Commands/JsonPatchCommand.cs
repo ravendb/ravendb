@@ -42,11 +42,21 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
             try
             {
+                var original = document.Data;
                 var isModified = false;
+                var hasChangesToApply = false;
                 foreach (Command command in _commands)
                 {
+                    // Test compares whole values, which include the changes made inside them only once ReadObject applies them
+                    if (command.Type == CommandTypes.Test && hasChangesToApply)
+                    {
+                        ReadObject(context, document, original);
+                        hasChangesToApply = false;
+                    }
+
                     var pathBlittable = command.GetActionableObject(document, command.Paths, command.OriginalPath);
                     string prop = command.Paths[^1];
+                    object copied = null;
 
                     switch (command.Type)
                     {
@@ -63,7 +73,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                             command.Move(pathBlittable, prop, command.GetActionableObject(document, command.FromPaths, command.OriginalFrom), command.FromPaths[^1]);
                             break;
                         case CommandTypes.Copy:
-                            command.Copy(pathBlittable, prop, command.GetNonActionableObject(document, command.FromPaths, command.OriginalFrom));
+                            copied = command.GetNonActionableObject(document, command.FromPaths, command.OriginalFrom);
+                            command.Copy(pathBlittable, prop, copied);
                             break;
                         case CommandTypes.Test:
                             command.Test(command.GetNonActionableObject(document, command.Paths, command.OriginalPath), command.Value);
@@ -75,18 +86,24 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     if (command.Type == CommandTypes.Test)
                         continue;
 
-                    using (document.Data)
+                    // the change is in the Modifications of the object or the array, which TryGetMember reads for the next operations
+                    isModified = true;
+                    hasChangesToApply = true;
+
+                    if (command.Value is BlittableJsonReaderBase || copied is BlittableJsonReaderBase)
                     {
-                        isModified = true;
-                        // ReadObject has to be called after every command so changes between each command are applied for the next operation's use.
-                        // For example: executing an Add at /a/b which would result in 'b' being created, then executing a Replace at /a/b
-                        // Without ReadObject after every command, TryGet will not find 'b' for the Replace operation.
-                        document.Data = context.ReadObject(document.Data, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        // the object is still the one of the request or of the copied location, a change inside it must go to the document's own copy
+                        ReadObject(context, document, original);
+                        hasChangesToApply = false;
                     }
                 }
 
+                if (hasChangesToApply)
+                    ReadObject(context, document, original);
+
                 DocumentsStorage.PutOperationResults? putResult = null;
-                if (isModified)
+                // the operations may leave the document as it was, e.g. a Replace with the same value
+                if (isModified && DocumentCompare.IsEqualTo(original, document.Data, DocumentCompare.DocumentCompareOptions.Default) != DocumentCompareResult.Equal)
                     putResult = context.DocumentDatabase.DocumentsStorage.Put(context, _id, document.ChangeVector, document.Data);
 
                 if (putResult == null)
@@ -109,6 +126,16 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             }
 
             return 1;
+        }
+
+        private void ReadObject(DocumentsOperationContext context, Document document, BlittableJsonReaderObject original)
+        {
+            var previous = document.Data;
+            document.Data = context.ReadObject(previous, _id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+            // the original is compared with the patched document at the end
+            if (previous != original)
+                previous.Dispose();
         }
 
         public string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections, DocumentDatabase database)
@@ -176,12 +203,29 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     case BlittableJsonReaderArray arr:
                         if (int.TryParse(name, out int index) == false)
                             throw new ArgumentException($"Expected an index but got a '{name}' at path {fullPath}");
-                        if (index >= arr.Length || index < 0)
+                        // a modified array holds all its current items in Modifications
+                        var length = arr.Modifications?.Items.Count ?? arr.Length;
+                        if (index >= length || index < 0)
                             throw new ArgumentOutOfRangeException($"Position {index} is out of array bounds at array {fullPath}");
-                        result = arr[index];
+                        result = arr.Modifications != null ? arr.Modifications.Items[index] : arr[index];
                         break;
 
                     case BlittableJsonReaderObject blittable:
+                        if (blittable.Modifications != null)
+                        {
+                            // a property set or removed by a previous operation
+                            foreach (var (propertyName, value) in blittable.Modifications.Properties)
+                            {
+                                if (propertyName == name)
+                                {
+                                    result = value;
+                                    return;
+                                }
+                            }
+
+                            if (blittable.Modifications.Removals?.Contains(blittable.GetPropertyIndex(name)) == true)
+                                goto default;
+                        }
                         if (blittable.TryGetMember(name, out object obj) == false)
                         {
                             goto default;
@@ -249,7 +293,7 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                         }
                         if (int.TryParse(prop, out var index) == false)
                             throw new ArgumentException($"Expected an index but got a '{prop}' at path {OriginalPath}");
-                        if (index >= arr.Length || index < 0)
+                        if (index > arr.Modifications.Items.Count || index < 0)
                             throw new ArgumentOutOfRangeException($"Position {index} is out of array bounds at array {OriginalPath}");
 
                         arr.Modifications.Items.Insert(index, value);
