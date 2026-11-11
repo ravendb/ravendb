@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -137,6 +137,29 @@ public class RavenDB_27589 : RavenTestBase
         // Simple shows one answer, the structured one
         var shown = Assert.Single(simple.Messages, m => m.Role == AiMessageRole.Assistant);
         Assert.Contains("done", shown.Content);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task Mock_Ollama_AnswerOnlyInReasoning_ReachesTheFinalRequest()
+    {
+        using var store = GetDocumentStore();
+
+        var ollama = MockOllama();
+        var requests = await RunMockConversationAsync(store, ollama,
+        [
+            MockLlm.CreateToolCallResponse("RecentOrder"),
+            // a thinking model: empty content, the answer only in reasoning
+            """{"choices":[{"index":0,"message":{"role":"assistant","content":"","reasoning":"I found the order"},"finish_reason":"stop"}],"usage":{"prompt_tokens":150,"completion_tokens":7,"total_tokens":157}}""",
+            MockLlm.CreateAnswerResponse("\"done\"", promptTokens: 140)
+        ]);
+
+        Assert.Equal(3, requests.Count);
+        AssertSplit(requests);
+
+        var sent = requests[2]["messages"]!.ToList();
+        Assert.Equal("assistant", sent[^2].Value<string>("role"));
+        Assert.Equal("I found the order", sent[^2].Value<string>("content"));
+        Assert.Equal(FinalAnswerPrompt, sent[^1].Value<string>("content"));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
