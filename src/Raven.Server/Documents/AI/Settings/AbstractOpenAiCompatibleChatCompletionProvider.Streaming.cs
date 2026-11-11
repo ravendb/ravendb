@@ -182,9 +182,8 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
         if (state.ReasoningFallback is not { Length: > 0 })
             return string.Empty;
 
-        const int maxLength = 500;
-        return state.ReasoningFallback.Length <= maxLength
+        return state.ReasoningFallback.Length <= MaxReasoningPreviewLength
             ? $" Reasoning: {state.ReasoningFallback}"
-            : $" Reasoning: {state.ReasoningFallback.ToString(0, maxLength)}...";
+            : $" Reasoning: {state.ReasoningFallback.ToString(0, MaxReasoningPreviewLength)}...";
     }
 }

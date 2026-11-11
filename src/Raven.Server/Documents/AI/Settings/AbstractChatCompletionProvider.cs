@@ -135,15 +135,25 @@ internal abstract class AbstractChatCompletionProvider
 
     protected BlittableJsonReaderObject ReadStructuredOutput(JsonOperationContext ctx, string text, string reason, HttpResponseMessage response, BlittableJsonReaderObject body)
     {
+        if (TryReadStructuredOutput(ctx, text, out var result))
+            return result;
+
+        throw UnexpectedResponseException.Create(
+            $"Structured output was requested but the model returned content that is not valid JSON ({reason}). Content: {text}",
+            response, body?.ToString() ?? string.Empty, GetRequestId(response.Headers));
+    }
+
+    protected static bool TryReadStructuredOutput(JsonOperationContext ctx, string text, out BlittableJsonReaderObject result)
+    {
         try
         {
-            return ctx.Sync.ReadForMemory(text, "ai/output");
+            result = ctx.Sync.ReadForMemory(text, "ai/output");
+            return true;
         }
         catch (Exception e) when (e is InvalidDataException or InvalidStartOfObjectException or EndOfStreamException)
         {
-            throw UnexpectedResponseException.Create(
-                $"Structured output was requested but the model returned content that is not valid JSON ({reason}). Content: {text}",
-                response, body?.ToString() ?? string.Empty, GetRequestId(response.Headers));
+            result = null;
+            return false;
         }
     }
 

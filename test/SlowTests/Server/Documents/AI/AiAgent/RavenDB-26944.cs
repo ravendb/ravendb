@@ -123,6 +123,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         var (_, error) = await StreamAsync(store, "chats/bad-stream-" + shape, InjectedResponse.Sse(sse));
 
         AssertNoParserErrorLeaked<UnexpectedResponseException>(error);
+        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: shape is "reasoning-only" or "reasoning-content-only");
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -427,6 +428,24 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             InjectedResponse.Json(response), maxModelIterationsPerCall: 16, withTool: true);
 
         AssertNoParserErrorLeaked<UnexpectedResponseException>(error);
+        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: shape is "empty-content-with-reasoning" or "null-content-with-reasoning");
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task Structured_NoContent_LongReasoning_IsExcerptedNotRepeated()
+    {
+        // The raw response body is appended to every provider error, so the reasoning is in the message
+        // either way; what the excerpt buys is not repeating an unbounded blob a second time.
+        const string tail = "end-of-a-very-long-deliberation";
+        var reasoning = new string('x', 600) + tail;
+
+        var error = await RunAsync("chats/long-reasoning",
+            InjectedResponse.Json(Wire.Completion("", finishReason: "stop", reasoning: reasoning)),
+            maxModelIterationsPerCall: 16, withTool: true);
+
+        var text = error.ToString();
+        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: true);
+        Assert.Equal(1, text.Split(tail).Length - 1);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -512,6 +531,22 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
 
     #endregion
 
+
+    // Matched on the two phrases the code itself tells apart, so the rest of the wording stays free to change.
+    private static void AssertDiagnosisMatchesTheFailure(Exception error, bool answerWasMissing)
+    {
+        var text = error.ToString();
+
+        if (answerWasMissing)
+        {
+            Assert.Contains("no content", text);
+            Assert.DoesNotContain("content that is not valid JSON", text);
+        }
+        else
+        {
+            Assert.DoesNotContain("no content", text);
+        }
+    }
 
     private static void AssertNoParserErrorLeaked<T>(Exception error) where T : Exception
     {
