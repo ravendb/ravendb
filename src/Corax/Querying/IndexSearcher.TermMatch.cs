@@ -318,7 +318,7 @@ public partial class IndexSearcher
         return NumberOfDocumentsUnderSpecificTerm(containerId);
     }
     
-    private long NumberOfDocumentsUnderSpecificTerm(long containerId)
+    public long NumberOfDocumentsUnderSpecificTerm(long containerId)
     {
         if (containerId == -1)
             return 0;
