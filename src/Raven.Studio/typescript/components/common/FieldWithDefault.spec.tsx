@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { composeStories } from "@storybook/react-webpack5";
-import { within } from "@testing-library/dom";
 import { useFieldArray, useForm } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -228,80 +227,26 @@ describe("FieldWithDefault", () => {
     it("names the duration picker after the field", async () => {
         const { screen } = rtlRender(<States />);
 
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(1);
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(0);
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(0);
+        expect(await screen.findByRole("textbox", { name: "Duration" })).toHaveValue("1h");
     });
 
-    it("focuses the first duration part when its label is clicked", async () => {
+    it("focuses the duration when its label is clicked", async () => {
         const { screen, user } = rtlRender(<States />);
 
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-        await user.click(screen.getByText("Duration", { selector: "label" }));
+        await user.click(await screen.findByText("Duration", { selector: "label" }));
 
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveFocus();
+        expect(screen.getByRole("textbox", { name: "Duration" })).toHaveFocus();
     });
 
-    it("shows the default duration once every part is cleared", async () => {
+    it("shows the default duration once the duration is cleared", async () => {
         const { screen, user } = rtlRender(<States />);
 
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-        for (const part of within(durationPicker).getAllByRole("spinbutton")) {
-            await user.clear(part);
-        }
+        const durationInput = await screen.findByRole("textbox", { name: "Duration" });
+        await user.clear(durationInput);
+        await user.keyboard("{Enter}");
 
         expect(screen.queryByRole("button", { name: "Reset to default", description: "Duration" })).toBeNull();
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveAttribute(
-            "placeholder",
-            "Default (1)"
-        );
-    });
-
-    it("shows zero placeholders while a duration is set", async () => {
-        const { screen, user } = rtlRender(<States />);
-
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-        await user.clear(within(durationPicker).getByRole("spinbutton", { name: "Minutes" }));
-
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveAttribute("placeholder", "0");
-    });
-
-    it.each([
-        ["-5", "Please enter a non-negative number"],
-        ["1.5", "Please enter a whole number"],
-    ])("rejects a duration part of %s even when the total is positive", async (minutes, message) => {
-        const { screen, user } = rtlRender(<States />);
-
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-        const minutesInput = within(durationPicker).getByRole("spinbutton", { name: "Minutes" });
-        await user.clear(minutesInput);
-        await user.type(minutesInput, minutes);
-
-        expect(await screen.findByText(message)).toBeInTheDocument();
-
-        await user.clear(minutesInput);
-        await user.type(minutesInput, "5");
-
-        expect(screen.queryByText(message)).toBeNull();
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(1);
-    });
-
-    it("switches the message when a negative part becomes a fraction", async () => {
-        const { screen, user } = rtlRender(<States />);
-
-        const durationPicker = await screen.findByRole("group", { name: "Duration" });
-        const minutesInput = within(durationPicker).getByRole("spinbutton", { name: "Minutes" });
-        await user.clear(minutesInput);
-        await user.type(minutesInput, "-5");
-        expect(await screen.findByText("Please enter a non-negative number")).toBeInTheDocument();
-
-        await user.clear(minutesInput);
-        await user.type(minutesInput, "0.5");
-
-        expect(await screen.findByText("Please enter a whole number")).toBeInTheDocument();
-        expect(screen.queryByText("Please enter a non-negative number")).toBeNull();
+        expect(durationInput).toHaveAttribute("placeholder", "Default (1m)");
     });
 
     it("suggests the optimal value while it is not in use", async () => {

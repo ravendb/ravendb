@@ -1,7 +1,6 @@
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/settings/remoteAttachments/RemoteAttachments.stories";
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
-import { within } from "@testing-library/dom";
 
 const { DefaultRemoteAttachments } = composeStories(stories);
 
@@ -15,19 +14,20 @@ const selectors = {
 
 describe("RemoteAttachments", () => {
     it("shows the Save button enabled for DatabaseAdmin access", async () => {
-        const { screen, fillInput } = await rtlRender_WithWaitForLoad(
+        const { screen, user } = await rtlRender_WithWaitForLoad(
             <DefaultRemoteAttachments databaseAccess="DatabaseAdmin" />
         );
 
         const saveButton = screen.queryByRole("button", { name: selectors.titles.save });
-        const checkFrequencyInput = within(
-            screen.getByRole("group", { name: "Interval between remote attachments task runs" })
-        ).getByRole("spinbutton", { name: "Seconds" });
+        const checkFrequencyInput = screen.getByRole("textbox", {
+            name: "Interval between remote attachments task runs",
+        });
 
         // Save button is disabled, if none of inputs are dirty
         expect(saveButton).toBeDisabled();
 
-        await fillInput(checkFrequencyInput, "100");
+        await user.clear(checkFrequencyInput);
+        await user.type(checkFrequencyInput, "100s{Enter}");
 
         expect(saveButton).toBeInTheDocument();
         expect(saveButton).not.toBeDisabled();

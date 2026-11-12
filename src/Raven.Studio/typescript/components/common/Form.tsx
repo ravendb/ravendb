@@ -21,7 +21,7 @@ import Button from "react-bootstrap/Button";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
 import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
-import DurationPicker, { DurationPickerProps } from "./DurationPicker";
+import DurationDropdownPicker, { DurationPickerProps } from "./DurationDropdownPicker";
 import SelectCreatable from "./select/SelectCreatable";
 import {
     ActionMeta,
@@ -71,10 +71,7 @@ export type FormSelectProps<
     Group extends GroupBase<Option> = GroupBase<Option>,
 > = ComponentProps<typeof Select<Option, IsMulti, Group>> & { selectClassName?: string };
 
-export type FormDurationPickerProps = Omit<
-    DurationPickerProps,
-    "onChange" | "totalSeconds" | "onInvalidPartMessageChange"
->;
+export type FormDurationPickerProps = Omit<DurationPickerProps, "onChange" | "totalSeconds">;
 
 export const DIRTY_AND_VALIDATE: SetValueConfig = { shouldDirty: true, shouldValidate: true };
 
@@ -589,17 +586,14 @@ export function ControlledDurationPicker<
 >(props: ControlledFieldProps<TFieldValues, TName> & FormDurationPickerProps) {
     const { field, fieldState, isSubmitting, ...rest } = props;
 
-    const [invalidPartMessage, setInvalidPartMessage] = useState<string>(null);
-    const hasInvalidParts = Number.isNaN(field.value);
-    const message = (hasInvalidParts ? invalidPartMessage : null) ?? fieldState.error?.message;
+    const message = fieldState.error?.message;
 
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <DurationPicker
+                <DurationDropdownPicker
                     totalSeconds={field.value}
                     onChange={field.onChange}
-                    onInvalidPartMessageChange={setInvalidPartMessage}
                     disabled={isSubmitting}
                     {...rest}
                 />

@@ -108,11 +108,10 @@ export function FormDurationPickerWithDefault<TFieldValues extends FieldValues, 
 
     return (
         <FieldWithDefault<TFieldValues, TName> {...fieldProps}>
-            {({ binding, isDisabled, controlId, labelId }) => (
+            {({ binding, isDisabled, labelId }) => (
                 <ControlledDurationPicker
                     {...binding}
                     {...inputProps}
-                    id={controlId}
                     disabled={isDisabled}
                     aria-labelledby={labelId}
                 />
@@ -205,7 +204,7 @@ function FieldWithDefault<TFieldValues extends FieldValues, TName extends FieldP
                     defaultPlaceholder: commonT("defaultPlaceholder", { value: defaultValueLabel }),
                 })}
                 {isOptimalSuggested && (
-                    <div className="field-with-default-hint column-gap-1 font-size-10 line-height-12">
+                    <div className="field-with-default-hint column-gap-1 font-size-12 line-height-16">
                         <span>{optimalValueHint ?? t("optimalValueHint", { value: optimalValueLabel })}</span>
                         <Button
                             variant="link"

@@ -2,7 +2,6 @@ import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as stories from "./RevisionsBinCleaner.stories";
-import { within } from "@testing-library/dom";
 
 const { DefaultRevisionsBinCleaner } = composeStories(stories);
 
@@ -19,32 +18,25 @@ describe("RevisionsBinCleaner", () => {
     it("can disable 'set minimum entries age to keep' after disabling 'enable revisions bin cleaner'", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
-        const parts = within(minimumEntriesAge).getAllByRole("spinbutton");
-        expect(parts).toHaveLength(3);
+        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
 
         expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).toBeChecked();
-
-        parts.forEach((part, index) => {
-            expect(part).toHaveValue([0, 0, 1][index]);
-            expect(part).toBeEnabled();
-        });
+        expect(minimumEntriesAge).toHaveValue("1m");
+        expect(minimumEntriesAge).toBeEnabled();
 
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
         expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).not.toBeChecked();
-
-        parts.forEach((part) => {
-            expect(part).toHaveValue(null);
-            expect(part).toBeDisabled();
-        });
+        expect(minimumEntriesAge).toHaveValue("");
+        expect(minimumEntriesAge).toBeDisabled();
     });
 
     it("rejects a minimum entries age of zero", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
-        await user.clear(within(minimumEntriesAge).getByRole("spinbutton", { name: "Minutes" }));
+        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        await user.clear(minimumEntriesAge);
+        await user.type(minimumEntriesAge, "0{Enter}");
 
         expect(
             await screen.findByText(
@@ -66,11 +58,10 @@ describe("RevisionsBinCleaner", () => {
 
         await user.click(screen.getByRole("checkbox", { name: "Set minimum entries age to keep" }));
 
-        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
-        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
-        expect(days).toHaveValue(null);
-        expect(days).toBeEnabled();
-        expect(days).toHaveAttribute("placeholder", "Default (30)");
+        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        expect(minimumEntriesAge).toHaveValue("");
+        expect(minimumEntriesAge).toBeEnabled();
+        expect(minimumEntriesAge).toHaveAttribute("placeholder", "Default (30d)");
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Minimum entries age" })
         ).not.toBeInTheDocument();
@@ -87,10 +78,9 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
-        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
-        expect(days).toHaveValue(null);
-        expect(days).toHaveAttribute("placeholder", "Default (30)");
+        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        expect(minimumEntriesAge).toHaveValue("");
+        expect(minimumEntriesAge).toHaveAttribute("placeholder", "Default (30d)");
     });
 
     it("can reset minimum entries age to the default", async () => {
@@ -104,15 +94,13 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const minimumEntriesAge = await screen.findByRole("group", { name: "Minimum entries age" });
-        const days = within(minimumEntriesAge).getByRole("spinbutton", { name: "Days" });
-        const hours = within(minimumEntriesAge).getByRole("spinbutton", { name: "Hours" });
-        expect(hours).toHaveValue(2);
+        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        expect(minimumEntriesAge).toHaveValue("2h");
 
         await user.click(screen.getByRole("button", { name: "Reset to default", description: "Minimum entries age" }));
 
-        expect(hours).toHaveValue(null);
-        expect(days).toHaveAttribute("placeholder", "Default (30)");
+        expect(minimumEntriesAge).toHaveValue("");
+        expect(minimumEntriesAge).toHaveAttribute("placeholder", "Default (30d)");
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Minimum entries age" })
         ).not.toBeInTheDocument();
@@ -121,14 +109,13 @@ describe("RevisionsBinCleaner", () => {
     it("can disable cleaner frequency after disabling 'enable revisions bin cleaner'", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const cleanerFrequency = await screen.findByRole("group", { name: "Cleaner frequency" });
-        const seconds = within(cleanerFrequency).getByRole("spinbutton", { name: "Seconds" });
-        expect(seconds).toBeEnabled();
+        const cleanerFrequency = await screen.findByRole("textbox", { name: "Cleaner frequency" });
+        expect(cleanerFrequency).toBeEnabled();
 
-        await user.type(seconds, "500");
+        await user.type(cleanerFrequency, "500{Enter}");
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
-        expect(seconds).toBeDisabled();
+        expect(cleanerFrequency).toBeDisabled();
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
         ).not.toBeInTheDocument();
@@ -174,10 +161,7 @@ describe("RevisionsBinCleaner", () => {
         });
         expect(isRevisionBinCleanerEnabledSwitch).toBeDisabled();
         expect(minimumEntriesAgeToKeepSwitch).toBeDisabled();
-        const cleanerFrequency = await screen.findByRole("group", { name: "Cleaner frequency" });
-        within(cleanerFrequency)
-            .getAllByRole("spinbutton")
-            .forEach((part) => expect(part).toBeDisabled());
+        expect(await screen.findByRole("textbox", { name: "Cleaner frequency" })).toBeDisabled();
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
         ).not.toBeInTheDocument();
@@ -194,17 +178,14 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const cleanerFrequency = await screen.findByRole("group", { name: "Cleaner frequency" });
-        const minutes = within(cleanerFrequency).getByRole("spinbutton", { name: "Minutes" });
-        const seconds = within(cleanerFrequency).getByRole("spinbutton", { name: "Seconds" });
-        expect(minutes).toHaveValue(8);
-        expect(seconds).toHaveValue(20);
+        const cleanerFrequency = await screen.findByRole("textbox", { name: "Cleaner frequency" });
+        expect(cleanerFrequency).toHaveValue("8m 20s");
 
         await user.click(screen.getByRole("button", { name: "Reset to default", description: "Cleaner frequency" }));
 
-        expect(minutes).toHaveValue(null);
-        expect(minutes).toBeEnabled();
-        expect(minutes).toHaveAttribute("placeholder", "Default (5)");
+        expect(cleanerFrequency).toHaveValue("");
+        expect(cleanerFrequency).toBeEnabled();
+        expect(cleanerFrequency).toHaveAttribute("placeholder", "Default (5m)");
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
         ).not.toBeInTheDocument();
@@ -213,8 +194,7 @@ describe("RevisionsBinCleaner", () => {
     it("rejects a cleaner frequency of zero", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const cleanerFrequency = await screen.findByRole("group", { name: "Cleaner frequency" });
-        await user.type(within(cleanerFrequency).getByRole("spinbutton", { name: "Seconds" }), "0");
+        await user.type(await screen.findByRole("textbox", { name: "Cleaner frequency" }), "0{Enter}");
 
         expect(await screen.findByText("Please enter positive number")).toBeInTheDocument();
     });
