@@ -101,7 +101,7 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps)
                             onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
                             size="xs"
                         >
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy" />
                         </Button>
                     </RichPanelDetailItem>
                 )}

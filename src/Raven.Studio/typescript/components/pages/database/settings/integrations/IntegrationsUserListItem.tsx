@@ -185,7 +185,7 @@ export default function IntegrationsUserList(props: IntegrationsUserListProps) {
                                             )
                                         }
                                     >
-                                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                                        <Icon icon="copy" margin="m-0" />
                                     </Button>
                                 </HStack>
                             </InputGroup>

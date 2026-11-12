@@ -72,7 +72,7 @@ export function RichAlert({
                     className="position-absolute top-0 end-0 m-2 hover-filter"
                     variant="link"
                 >
-                    <Icon icon="copy-to-clipboard" margin="m-0" color="muted" />
+                    <Icon icon="copy" margin="m-0" color="muted" />
                 </Button>
             )}
             {title ? (

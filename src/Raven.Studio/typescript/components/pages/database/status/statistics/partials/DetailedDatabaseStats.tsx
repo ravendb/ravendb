@@ -111,7 +111,7 @@ export function DetailedDatabaseStats() {
                                                     title="Copy to clipboard"
                                                     onClick={() => copyChangeVector(formattedChangeVector)}
                                                 >
-                                                    <Icon icon="copy-to-clipboard" margin="m-0" />
+                                                    <Icon icon="copy" margin="m-0" />
                                                 </Button>
                                                 {formattedChangeVector.map((cv) => (
                                                     <div

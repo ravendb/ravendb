@@ -103,7 +103,7 @@ export function GenAiPanel(props: GenAiPanelProps) {
                             onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
                             size="xs"
                         >
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy" />
                         </Button>
                     </RichPanelDetailItem>
                 )}
@@ -128,7 +128,7 @@ export function GenAiPanel(props: GenAiPanelProps) {
                             }
                             size="xs"
                         >
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy" />
                         </Button>
                     </RichPanelDetailItem>
                 )}
