@@ -126,34 +126,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return new SourceGenCombinedResolver(context, this);
         }
 
-        private sealed class SourceGenCombinedResolver : IJsonTypeInfoResolver
+        private sealed class SourceGenCombinedResolver(JsonSerializerContext context, RavenJsonTypeInfoResolver resolver) : IJsonTypeInfoResolver
         {
-            private readonly JsonSerializerContext _context;
-            private readonly RavenJsonTypeInfoResolver _fallback;
-
-            public SourceGenCombinedResolver(JsonSerializerContext context, RavenJsonTypeInfoResolver fallback)
-            {
-                _context = context;
-                _fallback = fallback;
-            }
-
-            public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
-            {
-                if (options.PropertyNameCaseInsensitive && HasPublicMembersWithCaseOnlyDifferentNames(type))
-                    return CreateCaseSensitiveRedirect(type, options);
-
-                JsonTypeInfo typeInfo = ((IJsonTypeInfoResolver)_context).GetTypeInfo(type, options);
-                if (typeInfo != null)
-                {
-                    _fallback.ModifyTypeInfo(typeInfo);
-                    return RedirectCaseOnlyNameCollisions(typeInfo);
-                }
-
-                return ((IJsonTypeInfoResolver)_fallback).GetTypeInfo(type, options);
-            }
+            public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options) => resolver.Resolve(type, options, context);
         }
 
-        public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
+        public override JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options) => Resolve(type, options, sourceGenerationContext: null);
+
+        private JsonTypeInfo Resolve(Type type, JsonSerializerOptions options, IJsonTypeInfoResolver sourceGenerationContext)
         {
             if (type == typeof(ExpandoObject))
                 return JsonMetadataServices.CreateValueInfo<ExpandoObject>(options, ExpandoObjectConverter.Instance);
@@ -168,7 +148,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (options.PropertyNameCaseInsensitive && HasPublicMembersWithCaseOnlyDifferentNames(type))
                 return CreateCaseSensitiveRedirect(type, options);
 
-            return RedirectBoundConstructors(RedirectCaseOnlyNameCollisions(base.GetTypeInfo(type, options)));
+            return RedirectBoundConstructors(RedirectCaseOnlyNameCollisions(CreateTypeInfo(type, options, sourceGenerationContext)));
+        }
+
+        private JsonTypeInfo CreateTypeInfo(Type type, JsonSerializerOptions options, IJsonTypeInfoResolver sourceGenerationContext)
+        {
+            JsonTypeInfo typeInfo = sourceGenerationContext?.GetTypeInfo(type, options);
+            if (typeInfo == null)
+                return base.GetTypeInfo(type, options);
+
+            ModifyTypeInfo(typeInfo);
+            return typeInfo;
         }
 
         internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type)
