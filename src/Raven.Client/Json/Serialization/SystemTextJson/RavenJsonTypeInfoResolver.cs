@@ -1941,7 +1941,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 if (isIdentityProperty)
                 {
-                    property.ShouldSerialize = ShouldSerializeIdentityProperty;
+                    Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
+                    property.ShouldSerialize = shouldSerialize == null
+                        ? ShouldSerializeIdentityProperty
+                        : (target, value) => ShouldSerializeIdentityProperty(target, value) && shouldSerialize(target, value);
                     break;
                 }
             }
