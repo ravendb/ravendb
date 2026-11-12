@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { appsMocks } from "@/mocks/apps-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { sampleDashboardApps, statsMocks } from "@/mocks/stats-mocks";
 import { AppDataSource } from "./app-data-source";
 
@@ -17,14 +17,12 @@ const meta = {
     title: "Apps/Data source",
     component: AppDataSource,
     parameters: {
-        page: { title: "Data source" },
+        page: {},
         // The detail mock only resolves known slugs, so start on a sample app.
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
-        msw: {
-            handlers: {
-                apps: [...appsWithoutErrorList, appsMocks.cdcErrors([])],
-            },
-        },
+        msw: mockHandlers({
+            apps: [...appsWithoutErrorList, appsMocks.cdcErrors([])],
+        }),
     },
 } satisfies Meta<typeof AppDataSource>;
 
@@ -36,11 +34,9 @@ export const Default: Story = {};
 
 export const WithErrors: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                apps: [...appsWithoutErrorList, appsMocks.cdcErrors()],
-                stats: statsWithSyncErrors,
-            },
-        },
+        msw: mockHandlers({
+            apps: [...appsWithoutErrorList, appsMocks.cdcErrors()],
+            stats: statsWithSyncErrors,
+        }),
     },
 };

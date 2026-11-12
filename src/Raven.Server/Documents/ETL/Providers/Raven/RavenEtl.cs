@@ -58,7 +58,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             // When the server certificate changes, we need to start using the new one.
             // Since the request executor has the old certificate, we will re-create it and it will pick up the new certificate.
             var newRequestExecutor = CreateNewRequestExecutor(_configuration, _serverStore);
-            Interlocked.Exchange(ref _requestExecutor, newRequestExecutor);
+            var oldRequestExecutor = Interlocked.Exchange(ref _requestExecutor, newRequestExecutor);
+            // the old executor may still be in use, its finalizer disposes it
+            oldRequestExecutor?.ForgetAbout();
         }
 
         internal Action<RavenEtl, SingleNodeBatchCommand> BeforeActualLoad = null;

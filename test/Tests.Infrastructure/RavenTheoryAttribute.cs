@@ -59,12 +59,6 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute, Xunit.v3.I
         get => Requires.HasFlag(RavenServiceRequirement.NpgSql);
         set => Requires = value ? Requires | RavenServiceRequirement.NpgSql : Requires & ~RavenServiceRequirement.NpgSql;
     }
-
-    public bool MongoDBRequired 
-    { 
-        get => Requires.HasFlag(RavenServiceRequirement.MongoDB);
-        set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
-    }
     
     public bool SnowflakeRequired
     {

@@ -520,4 +520,51 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(3, read);
         }
     }
+
+    [RavenTheory(RavenTestCategory.Voron | RavenTestCategory.Vector)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineData(1337)]
+    public void LayerZeroKeepsTwiceTheEdgesOfUpperLayers(int seed)
+    {
+        const int dimensions = 32;
+        const int numberOfEdges = 8;
+        const int numberOfVectors = 2_000;
+
+        using var _ = Slice.From(Allocator, TreeName, out var treeName);
+        var random = new Random(seed);
+
+        using (var txw = Env.WriteTransaction())
+        {
+            Hnsw.Create(txw.LowLevelTransaction, treeName, dimensions * sizeof(float), numberOfEdges, numberOfCandidates: 64, VectorEmbeddingType.Single);
+
+            using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, treeName, random))
+            {
+                var vector = new float[dimensions];
+                for (int i = 1; i <= numberOfVectors; i++)
+                {
+                    for (int j = 0; j < dimensions; j++)
+                        vector[j] = random.NextSingle() * 2 - 1;
+                    registration.Register(i, MemoryMarshal.Cast<float, byte>(vector));
+                }
+
+                registration.Commit(CancellationToken.None);
+            }
+
+            txw.Commit();
+        }
+
+        using (var txr = Env.ReadTransaction())
+        {
+            // Layer 0 capped at M edges starves the final search of neighbors and costs a lot of recall.
+            // With Mmax0 = 2 * M and the pruned connections kept, almost every node fills its layer 0 list.
+            var levelZeroDegrees = Hnsw.IterateNodes(txr.LowLevelTransaction, TreeName)
+                .Select(n => n.EdgesByLevel[0].Length)
+                .ToList();
+
+            Assert.Equal(numberOfVectors, levelZeroDegrees.Count);
+            double average = levelZeroDegrees.Average();
+            Assert.True(average > 1.5 * numberOfEdges, $"Average layer 0 degree is {average:F2}, expected more than {1.5 * numberOfEdges}");
+        }
+    }
 }

@@ -7,3 +7,5 @@ $env:OUTPUT_DIR = "$PSScriptRoot/dist"
 ./set-raven-version-env.ps1
 
 ./test-deb-vagrant.ps1
+
+exit $LASTEXITCODE

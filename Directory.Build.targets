@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    Microsoft.SemanticKernel.Connectors.Onnx pulls in Microsoft.ML.OnnxRuntimeGenAI, but we only use the BERT embeddings (plain Microsoft.ML.OnnxRuntime),
+    so the GenAI native libraries are never loaded. ExcludeAssets="native" on a PackageReference does not flow to referencing projects,
+    hence we drop them here for every project (build output, publish output and .deps.json).
+  -->
+  <Target Name="RemoveOnnxRuntimeGenAINativeAssets" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'Microsoft.ML.OnnxRuntimeGenAI'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'Microsoft.ML.OnnxRuntimeGenAI'" />
+    </ItemGroup>
+  </Target>
+</Project>

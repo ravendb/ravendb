@@ -12,8 +12,10 @@ using Raven.Quill.Agents;
 using Raven.Quill.Cdc;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Endpoints;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Licensing;
+using Raven.Quill.Logging;
 using Raven.Quill.Raven;
 using Raven.Quill.Wizard;
 
@@ -27,7 +29,8 @@ internal static class MetricsReadService
 
     public static async Task<UsageResponse> GetUsageAsync(
         ILicenseStatsProvider provider,
-        IDocumentStore store, List<App> apps, int year, int? month, int? day, CancellationToken ct)
+        IDocumentStore store, List<App> apps, int year, int? month, int? day,
+        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
     {
         var period = new UsagePeriod(year, month, day);
         var buckets = period.Buckets();
@@ -43,8 +46,9 @@ internal static class MetricsReadService
         var tokens = new long[buckets.Count];
         var writes = new long[buckets.Count];
 
-        var stats = await provider.GetUsageAsync(year, month, day, ct);
-        var statsPerApp = stats.PerApplication.GroupBy(p => p.TopologyId)
+        var writeUsage = await TryGetWriteUsageAsync(provider, year, month, day, logger, ct);
+        var isWritesUnavailable = writeUsage is null;
+        var statsPerApp = (writeUsage ?? []).GroupBy(p => p.TopologyId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var writesByApp = new List<AppWrites>(results.Count);
@@ -77,7 +81,25 @@ internal static class MetricsReadService
         var points = new List<UsagePoint>(buckets.Count);
         for (var i = 0; i < buckets.Count; i++)
             points.Add(new UsagePoint(buckets[i], conversations[i], messages[i], tokens[i], writes[i]));
-        return new UsageResponse(points, writesByApp);
+        return new UsageResponse(points, writesByApp, isWritesUnavailable);
+    }
+
+    // Conversations, messages and tokens come from the app databases; only the writes column depends on the
+    // license server, so an outage there is reported as unavailable writes instead of failing the whole dashboard.
+    private static async Task<List<QuillApplicationUsage>?> TryGetWriteUsageAsync(
+        ILicenseStatsProvider provider, int year, int? month, int? day,
+        QuillLogger<StatsEndpoints.StatsLogger> logger, CancellationToken ct)
+    {
+        try
+        {
+            return (await provider.GetUsageAsync(year, month, day, ct)).PerApplication;
+        }
+        catch (LicenseUsageUnavailableException ex)
+        {
+            if (logger.IsWarnEnabled)
+                logger.Warn(ex, "write usage unavailable from the license server; reporting writes as unavailable");
+            return null;
+        }
     }
 
     private static async Task<(long[] Conversations, long[] Messages, long[] Tokens)> GetAppUsageAsync(IDocumentStore store, App app, UsagePeriod period, CancellationToken ct)
@@ -152,7 +174,8 @@ internal static class MetricsReadService
 
         var metrics = new AppUsageMetrics(
             Conversations: new MetricCard(convNow, Delta(convNow, convPrev), ToDoubles(convByBucket)),
-            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)));
+            Tokens: new MetricCard(tokNow, Delta(tokNow, tokPrev), ToDoubles(tokByBucket)),
+            Buckets: buckets.ToArray());
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(database), ct);
         
@@ -178,7 +201,7 @@ internal static class MetricsReadService
             agent => modelByAgent.GetValueOrDefault(agent, UnknownModel));
 
         var topCapabilities = rows
-            .GroupBy(r => r.Agent ?? "")
+            .GroupBy(r => r.Agent)
             .Select(g =>
             {
                 var invocations = g.Sum(r => r.Conversations);
@@ -191,7 +214,7 @@ internal static class MetricsReadService
             .ToArray();
 
         var conversationsByChannel = await BuildConversationsByChannelAsync(
-            session, buckets, period, ct);
+            session, rows, buckets, period, ct);
 
         return new AppUsageResponse(
             metrics,
@@ -218,11 +241,11 @@ internal static class MetricsReadService
     }
 
     private static SeriesData BuildTokenSeries(
-        IReadOnlyList<ConversationMetricsIndex.Result> rows, List<DateTime> buckets,
+        IReadOnlyList<UsageMetricRow> rows, List<DateTime> buckets,
         UsagePeriod period, Func<string, string> keyOf, Func<string, string>? labelOf = null)
     {
         var label = labelOf ?? (k => k);
-        var keys = rows.Select(r => keyOf(r.Agent ?? "")).Distinct()
+        var keys = rows.Select(r => keyOf(r.Agent)).Distinct()
             .Where(k => k != TimeAxisKey)   // a key colliding with the reserved time axis can't be represented — drop it
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase).ToArray();
         var seriesKeys = keys.Select(k => new SeriesKey(k, label(k))).ToArray();
@@ -234,7 +257,7 @@ internal static class MetricsReadService
         {
             var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
-            var key = keyOf(row.Agent ?? "");
+            var key = keyOf(row.Agent);
             if (key == TimeAxisKey) continue;   // dropped from keys above
             points[i][key] = (long)points[i][key] + row.Tokens;
         }
@@ -243,7 +266,8 @@ internal static class MetricsReadService
     }
 
     private static async Task<SeriesData> BuildConversationsByChannelAsync(
-        IAsyncDocumentSession session, List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
+        IAsyncDocumentSession session, IReadOnlyList<UsageMetricRow> rows,
+        List<DateTime> buckets, UsagePeriod period, CancellationToken ct)
     {
         var channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         var nameByChannel = channels
@@ -263,16 +287,15 @@ internal static class MetricsReadService
         for (var b = 0; b < buckets.Count; b++)
             points[b] = NewBucketPoint(keys, period.Label(buckets[b]));
 
-        var previews = await session.LoadAllStartingWithAsync<ConversationPreview>(ConversationPreview.IdPrefix, ct);
-        foreach (var preview in previews)
+        foreach (var row in rows)
         {
-            if (preview.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
-            var channelId = preview.ChannelId[Channel.IdPrefix.Length..];
+            if (row.ChannelId.StartsWith(Channel.IdPrefix, StringComparison.Ordinal) == false) continue;
+            var channelId = row.ChannelId[Channel.IdPrefix.Length..];
             if (nameByChannel.ContainsKey(channelId) == false) continue;
             if (channelId == TimeAxisKey) continue;   // dropped from keys above
-            var i = period.IndexOf(preview.CreatedAt);
+            var i = period.IndexOf(row.Bucket);
             if (i < 0) continue;
-            points[i][channelId] = (long)points[i][channelId] + 1L;
+            points[i][channelId] = (long)points[i][channelId] + row.Conversations;
         }
 
         return new SeriesData(points, seriesKeys);
@@ -308,7 +331,7 @@ internal static class MetricsReadService
                 ChannelsCount: 0,
                 AdaptersCount: 0,
                 AgentsCount: 0,
-                ChannelsLabel: null,
+                ChannelTypes: [],
                 StatusSubtitle: "Database unavailable",
                 CreatedAt: Utc(app.CreatedAt),
                 UpdatedAt: Utc(app.CreatedAt)));
@@ -329,9 +352,7 @@ internal static class MetricsReadService
         using (var session = store.OpenAsyncSession(app.Database))
             channels = await session.LoadAllStartingWithAsync<Channel>(Channel.IdPrefix, ct);
         var enabledChannels = channels.Count(c => c.Enabled);
-        var channelsLabel = channels.Count == 0
-            ? null
-            : string.Join(", ", channels.Select(c => ChannelTypeLabel(c.Type)).Distinct());
+        var channelTypes = channels.Select(c => c.Type).Distinct().ToList();
 
         var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(app.Database), ct);
         var cdc = record.CdcSinks?.FirstOrDefault();
@@ -347,7 +368,7 @@ internal static class MetricsReadService
             }
         }
         var agentsCount = record.AiAgents?.Count ?? 0;
-        var hasSyncErrors = cdc is { Disabled: false } && await HasSyncErrorsAsync(store, app.Database, ct);
+        var hasSyncErrors = cdc is { Disabled: false } && await HasSyncErrorsAsync(store, app, ct);
         var (status, subtitle) = DeriveAppStatus(
             agentsCount, channels.Count, enabledChannels, cdc?.Disabled ?? false, hasSyncErrors);
 
@@ -363,7 +384,7 @@ internal static class MetricsReadService
             ChannelsCount: channels.Count,
             AdaptersCount: 0,
             AgentsCount: agentsCount,
-            ChannelsLabel: channelsLabel,
+            ChannelTypes: channelTypes,
             StatusSubtitle: subtitle,
             CreatedAt: Utc(app.CreatedAt),
             UpdatedAt: Utc(app.CreatedAt));
@@ -394,16 +415,14 @@ internal static class MetricsReadService
         return "";
     }
 
-    private static string ChannelTypeLabel(ChannelType type) => type switch
+    private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, App app, CancellationToken ct)
     {
-        ChannelType.IFrame => "Web widget",
-        _ => type.ToString(),
-    };
-
-    private static async Task<bool> HasSyncErrorsAsync(IDocumentStore store, string database, CancellationToken ct)
-    {
-        var errors = await CdcPerformanceReader.ReadErrorsAsync(store.Maintenance.ForDatabase(database), ct);
-        return CdcPerformanceShaper.HasErrors(errors);
+        var maintenance = store.Maintenance.ForDatabase(app.Database);
+        var performance = CdcPerformanceReader.ReadAsync(maintenance, ct);
+        var errors = CdcPerformanceReader.ReadErrorsAsync(maintenance, ct);
+        var state = AppLookup.LoadCdcStateAsync(store, app.Database, app.CdcTaskName, ct);
+        await Task.WhenAll(performance, errors, state);
+        return CdcPerformanceShaper.HasErrorsSince(performance.Result, errors.Result, state.Result.LastModified);
     }
 
     internal static (string Status, string? Subtitle) DeriveAppStatus(
@@ -473,16 +492,20 @@ internal static class MetricsReadService
     public static async Task<Dictionary<string, AgentActivity>> GetAgentActivityAsync(
         IDocumentStore store, string database, CancellationToken ct)
     {
-            using var session = store.OpenAsyncSession(database);
-            var rows = await QueryAllMetricRowsAsync(session, ct);
-            return rows
-                .GroupBy(r => r.Agent)
-                .ToDictionary(
-                    g => g.Key,
-                    g => new AgentActivity(
-                        g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
-                        Utc(g.Max(r => r.Bucket))),
-                    StringComparer.OrdinalIgnoreCase);
+        using var session = store.OpenAsyncSession(database);
+        var docs = await session.LoadAllStartingWithAsync<UsageMetrics>(UsageMetrics.IdPrefix, ct);
+        var rows = await QueryAllMetricRowsAsync(session, ct);
+        var lastTurnByAgent = docs
+            .GroupBy(d => d.Agent, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Max(d => d.LastTurnAt), StringComparer.OrdinalIgnoreCase);
+        return rows
+            .GroupBy(r => r.Agent)
+            .ToDictionary(
+                g => g.Key,
+                g => new AgentActivity(
+                    g.Sum(r => r.Conversations), g.Sum(r => r.Messages), g.Sum(r => r.Tokens),
+                    Utc(lastTurnByAgent[g.Key])),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     public static async Task<ConversationListResult> GetConversationsAsync(IDocumentStore store, string slug, string database, UsagePeriod period, int start, int pageSize, DateTime nowUtc, CancellationToken ct)
@@ -524,6 +547,10 @@ internal static class MetricsReadService
         if (conversationId.StartsWith(ConversationIdPrefix, StringComparison.Ordinal) == false)
             return null;
 
+        using var session = store.OpenAsyncSession(database);
+        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
+            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct);
+
         var result = await store.AI.ForDatabase(database).GetConversationMessagesAsync(new GetConversationMessagesOptions
         {
             ConversationId = conversationId,
@@ -531,12 +558,14 @@ internal static class MetricsReadService
         }, ct);
 
         if (result is null)
-            return null;
+        {
+            if (preview is null)
+                return null;
 
-        using var session = store.OpenAsyncSession(database);
-        var preview = await session.LoadAsync<ConversationPreview>(ConversationPreview.IdFor(conversationId),
-            include => include.IncludeDocuments<Channel>(p => p.ChannelId), ct)
-            ?? new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
+            return BuildExpiredDto(preview, slug, await ChannelNameAsync(session, preview.ChannelId, ct), nowUtc);
+        }
+
+        preview ??= new ConversationPreview { ConversationId = conversationId, CreatedAt = result.CreatedAt, LastMessageAt = result.LastMessageAt };
         var channelName = await ChannelNameAsync(session, preview.ChannelId, ct);
 
         var config = await AgentLookup.FindAsync(store, database, result.Agent, ct);
@@ -579,6 +608,13 @@ internal static class MetricsReadService
         ];
         return MakeDto(p.ConversationId, slug, channelName, p.Agent, prms, lastExchange, transcript: null,
             p.LastMessageAt, p.CreatedAt, nowUtc);
+    }
+
+    private static ConversationDto BuildExpiredDto(ConversationPreview p, string slug, string channelName, DateTime nowUtc)
+    {
+        var previewDto = BuildPreviewDto(p, slug, channelName, nowUtc);
+        AiConversationMessage[] transcript = [previewDto.LastExchange[1], previewDto.LastExchange[0]];
+        return previewDto with { Transcript = transcript };
     }
 
     private static ConversationDto BuildDto(AiConversationMessagesResult result, string slug, ConversationPreview preview, string channelName, string replyField, DateTime nowUtc)
@@ -662,12 +698,7 @@ internal static class MetricsReadService
         return await configSession.LoadAllStartingWithAsync<App>(AppLookup.IdPrefix, ct);
     }
 
-    private static DateTime Utc(DateTime d) => d.Kind switch
-    {
-        DateTimeKind.Utc => d,
-        DateTimeKind.Local => d.ToUniversalTime(),
-        _ => DateTime.SpecifyKind(d, DateTimeKind.Utc),
-    };
+    private static DateTime Utc(DateTime d) => UsagePeriod.ToUtc(d);
 
     // isolate per-app failures: one bad tenant DB can't 500 a global fan-out
     private static async Task<List<TResult>> ForEachAppAsync<TResult>(
@@ -690,33 +721,41 @@ internal static class MetricsReadService
         return results.Where(r => r.HasValue).Select(r => r.Value).ToList();
     }
 
-    private static async Task<List<ConversationMetricsIndex.Result>> QueryAllMetricRowsAsync(
-        IAsyncDocumentSession session, CancellationToken ct)
-    {
-        try
-        {
-            return await session.Advanced
-                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-                .ToListAsync(ct);
-        }
-        catch (IndexDoesNotExistException) { return []; }  // fresh app DB / index not built yet ⇒ no activity
-    }
+    internal sealed record UsageMetricRow(
+        string Agent, string ChannelId, DateTime Bucket, long Conversations, long Messages, long Tokens);
 
-    private static async Task<List<ConversationMetricsIndex.Result>> QueryMetricRowsInRangeAsync(
-        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct)
-    {
-        try
-        {
-            return await session.Advanced
-                .AsyncDocumentQuery<ConversationMetricsIndex.Result, ConversationMetricsIndex>()
-                .WhereGreaterThanOrEqual(r => r.Bucket, start)
-                .AndAlso()
-                .WhereLessThan(r => r.Bucket, end)
-                .ToListAsync(ct);
-        }
-        catch (IndexDoesNotExistException) { return []; }
-    }
+    private static Task<List<UsageMetricRow>> QueryAllMetricRowsAsync(
+        IAsyncDocumentSession session, CancellationToken ct) =>
+        QueryMetricRowsAsync(session, from: null, to: null, ct);
 
+    private static Task<List<UsageMetricRow>> QueryMetricRowsInRangeAsync(
+        IAsyncDocumentSession session, DateTime start, DateTime end, CancellationToken ct) =>
+        QueryMetricRowsAsync(session, start, end, ct);
+
+    internal static async Task<List<UsageMetricRow>> QueryMetricRowsAsync(
+        IAsyncDocumentSession session, DateTime? from, DateTime? to, CancellationToken ct)
+    {
+        var docs = await session.Query<UsageMetrics>()
+            .Include(builder => builder.IncludeTimeSeries(UsageMetrics.SeriesName, from, to))
+            .ToListAsync(ct);
+
+        var rows = new List<UsageMetricRow>();
+        foreach (var doc in docs)
+        {
+            var entries = await session
+                .IncrementalTimeSeriesFor<UsageIncrement>(doc.Id!, UsageMetrics.SeriesName)
+                .GetAsync(from, to, token: ct) ?? [];
+            foreach (var entry in entries)
+            {
+                if (to is { } end && entry.Timestamp >= end)
+                    continue;
+                rows.Add(new UsageMetricRow(doc.Agent, doc.ChannelId, entry.Timestamp,
+                    (long)entry.Value.Conversations, (long)entry.Value.Messages, (long)entry.Value.Tokens));
+            }
+        }
+
+        return rows;
+    }
 }
 
 

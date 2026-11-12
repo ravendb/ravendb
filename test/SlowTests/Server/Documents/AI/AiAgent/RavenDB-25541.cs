@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 return new object();
             });
 
-            chat.SetUserPrompt("Give me 15 real cities names, one per line");
+            chat.SetUserPrompt("Look at a random document and greet me by my name, then give me 15 real cities names, one per line");
             var r = await chat.RunAsync<AiAgentBasics.OutputSchema>();
             Assert.Equal(1, handleCalled);
             Assert.Equal(1, receiveCalled);

@@ -80,6 +80,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 throw;
             }
+            catch (UnsupportedAiQueryParameterException)
+            {
+                throw;
+            }
             catch (QueryToolFailedException)
             {
                 throw;

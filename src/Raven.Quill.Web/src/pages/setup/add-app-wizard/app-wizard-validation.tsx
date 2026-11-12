@@ -1,6 +1,6 @@
 import type { CdcColumnType, CdcSinkRelationType } from "@/api/generated/server-api";
 import { z } from "zod";
-import { MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableLabel, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
 import { MAX_SLUG_LENGTH, toSlug } from "@/pages/setup/add-app-wizard/slugify";
 
 // Mirrors the generated CdcSinkTableConfig graph. Kept in sync with the API enums via `satisfies`.
@@ -23,11 +23,12 @@ export const slugSchema = z
         }
     });
 
-export const providerSchema = z.union([
-    z.literal("Npgsql"),
-    z.literal("SqlClient"),
-    z.literal("MySqlConnectorFactory"),
-]);
+export const providerSchema = z.union(
+    [z.literal("Npgsql"), z.literal("SqlClient"), z.literal("MySqlConnectorFactory")],
+    {
+        error: 'The configuration\'s "provider" must be "Npgsql" (PostgreSQL), "SqlClient" (SQL Server) or "MySqlConnectorFactory" (MySQL).',
+    },
+);
 
 const hasUniqueValues = (values: Array<string | null | undefined>) => {
     const normalized = values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
@@ -35,7 +36,8 @@ const hasUniqueValues = (values: Array<string | null | undefined>) => {
     return new Set(normalized).size === normalized.length;
 };
 
-const getSourceTableKey = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) => {
+// The schema is compared as written: the tables schema has no connection to resolve a default schema from.
+const getRootTableKey = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) => {
     const name = table.sourceTableName?.trim().toLowerCase();
 
     if (!name) {
@@ -44,9 +46,6 @@ const getSourceTableKey = (table: { sourceTableSchema?: string | null; sourceTab
 
     return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
 };
-
-const getSourceTableLabel = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) =>
-    table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 
 /** String list in the FormStringList shape: useFieldArray needs object items, not plain strings. */
 const requiredUniqueStringsSchema = (requiredMessage: string, uniqueMessage: string) =>
@@ -197,7 +196,7 @@ export const tablesSchema = z
         const countByKey = new Map<string, number>();
 
         for (const table of tables) {
-            const key = getSourceTableKey(table);
+            const key = getRootTableKey(table);
 
             if (key) {
                 countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
@@ -206,7 +205,7 @@ export const tablesSchema = z
 
         // A source table can be a root table only once; flag each duplicate on its own row.
         tables.forEach((table, index) => {
-            const key = getSourceTableKey(table);
+            const key = getRootTableKey(table);
 
             if (!key || (countByKey.get(key) ?? 0) < 2) {
                 return;
@@ -215,7 +214,7 @@ export const tablesSchema = z
             ctx.addIssue({
                 code: "custom",
                 path: [index, "sourceTableName"],
-                message: `Source table "${getSourceTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
+                message: `Source table "${getTableLabel(table)}" is already configured as another root table. A source table can be mapped only once.`,
             });
         });
     });
@@ -320,14 +319,7 @@ export const appSchema = z.object({
                 }),
             )
             .min(1, "At least one table is required")
-            .max(
-                MAX_SELECTED_TABLES,
-                `During the beta, at most ${MAX_SELECTED_TABLES} tables can be processed by one app`,
-            ),
-    }),
-    map: z.object({
-        source: z.union([z.literal("ai-suggested"), z.literal("manual")]),
-        aiPrompt: z.string(),
+            .max(MAX_SELECTED_TABLES, `At most ${MAX_SELECTED_TABLES} tables can be processed by one app`),
     }),
     mapTables: z.object({
         tables: tablesSchema,
@@ -339,4 +331,5 @@ export const appSchema = z.object({
 });
 
 export type AppFormData = z.infer<typeof appSchema>;
-export type AppStepId = keyof AppFormData;
+/** The map step produces its mapping with the planner rather than with form fields, so it has no section of its own. */
+export type AppStepId = keyof AppFormData | "map";

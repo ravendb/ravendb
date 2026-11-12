@@ -151,10 +151,26 @@ namespace Raven.Server.Documents.ETL
                     }
 
                     var latestStats = etl.GetLatestPerformanceStats();
-                    if (latestStats != null &&
-                        latestStats.Completed == false &&
-                        itemsToSend.Contains(latestStats) == false)
-                        itemsToSend.Add(latestStats);
+                    var previousStats = etlAndPerformanceStatsList.LastSentLatestStats;
+
+                    // failed batches don't raise BatchCompleted, so their final state has to be sent from here
+                    if (previousStats != null &&
+                        previousStats != latestStats &&
+                        etlAndPerformanceStatsList.LastSentLatestStatsCompleted == false &&
+                        itemsToSend.Contains(previousStats) == false)
+                        itemsToSend.Add(previousStats);
+
+                    if (latestStats != null)
+                    {
+                        var latestStatsCompleted = latestStats.Completed;
+                        var alreadySentAsCompleted = latestStats == previousStats && etlAndPerformanceStatsList.LastSentLatestStatsCompleted;
+
+                        if (alreadySentAsCompleted == false && itemsToSend.Contains(latestStats) == false)
+                            itemsToSend.Add(latestStats);
+
+                        etlAndPerformanceStatsList.LastSentLatestStats = latestStats;
+                        etlAndPerformanceStatsList.LastSentLatestStatsCompleted = latestStatsCompleted;
+                    }
 
                     if (itemsToSend.Count > 0)
                     {
@@ -201,6 +217,10 @@ namespace Raven.Server.Documents.ETL
             }
 
             public long TaskId { get; }
+
+            public IEtlStatsAggregator LastSentLatestStats { get; set; }
+
+            public bool LastSentLatestStatsCompleted { get; set; }
         }
     }
 }

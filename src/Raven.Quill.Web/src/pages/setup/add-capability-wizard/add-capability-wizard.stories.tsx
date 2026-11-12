@@ -6,13 +6,11 @@ import { FormProvider, useForm } from "react-hook-form";
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import type { AiHelperStatus } from "@/api/generated/server-api";
 import { AI_OUT_OF_TOKENS_MESSAGE } from "@/components/ai-consent/use-ai-consent";
 import { FormWizard } from "@/components/form/wizard/form-wizard";
 import { preventEnterKeySubmission } from "@/lib/form-utils";
 import { appsMocks, sampleAgentSuggestion } from "@/mocks/apps-mocks";
-import { assistantMocks } from "@/mocks/assistant-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { consentHandlers, defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
 import { AddCapabilityWizard } from "./add-capability-wizard";
 import { suggestionToAgentConfiguration } from "./agent-config-form";
@@ -36,10 +34,6 @@ const meta = {
 export default meta;
 
 type Story = StoryObj<typeof meta>;
-
-function consentHandlers(status: AiHelperStatus) {
-    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
-}
 
 // The full wizard through the real entry component (form creation, store reset, and the
 // provision mutation wired up). Starts on the connection step because of ?capability=agent.
@@ -130,7 +124,7 @@ export const ConnectProvider: Story = {
 export const ConnectProviderEmpty: Story = {
     render: () => <CapabilityWizardAtStep initialStep="connection" />,
     parameters: {
-        msw: { handlers: { apps: [appsMocks.aiConnectionStringsList([]), appsMocks.suggestAgent()] } },
+        msw: mockHandlers({ apps: [appsMocks.aiConnectionStringsList([]), appsMocks.suggestAgent()] }),
     },
 };
 
@@ -142,13 +136,13 @@ export const CreateAgent: Story = {
 // progress skeleton and its stage labels on screen. The prompt and manual options stay usable.
 export const CreateAgentSuggesting: Story = {
     render: () => <CapabilityWizardAtStep initialStep="create" hasSuggestions={false} />,
-    parameters: { msw: { handlers: { apps: [appsMocks.suggestAgentPending(), ...defaultApiMocks.apps] } } },
+    parameters: { msw: mockHandlers({ apps: [appsMocks.suggestAgentPending(), ...defaultApiMocks.apps] }) },
 };
 
 // Without consent both AI halves stay on screen inert; accepting loads the suggestions in place.
 export const CreateAgentConsentRequired: Story = {
     render: () => <CapabilityWizardAtStep initialStep="create" hasSuggestions={false} />,
-    parameters: { msw: { handlers: consentHandlers("ConsentRequired") } },
+    parameters: { msw: mockHandlers(consentHandlers("ConsentRequired")) },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -161,7 +155,7 @@ export const CreateAgentConsentRequired: Story = {
 // Nothing to accept while the quota is gone, so the gate offers a retry and only manual setup advances.
 export const CreateAgentOutOfTokens: Story = {
     render: () => <CapabilityWizardAtStep initialStep="create" hasSuggestions={false} />,
-    parameters: { msw: { handlers: consentHandlers("OutOfTokens") } },
+    parameters: { msw: mockHandlers(consentHandlers("OutOfTokens")) },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
 
@@ -183,5 +177,5 @@ export const Channels: Story = {
 
 export const ChannelsEmpty: Story = {
     render: () => <CapabilityWizardAtStep initialStep="channels" />,
-    parameters: { msw: { handlers: { channels: [channelsMocks.list([])] } } },
+    parameters: { msw: mockHandlers({ channels: [channelsMocks.list([])] }) },
 };

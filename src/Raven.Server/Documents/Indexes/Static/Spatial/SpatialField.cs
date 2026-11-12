@@ -1,4 +1,9 @@
 ﻿using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Buffers.Text;
+using System.Collections.Generic;
+using System.Diagnostics;
 using Corax.Utils;
 using GeoAPI;
 using Lucene.Net.Documents;
@@ -8,6 +13,7 @@ using NetTopologySuite;
 using Raven.Client;
 using Raven.Client.Exceptions.Corax;
 using Sparrow.Json;
+using Sparrow.Server;
 using Spatial4n.Context.Nts;
 using Spatial4n.Distance;
 using Spatial4n.Shapes;
@@ -20,9 +26,15 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
 {
     public sealed class SpatialField
     {
+        internal const string LuceneCentersFieldSuffix = "_spatial(centers)";
+
+        private const int LuceneCenterLength = 22;
+
         private static readonly NtsSpatialContext GeoContext;
 
         public readonly SpatialStrategy Strategy;
+
+        public readonly string LuceneCentersFieldName;
 
         private readonly SpatialOptions _options;
         private readonly NtsSpatialContext _ntsContext;
@@ -42,6 +54,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             _ntsContext = CreateNtsContext(options);
             _shapeStringReadWriter = new ShapeStringReadWriter(options, _ntsContext);
             Strategy = CreateStrategy(fieldName, options, _ntsContext);
+            LuceneCentersFieldName = fieldName + LuceneCentersFieldSuffix;
         }
 
         private static NtsSpatialContext CreateNtsContext(SpatialOptions options)
@@ -75,19 +88,67 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return null;
         }
 
-        public AbstractField[] LuceneCreateIndexableFields(object value)
+        public AbstractField[] LuceneCreateIndexableFields(object value, bool indexCenterForSorting)
         {
             var shape = value as IShape;
             if (shape != null || TryReadShape(value, out shape))
             {
                 var fields = Strategy.CreateIndexableFields(shape);
                 Array.Resize(ref fields, fields.Length + 1);
-                fields[^1] = new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
+                fields[^1] = indexCenterForSorting
+                    ? CreateLuceneCenterField(LuceneCentersFieldName, shape.Center)
+                    : new Field(Constants.Documents.Indexing.Fields.SpatialShapeFieldName, WriteShape(shape), Field.Store.YES, Field.Index.NO);
 
                 return fields;
             }
 
             return Array.Empty<AbstractField>();
+        }
+        
+        private static Field CreateLuceneCenterField(string name, IPoint center)
+        {
+            Span<byte> coordinates = stackalloc byte[2 * sizeof(double)];
+            BinaryPrimitives.WriteDoubleLittleEndian(coordinates, center.Y);
+            BinaryPrimitives.WriteDoubleLittleEndian(coordinates[sizeof(double)..], center.X);
+
+            return CreateLuceneCenterField(name, Format.ToBase64Unpadded(coordinates));
+        }
+
+        internal static Field CreateLuceneCenterField(string name, string centers)
+        {
+            Debug.Assert(centers.Length % LuceneCenterLength == 0, $"Invalid spatial centers length: {centers.Length}");
+
+            return new Field(name, centers, Field.Store.NO, Field.Index.NOT_ANALYZED_NO_NORMS) { OmitTermFreqAndPositions = true };
+        }
+
+        internal static void ParseCenters(ReadOnlySpan<byte> centers, List<(double Latitude, double Longitude)> points)
+        {
+            if (centers.Length % LuceneCenterLength != 0)
+            {
+                Debug.Assert(false, $"Invalid spatial centers length: {centers.Length}");
+                return;
+            }
+
+            Span<byte> center = stackalloc byte[LuceneCenterLength + 2];
+            center[LuceneCenterLength..].Fill((byte)'=');
+
+            Span<byte> coordinates = stackalloc byte[2 * sizeof(double)];
+
+            for (var i = 0; i < centers.Length; i += LuceneCenterLength)
+            {
+                centers.Slice(i, LuceneCenterLength).CopyTo(center);
+
+                if (Base64.DecodeFromUtf8(center, coordinates, out var bytesConsumed, out var bytesWritten) != OperationStatus.Done)
+                {
+                    Debug.Assert(false, "Invalid spatial center");
+                    continue; // invalid points are skipped
+                }
+
+                Debug.Assert(bytesConsumed == center.Length);
+                Debug.Assert(bytesWritten == coordinates.Length);
+
+                points.Add((BinaryPrimitives.ReadDoubleLittleEndian(coordinates), BinaryPrimitives.ReadDoubleLittleEndian(coordinates[sizeof(double)..])));
+            }
         }
 
         public CoraxSpatialPointEntry[] CoraxCreateIndexableFields(object value)

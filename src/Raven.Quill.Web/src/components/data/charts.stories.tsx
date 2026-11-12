@@ -7,13 +7,10 @@ const DATA = Array.from({ length: 12 }, (_, index) => ({
     writes: 100 + index * 25,
 }));
 
-// Tests, not catalogue entries: `!dev` keeps these out of the Storybook sidebar while
-// `pnpm test:storybook` still runs them. Play functions are the only way to exercise a
-// component here — the unit project runs in node with no DOM.
 const meta = {
     title: "Data/Charts",
     component: WritesBarChart,
-    tags: ["!dev"],
+    tags: ["test-only"],
     args: { data: DATA, xKey: "t" },
 } satisfies Meta<typeof WritesBarChart>;
 

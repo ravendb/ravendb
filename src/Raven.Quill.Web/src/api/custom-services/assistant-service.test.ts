@@ -4,7 +4,6 @@ import {
     createAssistantService,
     describeAssistantError,
     isAssistantConsentRequired,
-    isQuillSessionExpired,
     type AssistantChatFrame,
     type AssistantStreamEvent,
 } from "@/api/custom-services/assistant-service";
@@ -179,21 +178,5 @@ describe("isAssistantConsentRequired", () => {
         const error = await refusalOf("Unauthorized", 401, "text/plain");
 
         expect(isAssistantConsentRequired(error)).toBe(false);
-    });
-});
-
-describe("isQuillSessionExpired", () => {
-    it("recognizes Quill's bare 401 session challenge", async () => {
-        const error = await refusalOf("", 401, "text/plain");
-
-        expect(isQuillSessionExpired(error)).toBe(true);
-    });
-
-    it("does not read the AI service's relayed refusals as an expired session", async () => {
-        const consentError = await refusalOf('{"Status":"ConsentRequired"}', 401, "application/json");
-        const licenseError = await refusalOf("Unauthorized", 401, "text/plain");
-
-        expect(isQuillSessionExpired(consentError)).toBe(false);
-        expect(isQuillSessionExpired(licenseError)).toBe(false);
     });
 });

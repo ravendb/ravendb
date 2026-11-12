@@ -51,6 +51,19 @@ internal static class AiTaskIdentifierHelper
         if (string.IsNullOrWhiteSpace(input))
             return null;
 
+        if (TryGenerateIdentifier(input, out var identifier) == false)
+            throw new InvalidOperationException($"Can't generate an identifier from name '{input}' because it contains no ASCII letters or digits. Set the identifier explicitly.");
+
+        return identifier;
+    }
+
+    internal static bool TryGenerateIdentifier(string input, out string identifier)
+    {
+        identifier = null;
+
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+
         var result = new StringBuilder();
         var lastWasHyphen = false;
 
@@ -77,10 +90,11 @@ internal static class AiTaskIdentifierHelper
             }
         }
 
-        // Trim any trailing hyphens
         var finalResult = result.ToString().TrimEnd('-');
+        if (finalResult.Length == 0)
+            return false;
 
-        // Ensure we have at least one character
-        return string.IsNullOrEmpty(finalResult) ? $"{nameof(AiConnectionString)}Identifier" : finalResult;
+        identifier = finalResult;
+        return true;
     }
 }

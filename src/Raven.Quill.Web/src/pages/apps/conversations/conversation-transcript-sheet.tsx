@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { ConversationParams } from "@/pages/apps/conversations/conversation-params";
 import { ConversationSystemPrompt } from "@/pages/apps/conversations/conversation-system-prompt";
 import { ConversationToolCall } from "@/pages/apps/conversations/conversation-tool-call";
-import { TranscriptDisclosureState } from "@/pages/apps/conversations/transcript-disclosure";
+import { TranscriptDisclosureState } from "@/components/chat/transcript-disclosure";
 
 type ConversationTranscriptSheetProps = {
     slug: string;
@@ -103,7 +103,7 @@ function TranscriptRows({ scrollElement, rows }: { scrollElement: HTMLDivElement
     // freeze the visible window on its first value. The row contents stay compiled.
     "use no memo";
 
-    // eslint-disable-next-line react-hooks/incompatible-library -- handled by "use no memo" above
+    // eslint-disable-next-line react-hooks-js/incompatible-library -- handled by "use no memo" above
     const virtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: () => ESTIMATED_ROW_HEIGHT_IN_PX,
@@ -176,7 +176,7 @@ function TranscriptTurn({ turn, turnKey }: { turn: AiConversationMessage; turnKe
                         <Streamdown>{content}</Streamdown>
                     </div>
                 ))}
-            {turn.timestamp && <Timestamp value={turn.timestamp} textVariant="caption" />}
+            {turn.timestamp && <Timestamp value={turn.timestamp} textVariant="caption" timeZone="utc" />}
         </div>
     );
 }

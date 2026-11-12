@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.12
+ARG RUNTIME_IMAGE=mcr.microsoft.com/dotnet/aspnet:10.0.15
 ARG S6_OVERLAY_VERSION=3.2.1.0
 
 FROM ${RUNTIME_IMAGE} AS payload
@@ -88,7 +88,7 @@ VOLUME /var/lib/quill
 # --start-period must match RAVEN_QUILL_STARTUP_GRACE_SECONDS below: both are the startup budget,
 # one for Docker, one for 05-console deciding when a slow start counts as stuck.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=180s \
-    CMD curl -fsk https://127.0.0.1/healthz && curl -fs http://127.0.0.1:5000/healthz
+    CMD curl -fsk --resolve api.localhost:443:127.0.0.1 https://api.localhost/healthz && curl -fs http://127.0.0.1:5000/healthz
 
 # S6_VERBOSITY=0 keeps the supervisor's lifecycle chatter off stdout
 ENV S6_VERBOSITY=0 \

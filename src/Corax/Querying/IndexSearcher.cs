@@ -37,6 +37,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private const long BitmapOrFillDensityDivisor = 32;
     internal const int BitmapAndFillSingleBatchThreshold = 4096;
     internal const int BitmapDrainBufferSize = 4096;
+    private const int DocumentBoostLookupRatio = 32;
     
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
@@ -424,6 +425,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return covered >= NumberOfEntries;
     }
 
+    /// <summary>
+    /// The number of terms a pass over the terms of the field visits, as <see cref="TextualAggregation"/> does: one per
+    /// distinct value, plus one for null when any entry holds a null. <see cref="GetTermAmountInField"/> adds the number
+    /// of entries holding a null instead.
+    /// </summary>
+    public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
+    {
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (fieldTree == null)
+            return 0;
+
+        var numberOfTerms = fieldTree.NumberOfEntries;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId) && GetPostingList(nullPostingListId)?.State.NumberOfEntries > 0)
+            numberOfTerms++;
+
+        return numberOfTerms;
+    }
+
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
     {
         return TryGetTermsOfField<Lookup<CompactKeyLookup>.ForwardIterator>(field, out existsTermProvider);
@@ -503,6 +523,53 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     internal FixedSizeTree GetDocumentBoostTree()
     {
         return _transaction.FixedTreeFor(Constants.DocumentBoostSlice, sizeof(float));
+    }
+
+    internal void BoostDocuments(Span<long> matches, Span<float> scores, bool sortedById)
+    {
+        var tree = GetDocumentBoostTree();
+        if (tree.NumberOfEntries == 0 || matches.IsEmpty)
+            return;
+
+        Debug.Assert(sortedById == false || IsSortedById(matches), "Matches flagged as sorted by id are not sorted by id.");
+
+        if (tree.NumberOfEntries > (long)matches.Length * DocumentBoostLookupRatio || sortedById == false)
+        {
+            for (var i = 0; i < matches.Length; i++)
+            {
+                var boost = (float*)tree.ReadPtr(matches[i], out _);
+                if (boost != null)
+                    scores[i] *= *boost;
+            }
+
+            return;
+        }
+
+        using var iterator = tree.Iterate();
+        if (iterator.Seek(matches[0]) == false)
+            return;
+
+        var position = 0;
+        do
+        {
+            position = Bm25Relevance.FindLowerBound(matches, position, iterator.CurrentKey, gallop: true);
+            if (position == matches.Length)
+                return;
+
+            if (matches[position] == iterator.CurrentKey)
+                scores[position] *= *(float*)iterator.ValuePtr(out _);
+        } while (iterator.MoveNext());
+
+        static bool IsSortedById(Span<long> matches)
+        {
+            for (var i = 1; i < matches.Length; i++)
+            {
+                if (matches[i - 1] > matches[i])
+                    return false;
+            }
+
+            return true;
+        }
     }
 
 

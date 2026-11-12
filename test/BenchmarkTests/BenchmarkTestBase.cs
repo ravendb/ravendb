@@ -92,7 +92,11 @@ namespace BenchmarkTests
                     Server.WebUrl
                 },
                 Database = databaseName,
-                Certificate = adminCert
+                Certificate = adminCert,
+                Conventions =
+                {
+                    DisposeCertificate = false
+                }
             };
 
             if (deleteDatabaseOnDispose)

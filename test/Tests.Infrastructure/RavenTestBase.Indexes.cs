@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -17,6 +17,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Json.Sync;
+using Xunit;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace FastTests;
@@ -317,6 +318,31 @@ public partial class RavenTestBase
                 throw new TimeoutException(msg);
 
             return null;
+        }
+
+        /// <summary>
+        /// Checks once that there are no indexing errors. Unlike WaitForIndexingErrors(errorsShouldExists: false) it does not wait,
+        /// so it should be called after the indexes are non-stale (e.g. after WaitForIndexing).
+        /// </summary>
+        public void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
+        {
+            databaseName ??= store.Database;
+
+            var admin = store.Maintenance.ForDatabase(databaseName);
+            var databaseRecord = admin.Server.Send(new GetDatabaseRecordOperation(databaseName));
+
+            var errors = new List<IndexErrors>();
+            if (databaseRecord.IsSharded)
+            {
+                foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
+                    errors.AddRange(admin.ForShard(shardNumber).Send(new GetIndexErrorsOperation()).Where(x => x.Errors.Length > 0));
+            }
+            else
+            {
+                errors.AddRange(admin.Send(new GetIndexErrorsOperation()).Where(x => x.Errors.Length > 0));
+            }
+
+            Assert.True(errors.Count == 0, $"Expected no indexing errors, but got: {string.Join(", ", errors.Select(x => $"'{x.Name}': {string.Join("; ", x.Errors.Select(e => e.Error))}"))}");
         }
 
         public long WaitForEntriesCount(IDocumentStore store, string indexName, int minEntriesCount, string databaseName = null, TimeSpan? timeout = null, bool throwOnTimeout = true)

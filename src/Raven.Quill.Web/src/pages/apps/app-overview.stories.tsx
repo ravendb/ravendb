@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { agentsMocks } from "@/mocks/agents-mocks";
 import { appsMocks } from "@/mocks/apps-mocks";
 import { channelsMocks } from "@/mocks/channels-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { AppOverview } from "./app-overview";
 
 const appsWithoutCdcErrors = [appsMocks.detail(), appsMocks.cdcErrors([])];
@@ -23,11 +24,9 @@ export const Default: Story = {};
 
 export const WithoutCdcErrors: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                apps: appsWithoutCdcErrors,
-            },
-        },
+        msw: mockHandlers({
+            apps: appsWithoutCdcErrors,
+        }),
     },
 };
 
@@ -35,12 +34,10 @@ export const WithoutCdcErrors: Story = {
 // steps as numbered (incomplete) call-to-actions.
 export const Onboarding: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                agents: [agentsMocks.list([])],
-                apps: appsWithoutCdcErrors,
-                channels: [channelsMocks.list([])],
-            },
-        },
+        msw: mockHandlers({
+            agents: [agentsMocks.list([])],
+            apps: appsWithoutCdcErrors,
+            channels: [channelsMocks.list([])],
+        }),
     },
 };

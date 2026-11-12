@@ -1,7 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { RecursiveRequired } from "components/utils/common";
 import { getDuplicateRootTableErrors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTableWarnings";
-import { Resolver } from "react-hook-form/dist/types/resolvers";
+import { Resolver } from "react-hook-form";
 import * as yup from "yup";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;

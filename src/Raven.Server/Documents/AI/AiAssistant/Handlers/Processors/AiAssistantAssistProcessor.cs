@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 
 internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandler) : AiAssistantHandlerProcessorBase(requestHandler)
 {
+    protected virtual string UpstreamPath => "/api/v1/ai/assist";
+
     public override async ValueTask ExecuteAsync()
     {
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -24,13 +26,14 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
 
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             using var content = new StringContent(context.ReadObject(requestBody, "ai-assist").ToString(), Encoding.UTF8, "application/json");
-            using var response = await ApiHttpClient.PostAsync("/api/v1/ai/assist", content, HttpCompletionOption.ResponseHeadersRead, shouldRetry: true, token.Token).ConfigureAwait(false);
+            using var response = await ApiHttpClient.PostAsync(UpstreamPath, content, HttpCompletionOption.ResponseHeadersRead, shouldRetry: true, token.Token).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
 
-            var contentType = response.Content.Headers.ContentType.ToString();
-            HttpContext.Response.Headers.ContentType = contentType;
+            var contentType = response.Content.Headers.ContentType?.ToString();
+            if (contentType != null)
+                HttpContext.Response.Headers.ContentType = contentType;
 
             if (response.IsSuccessStatusCode && contentType == "text/event-stream")
                 RequestHandler.DisableResponseBuffering();

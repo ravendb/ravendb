@@ -10,17 +10,25 @@ import type { DiscoverTableResponse } from "@/api/generated/server-api";
 import { Checkbox } from "@/components/shadcn/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 import { countSelectedRows, getRangeSelection, setRowsSelected } from "@/components/table/row-range-selection";
-import { getTableLabel, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import {
+    getTableLabel,
+    hasTableWarnings,
+    matchesTableSearch,
+    matchesWarningsFilter,
+    MAX_SELECTED_TABLES,
+    type WarningsFilter,
+} from "@/pages/setup/add-app-wizard/discover-utils";
 import { Button } from "@/components/shadcn/ui/button";
 
 const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
     accessorFn: (table) => getTableLabel(table),
     header: "Table name",
     id: "tableName",
+    filterFn: (row, _columnId, search: string) => matchesTableSearch(row.original, search),
     cell: ({ row, getValue }) => (
         <span className="flex min-w-0 items-center gap-1.5 font-mono">
             <span className="truncate">{getValue<string>()}</span>
-            {row.original.warnings.length > 0 && (
+            {hasTableWarnings(row.original) && (
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Button variant="link" aria-label="Table warnings" className="cursor-default px-0">
@@ -37,6 +45,14 @@ const TABLE_NAME_COLUMN: ColumnDef<DiscoverTableResponse> = {
             )}
         </span>
     ),
+};
+
+export const WARNINGS_COLUMN_ID = "warnings";
+
+const WARNINGS_COLUMN: ColumnDef<DiscoverTableResponse> = {
+    accessorFn: hasTableWarnings,
+    id: WARNINGS_COLUMN_ID,
+    filterFn: (row, _columnId, filter: WarningsFilter) => matchesWarningsFilter(row.original, filter),
 };
 
 const PRIMARY_KEY_COLUMN: ColumnDef<DiscoverTableResponse> = {
@@ -97,6 +113,7 @@ export function createVerifiedColumns(anchorRowIdRef: RefObject<string | null>):
         TABLE_NAME_COLUMN,
         PRIMARY_KEY_COLUMN,
         COLUMNS_COUNT_COLUMN,
+        WARNINGS_COLUMN,
     ];
 }
 

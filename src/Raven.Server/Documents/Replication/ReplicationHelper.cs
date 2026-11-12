@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Replication
             
             return type switch
             {
+                ReplicationNode.ReplicationType.PullAsHub => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<PullReplicationAsHub>(bjro,
+                    "PullReplicationAsHub"),
                 ReplicationNode.ReplicationType.PullAsSink => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<PullReplicationAsSink>(bjro,
                     "PullReplicationAsSink"),
                 ReplicationNode.ReplicationType.External => DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ExternalReplication>(bjro,

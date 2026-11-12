@@ -1,8 +1,10 @@
 using System;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Sparrow.Extensions;
 using Sparrow.Server;
+using Voron;
 using Voron.Data.PostingLists;
 
 namespace Corax.Utils;
@@ -13,7 +15,7 @@ namespace Corax.Utils;
 public sealed unsafe class Bm25Relevance : IDisposable
 {
     [ThreadStatic]
-    internal static ArrayPool<Bm25Relevance> RelevancePool; 
+    internal static ArrayPool<TermRelevance> RelevancePool; 
     
     private readonly delegate*<Bm25Relevance, Span<long>, int, void> _processFunc;
     private readonly delegate*<Bm25Relevance, Span<long>, Span<float>, float, void> _scoreFunc;
@@ -32,9 +34,11 @@ public sealed unsafe class Bm25Relevance : IDisposable
     public const float ConstantScoreValue = 1f;
 
     private const int MaximumDocumentCapacity = MaxSizeOfStorage / (sizeof(long) + sizeof(short));
+    private const int DynamicScoreBatchSize = 16 * 1024;
     private const int MaxSizeOfStorage = 1024 * 1024; //1MB;
     private const float BFactor = 0.25f;
     private const float K1 = 2f;
+    private const int GallopRatio = 32;
 
     /// <summary>
     /// This is L_c / Avl_c. This is ratio of current term length to whole collection under specific field.
@@ -72,8 +76,8 @@ public sealed unsafe class Bm25Relevance : IDisposable
         {
             _scoreFunc = dynamicalScoreFunc;
             _processFunc = &DecodeAndDiscard;
-            _bufferCapacity = MaximumDocumentCapacity;
-            _currentId = MaximumDocumentCapacity;
+            _bufferCapacity = DynamicScoreBatchSize;
+            _currentId = DynamicScoreBatchSize;
         }
         else
         {
@@ -94,12 +98,34 @@ public sealed unsafe class Bm25Relevance : IDisposable
     /// We add 1 to the IDF (Inverse Document Frequency) value to ensure that it is not equal to 0.
     /// This guarantees that the boost factor is not 'forgotten' in the calculation of the score. 
     /// </summary>
-    private static float ComputeIdf(Querying.IndexSearcher indexSearcher, long termFrequency)
+    internal static float ComputeIdf(Querying.IndexSearcher indexSearcher, long termFrequency)
     {
         var m = indexSearcher.NumberOfEntries - termFrequency + 0.5D;
         var d = termFrequency + 0.5D;
 
         return (float)Math.Log((m / d) + 1);
+    }
+
+    internal static float Denominator(float termRatioToWholeCollection) => (1 - BFactor) + BFactor * termRatioToWholeCollection;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Contribution(short frequency, float boostFactor, float denominator, float idf)
+    {
+        var weight = frequency * boostFactor / denominator;
+        return idf * weight / (K1 + weight);
+    }
+
+    /// <summary>
+    /// Scores a term that has a single document. It is kept inline instead of in a Bm25Relevance.
+    /// </summary>
+    internal static void ScoreSingle(Span<long> matches, Span<float> scores, float boostFactor, in TermRelevance term, float idf)
+    {
+        if (idf.AlmostEquals(0f))
+            return;
+
+        var idOfMatch = matches.BinarySearch(term.EntryId);
+        if (idOfMatch >= 0)
+            scores[idOfMatch] += Contribution(term.Frequency, boostFactor, term.Denominator, idf);
     }
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
@@ -127,18 +153,78 @@ public sealed unsafe class Bm25Relevance : IDisposable
 
         var innerItems = bm25.Matches;
         var frequencies = bm25.Scores;
+        var denominator = Denominator(bm25._termRatioToWholeCollection);
 
+        // Both sides are sorted, so every lookup continues from the previous position.
+        if (innerItems.Length < matches.Length)
+        {
+            var gallop = matches.Length <= GallopRatio * innerItems.Length;
+            var idOfMatch = 0;
+            for (int idX = 0; idX < innerItems.Length; ++idX)
+            {
+                idOfMatch = FindLowerBound(matches, idOfMatch, innerItems[idX], gallop);
+                if (idOfMatch == matches.Length)
+                    return;
+
+                if (matches[idOfMatch] != innerItems[idX])
+                    continue;
+
+                scores[idOfMatch] += Contribution(frequencies[idX], boostFactor, denominator, bm25._idf);
+            }
+
+            return;
+        }
+
+        var gallopInInner = innerItems.Length <= GallopRatio * matches.Length;
+        var idOfInner = 0;
         for (int idX = 0; idX < matches.Length; ++idX)
         {
-            var entryId = matches[idX];
-            var idOfInner = innerItems.BinarySearch(entryId);
+            idOfInner = FindLowerBound(innerItems, idOfInner, matches[idX], gallopInInner);
+            if (idOfInner == innerItems.Length)
+                return;
 
-            if (idOfInner < 0)
+            if (innerItems[idOfInner] != matches[idX])
                 continue;
 
-            var weight = frequencies[idOfInner] * boostFactor / ((1 - BFactor) + BFactor * bm25._termRatioToWholeCollection);
-            scores[idX] += bm25._idf * weight  / (K1 + weight);
+            scores[idX] += Contribution(frequencies[idOfInner], boostFactor, denominator, bm25._idf);
         }
+    }
+
+    /// <summary>
+    /// Index of the first item not smaller than the value, searched from start. Galloping pays off when the items are dense
+    /// relative to the lookups, otherwise a binary search of the remaining items is cheaper.
+    /// </summary>
+    internal static int FindLowerBound(Span<long> items, int start, long value, bool gallop)
+    {
+        if (gallop == false)
+        {
+            var found = items[start..].BinarySearch(value);
+            return start + (found >= 0 ? found : ~found);
+        }
+
+        if (start == items.Length || items[start] >= value)
+            return start;
+
+        var low = start;
+        var step = 1;
+        while (low + step < items.Length && items[low + step] < value)
+        {
+            low += step;
+            step <<= 1;
+        }
+
+        var high = Math.Min(low + step, items.Length);
+        low++;
+        while (low < high)
+        {
+            var middle = (low + high) >>> 1;
+            if (items[middle] < value)
+                low = middle + 1;
+            else
+                high = middle;
+        }
+
+        return low;
     }
 
     /// <summary>
@@ -212,22 +298,49 @@ public sealed unsafe class Bm25Relevance : IDisposable
     {
         static void PostingListCalculateScoreDynamically(Bm25Relevance bm25, Span<long> matches, Span<float> scores, float boostFactor)
         {
+            if (matches.Length == 0)
+                return;
+            var lastMatch = matches[^1];
+            var pruneBound = EntryIdEncodings.PrepareIdForSeekInPostingList(lastMatch + 1);
+            bm25._setIterator.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0]));
+
+            var matchesStart = 0;
             bm25._currentId = bm25._bufferCapacity;
-            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: EntryIdEncodings.PrepareIdForPruneInPostingList(matches[^1])) && read > 0)
+            while (bm25._setIterator.Fill(bm25.Matches, out var read, pruneGreaterThanOptimization: pruneBound) && read > 0)
             {
                 bm25._currentId = read;
                 // The posting list yields encoded ids (entry id + quantized frequency). Split them the way the stored
                 // path does in DecodeAndSave, otherwise the ids never match and the frequencies stay zero - leaving
                 // every document with the score buffer's initial value.
                 EntryIdEncodings.Decode(bm25.Matches, bm25.Scores);
-                CalculateScoreFromMemory(bm25, matches, scores, boostFactor);
+
+                var postings = bm25.Matches;
+                matchesStart = FindLowerBound(matches, matchesStart, postings[0], gallop: true);
+                if (matchesStart == matches.Length)
+                    return;
+
+                CalculateScoreFromMemory(bm25, matches[matchesStart..], scores[matchesStart..], boostFactor);
+                if (postings[^1] >= lastMatch)
+                    return;
+
                 bm25._currentId = bm25._bufferCapacity;
             }
         }
 
         return new Bm25Relevance(indexSearcher, termFrequency, context, numberOfDocuments, termRatioToWholeCollection, &PostingListCalculateScoreDynamically)
         {
-            _setIterator = postingList.Iterate()
+            _setIterator = new PostingList(indexSearcher._transaction.LowLevelTransaction, Slices.Empty, postingList.State).Iterate()
         };
     }
+}
+
+/// <summary>
+/// Relevance of one term of a multi-term match. A term with a single document is kept inline, without a Bm25Relevance.
+/// </summary>
+internal struct TermRelevance
+{
+    public Bm25Relevance Relevance;
+    public long EntryId;
+    public float Denominator;
+    public short Frequency;
 }

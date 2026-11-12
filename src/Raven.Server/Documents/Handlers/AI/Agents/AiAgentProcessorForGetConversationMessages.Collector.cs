@@ -294,7 +294,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 AiConversationDetailLevel.Simple => msg switch
                 {
                     { Role: AiMessageRole.User } or
-                    { Role: AiMessageRole.Assistant, Content: not null } => true,
+                    // Ollama sends "" content next to tool_calls
+                    { Role: AiMessageRole.Assistant, Content: not (null or "") } => true,
                     _ => false
                 },
                 AiConversationDetailLevel.Full or _ => true,

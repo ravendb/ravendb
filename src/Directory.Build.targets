@@ -1,4 +1,6 @@
 ﻿<Project>
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
+
     <Target Name="AddPackageAliases" BeforeTargets="ResolveReferences" Outputs="%(PackageReference.Identity)">
         <PropertyGroup>
             <AliasPackageReference>@(PackageReference->'%(Identity)')</AliasPackageReference>

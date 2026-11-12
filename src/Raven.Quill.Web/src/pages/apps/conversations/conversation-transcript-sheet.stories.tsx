@@ -6,7 +6,7 @@ import { ConversationTranscriptSheet } from "./conversation-transcript-sheet";
 const meta = {
     title: "Apps/ConversationTranscriptSheet",
     component: ConversationTranscriptSheet,
-    tags: ["!dev"],
+    tags: ["test-only"],
     args: {
         slug: "demo",
         // the one mock conversation with no stored last exchange, so its detail carries the long sample transcript
@@ -90,8 +90,10 @@ export const ExpandedRowsStayExpandedAcrossScrolling: Story = {
         scrollElement.scrollTop = scrollElement.scrollHeight;
         await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).not.toBeInTheDocument());
 
-        scrollElement.scrollTop = 0;
-        await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).toBeInTheDocument());
+        await waitFor(() => {
+            scrollElement.scrollTop = 0;
+            expect(rowAt(sheet, TOOL_CALL_ROW)).toBeInTheDocument();
+        });
         expect(
             within(requireRowAt(sheet, TOOL_CALL_ROW)).getByRole("button", { name: /search-products/i }),
         ).toHaveAttribute("aria-expanded", "true");

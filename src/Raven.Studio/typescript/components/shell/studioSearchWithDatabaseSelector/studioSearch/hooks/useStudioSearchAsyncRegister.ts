@@ -12,7 +12,7 @@ import { useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAsync } from "react-async-hook";
 
 interface UseStudioSearchAsyncRegisterProps {
@@ -28,10 +28,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
-    const location = useMemo(
-        () => (activeDatabase ? DatabaseUtils.getFirstLocation(activeDatabase, localNodeTag) : null),
-        [activeDatabase, localNodeTag]
-    );
+    const location = activeDatabase ? DatabaseUtils.getFirstLocation(activeDatabase, localNodeTag) : null;
 
     const { databasesService, indexesService, tasksService } = useServices();
     const { appUrl } = useAppUrls();
@@ -151,7 +148,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
             }
             return tasksService.getOngoingTasks(activeDatabaseName, location);
         },
-        [activeDatabaseName, location],
+        [activeDatabaseName, location?.nodeTag, location?.shardNumber],
         {
             onSuccess(results: Raven.Server.Web.System.OngoingTasksResult) {
                 const ongoingTasks: StudioSearchItem[] = (results.OngoingTasks as OngoingTaskWithBroker[]).map((x) => ({
@@ -184,7 +181,7 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
             }
             return indexesService.getStats(activeDatabaseName, location);
         },
-        [activeDatabaseName, location],
+        [activeDatabaseName, location?.nodeTag, location?.shardNumber],
         {
             onSuccess(results) {
                 register(

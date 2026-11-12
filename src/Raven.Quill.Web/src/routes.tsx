@@ -15,7 +15,7 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { createBrowserRouter, Outlet, type RouteObject } from "react-router";
+import { createBrowserRouter, Navigate, Outlet, type RouteObject } from "react-router";
 import App from "@/app";
 import { UnsavedChangesProvider } from "@/components/form/unsaved-changes/unsaved-changes-provider";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
@@ -23,7 +23,7 @@ import { AppAgentEdit } from "@/pages/apps/app-agent-edit";
 import { AppAgents } from "@/pages/apps/app-agents";
 import { AppChannelDetail } from "@/pages/apps/app-channel-detail";
 import { AppChannels } from "@/pages/apps/app-channels";
-import { AppWebWidgetDefaultCustomize } from "@/pages/apps/app-web-widget-default-customize";
+import { AppChatWidgetDefaultCustomize } from "@/pages/apps/app-chat-widget-default-customize";
 import { AppConversations } from "@/pages/apps/app-conversations";
 import { AppDataSource } from "@/pages/apps/app-data-source";
 import { AppOverview } from "@/pages/apps/app-overview";
@@ -255,11 +255,11 @@ const appPages: AppRouteDefinition[] = [
         element: <AppChannelDetail />,
     },
     {
-        // App-level default web-widget styling. Reached from the Channels list.
-        path: "web-widget/default-customize",
-        title: "Default web widget appearance",
+        // App-level default chat widget styling. Reached from the Channels list.
+        path: "chat-widget/default-customize",
+        title: "Default chat widget appearance",
         isPageTitleHidden: true,
-        element: <AppWebWidgetDefaultCustomize />,
+        element: <AppChatWidgetDefaultCustomize />,
     },
     {
         path: "analytics",
@@ -433,6 +433,12 @@ export const router = createBrowserRouter([
                                     isPageTitleHidden: true,
                                     isSidebarCollapsed: true,
                                 } satisfies AppRouteHandle,
+                            },
+                            {
+                                // Old URL of the default chat widget appearance page, renamed in Quill-391.
+                                // Keeps existing links working.
+                                path: "web-widget/default-customize",
+                                element: <Navigate to="../chat-widget/default-customize" replace />,
                             },
                             {
                                 path: "*",

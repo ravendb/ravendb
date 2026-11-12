@@ -10,7 +10,7 @@
         "check:bundle": "node ./scripts/check-bundle.mjs",
         "test:unit": "vitest run --project=unit",
         "test:storybook": "vitest run --project=storybook",
-        "storybook": "storybook dev -p 6007 --no-open",
+        "storybook": "storybook dev -p 6107 --no-open --exact-port",
         "build-storybook": "storybook build"
     },
     "//": "Exact pins on purpose: this bundle ships to third-party websites, so a dependency bump here must be a deliberate, separately reviewed change (see scripts/check-bundle.mjs for the size guard).",
@@ -26,8 +26,8 @@
         "@types/hast": "3.0.5",
         "@types/node": "24.12.4",
         "tailwindcss": "4.3.0",
-        "typescript": "6.0.3",
-        "vite": "8.1.5",
-        "vitest": "4.1.11"
+        "typescript": "7.0.2",
+        "vite": "8.3.5",
+        "vitest": "4.1.12"
     }
 }

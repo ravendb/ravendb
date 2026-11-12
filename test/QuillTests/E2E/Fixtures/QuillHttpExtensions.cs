@@ -122,11 +122,21 @@ internal static class QuillRoutes
     // wizard (config-DB scoped)
     public const string SetupConnect = "/api/setup/connect";
     public const string SetupDiscover = "/api/setup/discover";
+    public const string SetupDraft = "/api/setup/draft";
+    public const string SetupDraftSave = "/api/setup/draft/save";
     public const string SetupMap = "/api/setup/map";
     public const string SetupVerifyCdc = "/api/setup/verify-cdc";
     public const string SetupProvision = "/api/setup/provision";
     public const string SetupTestMapping = "/api/setup/test-mapping";
-    public const string SuggestCdc = "/api/setup/suggest/cdc";
+    public const string MigrationProposalStart = "/api/setup/migration/proposal/start";
+    public const string MigrationProposalAsk = "/api/setup/migration/proposal/ask";
+    public const string MigrationAreaStart = "/api/setup/migration/area/start";
+    public const string MigrationAreaAsk = "/api/setup/migration/area/ask";
+    public const string MigrationPlanGet = "/api/setup/migration/plan/get";
+    public const string MigrationPlanSave = "/api/setup/migration/plan/save";
+    public const string MigrationPlanDiscard = "/api/setup/migration/plan/discard";
+    public const string MigrationStop = "/api/setup/migration/stop";
+    public const string MigrationApply = "/api/setup/migration/apply";
 
     // global (config-DB fan-out)
     public const string Usage = "/api/usage";
@@ -167,9 +177,6 @@ internal static class QuillRoutes
     public static string EmbedLinks(string slug) => $"/api/apps/{slug}/embed-links";
     public static string EmbedLink(string slug, string token) => $"/api/apps/{slug}/embed-links/{token}";
 
-    public static string SlackWebhook(string token) => $"/webhooks/slack/{token}";
-    public static string SlackWebhookInfo(string slug, string channelId) =>
-        $"/api/apps/{slug}/channels/{channelId}/slack/webhook";
     public static string SlackHealth(string slug) => $"/api/apps/{slug}/slack/health";
 
     public static string DiscordHealth(string slug) => $"/api/apps/{slug}/discord/health";

@@ -8,7 +8,8 @@ import {
     SheetSlideTransition,
     useSheetSlideNavigation,
 } from "components/common/splitView/SheetSlideNavigation";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
+import { indexErrorsUtils } from "components/pages/database/indexes/errors/IndexErrorsUtils";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -17,9 +18,15 @@ interface IndexErrorsSheetProps {
     errorDetails: ReactTableRow<IndexErrorPerDocument>;
     allRows: ReactTableRow<IndexErrorPerDocument>[];
     initialIndex: number;
+    disableLinks?: boolean;
 }
 
-export default function IndexErrorsSheet({ errorDetails, allRows, initialIndex }: IndexErrorsSheetProps) {
+export default function IndexErrorsSheet({
+    errorDetails,
+    allRows,
+    initialIndex,
+    disableLinks = false,
+}: IndexErrorsSheetProps) {
     const { close } = useViewSheet();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
@@ -44,15 +51,23 @@ export default function IndexErrorsSheet({ errorDetails, allRows, initialIndex }
                     {error.IndexName && (
                         <div className="d-flex justify-content-between align-items-center pb-1 border-bottom border-secondary">
                             <div className="small-label">Index name</div>
-                            <a href={appUrl.forEditIndex(error.IndexName, dbName)} className="text-truncate">
-                                {error.IndexName}
-                            </a>
+                            {disableLinks ? (
+                                <div className="fw-bold text-truncate">{error.IndexName}</div>
+                            ) : (
+                                <a href={appUrl.forEditIndex(error.IndexName, dbName)} className="text-truncate">
+                                    {error.IndexName}
+                                </a>
+                            )}
                         </div>
                     )}
                     {error.Document && (
                         <div className="d-flex justify-content-between align-items-center pb-1 border-bottom border-secondary">
                             <div className="small-label">Document ID</div>
-                            <CellDocumentValue value={error.Document} databaseName={dbName} hasHyperlinkForIds />
+                            <CellDocumentId
+                                id={error.Document}
+                                databaseName={dbName}
+                                hasHyperlink={!disableLinks && indexErrorsUtils.isDocumentError(error)}
+                            />
                         </div>
                     )}
                     {error.LocalTime && (

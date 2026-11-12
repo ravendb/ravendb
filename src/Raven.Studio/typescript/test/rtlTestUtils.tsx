@@ -17,7 +17,7 @@ import * as byNameQueries from "./byNameQueries";
 import * as byClassNameQueries from "./byClassNameQueries";
 import { ChangesProvider } from "hooks/useChanges";
 import { mockHooks } from "test/mocks/hooks/MockHooks";
-import { createStoreConfiguration } from "components/store";
+import { createTestStore } from "test/createTestStore";
 import { Provider as ReduxProvider } from "react-redux";
 import { setEffectiveTestStore } from "components/storeCompat";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
@@ -25,6 +25,8 @@ import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
 import { userEvent } from "@testing-library/user-event";
 import { DialogProvider } from "components/common/Dialog";
 import { SplitViewProvider } from "components/common/splitView/SplitView";
+import { I18nextProvider } from "react-i18next";
+import { i18n } from "common/i18n/i18n";
 
 let needsTestMock = true;
 
@@ -81,35 +83,35 @@ async function fillInput(element: HTMLElement, value: string) {
 
 const AllProviders = () => MockProviders;
 
-const JEST_WORKER_WARN_AFTER_MS = 1000;
-
 interface MockProvidersProps {
     children: React.ReactNode;
     isSplitViewDisabled?: boolean;
 }
 
 export function MockProviders({ children, isSplitViewDisabled }: MockProvidersProps) {
-    const [store] = useState(() => createStoreConfiguration({ devChecksWarnAfterMs: JEST_WORKER_WARN_AFTER_MS }));
+    const [store] = useState(createTestStore);
 
     setEffectiveTestStore(store);
 
     return (
         <ReduxProvider store={store}>
-            <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
-                <ConfirmDialogProvider>
-                    <DialogProvider>
-                        <ServiceProvider services={mockServices.context}>
-                            <ChangesProvider changes={mockHooks.useChanges.mock}>
-                                {isSplitViewDisabled ? (
-                                    <>{children}</>
-                                ) : (
-                                    <SplitViewProvider>{children}</SplitViewProvider>
-                                )}
-                            </ChangesProvider>
-                        </ServiceProvider>
-                    </DialogProvider>
-                </ConfirmDialogProvider>
-            </DirtyFlagProvider>
+            <I18nextProvider i18n={i18n}>
+                <DirtyFlagProvider setIsDirty={mockHooks.useDirtyFlag.mock}>
+                    <ConfirmDialogProvider>
+                        <DialogProvider>
+                            <ServiceProvider services={mockServices.context}>
+                                <ChangesProvider changes={mockHooks.useChanges.mock}>
+                                    {isSplitViewDisabled ? (
+                                        <>{children}</>
+                                    ) : (
+                                        <SplitViewProvider>{children}</SplitViewProvider>
+                                    )}
+                                </ChangesProvider>
+                            </ServiceProvider>
+                        </DialogProvider>
+                    </ConfirmDialogProvider>
+                </DirtyFlagProvider>
+            </I18nextProvider>
         </ReduxProvider>
     );
 }

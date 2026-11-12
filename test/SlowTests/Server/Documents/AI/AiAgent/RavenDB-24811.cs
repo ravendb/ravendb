@@ -14,7 +14,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -40,7 +40,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
     }
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults_WithTools(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -70,9 +70,8 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
             wasCalled = true;
         });
 
-        chat.SetUserPrompt("Give me 15 real cities names, one per line");
-        // the tool-call phase must not stream the answer; a local model may narrate before/with the tool call,
-        // so it is captured separately and only the hosted providers are held to that.
+        // asking for the name makes small models call 'whoami' too
+        chat.SetUserPrompt("Greet me by my name, then give me 15 real cities names, one per line");
         var toolPhaseStream = new StringBuilder();
         var result = await chat.StreamAsync<AiAgentBasics.OutputSchema>(x=>x.Answer, s =>
         {
@@ -81,8 +80,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
         }, CancellationToken.None);
         Assert.Equal(AiConversationResult.ActionRequired,result.Status);
         Assert.True(wasCalled);
-        if (config.AiConnectorType != AiConnectorType.Ollama)
-            Assert.Empty(toolPhaseStream.ToString());
+        Assert.Empty(toolPhaseStream.ToString());
         chat.AddActionResponse(actionRequest.ToolId, "I'm batman");
 
         var finalAnswerStream = new StringBuilder();

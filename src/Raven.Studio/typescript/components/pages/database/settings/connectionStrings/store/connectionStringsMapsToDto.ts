@@ -352,6 +352,19 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
+        AnthropicSettings:
+            connection.connectorType === "anthropicSettings"
+                ? {
+                      ApiKey: connection.anthropicSettings.apiKey,
+                      Model: connection.anthropicSettings.model,
+                      Endpoint: connection.anthropicSettings.endpoint,
+                      MaxOutputTokens: connection.anthropicSettings.maxOutputTokens,
+                      ReasoningEffort: connection.anthropicSettings.reasoningEffort,
+                      EnablePromptCache: connection.anthropicSettings.enablePromptCache,
+                      ApiVersion: connection.anthropicSettings.apiVersion,
+                      EmbeddingsMaxConcurrentBatches: null,
+                  }
+                : null,
     };
 }
 
@@ -360,7 +373,8 @@ function mapEmbeddingsMaxConcurrentBatchesToDto(connection: AiConnection): numbe
         return null;
     }
 
-    return connection[connection.connectorType].embeddingsMaxConcurrentBatches;
+    const settings = connection[connection.connectorType];
+    return "embeddingsMaxConcurrentBatches" in settings ? settings.embeddingsMaxConcurrentBatches : null;
 }
 
 function mapDimensionsToDto(connection: AiConnection): number {

@@ -20,6 +20,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
+import useUniqueId from "components/hooks/useUniqueId";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -28,6 +29,9 @@ export default function CertificatesUploadModal() {
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
     const permissionsConfirm = useCertificatePermissionsConfirm();
+    const titleId = useUniqueId("upload-certificate-title");
+
+    const close = () => dispatch(certificatesActions.isUploadModalOpenToggled());
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -63,17 +67,22 @@ export default function CertificatesUploadModal() {
     };
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleUpload)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="upload" className="fs-1" color="primary" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Upload client certificate</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="upload" size="lg" color="primary" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Upload client certificate
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
@@ -96,14 +105,11 @@ export default function CertificatesUploadModal() {
                         <CertificatesExpireField />
                         <hr />
                         <CertificatesPermissionsField />
+                        <hr />
                         <Certificates2FAField />
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner

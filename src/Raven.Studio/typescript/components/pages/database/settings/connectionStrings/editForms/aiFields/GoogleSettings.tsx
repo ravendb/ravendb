@@ -18,8 +18,8 @@ import { useFormContext, useWatch } from "react-hook-form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
-import assertUnreachable from "components/utils/assertUnreachable";
 import PromptCacheField from "./PromptCacheField";
+import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -48,6 +48,38 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             ? tasksService.testServerWideAiConnectionString("Google", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, settings);
     });
+
+    const asyncGetModelOptions = useAsyncDebounce(
+        async () => {
+            const apiKey = formValues.googleSettings.apiKey?.trim() ?? "";
+            const endpoint = formValues.googleSettings.endpoint?.trim() ?? "";
+
+            if (!apiKey) {
+                return [];
+            }
+
+            const dto: AiModelsRequestDto = {
+                ConnectorType: "Google",
+                GoogleSettings: {
+                    ApiKey: apiKey,
+                    Endpoint: endpoint,
+                    AiVersion: formValues.googleSettings.aiVersion,
+                },
+            };
+
+            try {
+                const result = await tasksService.getAiModels(dto);
+                return result
+                    .map((x) => x.replace(/^models\//, ""))
+                    .sort()
+                    .map((x) => ({ label: x, value: x }) satisfies SelectOption);
+            } catch {
+                return [];
+            }
+        },
+        [formValues.googleSettings.apiKey, formValues.googleSettings.endpoint, formValues.googleSettings.aiVersion],
+        300
+    );
 
     return (
         <>
@@ -109,8 +141,9 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     control={control}
                     name="googleSettings.model"
                     isDisabled={isUsedByAnyTask}
-                    placeholder="Select a model (or enter new one)"
-                    options={getModelOptions(formValues.modelType)}
+                    placeholder="Select a model or enter a new one (provide API key to see available models)"
+                    options={asyncGetModelOptions.result ?? []}
+                    isLoading={asyncGetModelOptions.loading}
                 />
             </div>
             <PromptCacheField baseName="googleSettings" serverDefaultValue={false} />
@@ -146,36 +179,6 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         </>
     );
 }
-
-// For now we use hardcoded values. Only these models have been tested
-function getModelOptions(modelType: FormData["modelType"]): SelectOption[] {
-    switch (modelType) {
-        case "Chat":
-            return chatModelOptions;
-        case "TextEmbeddings":
-            return embeddingsModelOptions;
-        default:
-            assertUnreachable(modelType);
-    }
-}
-
-const embeddingsModelOptions: SelectOption[] = [
-    ...[
-        "text-embedding-004",
-        "text-embedding-005",
-        "textembedding-gecko@001",
-        "textembedding-gecko@002",
-        "textembedding-gecko@003",
-        "textembedding-gecko-multilingual@001",
-        "text-multilingual-embedding-002",
-    ].map((x) => ({ label: x, value: x })),
-    { value: "text-embedding-large-exp-03-07", label: "text-embedding-large-exp-03-07 (experimental)" },
-];
-
-const chatModelOptions: SelectOption[] = ["gemini-3-pro-preview", "gemini-3-flash-preview"].map((x) => ({
-    label: x,
-    value: x,
-}));
 
 const endpointOptions: SelectOption[] = ["https://generativelanguage.googleapis.com"].map((x) => ({
     label: x,

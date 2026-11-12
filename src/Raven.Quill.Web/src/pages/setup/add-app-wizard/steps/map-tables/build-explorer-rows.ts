@@ -122,6 +122,6 @@ function addChildRows({ rows, parentPath, table, isRootDisabled, depth, expanded
     });
 }
 
-function hasChildTables(table: FormRootTable | FormEmbeddedTable) {
+export function hasChildTables(table: FormRootTable | FormEmbeddedTable) {
     return Boolean(table?.linkedTables?.length || table?.embeddedTables?.length);
 }

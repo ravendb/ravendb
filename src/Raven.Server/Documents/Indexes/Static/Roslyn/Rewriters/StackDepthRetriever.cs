@@ -11,7 +11,7 @@ public sealed class StackDepthRetriever : CSharpSyntaxRewriter
 
     private int _selectDepth;
 
-    public int StackSize => _letCounter + _selectDepth;
+    public int LetAndSelectDepth => _letCounter + _selectDepth;
 
     public void Clear()
     {

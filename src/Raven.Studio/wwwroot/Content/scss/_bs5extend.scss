@@ -339,7 +339,7 @@ select {
         --#{$prefix}alert-bg: #{$bg};
         --#{$prefix}alert-border-color: #{$border-color};
 
-        > h3,
+        > :is(h1, h2, h3, h4, h5, h6),
         .title-icon {
             color: $title-color;
         }
@@ -471,12 +471,13 @@ select {
                 padding: 0;
             }
         }
-        .react-select__menu {
-            text-align: left;
-            min-width: 120px;
-            width: auto;
-        }
     }
+}
+
+.react-select__menu.time-window-select-menu {
+    text-align: left;
+    min-width: 120px;
+    width: auto;
 }
 
 .input-group {

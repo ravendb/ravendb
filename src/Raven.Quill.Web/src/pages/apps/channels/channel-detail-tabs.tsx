@@ -12,7 +12,7 @@ import { SlackConnectTab } from "@/pages/apps/channels/slack-connect-tab";
 import { TelegramChannelBindings } from "@/pages/apps/channels/telegram-channel-bindings";
 import { TelegramConnectTab } from "@/pages/apps/channels/telegram-connect-tab";
 import { TelegramMessagesTab } from "@/pages/apps/channels/telegram-messages-tab";
-import { WebWidgetAppearanceTab } from "@/pages/apps/channels/web-widget-appearance-tab";
+import { ChatWidgetAppearanceTab } from "@/pages/apps/channels/chat-widget-appearance-tab";
 import { SectionCard } from "@/pages/apps/section-card";
 
 export type ChannelTabContext = {
@@ -26,7 +26,7 @@ export type ChannelTabDef = {
     label: string;
     icon: LucideIcon;
     // "padded": default breathing padding. "bare": brings its own sticky top bar / preview and wants
-    // content flush (the web widget's Customize tab). "fill": a fixed header that stays put while the body
+    // content flush (the embedded chat channel's Customize tab). "fill": a fixed header that stays put while the body
     // scrolls beneath it (the editable Telegram tabs).
     layout: "padded" | "bare" | "fill";
     render: (ctx: ChannelTabContext) => ReactNode;
@@ -73,7 +73,7 @@ const IFRAME_TABS: ChannelTabDef[] = [
         label: "Customize appearance",
         icon: Palette,
         layout: "bare",
-        render: ({ slug, channel }) => <WebWidgetAppearanceTab slug={slug} channelId={channel.channelId} />,
+        render: ({ slug, channel }) => <ChatWidgetAppearanceTab slug={slug} channelId={channel.channelId} />,
     },
 ];
 

@@ -1,24 +1,32 @@
 import { useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { useFormContext, useFormState } from "react-hook-form";
-import { CheckIcon, CircleAlertIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from "lucide-react";
+import { CheckIcon, CircleAlertIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import type { DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
 import type { WizardBodyComponentProps } from "@/components/form/wizard/form-wizard";
 import { WizardErrorAlert } from "@/components/form/wizard/wizard-error-alert";
+import { SearchInput } from "@/components/search-input";
 import { Alert, AlertTitle } from "@/components/shadcn/ui/alert";
 import { Badge } from "@/components/shadcn/ui/badge";
 import { Button } from "@/components/shadcn/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/shadcn/ui/input-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/shadcn/ui/tabs";
 import { countSelectedRows } from "@/components/table/row-range-selection";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { getTableKey, isTableSupported, MAX_SELECTED_TABLES } from "@/pages/setup/add-app-wizard/discover-utils";
+import {
+    getTableKey,
+    hasTableWarnings,
+    isTableSupported,
+    matchesTableSearch,
+    MAX_SELECTED_TABLES,
+    type WarningsFilter,
+} from "@/pages/setup/add-app-wizard/discover-utils";
 import { DefineSchemasSheet } from "@/pages/setup/add-app-wizard/steps/verify/define-schemas-sheet";
 import { NeedsConfigTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/needs-config-tables-table";
 import { useDiscoverTablesMutation } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
 import { useVerifySchemaCdcState } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-cdc";
 import { VerifiedTablesTable } from "@/pages/setup/add-app-wizard/steps/verify/verified-tables-table";
+import { WarningsFilterToggle } from "@/pages/setup/add-app-wizard/steps/verify/warnings-filter-toggle";
 import { WizardErrorList } from "@/components/form/wizard/wizard-error-list";
 import {
     DiscoverLoadingSkeleton,
@@ -41,6 +49,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
 
     const [activeTab, setActiveTab] = useState<VerifyTab>("verified");
     const [search, setSearch] = useState("");
+    const [warningsFilter, setWarningsFilter] = useState<WarningsFilter>("all");
     const [isSchemasSheetOpen, setIsSchemasSheetOpen] = useState(false);
     const [rowSelection, setRowSelection] = useState<RowSelectionState>(() =>
         Object.fromEntries(getValues("verifySchema.tables").map((table) => [getTableKey(table), true])),
@@ -101,6 +110,11 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
     // The tabs are hidden when every table is verified, so fall back to the verified tab
     // even if "needs-configuration" was active before (e.g. after a re-discovery).
     const currentTab: VerifyTab = needsConfigTables.length > 0 ? activeTab : "verified";
+    // Same fallback for the warnings filter, which is hidden while no verified table has warnings.
+    const hasWarningTables = verifiedTables.some(hasTableWarnings);
+    const currentWarningsFilter: WarningsFilter = hasWarningTables ? warningsFilter : "all";
+    const isWarningsFilterShown = currentTab === "verified" && hasWarningTables;
+    const searchedVerifiedTables = verifiedTables.filter((table) => matchesTableSearch(table, search));
 
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -113,30 +127,6 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                 <DiscoverLoadingSkeleton />
             ) : allTables.length > 0 ? (
                 <>
-                    <div className="flex items-center gap-2">
-                        <InputGroup className="max-w-sm">
-                            <InputGroupAddon>
-                                <SearchIcon aria-hidden="true" />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                                value={search}
-                                onChange={(event) => setSearch(event.target.value)}
-                                placeholder="Search by table name..."
-                                type="search"
-                            />
-                        </InputGroup>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="ml-auto"
-                            onClick={() => setIsSchemasSheetOpen(true)}
-                            disabled={isVerifyCdcRunning}
-                        >
-                            <PlusIcon aria-hidden="true" />
-                            Customize schemas
-                        </Button>
-                    </div>
-
                     {needsConfigTables.length > 0 && (
                         <Tabs value={currentTab} onValueChange={(value) => setActiveTab(value as VerifyTab)}>
                             <TabsList>
@@ -158,6 +148,34 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                         </Tabs>
                     )}
 
+                    <div className="flex flex-wrap items-center gap-2">
+                        <SearchInput
+                            placeholder="Search by table name..."
+                            clearLabel="Clear the search"
+                            value={search}
+                            onValueChange={setSearch}
+                            className="max-w-xs grow basis-48"
+                        />
+                        {isWarningsFilterShown && (
+                            <WarningsFilterToggle
+                                value={currentWarningsFilter}
+                                onValueChange={setWarningsFilter}
+                                tableCount={searchedVerifiedTables.length}
+                                warningTableCount={searchedVerifiedTables.filter(hasTableWarnings).length}
+                            />
+                        )}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="ml-auto"
+                            onClick={() => setIsSchemasSheetOpen(true)}
+                            disabled={isVerifyCdcRunning}
+                        >
+                            <PlusIcon aria-hidden="true" />
+                            Customize schemas
+                        </Button>
+                    </div>
+
                     {currentTab === "needs-configuration" && (
                         <WarningNotice>
                             {needsConfigTables.length === 1
@@ -168,8 +186,8 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
 
                     {currentTab === "verified" && countSelectedRows(rowSelection) >= MAX_SELECTED_TABLES && (
                         <WarningNotice>
-                            During the beta, one app processes at most {MAX_SELECTED_TABLES} tables - support for
-                            unlimited tables is coming later. Deselect a table to pick a different one.
+                            One app processes at most {MAX_SELECTED_TABLES} tables - support for unlimited tables is
+                            coming later. Deselect a table to pick a different one.
                         </WarningNotice>
                     )}
 
@@ -179,6 +197,7 @@ export function VerifySchemaStep({ isBusy }: WizardBodyComponentProps) {
                                 tables={verifiedTables}
                                 totalTableCount={allTables.length}
                                 search={search}
+                                warningsFilter={currentWarningsFilter}
                                 rowSelection={rowSelection}
                                 onRowSelectionChange={handleRowSelectionChange}
                                 disabled={isVerifyCdcRunning}

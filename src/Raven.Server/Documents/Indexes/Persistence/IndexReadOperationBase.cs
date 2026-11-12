@@ -11,7 +11,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
 
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
     {
         public abstract bool IsSharded { get; }
         protected readonly QueryBuilderFactories QueryBuilderFactories;
-        private readonly MemoryInfo _memoryInfo;
+        private readonly QueryInfo _queryInfo;
         private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
 
         protected IndexReadOperationBase(Index index, RavenLogger logger, QueryBuilderFactories queryBuilderFactories, IndexQueryServerSide query) : base(index, logger)
@@ -30,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
             if (query != null && logger.IsInfoEnabled)
             {
-                _memoryInfo = new MemoryInfo
+                _queryInfo = new QueryInfo
                 {
                     AllocatedManagedBefore = GC.GetAllocatedBytesForCurrentThread(),
                     AllocatedUnmanagedBefore = NativeMemory.ThreadAllocations.Value.TotalAllocated,
@@ -42,6 +41,15 @@ namespace Raven.Server.Documents.Indexes.Persistence
         }
 
         public abstract long EntriesCount();
+
+        public void TrackResultsForLogging(Reference<long> totalResults, Reference<long> skippedResults)
+        {
+            if (_queryInfo == null)
+                return;
+
+            _queryInfo.TotalResults = totalResults;
+            _queryInfo.SkippedResults = skippedResults;
+        }
 
         internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved()
         {
@@ -81,12 +89,12 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public override void Dispose()
         {
             if ((_logger.IsInfoEnabled || (_logger.IsWarnEnabled && _index.IsLowMemory)) &&
-                _memoryInfo != null && _memoryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
+                _queryInfo != null && _queryInfo.ManagedThreadId == NativeMemory.CurrentThreadStats.ManagedThreadId)
             {
                 // information logs are enabled or we're in a low memory state and operations logs are enabled
 
-                var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _memoryInfo.AllocatedManagedBefore;
-                var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _memoryInfo.AllocatedUnmanagedBefore);
+                var mangedDiff = GC.GetAllocatedBytesForCurrentThread() - _queryInfo.AllocatedManagedBefore;
+                var unmanagedDiff = Math.Max(0, NativeMemory.ThreadAllocations.Value.TotalAllocated - _queryInfo.AllocatedUnmanagedBefore);
 
                 if (_logger.IsWarnEnabled && mangedDiff < ThresholdForMemoryUsageLoggingInBytes && unmanagedDiff < ThresholdForMemoryUsageLoggingInBytes)
                 {
@@ -94,11 +102,13 @@ namespace Raven.Server.Documents.Indexes.Persistence
                     return;
                 }
 
-                var msg = $"Query for index `{_indexName}` for query: `{_memoryInfo.Query}`, " +
-                          $"page size: {_memoryInfo.PageSize:#,#;;0}, " +
+                var msg = $"Query for index `{_indexName}` for query: `{_queryInfo.Query}`, " +
+                          $"page size: {_queryInfo.PageSize:#,#;;0}, " +
+                          $"total results: {FormatCount(_queryInfo.TotalResults)}, " +
+                          $"skipped results: {FormatCount(_queryInfo.SkippedResults)}, " +
                           $"allocated managed: {new Size(mangedDiff, SizeUnit.Bytes)}, " +
                           $"allocated unmanaged: {new Size(unmanagedDiff, SizeUnit.Bytes)}, " +
-                          $"managed thread id: {_memoryInfo.ManagedThreadId}";
+                          $"managed thread id: {_queryInfo.ManagedThreadId}";
 
                 if (_logger.IsWarnEnabled)
                 {
@@ -111,6 +121,11 @@ namespace Raven.Server.Documents.Indexes.Persistence
             }
         }
 
+        private static string FormatCount(Reference<long> count)
+        {
+            return count == null ? "unknown" : count.Value.ToString("#,#;;0");
+        }
+
         public struct QueryResult
         {
             public Document Result;
@@ -118,13 +133,15 @@ namespace Raven.Server.Documents.Indexes.Persistence
             public ExplanationResult Explanation;
         }
 
-        private sealed class MemoryInfo
+        private sealed class QueryInfo
         {
             public long AllocatedManagedBefore { get; init; }
             public long AllocatedUnmanagedBefore { get; init; }
             public int ManagedThreadId { get; init; }
             public Queries.AST.Query Query { get; init; }
             public long PageSize { get; init; }
+            public Reference<long> TotalResults { get; set; }
+            public Reference<long> SkippedResults { get; set; }
         }
     }
 }

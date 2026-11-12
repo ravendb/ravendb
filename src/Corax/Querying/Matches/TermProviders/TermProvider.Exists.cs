@@ -19,10 +19,10 @@ namespace Corax.Querying.Matches.TermProviders
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly long _numberOfTerms;
-        private readonly CompactTree _tree;
         private readonly Querying.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
-        
+        private readonly double _averageTermLength;
+
         
         private readonly bool _nullExists;
         private readonly PostingList _nullPostingList;
@@ -36,9 +36,9 @@ namespace Corax.Querying.Matches.TermProviders
 
         public ExistsTermProvider(Querying.IndexSearcher searcher, CompactTree tree, in FieldMetadata field)
         {
-            _tree = tree;
             _field = field;
             _searcher = searcher;
+            _averageTermLength = field.HasBoost ? searcher.GetAverageTermLength(field, tree) : 0;
             _nullIterator = default;
             _nullExists = false;
             _fetchNulls = false;
@@ -84,25 +84,23 @@ namespace Corax.Querying.Matches.TermProviders
             _iterator.Reset();
         }
         
-        public bool Next(out TermMatch term)
+        public bool Next(out long termId, out double termRatioToWholeCollection)
         {
+            termRatioToWholeCollection = 1;
             if (_fetchNulls)
             {
                 _fetchNulls = false;
-                term = _searcher.TermQuery(_field, containerId: _postingListId, 1D);
-                return true;
-            }
-          
-            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
-            var key = scope.Key;
-            while (_iterator.MoveNext(key, out _, out _))
-            {
-                term = _searcher.TermQuery(_field, key, _tree);
+                termId = _postingListId;
                 return true;
             }
 
-            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
-            return false;
+            using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
+            var key = scope.Key;
+            if (_iterator.MoveNext(key, out termId, out _) == false)
+                return false;
+
+            termRatioToWholeCollection = Querying.IndexSearcher.GetTermRatioToWholeCollection(key, _averageTermLength);
+            return true;
         }
 
         public bool GetNextTerm(out ReadOnlySpan<byte> term)

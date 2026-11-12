@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
-import { RefreshCw, SparklesIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
-import { Button } from "@/components/shadcn/ui/button";
 import { InputGroupAddon } from "@/components/shadcn/ui/input-group";
 import { FormInput } from "@/components/form/form-input";
+import { GenerateFromNameButton } from "@/components/form/generate-from-name-button";
 import { FormTextarea } from "@/components/form/form-textarea";
 import {
     toAgentIdentifier,
@@ -24,6 +24,7 @@ export const SYSTEM_PROMPT_PLACEHOLDER =
 export function AgentConfigurationTab() {
     const { control, getValues, setValue } = useFormContext<AgentFormData>();
     const mode = useWatch({ control, name: "create.mode" });
+    const [name, identifier] = useWatch({ control, name: ["review.name", "review.identifier"] });
     const hasEditedIdentifier = useCapabilityWizardStore((state) => state.hasEditedIdentifier);
     const setHasEditedIdentifier = useCapabilityWizardStore((state) => state.setHasEditedIdentifier);
     // The AI-made configuration is seeded into the same editable fields as a manual one, so this
@@ -69,20 +70,21 @@ export function AgentConfigurationTab() {
                             placeholder="e.g. customer-service-agent"
                             description="A unique identifier for the agent. Permanent once the agent is created."
                             // The identifier follows the agent name until the operator types their own.
-                            afterChange={() => setHasEditedIdentifier(true)}
+                            afterChange={(event) =>
+                                setHasEditedIdentifier(
+                                    event.target.value !== toAgentIdentifier(getValues("review.name")),
+                                )
+                            }
                             addons={
                                 <InputGroupAddon align="inline-end">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => {
-                                            setIdentifierFromName(getValues("review.name"));
+                                    <GenerateFromNameButton
+                                        isAlreadyGenerated={identifier === toAgentIdentifier(name)}
+                                        alreadyGeneratedTooltip="The identifier is already generated from the agent name."
+                                        onGenerate={() => {
+                                            setIdentifierFromName(name);
                                             setHasEditedIdentifier(false);
                                         }}
-                                    >
-                                        <RefreshCw />
-                                        Regenerate
-                                    </Button>
+                                    />
                                 </InputGroupAddon>
                             }
                         />

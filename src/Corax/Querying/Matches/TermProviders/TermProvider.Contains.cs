@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -15,6 +15,7 @@ namespace Corax.Querying.Matches.TermProviders
         private readonly Querying.IndexSearcher _searcher;
         private readonly FieldMetadata _field;
         private readonly CompactKey _term;
+        private readonly double _averageTermLength;
 
         private CompactTree.Iterator<TLookupIterator> _iterator;
 
@@ -24,6 +25,7 @@ namespace Corax.Querying.Matches.TermProviders
             _tree = tree;
             _searcher = searcher;
             _field = field;
+            _averageTermLength = field.HasBoost ? searcher.GetAverageTermLength(field, tree) : 0;
             _iterator = tree.Iterate<TLookupIterator>();
             _iterator.Reset();
             _term = term;
@@ -42,12 +44,12 @@ namespace Corax.Querying.Matches.TermProviders
             _iterator.Reset();
         }
 
-        public bool Next(out TermMatch term)
+        public bool Next(out long termId, out double termRatioToWholeCollection)
         {
             var contains = _term.Decoded();
             using var scope = new CompactKeyCacheScope(_searcher._transaction.LowLevelTransaction);
             var key = scope.Key;
-            while (_iterator.MoveNext(key, out _, out _))
+            while (_iterator.MoveNext(key, out termId, out _))
             {
                 var termSlice = key.Decoded();
                 if (!termSlice.Contains(contains))
@@ -55,11 +57,11 @@ namespace Corax.Querying.Matches.TermProviders
                     continue;
                 }
 
-                term = _searcher.TermQuery(_field, key, _tree);
+                termRatioToWholeCollection = Querying.IndexSearcher.GetTermRatioToWholeCollection(key, _averageTermLength);
                 return true;
             }
 
-            term = TermMatch.CreateEmpty(_searcher, _searcher.Allocator);
+            termRatioToWholeCollection = 1;
             return false;
         }
 

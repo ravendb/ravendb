@@ -43,7 +43,7 @@ export function EmbedLinkPreview({ url, expiresAt, maxInvocations }: EmbedLinkPr
             </Field>
             <Text variant="caption">
                 Expires <Timestamp value={expiresAt} textVariant="inherit" /> · up to {maxInvocations.toLocaleString()}{" "}
-                chats.
+                prompts.
             </Text>
             <iframe
                 src={url}

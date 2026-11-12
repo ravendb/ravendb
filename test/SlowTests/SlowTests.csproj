@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.12</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.15</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>SlowTests</AssemblyName>
     <PackageId>SlowTests</PackageId>
@@ -103,6 +103,10 @@
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
     <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <None Remove="Data\RavenDB_27171\RavenDB_27171.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_27747\RavenDB_27747.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_27747\RavenDB_27747.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_27747\RavenDB_27747_Corax.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_27747\RavenDB_27747_Corax.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <None Remove="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
     <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
@@ -170,7 +174,6 @@
     <PackageReference Include="FubarDev.FtpServer" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" />
     <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="xunit.runner.visualstudio">
@@ -252,6 +255,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\SystemVersion\RavenDB_13724.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="SchemaUpgrade\Issues\DocumentsVersion\RavenDB_22932_PrefixedShard_62.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SchemaUpgrade\Issues\VoronCurrentVersion\schema_999\headers.one">

@@ -54,6 +54,8 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
 
     public override void ValidateFields(List<string> errors)
     {
+        base.ValidateFields(errors);
+
         if (string.IsNullOrWhiteSpace(Uri))
             errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
 
@@ -111,4 +113,7 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
     /// </summary>
     public string Endpoint => Uri;
     public Uri GetBaseEndpointUri() => new Uri(Endpoint);
+
+    // Ollama has no prompt cache setting, so it always follows the default.
+    bool? IAiSettings.EnablePromptCache => null;
 }

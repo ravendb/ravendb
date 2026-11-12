@@ -4,8 +4,7 @@ import endpoints = require("endpoints");
 import document = require("models/database/documents/document");
 
 class stubsObjectsContainer {
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    private static stubsObjects: dictionary<{}> = {};
+    private static stubsObjects: dictionary<Record<string, number>> = {};
   
     static getStubObject(propertiesCount: number) {
         if (propertiesCount in stubsObjectsContainer.stubsObjects) {

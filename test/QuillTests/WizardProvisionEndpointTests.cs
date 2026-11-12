@@ -41,7 +41,7 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
         Assert.Contains("reserved", ex.Body);
     }
 
-    // provision is an upsert: the edit wizard reruns the whole flow and submits to the same endpoint
+    // provision is an upsert for the edit wizard, which reruns the whole flow and submits to the same endpoint
     [RavenFact(RavenTestCategory.Quill)]
     public async Task Provision_on_an_existing_slug_updates_the_app()
     {
@@ -50,7 +50,7 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
         var first = await Host.ProvisionAsync(new ProvisionRequest("First App", slug));
 
         await SeedWizardMapAsync(Host.Config, slug, collection: "RenamedOrders");
-        var second = await Host.ProvisionAsync(new ProvisionRequest("Second App", slug));
+        var second = await Host.ProvisionAsync(new ProvisionRequest("Second App", slug, UpdateExisting: true));
 
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(slug, second.Slug);
@@ -73,7 +73,7 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
         await Host.ProvisionAsync(new ProvisionRequest("App", slug));
 
         await SeedWizardMapAsync(Host.Config, slug, connectionString: "Host=10.0.0.2;Database=src");
-        await Host.ProvisionAsync(new ProvisionRequest("App", slug));
+        await Host.ProvisionAsync(new ProvisionRequest("App", slug, UpdateExisting: true));
 
         var cdc = await Host.GetCdcAsync(slug);
         Assert.Equal("Host=10.0.0.2;Database=src", cdc.ConnectionString);
@@ -89,10 +89,34 @@ public class WizardProvisionEndpointTests(ITestOutputHelper output, QuillCollect
         var first = await Host.ProvisionAsync(new ProvisionRequest("First App", normalized));
 
         // messy slug normalizes to the already-provisioned one, so this updates it
-        var second = await Host.ProvisionAsync(new ProvisionRequest("Renamed App", $"My Custom App {suffix}!!"));
+        var second = await Host.ProvisionAsync(
+            new ProvisionRequest("Renamed App", $"My Custom App {suffix}!!", UpdateExisting: true));
 
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(normalized, second.Slug);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provision_returns_409_when_the_slug_already_belongs_to_an_app()
+    {
+        var slug = "taken-" + Guid.NewGuid().ToString("N");
+        await SeedWizardMapAsync(Host.Config, slug, collection: "Orders");
+        await Host.ProvisionAsync(new ProvisionRequest("First App", slug));
+
+        await SeedWizardMapAsync(Host.Config, slug, collection: "RenamedOrders");
+        var ex = await Assert.ThrowsAsync<QuillHttpException>(
+            () => Host.ProvisionAsync(new ProvisionRequest("Other App", slug)));
+
+        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
+        Assert.Contains("First App", ex.Body);
+
+        // the live app keeps both its name and its mapping
+        using var session = Host.Config.OpenAsyncSession();
+        var app = await session.LoadAsync<App>($"apps/{slug}");
+        Assert.Equal("First App", app.AppName);
+
+        var cdc = await Host.GetCdcAsync(slug);
+        Assert.Equal("Orders", cdc.Configuration.Tables[0].CollectionName);
     }
 
     // a database under the slug with no app behind it is not ours to adopt

@@ -61,10 +61,6 @@ class migrateDatabase extends viewModelBase {
         
         const getCollectionsDebounced = _.debounce(() => this.getCollections(), 500);
         
-        const mongoConfiguration = this.model.mongoDbConfiguration;
-        mongoConfiguration.connectionString.subscribe(() => getCollectionsDebounced());
-        mongoConfiguration.databaseName.subscribe(() => getCollectionsDebounced());
-        
         const cosmosConfiguration = this.model.cosmosDbConfiguration;
         cosmosConfiguration.azureEndpointUrl.subscribe(() => getCollectionsDebounced());
         cosmosConfiguration.primaryKey.subscribe(() => getCollectionsDebounced());
@@ -137,11 +133,6 @@ class migrateDatabase extends viewModelBase {
                           The Tools package can be downloaded from the <a target="_blank" href="http://ravendb.net/download">ravendb.net</a> website.</small>`
             });
 
-        popoverUtils.longWithHover($(".migrate-gridfs small"),
-            {
-                content: 'GridFS attachments will be saved as documents with attachments in <strong>@files</strong> collection.'
-            });
-
         popoverUtils.longWithHover($("#scriptPopover"),
             {
                 content:
@@ -186,18 +177,12 @@ class migrateDatabase extends viewModelBase {
         const activeConfiguration = this.model.activeConfiguration();
 
         this.spinners.getDatabaseNames(true);
-        const selectMigrationOption = this.model.selectMigrationOption();
         const db = this.activeDatabase();
 
         return migrateDatabaseCommand.getDatabaseNames(db, this.model.toDto())
             .execute()
             .done((databasesInfo) => {
                 activeConfiguration.databaseNames(databasesInfo.Databases);
-            })
-            .fail(() => {
-                if (selectMigrationOption === "MongoDB") {
-                    this.model.mongoDbConfiguration.hasGridFs(false);
-                }
             })
             .always(() => this.spinners.getDatabaseNames(false));
     }
@@ -220,15 +205,9 @@ class migrateDatabase extends viewModelBase {
                 }
 
                 activeConfiguration.setCollections(collectionInfo.Collections);
-                if (selectMigrationOption === "MongoDB") {
-                    this.model.mongoDbConfiguration.hasGridFs(collectionInfo.HasGridFS);
-                }
             })
             .fail(() => {
                 activeConfiguration.setCollections([]);
-                if (selectMigrationOption === "MongoDB") {
-                    this.model.mongoDbConfiguration.hasGridFs(false);
-                }
             })
             .always(() => this.spinners.getCollectionNames(false));
     }

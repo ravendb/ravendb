@@ -1,9 +1,10 @@
 import { useAppSelector } from "components/store";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { CellContext, ColumnDef, Row, Table as TanstackTable } from "@tanstack/react-table";
+import { CellContext, ColumnDef, Row, RowData, Table as TanstackTable } from "@tanstack/react-table";
 import { useMemo } from "react";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
-import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
+import { indexErrorsUtils } from "components/pages/database/indexes/errors/IndexErrorsUtils";
 import { useAppUrls } from "hooks/useAppUrls";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -13,6 +14,13 @@ import IndexErrorsSheet from "components/pages/database/indexes/errors/IndexErro
 import { OpenSheetOptions, useViewSheet } from "components/common/splitView/ViewSheet";
 import React from "react";
 import { CellDateWithRelativeTimeWrapper } from "components/common/virtualTable/cells/CellDateWithRelativeTime";
+
+declare module "@tanstack/react-table" {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface TableMeta<TData extends RowData> {
+        disableLinks?: boolean;
+    }
+}
 
 const indexErrorsSheetConfig: Pick<OpenSheetOptions, "initialWidth" | "minWidth" | "maxWidth"> = {
     initialWidth: "60%",
@@ -33,6 +41,7 @@ function openIndexErrorsSheet(
                 errorDetails={row}
                 allRows={allRows}
                 initialIndex={currentIndex >= 0 ? currentIndex : 0}
+                disableLinks={table.options.meta?.disableLinks}
             />
         ),
         ...indexErrorsSheetConfig,
@@ -94,14 +103,24 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
 
 type HyperLinkDocumentCellValueProps = Pick<
     CellContext<IndexErrorPerDocument, IndexErrorPerDocument["Document"]>,
-    "getValue" | "table"
+    "getValue" | "row" | "table"
 >;
 
-const HyperLinkDocumentCellValue = ({ getValue, table }: HyperLinkDocumentCellValueProps) => {
+const HyperLinkDocumentCellValue = ({ getValue, row, table }: HyperLinkDocumentCellValueProps) => {
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
+    const disableLinks = table.options.meta?.disableLinks;
 
-    return <CellDocumentValue value={getValue()} databaseName={dbName} hasHyperlinkForIds={!disableLinks} />;
+    if (!getValue()) {
+        return <CellValue value={getValue()} />;
+    }
+
+    return (
+        <CellDocumentId
+            id={getValue()}
+            databaseName={dbName}
+            hasHyperlink={!disableLinks && indexErrorsUtils.isDocumentError(row.original)}
+        />
+    );
 };
 
 type HyperlinkIndexCellValueProps = Pick<
@@ -112,7 +131,7 @@ type HyperlinkIndexCellValueProps = Pick<
 const HyperlinkIndexCellValue = ({ getValue, table }: HyperlinkIndexCellValueProps) => {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
-    const disableLinks = (table.options.meta as { disableLinks?: boolean })?.disableLinks;
+    const disableLinks = table.options.meta?.disableLinks;
 
     const getLinkToIndex = (cellValue: IndexErrorPerDocument["IndexName"]): string => {
         if (typeof cellValue !== "string") {

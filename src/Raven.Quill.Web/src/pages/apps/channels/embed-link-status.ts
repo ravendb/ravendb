@@ -36,8 +36,8 @@ export function getUsageStatus(invocationCount: number, maxInvocations: number):
     const isExhausted = maxInvocations <= 0 || invocationCount >= maxInvocations;
 
     const title = isExhausted
-        ? `Limit reached · ${invocationCount.toLocaleString()} of ${maxInvocations.toLocaleString()} chats used`
-        : `${invocationCount.toLocaleString()} of ${maxInvocations.toLocaleString()} chats used · ${remaining.toLocaleString()} left`;
+        ? `Limit reached · ${invocationCount.toLocaleString()} of ${maxInvocations.toLocaleString()} prompts used`
+        : `${invocationCount.toLocaleString()} of ${maxInvocations.toLocaleString()} prompts used · ${remaining.toLocaleString()} left`;
 
     if (isExhausted) {
         return { tone: "critical", label, title };

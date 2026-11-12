@@ -72,6 +72,12 @@ namespace SlowTests.Tests
             throw new Exception(userMessage);
         }
 
+        // NOTE: test/AnalyzersTests is intentionally exempt from this check because it is a
+        // pure Roslyn unit-test project that uses plain [Fact] (no server dependency).
+        // The exemption is structural — AnalyzersTests is NOT referenced (directly or transitively)
+        // by SlowTests, so GetAssemblies() never visits it. If a future PR adds such a reference,
+        // this test will start failing for every [Fact] in AnalyzersTests; see
+        // test/AnalyzersTests/AnalyzersTests.csproj for the rationale.
         [RavenFact(RavenTestCategory.Codebase)]
         public void AllTestsShouldUseRavenFactOrRavenTheoryAttributes()
         {

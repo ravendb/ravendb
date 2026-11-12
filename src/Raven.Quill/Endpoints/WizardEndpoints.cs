@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Quill.AiHelper;
+using Raven.Quill.AiHelper.Migration;
 using Raven.Quill.Contracts;
 using Raven.Quill.Endpoints.Helpers;
 using Raven.Quill.Infrastructure;
@@ -19,16 +20,9 @@ namespace Raven.Quill.Endpoints;
 public static class WizardEndpoints
 {
     // the source connection string's name on the app DB once provisioned (used when the map didn't set one)
-    private const string SourceConnectionStringName = "quill-cdc-connection";
-    private const string DefaultCdcTaskName = "quill-cdc";
+    internal const string SourceConnectionStringName = "quill-cdc-connection";
+    internal const string DefaultCdcTaskName = "quill-cdc";
     private const string CdcDryRunTaskName = "quill-cdc-dry-run";
-
-    private const string DefaultIntentPrompt =
-        "Propose a sensible RavenDB CDC document model from the discovered relational schema: " +
-        "map each root/aggregate table to its own collection, embed parent-owned child rows " +
-        "(1:N ownership) as nested arrays, and keep many-to-many or shared references as separate " +
-        "collections linked by id. Use idiomatic collection names derived from the table names; " +
-        "prefer a minimal, query-friendly shape over a literal table-per-collection mirror.";
 
     public static void Map(WebApplication app)
     {
@@ -37,6 +31,23 @@ public static class WizardEndpoints
             .WithName("setup.connect")
             .Accepts<ConnectRequest>("application/json")
             .Produces<ConnectResult>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/draft", DraftAsync)
+            .WithName("setup.draft")
+            .WithDescription(
+                "What the wizard stored for an app, so a reloaded wizard continues where it was and an edit can reopen " +
+                "the plan the app's mapping was applied from. 404 when nothing is stored for the slug.")
+            .Accepts<WizardDraftRequest>("application/json")
+            .Produces<WizardDraftResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status404NotFound);
+        group.MapPost("/draft/save", DraftSaveAsync)
+            .WithName("setup.draftSave")
+            .WithDescription(
+                "Keeps what only the wizard knows - the app name, the selected tables and the step it moved on to - " +
+                "for a reloaded wizard to continue from.")
+            .Accepts<WizardDraftSaveRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/discover", DiscoverAsync)
             .WithName("setup.discover")
@@ -58,10 +69,75 @@ public static class WizardEndpoints
             .Accepts<MapRequest>("application/json")
             .Produces<CdcSinkConfiguration>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
-        group.MapPost("/suggest/cdc", SuggestCdcAsync)
-            .WithName("setup.suggestCdc")
-            .Accepts<SuggestCdcRequest>("application/json")
-            .Produces<SuggestCdcResponse>()
+        group.MapPost("/migration/proposal/start", ProposalStartAsync)
+            .WithName("setup.migrationProposalStart")
+            .WithDescription(
+                "Begins a migration: the proposal agent groups the discovered schema into areas and collections " +
+                "and sets the naming conventions. Streams NDJSON frames; the done frame, or the error frame of a start " +
+                "that failed after the api created the plan, carries the plan id the api keeps the plan under. " +
+                "409 while a proposal turn or a manual save of the app runs.")
+            .Accepts<MigrationProposalStartRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/proposal/ask", ProposalAskAsync)
+            .WithName("setup.migrationProposalAsk")
+            .WithDescription("One more turn with the proposal agent: a question, a re-proposal, or the conventions before the first area starts. 409 while a proposal turn or a manual save of the app runs.")
+            .Accepts<MigrationProposalAskRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/area/start", AreaStartAsync)
+            .WithName("setup.migrationAreaStart")
+            .WithDescription(
+                "Opens an area for the first time: the area agent builds every collection the proposal gave it. " +
+                "Once per area; later opens read the cards from plan/get. The turn finishes even if the browser leaves. 409 while the area's turn or a manual save of the app runs.")
+            .Accepts<MigrationAreaStartRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/area/ask", AreaAskAsync)
+            .WithName("setup.migrationAreaAsk")
+            .WithDescription("One more turn with an area's agent. The message names the collections it is about. 409 while the area's turn or a manual save of the app runs.")
+            .Accepts<MigrationAreaAskRequest>("application/json")
+            .Produces<MigrationFrame>(StatusCodes.Status200OK, contentType: "application/x-ndjson");
+        group.MapPost("/migration/stop", Stop)
+            .WithName("setup.migrationStop")
+            .WithDescription(
+                "Stops the running turn of the proposal or of one area, in the api too; its stream ends with an error " +
+                "frame and the area is free again. Leaving the page does not stop a turn. 204 also when none runs.")
+            .Accepts<MigrationStopRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/migration/plan/get", PlanGetAsync)
+            .WithName("setup.migrationPlanGet")
+            .WithDescription("The plan as the api stores it and the proposal it accepted.")
+            .Accepts<MigrationPlanGetRequest>("application/json")
+            .Produces<MigrationPlanGetResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+        group.MapPost("/migration/plan/save", PlanSaveAsync)
+            .WithName("setup.migrationPlanSave")
+            .WithDescription(
+                "Saves the unsaved changes of an area view together, or none of them. 409 while a planner turn or " +
+                "another save of the app runs; 422 with the issues the api's mapping validator found, located in the configuration.")
+            .Accepts<MigrationPlanSaveRequest>("application/json")
+            .Produces<MigrationPlanSaveOutcome>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status401Unauthorized)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
+            .Produces<MigrationPlanSaveOutcome>(StatusCodes.Status422UnprocessableEntity)
+            .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+        group.MapPost("/migration/plan/discard", PlanDiscardAsync)
+            .WithName("setup.migrationPlanDiscard")
+            .WithDescription(
+                "Forgets the plan of an app, so a reloaded wizard starts the planner over instead of reopening it. " +
+                "The mapping the app runs on stays. 204 also when the app has no plan.")
+            .Accepts<MigrationPlanDiscardRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/migration/apply", ApplyMigrationAsync)
+            .WithName("setup.migrationApply")
+            .WithDescription(
+                "Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. " +
+                "The plan counts as applied to the app only once provision succeeds.")
+            .Accepts<MigrationApplyRequest>("application/json")
+            .Produces<MigrationApplyResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ApiErrorResponse>(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/test-mapping", TestMappingAsync)
@@ -71,11 +147,12 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/provision", ProvisionAsync)
             .WithName("setup.provision")
-            .WithDescription("Creates the app, or updates it when one already exists under the same slug. " +
+            .WithDescription("Creates the app. Updating one that already exists under the same slug requires " +
+                             "updateExisting, so a new app cannot silently take over a live one. " +
                              "The slug (also the app's database name, used in public embed URLs) derives " +
                              "from appName unless an explicit slug is supplied; either is normalized to " +
-                             "lowercase ASCII alphanumerics with hyphens. A slug whose database exists " +
-                             "without an app behind it => 409.")
+                             "lowercase ASCII alphanumerics with hyphens. A slug already taken, or whose " +
+                             "database exists without an app behind it => 409.")
             .Accepts<ProvisionRequest>("application/json")
             .Produces<ProvisionResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -126,6 +203,10 @@ public static class WizardEndpoints
                 state.LastDiscoverAt = null;
                 state.LastMapConfiguration = null;
                 state.LastMapAt = null;
+                state.PlanId = null;
+                state.PlanSelectedTables = null;
+                state.LastMapPlanVersions = null;
+                state.AppliedPlanVersions = null;
             }
 
             state.Provider = factoryName;
@@ -142,6 +223,54 @@ public static class WizardEndpoints
                 $"WizardSource '{body.Slug}' provider={factoryName} credential stored", ctx);
 
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> DraftAsync(WizardDraftRequest body, IDocumentStore store, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body?.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+
+        WizardState? state;
+        using (var session = store.OpenAsyncSession())
+            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
+
+        if (state?.Provider is null || string.IsNullOrEmpty(state.SourceConnectionString))
+            return Results.NotFound(new ApiErrorResponse($"no wizard draft found for '{body.Slug}'"));
+
+        var isAppCreated = await AppLookup.LoadAppAsync(store, body.Slug, ct) is not null;
+
+        return Results.Ok(new WizardDraftResponse(
+            IsAppCreated: isAppCreated,
+            AppName: state.AppName ?? string.Empty,
+            Provider: SqlProviderParser.GetSupportedProvider(state.Provider).ToString(),
+            ConnectionString: state.SourceConnectionString,
+            IsConnected: state.LastVerifyResult?.Success == true,
+            DiscoverSchemas: state.DiscoverSchemas ?? [],
+            Discovery: state.LastDiscoveredSchema is null ? null : DiscoverResponse.From(state.LastDiscoveredSchema),
+            SelectedTables: state.SelectedTables ?? [],
+            Step: state.Step,
+            HasPlan: state.PlanId is not null,
+            PlanSelectedTables: state.PlanSelectedTables ?? [],
+            AppliedPlanVersions: state.AppliedPlanVersions));
+    }
+
+    private static async Task<IResult> DraftSaveAsync(WizardDraftSaveRequest body, IDocumentStore store, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(body?.Slug))
+            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+
+        var wizardId = WizardState.DocumentIdFor(body.Slug);
+        using var session = store.OpenAsyncSession();
+
+        if (await session.Advanced.ExistsAsync(wizardId, ct) == false)
+            return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
+
+        session.Advanced.Patch<WizardState, string?>(wizardId, state => state.AppName, body.AppName);
+        session.Advanced.Patch<WizardState, SelectedSourceTable[]?>(wizardId, state => state.SelectedTables, body.SelectedTables);
+        session.Advanced.Patch<WizardState, string?>(wizardId, state => state.Step, body.Step);
+        await session.SaveChangesAsync(ct);
+
+        return Results.NoContent();
     }
 
     private static async Task<IResult> DiscoverAsync(
@@ -189,6 +318,7 @@ public static class WizardEndpoints
         }
 
         state.Provider = factoryName;
+        state.DiscoverSchemas = schemas;
         state.LastDiscoveredSchema = schema;
         state.LastDiscoverAt = DateTime.UtcNow;
         await session.StoreAsync(state, wizardId, ct);
@@ -378,6 +508,7 @@ public static class WizardEndpoints
                 return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
             state.LastMapConfiguration = cdcConfig;
             state.LastMapAt = DateTime.UtcNow;
+            state.LastMapPlanVersions = null;
             await session.StoreAsync(state, wizardId, ct);
             await session.SaveChangesAsync(ct);
         }
@@ -390,61 +521,97 @@ public static class WizardEndpoints
         return Results.Ok(cdcConfig);
     }
 
-    private static async Task<IResult> SuggestCdcAsync(
-        SuggestCdcRequest body,
-        IDocumentStore store,
-        IAiHelperClient aiClient,
+    private static async Task ProposalStartAsync(MigrationProposalStartRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.ProposalStartAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static async Task ProposalAskAsync(MigrationProposalAskRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.ProposalAskAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static async Task AreaStartAsync(MigrationAreaStartRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.AreaStartAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static async Task AreaAskAsync(MigrationAreaAskRequest body, MigrationService service, HttpContext ctx, CancellationToken ct)
+    {
+        var stream = new MigrationStream(ctx);
+        var refusal = await service.AreaAskAsync(body, stream, ct);
+        await RefuseAsync(ctx, stream, refusal);
+    }
+
+    private static IResult Stop(MigrationStopRequest body, MigrationService service) =>
+        service.Stop(body) is { } refusal ? Refused(refusal) : Results.NoContent();
+
+    private static async Task RefuseAsync(HttpContext ctx, MigrationStream stream, MigrationService.Refusal? refusal)
+    {
+        if (refusal is null || stream.Started)
+            return;
+
+        await Refused(refusal).ExecuteAsync(ctx);
+    }
+
+    private static async Task<IResult> PlanGetAsync(MigrationPlanGetRequest body, MigrationService service, CancellationToken ct)
+    {
+        var (plan, refusal) = await service.PlanGetAsync(body, ct);
+        return refusal is null ? Results.Ok(plan) : Refused(refusal);
+    }
+
+    private static async Task<IResult> PlanSaveAsync(MigrationPlanSaveRequest body, MigrationService service, CancellationToken ct)
+    {
+        var (outcome, refusal) = await service.PlanSaveAsync(body, ct);
+        if (refusal is not null)
+            return Refused(refusal);
+
+        return Results.Json(outcome, statusCode: outcome!.Issues is { Length: > 0 }
+            ? StatusCodes.Status422UnprocessableEntity
+            : StatusCodes.Status200OK);
+    }
+
+    private static async Task<IResult> PlanDiscardAsync(MigrationPlanDiscardRequest body, MigrationService service, CancellationToken ct) =>
+        await service.PlanDiscardAsync(body, ct) is { } refusal ? Refused(refusal) : Results.NoContent();
+
+    private static IResult Refused(MigrationService.Refusal refusal) =>
+        Results.Json(new ApiErrorResponse(refusal.Message), statusCode: refusal.Status switch
+        {
+            null when refusal.IsConflict => StatusCodes.Status409Conflict,
+            null => StatusCodes.Status400BadRequest,
+            var status when status.Value.ServiceAnswered() => StatusCodes.Status401Unauthorized,
+            _ => StatusCodes.Status502BadGateway
+        });
+
+    private static async Task<IResult> ApplyMigrationAsync(
+        MigrationApplyRequest body,
+        MigrationService service,
         QuillLogger<WizardLogger> logger,
         CancellationToken ct)
     {
-        if (body is null)
-            return Results.BadRequest(new ApiErrorResponse("request body is required"));
-        if (string.IsNullOrWhiteSpace(body.Slug))
-            return Results.BadRequest(new ApiErrorResponse("slug is required"));
+        var (response, refusal) = await service.ApplyAsync(body, ct);
 
-        if (body.SelectedTables is not { Length: > 0 })
-            return Results.BadRequest(new ApiErrorResponse("selectedTables must list at least one table"));
+        if (refusal is not null)
+            return Refused(refusal);
 
-        var intentPrompt = string.IsNullOrWhiteSpace(body.IntentPrompt) ? DefaultIntentPrompt : body.IntentPrompt!;
-
-        WizardState? state;
-        using (var session = store.OpenAsyncSession())
-            state = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(body.Slug), ct);
-
-        if (state?.LastDiscoveredSchema is null)
-            return Results.BadRequest(new ApiErrorResponse("no discovered schema found; call /api/setup/discover first"));
-
-        var selectedSchema = SelectTables(state.LastDiscoveredSchema, body.SelectedTables);
-        if (selectedSchema.Tables.Count == 0)
-            return Results.BadRequest(new ApiErrorResponse(
-                "none of the selected tables are part of the discovered schema; call /api/setup/discover first"));
-
-        var result = await aiClient.SuggestCdcAsync(selectedSchema, samples: null, intentPrompt, ct);
-
-        if (result.Status != AiHelperStatus.Success)
-            return Results.Ok(new SuggestCdcResponse(Configuration: null, result.Rationale, result.Status.ToString()));
-
-        if (result.Configuration is null)
-            return Results.UnprocessableEntity(new ApiErrorResponse("AI service returned a success status but no configuration"));
-
-        if (!result.Configuration.Validate(out var errors, validateName: false, validateConnection: false))
+        if (response!.Errors.Length > 0)
         {
             if (logger.IsInfoEnabled)
-                logger.Info($"SuggestCdc: returned configuration failed validation ({errors.Count} errors)");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
+                logger.Info($"Migration apply: assembled configuration failed validation ({response.Errors.Length} errors)");
+
+            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: response.Errors));
         }
 
-        ValidateJoinColumnsAgainstSchema(result.Configuration, state.LastDiscoveredSchema, errors);
-        if (errors.Count > 0)
-        {
-            if (logger.IsInfoEnabled)
-                logger.Info(
-                    $"SuggestCdc: returned configuration has {errors.Count} join column(s) the source " +
-                    "schema does not have");
-            return Results.UnprocessableEntity(new ApiErrorResponse(Errors: errors.ToArray()));
-        }
+        if (response.UnmappedTables.Length > 0 && logger.IsInfoEnabled)
+            logger.Info($"Migration apply: {response.UnmappedTables.Length} discovered table(s) are not covered by the plan");
 
-        return Results.Ok(new SuggestCdcResponse(result.Configuration, result.Rationale, result.Status.ToString()));
+        return Results.Ok(response);
     }
 
     private static async Task<IResult> TestMappingAsync(
@@ -534,6 +701,10 @@ public static class WizardEndpoints
         }
 
         var app = await AppLookup.LoadAppAsync(store, slug, ct);
+        if (app is not null && body.UpdateExisting == false)
+            return Results.Conflict(new ApiErrorResponse(
+                $"slug '{slug}' is already used by app '{app.AppName}'; set updateExisting to change that app instead"));
+
         if (app is null)
         {
             RavenStoreFactory.DatabaseCreationStatus status;
@@ -579,6 +750,14 @@ public static class WizardEndpoints
             new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
 
         await CreateOrUpdateCdcAsync(store, app, state.LastMapConfiguration, ct);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            session.Advanced.Patch<WizardState, Dictionary<string, int>?>(
+                WizardState.DocumentIdFor(slug), wizard => wizard.AppliedPlanVersions, state.LastMapPlanVersions);
+            await session.SaveChangesAsync(ct);
+        }
+
         if (logger.IsInfoEnabled)
             logger.Info(
                 $"Provisioned app slug={app.Slug} id={app.Id} cdcTask={app.CdcTaskName}");
@@ -610,56 +789,7 @@ public static class WizardEndpoints
     /// Discovery enumerates whole schemas, so handing the AI everything it found would map tables the
     /// operator deliberately left out.
     /// </summary>
-    private static void ValidateJoinColumnsAgainstSchema(CdcSinkConfiguration configuration, CdcSinkSourceSchema schema, List<string> errors)
-    {
-        foreach (var table in configuration.Tables)
-            ValidateScope(table.SourceTableSchema, table.SourceTableName, table.CollectionName, table.EmbeddedTables, table.LinkedTables);
-
-        void ValidateScope(
-            string? tableSchema,
-            string tableName,
-            string description,
-            List<CdcSinkEmbeddedTableConfig>? embeddedTables,
-            List<CdcSinkLinkedTableConfig>? linkedTables)
-        {
-            var columns = SourceColumnsOf(tableSchema, tableName);
-
-            foreach (var linked in linkedTables ?? [])
-                CheckJoinColumns(linked.JoinColumns, columns, $"Linked table '{linked.SourceTableName}' under '{description}'");
-
-            foreach (var embedded in embeddedTables ?? [])
-            {
-                ValidateScope(embedded.SourceTableSchema, embedded.SourceTableName,
-                    $"{description}.{embedded.PropertyName}", embedded.EmbeddedTables, embedded.LinkedTables);
-
-                CheckJoinColumns(embedded.JoinColumns, SourceColumnsOf(embedded.SourceTableSchema, embedded.SourceTableName),
-                    $"Embedded table '{embedded.SourceTableName}' under '{description}'");
-            }
-        }
-
-        HashSet<string>? SourceColumnsOf(string? tableSchema, string tableName) => schema.Tables
-            .FirstOrDefault(table =>
-                string.Equals(table.SourceTableName, tableName, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(table.SourceTableSchema ?? string.Empty, tableSchema ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-            ?.Columns.Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        void CheckJoinColumns(List<string>? joinColumns, HashSet<string>? sourceColumns, string description)
-        {
-            if (sourceColumns is null)
-                return;
-
-            foreach (var joinColumn in joinColumns ?? [])
-            {
-                if (string.IsNullOrWhiteSpace(joinColumn) || sourceColumns.Contains(joinColumn))
-                    continue;
-
-                errors.Add($"{description}: join column '{joinColumn}' is not a column of the source table. " +
-                    $"Its columns are: {string.Join(", ", sourceColumns)}.");
-            }
-        }
-    }
-
-    private static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
+    internal static CdcSinkSourceSchema SelectTables(CdcSinkSourceSchema schema, SelectedSourceTable[] selectedTables)
     {
         var selectedKeys = selectedTables
             .Select(table => TableKey(table.SourceTableSchema, table.SourceTableName))

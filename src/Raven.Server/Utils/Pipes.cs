@@ -86,16 +86,20 @@ namespace Raven.Server.Utils
                         if (restart)
                         {
                             await writer.WriteLineAsync("Restarting Server...<DELIMETER_RESTART>");
-                            Program.RestartServerMre.Set();
-                            Program.ShutdownServerMre.Set();
+                            Program.RestartServer();
                             // server restarting
                             return;
                         }
 
-                        await writer.WriteLineAsync("Shutting Down Server...<DELIMETER_RESTART>");
-                        Program.ShutdownServerMre.Set();
-                        // server shutting down
-                        return;
+                        if (cli.ShutdownRequested)
+                        {
+                            await writer.WriteLineAsync("Shutting Down Server...<DELIMETER_RESTART>");
+                            Program.ShutdownServer();
+                            // server shutting down
+                            return;
+                        }
+
+                        // logged out, keep listening for the next connection
                     }
                     catch (Exception e)
                     {

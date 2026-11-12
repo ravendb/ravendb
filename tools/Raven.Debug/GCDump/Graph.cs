@@ -469,7 +469,7 @@ namespace Graphs
         {
             RootIndex = NodeIndex.Invalid;
             m_writer ??= new SegmentedMemoryStreamWriter(m_expectedNodeCount * 8,
-                    m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
+                    m_isVeryLargeGraph ? SerializationSettings.Default.WithStreamLabelWidth(StreamLabelWidth.EightBytes) : SerializationSettings.Default);
 
             m_totalSize = 0;
             m_totalRefs = 0;
@@ -597,7 +597,7 @@ namespace Graphs
             // TODO be lazy about reading in the blobs.
             int blobCount = deserializer.ReadInt();
             SegmentedMemoryStreamWriter writer = new(blobCount,
-                m_isVeryLargeGraph ? new SerializationConfiguration() { StreamLabelWidth = StreamLabelWidth.EightBytes } : null);
+                m_isVeryLargeGraph ? SerializationSettings.Default.WithStreamLabelWidth(StreamLabelWidth.EightBytes) : SerializationSettings.Default);
 
             while (8 <= blobCount)
             {
@@ -1930,7 +1930,9 @@ public class SpanningTree
         float[] priorityArray = new float[priorityPatArray.Length];
         for (int i = 0; i < priorityPatArray.Length; i++)
         {
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
             Match m = Regex.Match(priorityPatArray[i], @"(.*)->(-?\d+.?\d*)");
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
             if (!m.Success)
             {
                 if (string.IsNullOrWhiteSpace(priorityPatArray[i]))

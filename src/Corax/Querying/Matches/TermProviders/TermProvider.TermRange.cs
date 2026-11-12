@@ -196,10 +196,12 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Next(out TermMatch term)
+    public bool Next(out long termId, out double termRatioToWholeCollection)
     {
-        if (_isEmpty || _iterator.MoveNext(out var termId) == false)
-            goto ReturnEmpty;
+        termId = -1;
+        termRatioToWholeCollection = 1D;
+        if (_isEmpty || _iterator.MoveNext(out termId) == false)
+            return false;
 
 
         if (termId == _endContainerId)
@@ -207,15 +209,10 @@ public struct TermRangeProvider<TLookupIterator, TLow, THigh> : ITermProvider, I
             _isEmpty = true;
 
             if (_shouldIncludeLastTerm == false)
-                goto ReturnEmpty;
+                return false;
         }
 
-        term = _indexSearcher.TermQuery(_field, termId, 1D);
         return true;
-
-        ReturnEmpty:
-        term = TermMatch.CreateEmpty(_indexSearcher, _indexSearcher.Allocator);
-        return false;
     }
 
     public QueryInspectionNode Inspect()

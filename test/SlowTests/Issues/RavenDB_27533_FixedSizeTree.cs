@@ -50,7 +50,8 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             using (var tx = Env.WriteTransaction())
             {
                 var fst = tx.FixedTreeFor(treeName, valSize: 8);
-                fst.DeleteRange(from, to);
+                foreach (long key in model.GetViewBetween(from, to))
+                    fst.Delete(key);
                 tx.Commit();
             }
 
@@ -286,7 +287,19 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
             var owingLeaf = fst.GetReadOnlyPage(rootChildren[1]);
             Assert.Equal(1, owingLeaf.CollapsedLevels);
 
-            fst.DeleteRange(Stride, owingLeaf.GetKey(0) - 1);
+            // deleting one key at a time lets the rebalancer move entries of the owing leaf to the left, so delete until the root
+            // collapses. Depth is not a stop condition: a branch collapsing into its parent does not decrement it
+            int depth = fst.Depth;
+            for (long key = Stride; key < next; key += Stride)
+            {
+                fst.Delete(key);
+                if (fst.Depth == depth)
+                    continue;
+
+                depth = fst.Depth;
+                if (fst.GetReadOnlyPage(RootPage(fst)).IsLeaf)
+                    break;
+            }
 
             tx.Commit();
         }
@@ -300,6 +313,126 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CollapsingABranchThatOwesALevelMustPassItToItsChild()
+    {
+        Slice.From(Allocator, "entries", out Slice treeName);
+
+        using (var tx = Env.WriteTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            long next = Stride;
+            while (fst.Depth < 3)
+            {
+                fst.Add(next, Value);
+                next += Stride;
+            }
+
+            // the newest root child is a branch of two leaves: the full one it took over and the one holding the last key
+            long rootPage = RootPage(fst);
+            var rootChildren = ChildrenOf(fst, rootPage);
+            Assert.Equal(2, rootChildren.Length);
+            long markedBranch = rootChildren[1];
+            Assert.True(fst.GetReadOnlyPage(markedBranch).IsBranch);
+
+            // pretend that branch is one level shallower than its sibling, then empty its newest leaf: the branch
+            // is down to one child, which replaces it in the root and is now two levels above the leaves of its sibling
+            ((FixedSizeTreePageHeader*)tx.LowLevelTransaction.ModifyPage(markedBranch).Pointer)->CollapsedLevels = 1;
+            fst.Delete(next - Stride);
+
+            var promoted = fst.GetReadOnlyPage(ChildrenOf(fst, rootPage)[1]);
+            Assert.True(promoted.IsLeaf);
+            Assert.Equal(2, promoted.CollapsedLevels);
+
+            // the leaf is full, so the next add splits it, which wraps it in a branch and pays one of the two levels back
+            long promotedPage = promoted.PageNumber;
+            while (fst.GetReadOnlyPage(ChildrenOf(fst, rootPage)[1]).IsLeaf)
+            {
+                fst.Add(next, Value);
+                next += Stride;
+            }
+
+            var wrapper = fst.GetReadOnlyPage(ChildrenOf(fst, rootPage)[1]);
+            Assert.True(wrapper.IsBranch);
+            Assert.Equal(1, wrapper.CollapsedLevels);
+            Assert.Contains(promotedPage, ChildrenOf(fst, wrapper.PageNumber));
+            Assert.All(ChildrenOf(fst, wrapper.PageNumber), child => Assert.Equal(0, fst.GetReadOnlyPage(child).CollapsedLevels));
+            fst.ValidateTree_Forced();
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void MarkedBranchThatOverflowsMustWrapBeforeItSplits()
+    {
+        Slice.From(Allocator, "entries", out Slice treeName);
+        var model = new SortedSet<long>();
+
+        long next = Stride;
+        while (true)
+        {
+            Add(treeName, model, ref next, 20_000);
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.FixedTreeFor(treeName, valSize: 8);
+                if (fst.Depth == 3 && ChildrenOf(fst, RootPage(fst)).Length >= 3)
+                    break;
+            }
+        }
+
+        long rootPage, markedBranch, lastLeafStart, rangeEnd;
+        int rootEntries;
+        using (var tx = Env.ReadTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            rootPage = RootPage(fst);
+            var root = fst.GetReadOnlyPage(rootPage);
+            rootEntries = root.NumberOfEntries;
+            markedBranch = root.GetEntry(0)->PageNumber;
+
+            var branch = fst.GetReadOnlyPage(markedBranch);
+            Assert.True(branch.IsBranch);
+            lastLeafStart = branch.GetKey(branch.NumberOfEntries - 1);
+            rangeEnd = root.GetEntry(1)->GetKey<long>();
+        }
+
+        // pretend a collapse left this whole subtree one level shallower than its siblings
+        SetCollapsedLevels(treeName, markedBranch, 1);
+
+        // doubling the density of the last leaf splits it until the branch has no room for another pointer and has
+        // to split itself: that must wrap it first, not split it next to its siblings in the root
+        FillRange(treeName, model, lastLeafStart, rangeEnd);
+
+        using (var tx = Env.ReadTransaction())
+        {
+            var fst = tx.FixedTreeFor(treeName, valSize: 8);
+            fst.ValidateTree_Forced();
+
+            Assert.Equal(rootPage, RootPage(fst));
+            var root = fst.GetReadOnlyPage(rootPage);
+            Assert.Equal(rootEntries, root.NumberOfEntries);
+
+            long wrapperPage = root.GetEntry(0)->PageNumber;
+            Assert.NotEqual(markedBranch, wrapperPage);
+
+            var wrapper = fst.GetReadOnlyPage(wrapperPage);
+            Assert.True(wrapper.IsBranch);
+            Assert.Equal(0, wrapper.CollapsedLevels);
+
+            var wrapped = ChildrenOf(fst, wrapperPage);
+            Assert.Contains(markedBranch, wrapped);
+            Assert.All(wrapped, child =>
+            {
+                var page = fst.GetReadOnlyPage(child);
+                Assert.True(page.IsBranch);
+                Assert.Equal(0, page.CollapsedLevels);
+                Assert.All(ChildrenOf(fst, child), leaf => Assert.True(fst.GetReadOnlyPage(leaf).IsLeaf));
+            });
+        }
+
+        AssertContents(treeName, model);
+    }
+
     private void RemoveLastLeavesOf(Slice treeName, SortedSet<long> model, long branchPage, Func<FixedSizeTree, bool> until)
     {
         using (var tx = Env.WriteTransaction())
@@ -310,8 +443,11 @@ public unsafe class RavenDB_27533_FixedSizeTree(ITestOutputHelper output) : Stor
                 var branch = fst.GetReadOnlyPage(branchPage);
                 var leaf = fst.GetReadOnlyPage(branch.GetEntry(branch.NumberOfEntries - 1)->PageNumber);
                 long from = leaf.GetKey(0), to = leaf.GetKey(leaf.NumberOfEntries - 1);
-                fst.DeleteRange(from, to);
-                model.GetViewBetween(from, to).Clear();
+                var keys = model.GetViewBetween(from, to);
+                Assert.True(keys.Count > 0, $"the last leaf of branch {branchPage} holds no live key, the loop would never end");
+                foreach (long key in keys)
+                    fst.Delete(key);
+                keys.Clear();
             }
 
             tx.Commit();

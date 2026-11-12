@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -99,6 +99,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
         public virtual string FromToString => $"from {_databaseName} at {_server.NodeTag} to {Destination.FromString()}";
+        protected virtual string ConnectionEstablishedLogDetails => FromToString;
 
         protected AbstractOutgoingReplicationHandler(TcpConnectionInfo connectionInfo, ServerStore server, string databaseName, AbstractDatabaseNotificationCenter notificationCenter, ReplicationNode node,
             TContextPool contextPool, CancellationToken token)
@@ -547,6 +548,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
                 throw;
             }
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Outgoing replication connection established. {ConnectionEstablishedLogDetails}");
         }
 
         internal void SendHeartbeat(string databaseChangeVector, string lastSentSourceChangeVector)
