@@ -39,7 +39,7 @@ interface AboutPageStoryProps {
     licenseServerConnection: boolean;
     passiveServer: boolean;
     devBuild: boolean;
-    stableReleaseAvailable: boolean;
+    changeLog: "available" | "noStableRelease" | "unavailable";
     latestServerBuildNumber: number;
     isIsv: boolean;
     cloud: boolean;
@@ -74,10 +74,12 @@ function commonInit(props: AboutPageStoryProps) {
         Status: props.supportStatus,
     });
 
-    if (props.stableReleaseAvailable) {
+    if (props.changeLog === "available") {
         licenseService.withGetChangeLog();
-    } else {
+    } else if (props.changeLog === "noStableRelease") {
         licenseService.withGetChangeLog(LicenseStubs.changeLogWithoutStableRelease());
+    } else {
+        licenseService.withoutChangeLog();
     }
 
     if (props.licenseServerConnection) {
@@ -107,7 +109,7 @@ const defaultArgs: AboutPageStoryProps = {
     cloud: false,
     passiveServer: false,
     devBuild: false,
-    stableReleaseAvailable: true,
+    changeLog: "available",
     supportStatus: "NoSupport",
     latestServerBuildNumber: undefined,
     licenseServerConnection: true,
@@ -120,6 +122,10 @@ const defaultArgs: AboutPageStoryProps = {
 };
 
 const defaultArgTypes: Partial<ArgTypes<AboutPageStoryProps>> = {
+    changeLog: {
+        control: "select",
+        options: ["available", "noStableRelease", "unavailable"],
+    },
     consentStatus: {
         control: "select",
         options: ["Success", "InvalidCredentials", "ConsentRequired"],
@@ -309,7 +315,26 @@ export const DevelopmentBuildWithoutStableRelease: StoryObj<AboutPageStoryProps>
     args: {
         ...defaultArgs,
         devBuild: true,
-        stableReleaseAvailable: false,
+        changeLog: "noStableRelease",
+    },
+    argTypes: defaultArgTypes,
+};
+
+export const DevelopmentBuildChangelogUnavailable: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        devBuild: true,
+        changeLog: "unavailable",
+    },
+    argTypes: defaultArgTypes,
+};
+
+export const ChangelogUnavailable: StoryObj<AboutPageStoryProps> = {
+    render,
+    args: {
+        ...defaultArgs,
+        changeLog: "unavailable",
     },
     argTypes: defaultArgTypes,
 };

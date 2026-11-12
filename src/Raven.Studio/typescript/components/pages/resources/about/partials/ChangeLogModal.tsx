@@ -67,10 +67,16 @@ export function ChangeLogModal(props: ChangelogModalProps) {
             : asyncGetChangeLog.result?.BuildCompatibilitiesForUserMajorMinor;
 
     if (!versionsList?.length) {
+        const hasNoStableReleaseYet = isDevBuild && asyncGetChangeLog.result != null;
+
         return (
             <ModalWrapper onClose={onClose} mode={mode}>
                 <div className="well rounded-3 p-4">
-                    <EmptySet>No changelog yet. It appears once this version has a stable release.</EmptySet>
+                    <EmptySet>
+                        {hasNoStableReleaseYet
+                            ? "No changelog yet. It appears once this version has a stable release."
+                            : "No changelog available"}
+                    </EmptySet>
                 </div>
             </ModalWrapper>
         );
