@@ -1,7 +1,6 @@
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -18,7 +17,7 @@ namespace SlowTests.SlowTests
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions()
+                ModifyDocumentStore = Options.UseNewtonsoftJson
             }))
             {
                 using (var s = store.OpenSession())

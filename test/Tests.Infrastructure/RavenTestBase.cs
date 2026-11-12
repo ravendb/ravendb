@@ -285,7 +285,7 @@ namespace FastTests
                     };
 
                     if (RavenTestHelper.EnvironmentVariables.RunTestsWithNewtonsoftJson)
-                        store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
+                        Options.UseNewtonsoftJson(store);
 
                     options.ModifyDocumentStore?.Invoke(store);
                     if (store.Urls.Length == 0)
@@ -1054,6 +1054,10 @@ namespace FastTests
                 _descriptionBuilder = new StringBuilder(options._descriptionBuilder.ToString());
                 _frozen = options._frozen;
             }
+
+            public static Options ForNewtonsoftJson() => new() { ModifyDocumentStore = UseNewtonsoftJson };
+
+            public static void UseNewtonsoftJson(DocumentStore store) => store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode, bool includeScoresAndDistances = false)
             {

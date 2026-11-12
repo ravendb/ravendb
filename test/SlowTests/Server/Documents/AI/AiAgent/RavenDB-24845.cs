@@ -7,7 +7,6 @@ using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -66,7 +65,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithSingleString()
         {
-            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -113,7 +112,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithMultipleStrings()
         {
-            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -190,7 +189,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithStringArray()
         {
-            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -248,7 +247,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithStringList()
         {
-            using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

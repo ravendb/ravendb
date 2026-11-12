@@ -1,5 +1,4 @@
-using Raven.Client.Json.Serialization.NewtonsoftJson;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -51,7 +50,7 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions()
+                ModifyDocumentStore = Options.UseNewtonsoftJson
             }))
             {
                 var serializer = new NewtonsoftJsonBlittableEntitySerializer(store.Conventions.Serialization);

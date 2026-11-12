@@ -1,8 +1,7 @@
-using FastTests;
+﻿using FastTests;
 using Newtonsoft.Json.Linq;
 using Tests.Infrastructure;
 using Xunit;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues;
 
@@ -17,7 +16,7 @@ public class RavenDB_20972 : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectIdInNestedDocuments()
     {
-        using var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() });
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
         using (var s = store.OpenSession())
         {

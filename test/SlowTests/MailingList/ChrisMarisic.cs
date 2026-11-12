@@ -1,9 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -52,7 +51,7 @@ namespace SlowTests.MailingList
         public void Physical_store_test(Options options)
         {
             List<Car> cars;
-            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.Initialize();

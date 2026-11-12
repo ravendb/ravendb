@@ -5,6 +5,6 @@ namespace Tests.Infrastructure
 {
     public static class NewtonsoftTestConventions
     {
-        public static readonly DocumentConventions Default = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
+        public static DocumentConventions Default => new() { Serialization = new NewtonsoftJsonSerializationConventions() };
     }
 }

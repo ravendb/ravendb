@@ -13,7 +13,7 @@ using Xunit;
 
 namespace FastTests.Client;
 
-public class SystemTextJsonScalarConverterTests(ITestOutputHelper output) : NoDisposalNeeded(output)
+public class SystemTextJsonScalarConverterTests(ITestOutputHelper output) : SerializerParityTestBase(output)
 {
     private class HoldsBigInteger
     {
@@ -205,29 +205,6 @@ public class SystemTextJsonScalarConverterTests(ITestOutputHelper output) : NoDi
             Assert.Equal((LongFlags)Enum.ToObject(typeof(LongFlags), -1L), read.Flags);
         }
     }
-
-    private static T AssertWritesLikeNewtonsoft<T>(T value)
-    {
-        return AssertWritesLikeNewtonsoft(value, Newtonsoft, SystemTextJson);
-    }
-
-    private static T AssertWritesLikeNewtonsoft<T>(T value, DocumentConventions newtonsoft, DocumentConventions systemTextJson)
-    {
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        using (BlittableJsonReaderObject expected = newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
-        using (BlittableJsonReaderObject actual = systemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
-        {
-            JObject expectedJson = JObject.Parse(expected.ToString());
-            JObject actualJson = JObject.Parse(actual.ToString());
-            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
-
-            return systemTextJson.Serialization.DefaultConverter.FromBlittable<T>(actual);
-        }
-    }
-
-    private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
-
-    private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
 
     private static DocumentConventions NewtonsoftIntegers { get; } = new() { SaveEnumsAsIntegers = true, Serialization = new NewtonsoftJsonSerializationConventions() };
 

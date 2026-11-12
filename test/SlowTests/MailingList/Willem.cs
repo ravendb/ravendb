@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -20,7 +19,7 @@ namespace SlowTests.MailingList
         [RavenFact(RavenTestCategory.Indexes)]
         public void ThisIsMyTest()
         {
-            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 new Sales_ByDateProduct().Execute(store);
                 using (var session = store.OpenSession())

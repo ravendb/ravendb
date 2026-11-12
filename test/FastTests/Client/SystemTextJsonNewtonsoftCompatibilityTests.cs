@@ -26,7 +26,7 @@ using Xunit;
 
 namespace FastTests.Client;
 
-public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output) : NoDisposalNeeded(output)
+public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output) : SerializerParityTestBase(output)
 {
     public class Animal
     {
@@ -2086,7 +2086,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonWritesAndReadsNullableStructsLikeNewtonsoft()
     {
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsNullableStruct { Location = new Coordinates { X = 1, Y = 2 } });
+        var read = AssertWritesLikeNewtonsoft(new HoldsNullableStruct { Location = new Coordinates { X = 1, Y = 2 } });
 
         Assert.Equal(2, read.Location?.Y);
         Assert.Null(read.Missing);
@@ -2106,7 +2106,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonReadsReadOnlyCollectionsLikeNewtonsoft()
     {
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsReadOnlyCollections
+        var read = AssertWritesLikeNewtonsoft(new HoldsReadOnlyCollections
         {
             Numbers = new ReadOnlyCollection<int>([1, 2]),
             Names = new ReadOnlyCollection<string>(["a"]),
@@ -2216,11 +2216,11 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonSetsReadOnlyFieldsWithMemberAttributesLikeNewtonsoft()
     {
-        var fields = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ReadOnlyFields(5, 6));
+        var fields = AssertWritesLikeNewtonsoft(new ReadOnlyFields(5, 6));
         Assert.Equal(5, fields.Marked);
         Assert.Equal(0, fields.Unmarked);
 
-        var contract = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ContractReadOnlyField("name"));
+        var contract = AssertWritesLikeNewtonsoft(new ContractReadOnlyField("name"));
         Assert.Equal("name", contract.Name);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -2251,7 +2251,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         var guid = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
         string text = guid.ToString(format);
 
-        var written = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsGuids { Id = guid, MaybeId = guid, ById = new Dictionary<Guid, string> { [guid] = "value" } });
+        var written = AssertWritesLikeNewtonsoft(new HoldsGuids { Id = guid, MaybeId = guid, ById = new Dictionary<Guid, string> { [guid] = "value" } });
         Assert.Equal(guid, written.Id);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -2279,7 +2279,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [InlineData("{\"Major\":1,\"Minor\":2,\"Build\":-1,\"Revision\":-1,\"MajorRevision\":-1,\"MinorRevision\":-1}", "1.2")]
     public void SystemTextJsonReadsVersionsWrittenAsStringsAndAsNetFrameworkNewtonsoftObjects(string value, string expected)
     {
-        var written = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsVersion { Value = Version.Parse(expected) });
+        var written = AssertWritesLikeNewtonsoft(new HoldsVersion { Value = Version.Parse(expected) });
         Assert.Equal(Version.Parse(expected), written.Value);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -2297,7 +2297,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonWritesAndReadsUIntPtrLikeNewtonsoft()
     {
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsUIntPtr());
+        var read = AssertWritesLikeNewtonsoft(new HoldsUIntPtr());
 
         Assert.Equal(UIntPtr.Zero, read.Handle);
         Assert.Equal("name", read.Name);
@@ -2326,7 +2326,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         var value = new CaseOnlyDifferentNames { Name = "lower", NAME = "upper", Url = "public", Pet = new Dog { Name = "Rex", Barks = true } };
         value.SetUrl("private");
 
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(value);
+        var read = AssertWritesLikeNewtonsoft(value);
         Assert.Equal("lower", read.Name);
         Assert.Equal("upper", read.NAME);
         Assert.Equal("public", read.Url);
@@ -2359,7 +2359,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     public void SystemTextJsonKeepsDerivedValuesOfDictionariesWithNonStringKeysLikeNewtonsoft()
     {
         var id = Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e");
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new PolymorphicValuesByNonStringKeys
+        var read = AssertWritesLikeNewtonsoft(new PolymorphicValuesByNonStringKeys
         {
             ByNumber = new Dictionary<int, Animal> { [1] = new Dog { Name = "Rex", Barks = true }, [2] = new Animal { Name = "Cat" } },
             ById = new Dictionary<Guid, Animal> { [id] = new Dog { Name = "Max", Barks = true } },
@@ -2451,7 +2451,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonReadsImmutableCollectionsOfPolymorphicItemsLikeNewtonsoft()
     {
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new ImmutableCollections
+        var read = AssertWritesLikeNewtonsoft(new ImmutableCollections
         {
             List = ImmutableList.Create<Animal>(new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }),
             InterfaceList = ImmutableList.Create<Animal>(new Dog { Name = "Max", Barks = true }),
@@ -2646,7 +2646,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.Contains("Self referencing loop", exception.Message);
 
             var shared = new FriendlyDog { Name = "Max", Barks = true, Friend = new Dog { Name = "Fido", Barks = true } };
-            var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new Kennel { Resident = shared, Neighbour = shared });
+            var read = AssertWritesLikeNewtonsoft(new Kennel { Resident = shared, Neighbour = shared });
             Assert.Equal("Fido", Assert.IsType<Dog>(Assert.IsType<FriendlyDog>(read.Resident).Friend).Name);
             Assert.Equal("Fido", Assert.IsType<Dog>(Assert.IsType<FriendlyDog>(read.Neighbour).Friend).Name);
         }
@@ -2710,7 +2710,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         ((TimeoutSettings)source.Settings).Retries = 9;
         ((NamedOptions)source.Options).Name = "stored";
 
-        var roundTrip = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(source);
+        var roundTrip = AssertWritesLikeNewtonsoft(source);
         Assert.Equal(9, Assert.IsType<TimeoutSettings>(roundTrip.Settings).Retries);
         Assert.Equal("stored", Assert.IsType<NamedOptions>(roundTrip.Options).Name);
     }
@@ -2783,7 +2783,7 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonWritesTypeNamesOfObjectsWithoutMembersLikeNewtonsoft()
     {
-        var read = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsMarker { Marker = new NoMembers() });
+        var read = AssertWritesLikeNewtonsoft(new HoldsMarker { Marker = new NoMembers() });
         Assert.IsType<NoMembers>(read.Marker);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -2920,18 +2920,18 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonWritesDerivedItemsOfConvertedCollectionsLikeNewtonsoft()
     {
-        var zoo = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new LinqZoo { Pets = new[] { new Dog { Name = "Rex", Barks = true } }.Select(x => (Animal)x) });
+        var zoo = AssertWritesLikeNewtonsoft(new LinqZoo { Pets = new[] { new Dog { Name = "Rex", Barks = true } }.Select(x => (Animal)x) });
         Assert.Equal("Rex", Assert.Single(zoo.Pets).Name);
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
         using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new LinqZoo { Pets = new[] { new Dog { Name = "Rex", Barks = true } }.Select(x => (Animal)x) }, context))
             Assert.True((bool)((BlittableJsonReaderObject)((BlittableJsonReaderArray)json[nameof(LinqZoo.Pets)])[0])[nameof(Dog.Barks)]);
 
-        var bag = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new HoldsAnimalBag { Bag = new AnimalBag([new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }]) });
+        var bag = AssertWritesLikeNewtonsoft(new HoldsAnimalBag { Bag = new AnimalBag([new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }]) });
         Assert.True(Assert.IsType<Dog>(bag.Bag.First()).Barks);
         Assert.IsType<Animal>(bag.Bag.Last());
 
-        var grid = AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson(new AnimalGrid { Cells = new Animal[,] { { new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" } } } });
+        var grid = AssertWritesLikeNewtonsoft(new AnimalGrid { Cells = new Animal[,] { { new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" } } } });
         Assert.True(Assert.IsType<Dog>(grid.Cells[0, 0]).Barks);
         Assert.IsType<Animal>(grid.Cells[0, 1]);
     }
@@ -3066,24 +3066,6 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             }
         }
     }
-
-    private static T AssertWritesLikeNewtonsoftAndReadsNewtonsoftJson<T>(T value)
-    {
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
-        using (BlittableJsonReaderObject actual = SystemTextJson.Serialization.DefaultConverter.ToBlittable(value, context))
-        {
-            JObject expectedJson = JObject.Parse(expected.ToString());
-            JObject actualJson = JObject.Parse(actual.ToString());
-            Assert.True(JToken.DeepEquals(expectedJson, actualJson), $"Expected {expectedJson} but got {actualJson}");
-
-            return SystemTextJson.Serialization.DefaultConverter.FromBlittable<T>(expected);
-        }
-    }
-
-    private static DocumentConventions Newtonsoft { get; } = new() { Serialization = new NewtonsoftJsonSerializationConventions() };
-
-    private static DocumentConventions SystemTextJson { get; } = new() { Serialization = new SystemTextJsonSerializationConventions() };
 
     private static Zoo CreateZoo()
     {
