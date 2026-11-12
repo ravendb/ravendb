@@ -198,18 +198,15 @@ ai.genContext({})
             }
             Assert.False(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
 
-            var expectedError = config.Connection.OpenAiSettings != null
-                ? "You uploaded an unsupported image."
-                : "Unable to process input image";
-
+            // Providers word the rejection differently; what matters is that it reaches the task errors.
             IEnumerable<TaskItemErrorTableValue> errors = null;
             var hasError = await WaitForValueAsync(async () =>
             {
                 errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
-                return errors.Any(e => e.Error.Contains(expectedError));
+                return errors.Any(e => e.Error.Contains("Status Code: BadRequest") && e.Error.Contains("image", StringComparison.OrdinalIgnoreCase));
             }, true, timeout: 60_000);
 
-            Assert.True(hasError, $"Expected error containing '{expectedError}' not found. Errors: {string.Join(", ", errors?.Select(e => $"{e.DocumentId}: {e.Error}") ?? Array.Empty<string>())}");
+            Assert.True(hasError, $"Expected the provider's image rejection in the task errors. Errors: {string.Join(", ", errors?.Select(e => $"{e.DocumentId}: {e.Error}") ?? Array.Empty<string>())}");
         }
 
         private static Stream GetEmbeddedImgStream(string format)

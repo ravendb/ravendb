@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.Documents.Operations.AI;
 
 /// <summary>
-/// Base configuration for OpenAI-compatible providers (OpenAI, Azure OpenAI),
+/// Base configuration for the OpenAI-family providers,
 /// including common fields like API key, endpoint, model and embedding dimensions.
 /// </summary>
 public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
@@ -28,7 +28,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// <summary>
     /// The API key to use to authenticate with the service.
     /// </summary>
-    public string ApiKey { get; set; }
+    public virtual string ApiKey { get; set; }
 
     /// <summary>
     /// The service endpoint that the client will send requests to.
@@ -53,7 +53,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// <summary>
     /// The number of dimensions that the model should use.
     /// </summary>
-    public int? Dimensions { get; set; }
+    public virtual int? Dimensions { get; set; }
 
     /// <summary>
     /// Controls randomness of the model output. Range typically [0.0, 2.0].
@@ -69,6 +69,20 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// When <c>null</c>, the key is sent for AI agents and for GenAI tasks with query tools, and never for Google.
     /// </summary>
     public bool? EnablePromptCache { get; set; }
+
+    /// <summary>
+    /// The API that chat requests are sent to: <see cref="OpenAiApiMode.Responses"/> or <see cref="OpenAiApiMode.ChatCompletions"/>.
+    /// Whether it is supported, and which API is used when it is not set, depends on the provider.
+    /// </summary>
+    public virtual OpenAiApiMode? ApiMode { get; set; }
+
+    internal virtual OpenAiApiMode GetApiMode() => ApiMode ?? OpenAiApiMode.Responses;
+
+    /// <summary>
+    /// The reasoning effort for models that support it. When not set, the model's default is used.
+    /// Whether and how it is sent depends on the provider.
+    /// </summary>
+    public virtual string ReasoningEffort { get; set; }
 
     public override void ValidateFields(List<string> errors)
     {
@@ -113,6 +127,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
         if (EnablePromptCache != openAiSettings.EnablePromptCache)
             differences |= AiSettingsCompareDifferences.EndpointConfiguration;
 
+        if (ApiMode != openAiSettings.ApiMode)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
         return differences;
     }
 
@@ -133,6 +150,12 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 
         if (EnablePromptCache.HasValue)
             json[nameof(EnablePromptCache)] = EnablePromptCache.Value;
+
+        if (string.IsNullOrWhiteSpace(ReasoningEffort) == false)
+            json[nameof(ReasoningEffort)] = ReasoningEffort;
+
+        if (ApiMode.HasValue)
+            json[nameof(ApiMode)] = ApiMode.Value;
 
         return json;
     }

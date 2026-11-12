@@ -176,7 +176,7 @@ public class AgentParameterTypeE2ETests(ITestOutputHelper output, QuillCollectio
         {
             Name = connectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model"),
+            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model") { ApiMode = OpenAiApiMode.ChatCompletions }, // the mock serves only /chat/completions
         });
 
         await app.ProvisionAgentAsync(new AiAgentConfiguration

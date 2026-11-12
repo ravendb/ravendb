@@ -62,7 +62,10 @@ internal abstract class AbstractChatCompletionProvider
         switch (connectorType)
         {
             case AiConnectorType.OpenAi:
-                provider = new OpenAiChatCompletionProvider(connectionString.OpenAiSettings);
+                if (connectionString.OpenAiSettings.GetApiMode() == OpenAiApiMode.ChatCompletions)
+                    provider = new OpenAiChatCompletionProvider(connectionString.OpenAiSettings);
+                else
+                    provider = new OpenAiResponsesProvider(connectionString.OpenAiSettings);
                 return true;
             case AiConnectorType.AzureOpenAi:
                 provider = new AzureOpenAiChatCompletionProvider(connectionString.AzureOpenAiSettings);
