@@ -143,9 +143,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertMembersCanBeResolved(type);
             AssertNotNewtonsoftLinqType(type);
             AssertNoNewtonsoftTypeConverter(type);
-            AssertNoNewtonsoftReferencePreservation(type);
-            AssertNoNewtonsoftNamingStrategy(type);
-            AssertNoNewtonsoftItemConverter(type);
+            object container = FindOnTypeOrInterfaces(type, FindNewtonsoftContainerAttribute);
+            AssertNoNewtonsoftReferencePreservation(type, container);
+            AssertNoNewtonsoftNamingStrategy(type, container);
+            AssertNoNewtonsoftItemConverter(type, container);
 
             if (options.PropertyNameCaseInsensitive && HasPublicMembersWithCaseOnlyDifferentNames(type))
                 return CreateCaseSensitiveRedirect(type, options);
@@ -438,7 +439,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             object converter = FindOnTypeOrInterfaces(type, static t => GetNewtonsoftAttribute(t, NewtonsoftJsonConverterAttributeName));
             if (converter != null && IsTranslatedConverter(converter, type) == false)
-                ThrowNewtonsoftConverterNotSupported($"Type '{type.FullName}'");
+                ThrowNewtonsoftConverterNotSupported(Describe(type));
         }
 
         private void AssertNoNewtonsoftMemberAttributes(JsonTypeInfo typeInfo)
@@ -453,36 +454,35 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 {
                     object converter = GetNewtonsoftAttribute(member, NewtonsoftJsonConverterAttributeName);
                     if (converter != null && IsTranslatedConverter(converter, property.PropertyType) == false)
-                        ThrowNewtonsoftConverterNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+                        ThrowNewtonsoftConverterNotSupported(Describe(member));
                 }
 
                 object jsonProperty = GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName);
-                if (jsonProperty != null && PreservesNewtonsoftReferences(jsonProperty) && IsWrittenAsArray(property.PropertyType) == false)
-                    ThrowNewtonsoftReferencesNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+                if (jsonProperty == null)
+                    continue;
 
-                if (jsonProperty != null && HasNewtonsoftNamingStrategy(jsonProperty))
-                    ThrowNewtonsoftNamingStrategyNotSupported($"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+                if (PreservesNewtonsoftReferences(jsonProperty) && IsWrittenAsArray(property.PropertyType) == false)
+                    ThrowNewtonsoftReferencesNotSupported(Describe(member));
 
-                if (jsonProperty != null)
-                    AssertNewtonsoftItemConverterIsTranslated(jsonProperty, property.PropertyType, $"Member '{member.DeclaringType?.FullName}.{member.Name}'");
+                if (HasNewtonsoftNamingStrategy(jsonProperty))
+                    ThrowNewtonsoftNamingStrategyNotSupported(Describe(member));
+
+                AssertNewtonsoftItemConverterIsTranslated(jsonProperty, property.PropertyType, member);
             }
         }
 
-        private static void AssertNoNewtonsoftReferencePreservation(Type type)
+        private static void AssertNoNewtonsoftReferencePreservation(Type type, object container)
         {
             if (IsWrittenAsArray(type))
                 return;
 
-            object container = GetNewtonsoftContainerAttribute(type);
             bool preservesReferences = container != null
                 ? PreservesNewtonsoftReferences(container)
                 : GetDataContractAttribute(type) is { IsReference: true };
 
             if (preservesReferences)
-                ThrowNewtonsoftReferencesNotSupported($"Type '{type.FullName}'");
+                ThrowNewtonsoftReferencesNotSupported(Describe(type));
         }
-
-        private static object GetNewtonsoftContainerAttribute(Type type) => FindOnTypeOrInterfaces(type, FindNewtonsoftContainerAttribute);
 
         private static object FindOnTypeOrInterfaces(Type type, Func<Type, object> find)
         {
@@ -514,25 +514,23 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return null;
         }
 
-        private static void AssertNoNewtonsoftNamingStrategy(Type type)
+        private static void AssertNoNewtonsoftNamingStrategy(Type type, object container)
         {
-            object container = GetNewtonsoftContainerAttribute(type);
             if (container != null && HasNewtonsoftNamingStrategy(container))
-                ThrowNewtonsoftNamingStrategyNotSupported($"Type '{type.FullName}'");
+                ThrowNewtonsoftNamingStrategyNotSupported(Describe(type));
         }
 
         private static bool HasNewtonsoftNamingStrategy(object attribute)
         {
-            return attribute.GetType().GetProperty("NamingStrategyType")?.GetValue(attribute) != null;
+            return GetNewtonsoftValue(attribute, "NamingStrategyType") != null;
         }
 
         private static bool IsWrittenAsArray(Type type) => TypeShape.Of(type).IsCollection;
 
         private static bool PreservesNewtonsoftReferences(object attribute)
         {
-            Type attributeType = attribute.GetType();
-            return attributeType.GetProperty("IsReference")?.GetValue(attribute) is true ||
-                   attributeType.GetProperty("ItemIsReference")?.GetValue(attribute) is true;
+            return GetNewtonsoftValue(attribute, "IsReference") is true ||
+                   GetNewtonsoftValue(attribute, "ItemIsReference") is true;
         }
 
         private static void AssertNewtonsoftConstructorIsUsed(Type type)
@@ -568,10 +566,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private bool IsTranslatedConverter(object converterAttribute, Type valueType)
         {
-            Type attributeType = converterAttribute.GetType();
             return IsTranslatedConverter(
-                (Type)attributeType.GetProperty("ConverterType")?.GetValue(converterAttribute),
-                (object[])attributeType.GetProperty("ConverterParameters")?.GetValue(converterAttribute),
+                (Type)GetNewtonsoftValue(converterAttribute, "ConverterType"),
+                (object[])GetNewtonsoftValue(converterAttribute, "ConverterParameters"),
                 valueType);
         }
 
@@ -584,24 +581,34 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return converterType?.FullName == NewtonsoftStringEnumConverterName && (converterParameters == null || converterParameters.Length == 0);
         }
 
-        private void AssertNoNewtonsoftItemConverter(Type type)
+        private void AssertNoNewtonsoftItemConverter(Type type, object container)
         {
-            object container = GetNewtonsoftContainerAttribute(type);
             if (container != null)
-                AssertNewtonsoftItemConverterIsTranslated(container, type, $"Type '{type.FullName}'");
+                AssertNewtonsoftItemConverterIsTranslated(container, type, type);
         }
 
-        private void AssertNewtonsoftItemConverterIsTranslated(object attribute, Type collectionType, string target)
+        private void AssertNewtonsoftItemConverterIsTranslated(object attribute, Type collectionType, MemberInfo target)
         {
-            Type attributeType = attribute.GetType();
-            var converterType = (Type)attributeType.GetProperty("ItemConverterType")?.GetValue(attribute);
+            var converterType = (Type)GetNewtonsoftValue(attribute, "ItemConverterType");
             if (converterType == null)
                 return;
 
-            var converterParameters = (object[])attributeType.GetProperty("ItemConverterParameters")?.GetValue(attribute);
+            var converterParameters = (object[])GetNewtonsoftValue(attribute, "ItemConverterParameters");
             TypeShape shape = TypeShape.Of(collectionType);
             if (IsTranslatedConverter(converterType, converterParameters, shape.IsDictionary ? shape.ValueType : shape.ItemType) == false)
-                ThrowNewtonsoftItemConverterNotSupported(target);
+                ThrowNewtonsoftItemConverterNotSupported(Describe(target));
+        }
+
+        internal static object GetNewtonsoftValue(object attribute, string name)
+        {
+            return attribute.GetType().GetProperty(name)?.GetValue(attribute);
+        }
+
+        private static string Describe(MemberInfo target)
+        {
+            return target is Type type
+                ? $"Type '{type.FullName}'"
+                : $"Member '{target.DeclaringType?.FullName}.{target.Name}'";
         }
 
         internal static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
@@ -705,7 +712,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             object jsonObject = FindOnTypeOrInterfaces(type, static t => GetNewtonsoftAttribute(t, NewtonsoftJsonObjectAttributeName));
             if (jsonObject != null)
-                return Convert.ToInt32(jsonObject.GetType().GetProperty("MemberSerialization")?.GetValue(jsonObject));
+                return Convert.ToInt32(GetNewtonsoftValue(jsonObject, "MemberSerialization"));
 
             return HasDataContract(type) ? NewtonsoftMemberSerializationOptIn : 0;
         }
@@ -906,7 +913,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static bool IsNullValueIgnored(object jsonPropertyAttribute)
         {
-            object value = jsonPropertyAttribute.GetType().GetProperty("NullValueHandling")?.GetValue(jsonPropertyAttribute);
+            object value = GetNewtonsoftValue(jsonPropertyAttribute, "NullValueHandling");
             return value != null && Convert.ToInt32(value) == NewtonsoftNullValueHandlingIgnore;
         }
 
@@ -948,7 +955,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             object jsonProperty = GetNewtonsoftAttribute(member, NewtonsoftJsonPropertyAttributeName);
             if (jsonProperty != null)
-                return Convert.ToInt32(jsonProperty.GetType().GetProperty("DefaultValueHandling")?.GetValue(jsonProperty));
+                return Convert.ToInt32(GetNewtonsoftValue(jsonProperty, "DefaultValueHandling"));
 
             return member.GetCustomAttribute<DataMemberAttribute>(inherit: true) is { EmitDefaultValue: false } && HasDataContract(member.DeclaringType)
                 ? NewtonsoftDefaultValueHandlingIgnore
@@ -1146,7 +1153,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static bool GetNewtonsoftFlag(object attribute, string name)
         {
-            return attribute.GetType().GetProperty(name)?.GetValue(attribute) is not false;
+            return GetNewtonsoftValue(attribute, name) is not false;
         }
 
         private static HashSet<string> GetMappedNames(JsonTypeInfo typeInfo, JsonPropertyInfo extensionProperty)
