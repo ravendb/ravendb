@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Settings;
 using Tests.Infrastructure;
 using Xunit;
 #pragma warning disable SKEXP0001
@@ -212,6 +213,40 @@ public class AiConnectionStringsTests : RavenTestBase
             foreach (var name in settingsNames)
                 Assert.Contains(name, exception.Message);
         }
+    }
+
+    // An Ollama connection saved before Ollama joined OpenAiBaseSettings must behave as before.
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData("http://localhost:11434", "http://localhost:11434/v1/chat/completions", "http://localhost:11434/v1/responses")]
+    [InlineData("http://localhost:11434/v1", "http://localhost:11434/v1/chat/completions", "http://localhost:11434/v1/responses")]
+    [InlineData("http://host/ollama", "http://host/v1/chat/completions", "http://host/v1/responses")]
+    public void OllamaConnection_SavedBeforeOpenAiBaseSettings_BehavesAsBefore(string uri, string expectedChat, string expectedResponses)
+    {
+        var settings = new OllamaSettings(uri, "llama3.2");
+        var connectionString = new AiConnectionString { Name = "ollama", ModelType = AiModelType.Chat, OllamaSettings = settings };
+
+        // stored with the same keys, so older nodes still find "Uri"
+        var names = new List<string>();
+        foreach (var property in settings.ToJson().Properties)
+            names.Add(property.Name);
+        names.Sort();
+        Assert.Equal(new List<string> { "EmbeddingsMaxConcurrentBatches", "Model", "Temperature", "Think", "Uri" }, names);
+
+        // still valid without an API key
+        var errors = new List<string>();
+        settings.ValidateFields(errors);
+        Assert.Empty(errors);
+
+        // still Chat Completions, at the same address
+        Assert.True(AbstractChatCompletionProvider.TryGetParameters(connectionString, out var provider));
+        Assert.IsType<OllamaChatCompletionProvider>(provider);
+        Assert.Equal(expectedChat, new Uri(provider.GetBaseEndpointUri(), provider.GetRelativeCompletionUri()).ToString());
+
+        // Responses only when asked for
+        settings.ApiMode = OpenAiApiMode.Responses;
+        Assert.True(AbstractChatCompletionProvider.TryGetParameters(connectionString, out provider));
+        Assert.IsType<OllamaResponsesProvider>(provider);
+        Assert.Equal(expectedResponses, new Uri(provider.GetBaseEndpointUri(), provider.GetRelativeCompletionUri()).ToString());
     }
 
     private readonly List<string> _testValuesList = ["First test value", "Second test value", "Third test value"];
