@@ -154,10 +154,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type)
         {
             JsonTypeInfo typeInfo = options.GetTypeInfo(type);
-            if (typeInfo.Converter is ICaseSensitiveRedirect redirect)
-                typeInfo = redirect.Options.GetTypeInfo(type);
-
-            return typeInfo.Converter is IBoundConstructorRedirect bound ? bound.ObjectTypeInfo : typeInfo;
+            return typeInfo.Converter is IObjectTypeInfoRedirect redirect ? redirect.ObjectTypeInfo : typeInfo;
         }
 
         private static JsonTypeInfo RedirectBoundConstructors(JsonTypeInfo typeInfo)
@@ -165,22 +162,32 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (typeInfo.Kind != JsonTypeInfoKind.Object || _boundConstructors.TryGetValue(typeInfo, out BoundConstructor constructor) == false)
                 return typeInfo;
 
-            var redirect = (IBoundConstructorRedirect)Activator.CreateInstance(typeof(BoundConstructorConverter<>).MakeGenericType(typeInfo.Type), typeInfo, constructor);
-            return redirect.CreateTypeInfo(typeInfo.Options);
+            return CreateRedirect(typeof(BoundConstructorConverter<>), typeInfo.Type, typeInfo.Options, typeInfo, constructor);
         }
 
-        private interface IBoundConstructorRedirect
+        private static JsonTypeInfo CreateRedirect(Type converterDefinition, Type type, JsonSerializerOptions options, params object[] arguments)
+        {
+            var redirect = (IObjectTypeInfoRedirect)Activator.CreateInstance(converterDefinition.MakeGenericType(type), arguments);
+            return redirect.CreateTypeInfo(options);
+        }
+
+        private interface IObjectTypeInfoRedirect
         {
             JsonTypeInfo ObjectTypeInfo { get; }
 
             JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options);
         }
 
-        private sealed class BoundConstructorConverter<T>(JsonTypeInfo objectTypeInfo, BoundConstructor constructor) : JsonConverter<T>, IBoundConstructorRedirect
+        private abstract class RedirectConverter<T> : JsonConverter<T>, IObjectTypeInfoRedirect
         {
-            public JsonTypeInfo ObjectTypeInfo => objectTypeInfo;
+            public abstract JsonTypeInfo ObjectTypeInfo { get; }
 
             public JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options) => JsonMetadataServices.CreateValueInfo<T>(options, this);
+        }
+
+        private sealed class BoundConstructorConverter<T>(JsonTypeInfo objectTypeInfo, BoundConstructor constructor) : RedirectConverter<T>
+        {
+            public override JsonTypeInfo ObjectTypeInfo => objectTypeInfo;
 
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
@@ -278,8 +285,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static JsonTypeInfo CreateCaseSensitiveRedirect(Type type, JsonSerializerOptions options)
         {
             JsonSerializerOptions caseSensitiveOptions = _caseSensitiveOptions.GetValue(options, static o => new JsonSerializerOptions(o) { PropertyNameCaseInsensitive = false });
-            var redirect = (ICaseSensitiveRedirect)Activator.CreateInstance(typeof(CaseSensitiveConverter<>).MakeGenericType(type), caseSensitiveOptions);
-            return redirect.CreateTypeInfo(options);
+            return CreateRedirect(typeof(CaseSensitiveConverter<>), type, options, caseSensitiveOptions);
         }
 
         private static bool HasCaseOnlyNameCollision(JsonTypeInfo typeInfo)
@@ -327,27 +333,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return false;
         }
 
-        private interface ICaseSensitiveRedirect
+        private sealed class CaseSensitiveConverter<T>(JsonSerializerOptions caseSensitiveOptions) : RedirectConverter<T>
         {
-            JsonSerializerOptions Options { get; }
+            public override JsonTypeInfo ObjectTypeInfo => GetObjectTypeInfo(caseSensitiveOptions, typeof(T));
 
-            JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options);
-        }
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => JsonSerializer.Deserialize<T>(ref reader, caseSensitiveOptions);
 
-        private sealed class CaseSensitiveConverter<T> : JsonConverter<T>, ICaseSensitiveRedirect
-        {
-            public CaseSensitiveConverter(JsonSerializerOptions options)
-            {
-                Options = options;
-            }
-
-            public JsonSerializerOptions Options { get; }
-
-            public JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options) => JsonMetadataServices.CreateValueInfo<T>(options, this);
-
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => JsonSerializer.Deserialize<T>(ref reader, Options);
-
-            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, Options);
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, caseSensitiveOptions);
         }
 
         private void AssertMembersCanBeResolved(Type type)
