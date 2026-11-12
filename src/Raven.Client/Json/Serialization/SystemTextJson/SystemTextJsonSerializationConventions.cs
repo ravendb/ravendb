@@ -223,57 +223,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 $"{nameof(JsonSerializerOptions)}.{nameof(JsonSerializerOptions.PropertyNamingPolicy)} renames document fields, while queries, indexes and patches address them by member name. " +
                 $"Set {nameof(DocumentConventions)}.{nameof(DocumentConventions.PropertyNameConverter)} instead, which RavenDB applies to both.");
 
-        bool IEntityStreamWriter.TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
+        bool IEntityStreamWriter.TryWriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer, JsonOperationContext context)
         {
             if (entity is IDynamicMetaObjectProvider || serializer is not SystemTextJsonJsonSerializer stjSerializer)
                 return false;
 
-            JsonSerializerOptions options = stjSerializer.Options;
             Type type = entity.GetType();
             bool hasIdentityProperty = Conventions.GetIdentityProperty(type) != null;
-            long start = stream.Position;
 
-            RavenJsonTypeInfoResolver.RootEntity = hasIdentityProperty ? entity : null;
-            RavenJsonTypeInfoResolver.RootDocument = entity;
-            RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
-            try
+            using (RavenJsonTypeInfoResolver.EnterRoot(entity, removeIdentityProperty: true, hasIdentityProperty))
+            using (ContextMemoryBufferWriter buffer = stjSerializer.SerializeToBuffer(entity, type, context))
             {
-                JsonSerializer.Serialize(stream, entity, type, options);
-            }
-            finally
-            {
-                RavenJsonTypeInfoResolver.RootEntity = null;
-                RavenJsonTypeInfoResolver.RootDocument = null;
-                RavenJsonTypeInfoResolver.ClearSerializing();
-            }
+                if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
+                    return false;
 
-            if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
-            {
-                stream.SetLength(start);
-                stream.Position = start;
-                return false;
-            }
-
-            if (metadata != null && metadata.Count > 0)
-            {
-                long end = stream.Position;
-                stream.Position = end - 1;
-                if (stream.ReadByte() != '}')
-                    throw new InvalidOperationException($"Entity of type '{type}' must serialize to a JSON object.");
-
-                bool hasProperties = end - start > 2;
-                stream.SetLength(end - 1);
-                stream.Position = end - 1;
-                if (hasProperties)
-                    stream.WriteByte((byte)',');
-
-                using (var writer = new Utf8JsonWriter(stream, MetadataWriterOptions))
-                {
-                    writer.WritePropertyName(Constants.Documents.Metadata.Key);
-                    WriteMetadata(writer, metadata);
-                }
-
-                stream.WriteByte((byte)'}');
+                SystemTextJsonJsonSerializer.AppendMetadata(buffer, type, metadata);
+                stream.Write(buffer.WrittenSpan);
             }
 
             return true;

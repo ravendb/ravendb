@@ -181,19 +181,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             BlittableJsonReaderObject reader;
             if (useResolver)
             {
-                RavenJsonTypeInfoResolver.RootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
-                RavenJsonTypeInfoResolver.RootDocument = removeIdentityProperty ? entity : null;
-                RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
-
-                try
-                {
+                using (RavenJsonTypeInfoResolver.EnterRoot(entity, removeIdentityProperty, hasIdentityProperty))
                     reader = serialize();
-                }
-                finally
-                {
-                    RavenJsonTypeInfoResolver.RootEntity = null;
-                    RavenJsonTypeInfoResolver.RootDocument = null;
-                }
             }
             else
             {

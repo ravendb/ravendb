@@ -413,7 +413,7 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     bool written = entity is not BlittableJsonReaderObject &&
                                    _conventions.Serialization is IEntityStreamWriter streamWriter &&
-                                   streamWriter.TryWriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer);
+                                   streamWriter.TryWriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer, _context);
 
                     if (written == false)
                     {
