@@ -784,6 +784,10 @@ class genUtils {
         return date.startsWith("0001-01-01");
     }
 
+    static isDevBuildNumber(buildNumber: number) {
+        return buildNumber != null && buildNumber < 100;
+    }
+
     static isNewVersionAvailable(
         serverVersion: serverBuildVersionDto,
         latestVersion: Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo
@@ -791,13 +795,12 @@ class genUtils {
         if (!latestVersion) {
             return false;
         }
-    
+
         if (!serverVersion) {
             return false;
         }
-    
-        const isDevBuildNumber = (num: number) => num >= 40 && num < 90;
-        return !isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
+
+        return !genUtils.isDevBuildNumber(latestVersion.BuildNumber) && latestVersion.BuildNumber > serverVersion.BuildVersion;
     }
 
     static normalizeString(value: string) {

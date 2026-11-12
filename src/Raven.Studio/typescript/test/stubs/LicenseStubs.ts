@@ -268,9 +268,11 @@ export class LicenseStubs {
     static latestVersionNotChecked(): Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo {
         return {
             Version: null,
-            PublishedAt: null,
             BuildNumber: null,
-        } as Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo;
+            BuildType: null,
+            PublishedAt: null,
+            UpdateSeverity: null,
+        };
     }
 
     static getLicenseFreeDownload(): DownloadFreeLicenseResponse {

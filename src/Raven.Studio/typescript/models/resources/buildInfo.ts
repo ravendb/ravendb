@@ -1,11 +1,12 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
+import genUtils = require("common/generalUtils");
 
 class buildInfo {
     static serverBuildVersion = ko.observable<serverBuildVersionDto>();
-    
+
     static isDevVersion = ko.pureComputed(() => {
         const version = buildInfo.serverBuildVersion();
-        return version && version.BuildVersion < 100;
+        return genUtils.isDevBuildNumber(version?.BuildVersion);
     });
 
     /**
