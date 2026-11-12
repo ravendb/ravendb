@@ -1074,6 +1074,32 @@ namespace SlowTests.Client
             }
         }
 
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("@archive-at", "2030-01-01T00:00:00.0000000Z")]
+        [InlineData("@nested-object-types", "x")]
+        public void PatchingOnlyTheMetadataIsSaved(string key, string value)
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "people/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Address = new SinglePropClass { City = "Netanya" } }, documentId);
+                    session.SaveChanges();
+                }
+
+                var jpd = new JsonPatchDocument();
+                jpd.Add("/@metadata/" + key, value);
+                Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
+
+                using (var session = store.OpenSession())
+                {
+                    var stored = session.Load<Person>(documentId);
+                    Assert.Equal(value, session.Advanced.GetMetadataFor(stored).GetString(key));
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.Patching)]
         public void OperationsSeeTheChangesOfThePreviousOnes()
         {

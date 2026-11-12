@@ -102,8 +102,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
                     ReadObject(context, document, original);
 
                 DocumentsStorage.PutOperationResults? putResult = null;
-                // the operations may leave the document as it was, e.g. a Replace with the same value
-                if (isModified && DocumentCompare.IsEqualTo(original, document.Data, DocumentCompare.DocumentCompareOptions.Default) != DocumentCompareResult.Equal)
+                // the operations may leave the document as it was, e.g. a Replace with the same value; every property counts, the metadata too
+                if (isModified && original.Equals(document.Data) == false)
                     putResult = context.DocumentDatabase.DocumentsStorage.Put(context, _id, document.ChangeVector, document.Data);
 
                 if (putResult == null)
