@@ -28,25 +28,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 _session.OnBeforeConversionToEntityInvoke(id, type, ref json);
 
-                var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
-                var entity = defaultValue;
-
-                Type entityType = type;
-                var documentTypeAsString = _session.Conventions.GetClrType(id, json);
-                if (documentTypeAsString != null)
-                {
-                    var documentType = _session.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
-                    if (documentType != null && type.IsAssignableFrom(documentType))
-                    {
-                        entityType = documentType;
-                        entity = _session.Conventions.Serialization.DeserializeEntityFromBlittable(documentType, json);
-                    }
-                }
-
-                if (Equals(entity, defaultValue))
-                {
-                    entity = _session.Conventions.Serialization.DeserializeEntityFromBlittable(type, json);
-                }
+                object entity = DeserializeEntity(type, json, id, out Type entityType);
 
                 if (trackEntity && _session.Conventions.PreserveDocumentPropertiesNotFoundOnModel && entity != null)
                 {
