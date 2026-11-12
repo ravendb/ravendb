@@ -644,6 +644,20 @@ namespace Sparrow.Json
 
 #endif
 
+#if NET11_0_OR_GREATER
+
+        public bool Contains(Rune value)
+        {
+            return ToString().Contains(value);
+        }
+
+        public bool Contains(Rune value, StringComparison comparisonType)
+        {
+            return ToString().Contains(value, comparisonType);
+        }
+
+#endif
+
         public bool EndsWith(string value)
         {
             if (IsDisposed)
@@ -693,6 +707,25 @@ namespace Sparrow.Json
         {
             return EndsWith(value.ToString());
         }
+
+#if NET11_0_OR_GREATER
+
+        public bool EndsWith(char value, StringComparison comparisonType)
+        {
+            return ToString().EndsWith(value, comparisonType);
+        }
+
+        public bool EndsWith(Rune value)
+        {
+            return ToString().EndsWith(value);
+        }
+
+        public bool EndsWith(Rune value, StringComparison comparisonType)
+        {
+            return ToString().EndsWith(value, comparisonType);
+        }
+
+#endif
 
         public int IndexOf(char value)
         {
@@ -784,6 +817,45 @@ namespace Sparrow.Json
         {
             return ToString().IndexOf(value, comparisonType);
         }
+
+#if NET11_0_OR_GREATER
+
+        public int IndexOf(char value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, startIndex, count, comparisonType);
+        }
+
+        public int IndexOf(Rune value)
+        {
+            return ToString().IndexOf(value);
+        }
+
+        public int IndexOf(Rune value, int startIndex)
+        {
+            return ToString().IndexOf(value, startIndex);
+        }
+
+        public int IndexOf(Rune value, int startIndex, int count)
+        {
+            return ToString().IndexOf(value, startIndex, count);
+        }
+
+        public int IndexOf(Rune value, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, comparisonType);
+        }
+
+        public int IndexOf(Rune value, int startIndex, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, startIndex, comparisonType);
+        }
+
+        public int IndexOf(Rune value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, startIndex, count, comparisonType);
+        }
+
+#endif
 
         public int IndexOfAny(char[] anyOf)
         {
@@ -890,6 +962,45 @@ namespace Sparrow.Json
             return ToString().LastIndexOf(value, startIndex, count, comparisonType);
         }
 
+#if NET11_0_OR_GREATER
+
+        public int LastIndexOf(char value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, startIndex, count, comparisonType);
+        }
+
+        public int LastIndexOf(Rune value)
+        {
+            return ToString().LastIndexOf(value);
+        }
+
+        public int LastIndexOf(Rune value, int startIndex)
+        {
+            return ToString().LastIndexOf(value, startIndex);
+        }
+
+        public int LastIndexOf(Rune value, int startIndex, int count)
+        {
+            return ToString().LastIndexOf(value, startIndex, count);
+        }
+
+        public int LastIndexOf(Rune value, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, comparisonType);
+        }
+
+        public int LastIndexOf(Rune value, int startIndex, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, startIndex, comparisonType);
+        }
+
+        public int LastIndexOf(Rune value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, startIndex, count, comparisonType);
+        }
+
+#endif
+
         public int LastIndexOfAny(char[] anyOf)
         {
             return LastIndexOfAny(anyOf, Length - 1, Length);
@@ -973,6 +1084,15 @@ namespace Sparrow.Json
         {
             throw new NotSupportedException();
         }
+
+#if NET11_0_OR_GREATER
+
+        public string Replace(Rune oldRune, Rune newRune)
+        {
+            return ToString().Replace(oldRune, newRune);
+        }
+
+#endif
 
         public string Substring(int startIndex)
         {
@@ -1061,6 +1181,18 @@ namespace Sparrow.Json
         }
 #endif
 
+#if NET11_0_OR_GREATER
+        public string[] Split(Rune separator, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return ToString().Split(separator, options);
+        }
+
+        public string[] Split(Rune separator, int count, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return ToString().Split(separator, count, options);
+        }
+#endif
+
         public bool StartsWith(string value)
         {
             if (IsDisposed)
@@ -1137,6 +1269,25 @@ namespace Sparrow.Json
             return StartsWith(value.ToString());
         }
 
+#if NET11_0_OR_GREATER
+
+        public bool StartsWith(char value, StringComparison comparisonType)
+        {
+            return ToString().StartsWith(value, comparisonType);
+        }
+
+        public bool StartsWith(Rune value)
+        {
+            return ToString().StartsWith(value);
+        }
+
+        public bool StartsWith(Rune value, StringComparison comparisonType)
+        {
+            return ToString().StartsWith(value, comparisonType);
+        }
+
+#endif
+
         public char[] ToArray()
         {
             return ToString().ToArray();
@@ -1171,6 +1322,15 @@ namespace Sparrow.Json
             return ToString().ToLowerInvariant();
         }
 
+#if NET11_0_OR_GREATER
+
+        public string ToLowerOrdinal()
+        {
+            return ToString().ToLowerOrdinal();
+        }
+
+#endif
+
         public string ToUpper()
         {
             return ToString().ToUpper();
@@ -1189,6 +1349,15 @@ namespace Sparrow.Json
         {
             return ToString().ToUpperInvariant();
         }
+
+#if NET11_0_OR_GREATER
+
+        public string ToUpperOrdinal()
+        {
+            return ToString().ToUpperOrdinal();
+        }
+
+#endif
 
         public string Trim()
         {

@@ -17,7 +17,7 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
 
     <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
-    <AssemblyOriginatorKeyFile Condition="EXISTS('.\..\..\..\..\..\..\RavenDB.snk')">.\..\..\..\..\..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
+    <!-- relative to this file, so it also resolves for the projects BenchmarkDotNet generates under bench/*/.bdn -->
+    <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)..\RavenDB.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 </Project>
