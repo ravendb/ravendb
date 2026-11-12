@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson
 {
@@ -8,15 +7,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
     {
         public static readonly RavenSerializationBinder Instance = new();
 
-        private HashSet<Type> _forbiddenTypesCache = new();
+        private const string ForbiddenNamespace = "Microsoft.VisualStudio";
 
-        private HashSet<Type> _safeTypesCache = new();
-
-        private readonly HashSet<string> _forbiddenNamespaces = new() { "Microsoft.VisualStudio" };
-
-        private bool _used;
-
-        private static readonly HashSet<string> ForbiddenTypes = new()
+        /// <summary>
+        /// https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html#known-net-rce-gadgets
+        /// </summary>
+        internal static readonly HashSet<string> ForbiddenTypes = new()
         {
             "System.Configuration.Install.AssemblyInstaller",
             "System.Activities.Presentation.WorkflowDesigner",
@@ -30,37 +26,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             "System.Management.Automation.PSObject"
         };
 
+        private HashSet<Type> _forbiddenTypesCache = new();
+
+        private HashSet<Type> _safeTypesCache = new();
+
         public void ValidateType(Type type)
-        {
-            _used = true;
-            AssertType(type);
-        }
-
-        public void RegisterForbiddenNamespace(string @namespace)
-        {
-            if (@namespace == null)
-                throw new ArgumentNullException(nameof(@namespace));
-
-            AssertNotUsed();
-
-            _forbiddenNamespaces.Add(@namespace);
-        }
-
-        public void RegisterForbiddenType(Type type)
-        {
-            AssertNotUsed();
-
-            UpdateCache(ref _forbiddenTypesCache, type);
-        }
-
-        public void RegisterSafeType(Type type)
-        {
-            AssertNotUsed();
-
-            UpdateCache(ref _safeTypesCache, type);
-        }
-
-        private void AssertType(Type type)
         {
             if (type == null)
                 return;
@@ -71,7 +41,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (_forbiddenTypesCache.Contains(type))
                 ThrowForbiddenType(type);
 
-            if (type.Namespace != null && _forbiddenNamespaces.Any(@namespace => type.Namespace.StartsWith(@namespace)))
+            if (type.Namespace != null && type.Namespace.StartsWith(ForbiddenNamespace, StringComparison.Ordinal))
             {
                 UpdateCache(ref _forbiddenTypesCache, type);
                 ThrowForbiddenNamespace(type);
@@ -90,7 +60,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 {
                     try
                     {
-                        AssertType(genericArguments[i]);
+                        ValidateType(genericArguments[i]);
                     }
                     catch (Exception e)
                     {
@@ -102,12 +72,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             UpdateCache(ref _safeTypesCache, type);
-        }
-
-        private void AssertNotUsed()
-        {
-            if (_used)
-                throw new InvalidOperationException("Cannot perform this operation, because binder was already used.");
         }
 
         private static void UpdateCache(ref HashSet<Type> cache, Type type)

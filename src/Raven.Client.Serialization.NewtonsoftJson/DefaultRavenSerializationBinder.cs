@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Json.Serialization.SystemTextJson;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson;
 
@@ -16,23 +17,6 @@ public class DefaultRavenSerializationBinder : DefaultSerializationBinder
     private readonly HashSet<string> _forbiddenNamespaces = new() { "Microsoft.VisualStudio" };
 
     private bool _used;
-
-    /// <summary>
-    /// https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html#known-net-rce-gadgets
-    /// </summary>
-    private static readonly HashSet<string> ForbiddenTypes = new()
-    {
-        "System.Configuration.Install.AssemblyInstaller",
-        "System.Activities.Presentation.WorkflowDesigner",
-        "System.Windows.ResourceDictionary",
-        "System.Windows.Data.ObjectDataProvider",
-        "System.Windows.Forms.BindingSource",
-        "Microsoft.Exchange.Management.SystemManager.WinForms.ExchangeSettingsProvider",
-        "System.Data.DataViewManager",
-        "System.Xml.XmlDocument",
-        "System.Xml.XmlDataDocument",
-        "System.Management.Automation.PSObject"
-    };
 
     public override Type BindToType(string assemblyName, string typeName)
     {
@@ -95,7 +79,7 @@ public class DefaultRavenSerializationBinder : DefaultSerializationBinder
             ThrowForbiddenNamespace(type);
         }
 
-        if (ForbiddenTypes.Contains(type.FullName))
+        if (RavenSerializationBinder.ForbiddenTypes.Contains(type.FullName))
         {
             UpdateCache(ref _forbiddenTypesCache, type);
             ThrowForbiddenType(type);
