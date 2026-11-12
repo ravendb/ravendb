@@ -86,7 +86,7 @@ public class TelegramAgentScopingTests(ITestOutputHelper output, QuillTelegramFi
         {
             Name = connectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("mock-key", Llm.BaseAddress + "/", "gpt-4o-mock"),
+            OpenAiSettings = new OpenAiSettings("mock-key", Llm.BaseAddress + "/", "gpt-4o-mock") { ApiMode = OpenAiApiMode.ChatCompletions }, // the mock serves only /chat/completions
         });
 
         var agentId = "tg-scope-" + Guid.NewGuid().ToString("N")[..8];
