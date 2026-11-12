@@ -169,6 +169,9 @@ export interface AiConnection extends ConnectionBase {
         enablePromptCache?: boolean;
         isSetTemperature?: boolean;
         temperature?: number;
+        // No UI yet: kept from the loaded connection string so a save does not clear it
+        reasoningEffort?: string;
+        apiMode?: Raven.Client.Documents.Operations.AI.OpenAiApiMode;
     };
     googleSettings?: {
         aiVersion?: Raven.Client.Documents.Operations.AI.GoogleAIVersion;
@@ -178,6 +181,8 @@ export interface AiConnection extends ConnectionBase {
         endpoint?: string;
         embeddingsMaxConcurrentBatches?: number;
         enablePromptCache?: boolean;
+        // No UI yet: kept from the loaded connection string so a save does not clear it
+        reasoningEffort?: string;
     };
     huggingFaceSettings?: {
         apiKey?: string;
@@ -192,6 +197,10 @@ export interface AiConnection extends ConnectionBase {
         embeddingsMaxConcurrentBatches?: number;
         isSetTemperature?: boolean;
         temperature?: number;
+        // No UI yet: kept from the loaded connection string so a save does not clear it
+        apiKey?: string;
+        reasoningEffort?: string;
+        apiMode?: Raven.Client.Documents.Operations.AI.OpenAiApiMode;
     };
     embeddedSettings?: {
         embeddingsMaxConcurrentBatches?: number;
@@ -208,6 +217,8 @@ export interface AiConnection extends ConnectionBase {
         enablePromptCache?: boolean;
         isSetTemperature?: boolean;
         temperature?: number;
+        // No UI yet: kept from the loaded connection string so a save does not clear it
+        apiMode?: Raven.Client.Documents.Operations.AI.OpenAiApiMode;
     };
     mistralAiSettings?: {
         apiKey?: string;
