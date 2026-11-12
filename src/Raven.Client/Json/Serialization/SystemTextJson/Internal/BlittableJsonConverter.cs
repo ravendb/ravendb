@@ -61,15 +61,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            if (jsonSerializer is SystemTextJsonJsonSerializer stjSerializer)
-            {
-                Type type = entity.GetType();
-                return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: false,
-                    () => stjSerializer.SerializeToBlittable(entity, type, context));
-            }
-
-            using (var writer = new SystemTextJsonBlittableWriter(context, documentInfo: null))
-                return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer, removeIdentityProperty: false);
+            var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
+            Type type = entity.GetType();
+            return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: false,
+                () => serializer.SerializeToBlittable(entity, type, context));
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context)
@@ -86,15 +81,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            if (jsonSerializer is SystemTextJsonJsonSerializer stjSerializer)
-            {
-                Type type = entity.GetType();
-                return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: true,
-                    () => stjSerializer.SerializeToBlittableWithMetadata(entity, type, metadata, context));
-            }
-
-            using (var writer = new SystemTextJsonBlittableWriter(context, new DocumentInfo { MetadataInstance = metadata }))
-                return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer);
+            var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
+            Type type = entity.GetType();
+            return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: true,
+                () => serializer.SerializeToBlittableWithMetadata(entity, type, metadata, context));
         }
     }
 }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Session;
 using Sparrow;
 using Sparrow.Extensions;
@@ -12,101 +11,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class SystemTextJsonBlittableWriter : IJsonWriter
     {
-        private readonly LazyStringValue _metadataKey;
-        private readonly LazyStringValue _metadataCollection;
-        private readonly LazyStringValue _metadataId;
-
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
-        private bool _first;
-        private readonly DocumentInfo _documentInfo;
 
         public JsonOperationContext Context { get; }
 
-        public SystemTextJsonBlittableWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
-            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null,
-            LazyStringValue idField = null, LazyStringValue keyField = null, LazyStringValue collectionField = null)
+        public SystemTextJsonBlittableWriter(JsonOperationContext context)
         {
             Context = context;
-            _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
-            _manualBlittableJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
+            _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, BlittableJsonDocumentBuilder.UsageMode.None);
+            _manualBlittableJsonDocumentBuilder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
             _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();
-            _documentInfo = documentInfo;
-            _first = true;
-
-            _metadataId = idField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id);
-            _metadataKey = keyField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
-            _metadataCollection = collectionField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
         }
 
         public void WriteStartObject()
         {
             _manualBlittableJsonDocumentBuilder.StartWriteObject();
-            if (!_first)
-                return;
-            _first = false;
-            WriteMetadataFromDocumentInfo();
-        }
-
-        private void WriteMetadataFromDocumentInfo()
-        {
-            if (_documentInfo == null)
-                return;
-            if (_documentInfo.Metadata?.Modifications != null && _documentInfo.Metadata.Modifications.Properties.Count > 0)
-            {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
-                _manualBlittableJsonDocumentBuilder.StartWriteObject();
-
-                foreach (var prop in _documentInfo.Metadata.Modifications.Properties)
-                {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
-                    WritePropertyValue(prop.Name, prop.Value);
-                }
-
-                if (_documentInfo.Collection != null)
-                {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataCollection);
-                    _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
-                }
-
-                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-                _documentInfo.Metadata.Modifications = null;
-            }
-            else if (_documentInfo.Metadata != null)
-            {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
-                _manualBlittableJsonDocumentBuilder.StartWriteObject();
-
-                for (int i = 0; i < _documentInfo.Metadata.Count; i++)
-                {
-                    var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    _documentInfo.Metadata.GetPropertyByIndex(i, ref propertyDetails);
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
-
-                    WritePropertyValue(propertyDetails);
-                }
-                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-            }
-            else if (_documentInfo.MetadataInstance != null)
-            {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
-                WriteMetadata(_documentInfo.MetadataInstance);
-            }
-            else if (_documentInfo.Collection != null)
-            {
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataKey);
-                _manualBlittableJsonDocumentBuilder.StartWriteObject();
-
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataCollection);
-                _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Collection);
-
-                if (_documentInfo.Id != null)
-                {
-                    _manualBlittableJsonDocumentBuilder.WritePropertyName(_metadataId);
-                    _manualBlittableJsonDocumentBuilder.WriteValue(_documentInfo.Id);
-                }
-
-                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-            }
         }
 
         public void WriteMetadata(IMetadataDictionary metadata)
@@ -118,78 +37,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(kvp.Key);
 
                 WritePropertyValue(kvp.Key, kvp.Value);
-            }
-
-            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-        }
-
-        private void WritePropertyValue(BlittableJsonReaderObject.PropertyDetails prop)
-        {
-            switch (prop.Token & BlittableJsonReaderBase.TypesMask)
-            {
-                case BlittableJsonToken.StartObject:
-                    if (prop.Value is BlittableJsonReaderObject obj)
-                        WriteObject(obj);
-                    break;
-                case BlittableJsonToken.StartArray:
-                    _manualBlittableJsonDocumentBuilder.StartWriteArray();
-                    if (prop.Value is BlittableJsonReaderArray array)
-                    {
-                        foreach (var entry in array)
-                        {
-                            if (entry is BlittableJsonReaderObject entryObj)
-                                WriteObject(entryObj);
-                            else
-                                WritePropertyValue(prop.Name, entry);
-                        }
-                    }
-                    _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
-                    break;
-                case BlittableJsonToken.Integer:
-                    _manualBlittableJsonDocumentBuilder.WriteValue((long)prop.Value);
-                    break;
-                case BlittableJsonToken.LazyNumber:
-                    if (prop.Value is LazyNumberValue ldv)
-                    {
-                        _manualBlittableJsonDocumentBuilder.WriteValue(ldv);
-                    }
-                    else if (prop.Value is double d)
-                    {
-                        _manualBlittableJsonDocumentBuilder.WriteValue(d);
-                    }
-                    else
-                    {
-                        _manualBlittableJsonDocumentBuilder.WriteValue((float)prop.Value);
-                    }
-                    break;
-                case BlittableJsonToken.String:
-                    _manualBlittableJsonDocumentBuilder.WriteValue((LazyStringValue)prop.Value);
-                    break;
-                case BlittableJsonToken.CompressedString:
-                    _manualBlittableJsonDocumentBuilder.WriteValue((LazyCompressedStringValue)prop.Value);
-                    break;
-                case BlittableJsonToken.Boolean:
-                    _manualBlittableJsonDocumentBuilder.WriteValue((bool)prop.Value);
-                    break;
-                case BlittableJsonToken.Null:
-                    _manualBlittableJsonDocumentBuilder.WriteValueNull();
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WriteObject(BlittableJsonReaderObject obj)
-        {
-            var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-
-            _manualBlittableJsonDocumentBuilder.StartWriteObject();
-            for (int i = 0; i < obj.Count; i++)
-            {
-                obj.GetPropertyByIndex(i, ref propDetails);
-                _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
-                WritePropertyValue(propDetails);
             }
 
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
