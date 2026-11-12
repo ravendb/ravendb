@@ -160,7 +160,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 long processed = 0;
                 bool batchFull = false;
 
-                using (GetBatchStartKey(step.ReadTx.Allocator, lastHash, out Slice startHash))
+                using (GetBatchStartKey(step.ReadTx.Allocator, lastHash, Slices.BeforeAllKeys, out Slice startHash))
                 using (TreeIterator hashIt = hashIndexTree.Iterate(prefetch: true))
                 {
                     if (hashIt.Seek(startHash))
@@ -209,21 +209,23 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
         }
 
-        private static IDisposable GetBatchStartKey(ByteStringContext allocator, byte[] lastKey, out Slice startKey)
+        private static IDisposable GetBatchStartKey(ByteStringContext allocator, byte[] lastKey, Slice firstBatchKey, out Slice startKey)
         {
             if (lastKey == null)
             {
-                startKey = Slices.BeforeAllKeys;
+                startKey = firstBatchKey;
                 return null;
             }
 
             return Slice.From(allocator, lastKey, ByteStringType.Immutable, out startKey);
         }
 
+        // Each batch continues after the primary key of the last migrated record. Table.Set keeps the primary key,
+        // so the key is still in the next read transaction.
         private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, bool isSharded)
         {
-            var skip = 0L;
-            var processed = 0L;
+            byte[] lastKey = null;
+            var migrated = 0L;
             var done = false;
 
             UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass 2 of 2",
@@ -248,40 +250,45 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         var writeTable = step.WriteTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
 
                         var streamsTree = step.ReadTx.ReadTree(Attachments);
+                        var processed = 0L;
 
-                        foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
+                        using (GetBatchStartKey(context.Allocator, lastKey, Slices.Empty, out Slice startAfter))
                         {
-                            using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                            foreach (var (key, read) in readTable.SeekByPrimaryKeyPrefix(Slices.BeforeAllKeys, startAfter, skip: 0))
                             {
-                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
-
-                                using (scope)
-                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out _))
+                                using (TableValueReaderUtil.CloneTableValueReader(context, read))
                                 {
-                                    writeTable.Set(tvb, forceUpdate: true);
+                                    Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
+
+                                    using (scope)
+                                    using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out _))
+                                    {
+                                        writeTable.Set(tvb, forceUpdate: true);
+                                    }
+                                }
+
+                                if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
+                                {
+                                    lastKey = key.AsReadOnlySpan().ToArray();
+                                    commit = true;
+                                    break;
                                 }
                             }
-
-                            if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
-                            {
-                                skip += processed;
-                                processed = 0;
-                                commit = true;
-                                break;
-                            }
                         }
+
+                        migrated += processed;
 
                         if (commit)
                         {
                             step.Commit(context);
                             step.RenewTransactions();
                             OnBatchCommitted();
-                            progress.BatchCommitted(skip);
+                            progress.BatchCommitted(migrated);
                             continue;
                         }
-
-                        done = true;
                     }
+
+                    done = true;
 
                     if (isSharded)
                     {
@@ -295,7 +302,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
             }
 
-            progress.Completed(skip + processed);
+            progress.Completed(migrated);
         }
 
         private sealed class UpgradeProgress
