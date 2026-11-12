@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Sparrow.Utils;
 
@@ -16,6 +17,8 @@ namespace Raven.Client.Json
         private static readonly TaskCompletionSource<object> Sentinel = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private TaskCompletionSource<object> _tcs;
+
+        private readonly CancellationTokenSource _abortUpload = new();
 
         private readonly Func<Stream, Task> _asyncTaskWriter;
         private readonly DocumentConventions _conventions;
@@ -37,10 +40,57 @@ namespace Raven.Client.Json
                 ? Task.CompletedTask // SerializeToStreamAsync was never called
                 : _tcs!.Task;
 
+        // Over HTTP/2 a server can respond before reading the whole body and never read the rest
+        internal async Task WaitForRequestBodyAsync(Task requestBodyTask, HttpResponseMessage response, CancellationToken token)
+        {
+            if (response == null)
+            {
+                await requestBodyTask.ConfigureAwait(false);
+                return;
+            }
+
+            Task bufferResponseTask = null;
+            try
+            {
+                if (response.IsSuccessStatusCode == false)
+                {
+                    bufferResponseTask = response.Content.LoadIntoBufferAsync();
+                    await bufferResponseTask.WithCancellation(token).ConfigureAwait(false);
+
+                    _abortUpload.Cancel();
+                }
+
+                await requestBodyTask.WithCancellation(token).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                _abortUpload.Cancel();
+                response.Dispose();
+
+                await requestBodyTask.ConfigureAwait(false);
+
+                bufferResponseTask?.IgnoreUnobservedExceptions();
+
+                if (e is OperationCanceledException && token.IsCancellationRequested)
+                {
+#if NETSTANDARD2_0 || NETSTANDARD2_1
+                    throw new TaskCanceledException(new OperationCanceledException().Message);
+#else
+                    throw new TaskCanceledException(new OperationCanceledException().Message, null, token);
+#endif
+                }
+
+                throw;
+            }
+        }
+
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
             if (Interlocked.CompareExchange(ref _tcs, new(TaskCreationOptions.RunContinuationsAsynchronously), null) is not null)
                 throw new InvalidOperationException($"Already called previously, or called after {nameof(EnsureCompletedAsync)}");
+
+            var abortableStream = new AbortableWriteStream(stream, _abortUpload.Token);
+            stream = abortableStream;
 
             try
             {
@@ -91,6 +141,7 @@ namespace Raven.Client.Json
             }
             finally
             {
+                abortableStream.Dispose();
                 _tcs!.TrySetResult(null);
             }
         }
@@ -99,6 +150,75 @@ namespace Raven.Client.Json
         {
             length = -1;
             return false;
+        }
+
+        private sealed class AbortableWriteStream : Stream
+        {
+            private readonly Stream _inner;
+            private readonly CancellationToken _abort;
+            private CancellationTokenSource _linked;
+            private CancellationToken _linkedFor;
+
+            public AbortableWriteStream(Stream inner, CancellationToken abort)
+            {
+                _inner = inner;
+                _abort = abort;
+            }
+
+            public override bool CanRead => false;
+
+            public override bool CanSeek => false;
+
+            public override bool CanWrite => _inner.CanWrite;
+
+            public override long Length => throw new NotSupportedException();
+
+            public override long Position
+            {
+                get => throw new NotSupportedException();
+                set => throw new NotSupportedException();
+            }
+
+            private CancellationToken Abortable(CancellationToken token)
+            {
+                if (token.CanBeCanceled == false)
+                    return _abort;
+
+                if (_linked == null || _linkedFor != token)
+                {
+                    _linked?.Dispose();
+                    _linked = CancellationTokenSource.CreateLinkedTokenSource(token, _abort);
+                    _linkedFor = token;
+                }
+
+                return _linked.Token;
+            }
+
+            public override void Flush() => _inner.FlushAsync(_abort).GetAwaiter().GetResult();
+
+            public override Task FlushAsync(CancellationToken token) => _inner.FlushAsync(Abortable(token));
+
+            public override void Write(byte[] buffer, int offset, int count) => _inner.WriteAsync(buffer, offset, count, _abort).GetAwaiter().GetResult();
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken token) => _inner.WriteAsync(buffer, offset, count, Abortable(token));
+
+#if !NETSTANDARD2_0
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken token = default) => _inner.WriteAsync(buffer, Abortable(token));
+#endif
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                    _linked?.Dispose();
+
+                base.Dispose(disposing);
+            }
+
+            public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+            public override void SetLength(long value) => throw new NotSupportedException();
         }
     }
 }

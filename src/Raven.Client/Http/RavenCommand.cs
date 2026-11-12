@@ -113,9 +113,11 @@ namespace Raven.Client.Http
         {
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
+            HttpResponseMessage response = null;
             try
             {
-                return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                return response;
             }
             finally
             {
@@ -124,7 +126,7 @@ namespace Raven.Client.Http
                     var requestBodyTask = bjc.EnsureCompletedAsync();
 
                     if (requestBodyTask.IsCompleted == false)
-                        await requestBodyTask.ConfigureAwait(false);
+                        await bjc.WaitForRequestBodyAsync(requestBodyTask, response, token).ConfigureAwait(false);
                 }
             }
         }
