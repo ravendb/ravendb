@@ -18,6 +18,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Raven.Client.Util;
 using Sparrow.Extensions;
@@ -526,28 +527,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return attribute.GetType().GetProperty("NamingStrategyType")?.GetValue(attribute) != null;
         }
 
-        private static bool IsWrittenAsArray(Type type)
-        {
-            if (type == typeof(string) || typeof(IEnumerable).IsAssignableFrom(type) == false || typeof(IDictionary).IsAssignableFrom(type) || IsGenericDictionary(type))
-                return false;
-
-            foreach (Type @interface in type.GetInterfaces())
-            {
-                if (IsGenericDictionary(@interface))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private static bool IsGenericDictionary(Type type)
-        {
-            if (type.IsGenericType == false)
-                return false;
-
-            Type definition = type.GetGenericTypeDefinition();
-            return definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>);
-        }
+        private static bool IsWrittenAsArray(Type type) => TypeShape.Of(type).IsCollection;
 
         private static bool PreservesNewtonsoftReferences(object attribute)
         {
@@ -620,33 +600,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 return;
 
             var converterParameters = (object[])attributeType.GetProperty("ItemConverterParameters")?.GetValue(attribute);
-            if (IsTranslatedConverter(converterType, converterParameters, GetItemType(collectionType)) == false)
+            TypeShape shape = TypeShape.Of(collectionType);
+            if (IsTranslatedConverter(converterType, converterParameters, shape.IsDictionary ? shape.ValueType : shape.ItemType) == false)
                 ThrowNewtonsoftItemConverterNotSupported(target);
-        }
-
-        private static Type GetItemType(Type type)
-        {
-            if (type == typeof(string))
-                return null;
-
-            if (type.IsArray)
-                return type.GetElementType();
-
-            Type itemType = null;
-            foreach (Type candidate in type.GetInterfaces().Prepend(type))
-            {
-                if (candidate.IsGenericType == false)
-                    continue;
-
-                Type definition = candidate.GetGenericTypeDefinition();
-                if (definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>))
-                    return candidate.GetGenericArguments()[1];
-
-                if (definition == typeof(IEnumerable<>))
-                    itemType = candidate.GetGenericArguments()[0];
-            }
-
-            return itemType;
         }
 
         internal static object GetNewtonsoftAttribute(ICustomAttributeProvider provider, string attributeName)
@@ -1839,8 +1795,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.Get == null || property.Set == null || property.IsExtensionData ||
-                    (typeof(IDictionary).IsAssignableFrom(property.PropertyType) == false && IsGenericDictionary(property.PropertyType) == false))
+                if (property.Get == null || property.Set == null || property.IsExtensionData || TypeShape.Of(property.PropertyType).IsDictionary == false)
                     continue;
 
                 Func<object, object> get = property.Get;
