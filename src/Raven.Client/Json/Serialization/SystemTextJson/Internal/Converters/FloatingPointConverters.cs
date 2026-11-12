@@ -16,7 +16,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static string Format(double value)
         {
             string text = value.ToString("R", CultureInfo.InvariantCulture);
-            if (double.IsNaN(value) || double.IsInfinity(value) || text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
+            if (text.IndexOf('.') != -1 || text.IndexOf('E') != -1 || text.IndexOf('e') != -1)
                 return text;
 
             return text + ".0";
@@ -28,26 +28,42 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return text.IndexOf('.') != -1 ? text : text + ".0";
         }
 
-#if NET8_0_OR_GREATER
-        private const int MaxNumberLength = 64;
-
         private static void Write(Utf8JsonWriter writer, double value)
         {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                NamedFloatingPointLiterals.Write(writer, value);
+                return;
+            }
+
+#if NET8_0_OR_GREATER
             Span<byte> buffer = stackalloc byte[MaxNumberLength];
-            if (double.IsFinite(value) && value.TryFormat(buffer.Slice(0, MaxNumberLength - 2), out int written, "R", CultureInfo.InvariantCulture))
+            if (value.TryFormat(buffer.Slice(0, MaxNumberLength - 2), out int written, "R", CultureInfo.InvariantCulture))
+            {
                 WriteNumber(writer, buffer, written);
-            else
-                writer.WriteRawValue(Format(value), skipInputValidation: true);
+                return;
+            }
+#endif
+
+            writer.WriteRawValue(Format(value), skipInputValidation: true);
         }
 
         private static void Write(Utf8JsonWriter writer, decimal value)
         {
+#if NET8_0_OR_GREATER
             Span<byte> buffer = stackalloc byte[MaxNumberLength];
             if (value.TryFormat(buffer.Slice(0, MaxNumberLength - 2), out int written, "G", CultureInfo.InvariantCulture))
+            {
                 WriteNumber(writer, buffer, written);
-            else
-                writer.WriteRawValue(Format(value), skipInputValidation: true);
+                return;
+            }
+#endif
+
+            writer.WriteRawValue(Format(value), skipInputValidation: true);
         }
+
+#if NET8_0_OR_GREATER
+        private const int MaxNumberLength = 64;
 
         private static void WriteNumber(Utf8JsonWriter writer, Span<byte> buffer, int written)
         {
@@ -59,10 +75,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             writer.WriteRawValue(buffer.Slice(0, written), skipInputValidation: true);
         }
-#else
-        private static void Write(Utf8JsonWriter writer, double value) => writer.WriteRawValue(Format(value), skipInputValidation: true);
-
-        private static void Write(Utf8JsonWriter writer, decimal value) => writer.WriteRawValue(Format(value), skipInputValidation: true);
 #endif
 
         private sealed class DoubleConverter : JsonConverter<double>

@@ -229,7 +229,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WriteNumber(double value)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
-                writer.WriteRawValue(value.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
+                NamedFloatingPointLiterals.Write(writer, value);
             else
                 writer.WriteNumberValue(value);
         }
@@ -237,14 +237,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WriteNumber(float value)
         {
             if (float.IsNaN(value) || float.IsInfinity(value))
-                writer.WriteRawValue(value.ToString(CultureInfo.InvariantCulture), skipInputValidation: true);
+                NamedFloatingPointLiterals.Write(writer, value);
             else
                 writer.WriteNumberValue(value);
         }
 
         public void WriteNumber(decimal value) => writer.WriteNumberValue(value);
 
-        public void WriteNumber(LazyNumberValue value) => writer.WriteRawValue(value.ToString(), skipInputValidation: true);
+        public void WriteNumber(LazyNumberValue value)
+        {
+            if (NamedFloatingPointLiterals.TryWriteEscaped(writer, value) == false)
+                writer.WriteRawValue(value.ToString(), skipInputValidation: true);
+        }
 
         public void WriteStartObject() => writer.WriteStartObject();
 
