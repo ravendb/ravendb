@@ -150,22 +150,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        protected static BlittableJsonReaderObject ToBlittableInternal(
-            object entity,
-            DocumentConventions conventions,
-            JsonOperationContext context,
-            IJsonSerializer serializer,
-            IJsonWriter writer,
-            bool removeIdentityProperty = true)
-        {
-            return ConvertToBlittable(entity, conventions, context, removeIdentityProperty, () =>
-            {
-                serializer.Serialize(writer, entity);
-                writer.FinalizeDocument();
-                return writer.CreateReader();
-            });
-        }
-
         protected static BlittableJsonReaderObject ConvertToBlittable(
             object entity,
             DocumentConventions conventions,
