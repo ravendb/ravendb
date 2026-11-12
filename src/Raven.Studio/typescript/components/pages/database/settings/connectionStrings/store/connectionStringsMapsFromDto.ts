@@ -419,7 +419,6 @@ function mapAiFromSingleDto(
             dimensions: d.GoogleSettings?.Dimensions,
             embeddingsMaxConcurrentBatches: d.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
             enablePromptCache: d.GoogleSettings?.EnablePromptCache,
-            reasoningEffort: d.GoogleSettings?.ReasoningEffort,
         },
         huggingFaceSettings: {
             apiKey: d.HuggingFaceSettings?.ApiKey,

@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.AI.Settings;
 // can move back to Chat Completions and replay the same conversation.
 internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCompletionProvider
 {
-    protected AbstractOpenAiResponsesProvider(IAiSettings settings)
+    private readonly OpenAiBaseSettings _settings;
+
+    protected AbstractOpenAiResponsesProvider(OpenAiBaseSettings settings)
         : base(settings)
     {
+        _settings = settings;
     }
-
-    // Same meaning as AbstractOpenAiCompatibleChatCompletionProvider.SupportStrictTools
-    public virtual bool SupportStrictTools => true;
 
     // Same meaning as AbstractOpenAiCompatibleChatCompletionProvider.SupportsToolChoiceNone
     public virtual bool SupportsToolChoiceNone => true;
@@ -43,35 +43,27 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
 
     public override string GetRequestId(HttpResponseHeaders headers) => OpenAiShared.GetRequestId(headers);
 
-    // Vendor fields such as temperature and reasoning; called last, after every other field is in the body.
+    // Temperature, and reasoning.effort when set (not set: "reasoning" is not sent, so the provider default applies).
+    // Called last, after every other field is in the body. A provider with its own fields overrides this and calls the base first.
     protected virtual void HandleCompletionRequestPayload(DynamicJsonValue body)
     {
-    }
+        if (_settings.Temperature.HasValue)
+            body[Wire.Temperature] = _settings.Temperature.Value;
 
-    // Temperature, and reasoning.effort when set (not set: "reasoning" is not sent, so the provider default applies).
-    protected static void AddTemperatureAndReasoning(DynamicJsonValue body, OpenAiBaseSettings settings)
-    {
-        if (settings.Temperature.HasValue)
-            body[Wire.Temperature] = settings.Temperature.Value;
-
-        if (string.IsNullOrWhiteSpace(settings.ReasoningEffort) == false)
-            body[Wire.Reasoning] = new DynamicJsonValue { [Wire.Effort] = OpenAiShared.NormalizeReasoningEffort(settings.ReasoningEffort.Trim()) };
+        if (string.IsNullOrWhiteSpace(_settings.ReasoningEffort) == false)
+            body[Wire.Reasoning] = new DynamicJsonValue { [Wire.Effort] = OpenAiShared.NormalizeReasoningEffort(_settings.ReasoningEffort.Trim()) };
     }
 
     public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
     {
-        var tool = new DynamicJsonValue
+        return new DynamicJsonValue
         {
             [Wire.Type] = Wire.TypeFunction,
             [Wire.Name] = name,
             [Wire.Description] = description,
-            [Wire.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
+            [Wire.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema"),
+            [Wire.Strict] = true
         };
-
-        if (SupportStrictTools)
-            tool[Wire.Strict] = true;
-
-        return tool;
     }
 
     protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
@@ -160,7 +152,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         }
 
         if (request.Attachments is { Count: > 0 })
-            input.Add(BuildResponsesAttachmentsMessage(request.Attachments));
+            input.Add(BuildAttachmentsMessage(request.Attachments));
 
         return new ProviderMessages
         {
@@ -325,26 +317,9 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         }
     }
 
-    // Same logic as BuildAttachmentsMessage, but the note for an attachment that wasn't found is an input_text part.
-    private DynamicJsonValue BuildResponsesAttachmentsMessage(List<AiAttachment> attachments)
+    protected override DynamicJsonValue BuildTextPart(string text)
     {
-        var content = new DynamicJsonArray();
-        foreach (var attachment in attachments)
-        {
-            if (attachment.Source == AiAttachmentSource.NotFound)
-            {
-                content.Add(InputText($"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"));
-                continue;
-            }
-
-            content.Add(GetAiAttachmentJson(attachment));
-        }
-
-        return new DynamicJsonValue
-        {
-            [Wire.Role] = Canonical.RequestFields.RoleUserValue,
-            [Wire.Content] = content
-        };
+        return InputText(text);
     }
 
     public override DynamicJsonValue GetAiAttachmentJson(AiAttachment attachment)
@@ -428,7 +403,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
             RefusedToAnswerException.Throw(providerRefusal, content.ToString(), incompleteReason ?? status, requestId);
 
         if (incompleteReason == Wire.ReasonContentFilter)
-            RefusedToAnswerException.Throw(ContentFilterRefusal, content.ToString(), incompleteReason, requestId);
+            RefusedToAnswerException.Throw(OpenAiShared.ContentFilterRefusal, content.ToString(), incompleteReason, requestId);
 
         // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
         if (incompleteReason == Wire.ReasonMaxOutputTokens && (toolCalls != null || structuredOutput || text.Length == 0))
@@ -482,8 +457,6 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
             }
         }
     }
-
-    private const string ContentFilterRefusal = "Response blocked due to content policy";
 
     // The value written as the body's "model".
     protected virtual string RequestModel => Model;

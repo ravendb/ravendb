@@ -192,7 +192,6 @@ const schema = yupObjectSchema<FormData>({
         dimensions: getDimensionsSchema("googleSettings"),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("googleSettings"),
         enablePromptCache: yup.boolean().nullable(),
-        reasoningEffort: yup.string().nullable(),
     }),
     huggingFaceSettings: yupObjectSchema<FormData["huggingFaceSettings"]>({
         apiKey: yup
@@ -371,7 +370,6 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 endpoint: null,
                 embeddingsMaxConcurrentBatches: null,
                 enablePromptCache: null,
-                reasoningEffort: null,
             } satisfies Required<FormData["googleSettings"]>,
             huggingFaceSettings: {
                 apiKey: null,

@@ -52,7 +52,7 @@ internal static class AzureOpenAiShared
         var reasons = filtersObj.GetPropertyNames();
 
         var sb = new StringBuilder();
-        sb.Append("Response blocked due to content policy: ");
+        sb.Append(OpenAiShared.ContentFilterRefusal).Append(": ");
         foreach (var reason in reasons)
         {
             if (IsFiltered(filtersObj, reason, out string severity))
@@ -88,7 +88,7 @@ internal static class AzureOpenAiShared
             string message;
             if (entry.TryGet(FiltersConstants.ContentFilterResults, out BlittableJsonReaderObject results) == false || results == null ||
                 GetFiltersMessage(results, out message) == false)
-                message = "Response blocked due to content policy";
+                message = OpenAiShared.ContentFilterRefusal;
 
             if (entry.TryGet(FiltersConstants.SourceType, out string sourceType) == false || string.IsNullOrEmpty(sourceType))
                 sourceType = "content";

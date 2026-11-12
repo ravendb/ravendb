@@ -142,7 +142,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider
             RefusedToAnswerException.Throw(state.ProviderRefusal, "[streaming]", state.StopReason, requestId);
 
         if (state.StopReason == Wire.ReasonContentFilter)
-            RefusedToAnswerException.Throw(ContentFilterRefusal, "[streaming]", state.StopReason, requestId);
+            RefusedToAnswerException.Throw(OpenAiShared.ContentFilterRefusal, "[streaming]", state.StopReason, requestId);
 
         // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
         var truncated = state.StopReason == Wire.ReasonMaxOutputTokens;

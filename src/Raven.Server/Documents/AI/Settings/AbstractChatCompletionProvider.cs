@@ -74,10 +74,10 @@ internal abstract class AbstractChatCompletionProvider
                     provider = new AzureOpenAiResponsesProvider(connectionString.AzureOpenAiSettings);
                 return true;
             case AiConnectorType.Ollama:
-                if (connectionString.OllamaSettings.GetApiMode() == OpenAiApiMode.Responses)
-                    provider = new OllamaResponsesProvider(connectionString.OllamaSettings);
-                else
+                if (connectionString.OllamaSettings.GetApiMode() == OpenAiApiMode.ChatCompletions)
                     provider = new OllamaChatCompletionProvider(connectionString.OllamaSettings);
+                else
+                    provider = new OllamaResponsesProvider(connectionString.OllamaSettings);
                 return true;
             case AiConnectorType.Google:
                 provider = new GoogleChatCompletionProvider(connectionString.GoogleSettings);
@@ -166,6 +166,15 @@ internal abstract class AbstractChatCompletionProvider
     // One attachment as a content part in this provider's shape.
     public abstract DynamicJsonValue GetAiAttachmentJson(AiAttachment attachment);
 
+    protected virtual DynamicJsonValue BuildTextPart(string text)
+    {
+        return new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.AttachmentsRequestFields.Type] = ChatCompletionClient.Constants.AttachmentsRequestFields.TypeText,
+            [ChatCompletionClient.Constants.AttachmentsRequestFields.TypeText] = text
+        };
+    }
+
     // One user message holding every attachment; an attachment that wasn't found becomes a text note.
     protected DynamicJsonValue BuildAttachmentsMessage(List<AiAttachment> attachments)
     {
@@ -174,11 +183,7 @@ internal abstract class AbstractChatCompletionProvider
         {
             if (attachment.Source == AiAttachmentSource.NotFound)
             {
-                content.Add(new DynamicJsonValue
-                {
-                    [ChatCompletionClient.Constants.AttachmentsRequestFields.Type] = ChatCompletionClient.Constants.AttachmentsRequestFields.TypeText,
-                    [ChatCompletionClient.Constants.AttachmentsRequestFields.TypeText] = $"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"
-                });
+                content.Add(BuildTextPart($"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"));
                 continue;
             }
 

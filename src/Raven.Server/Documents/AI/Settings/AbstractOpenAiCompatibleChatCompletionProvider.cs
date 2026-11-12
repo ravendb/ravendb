@@ -73,7 +73,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         if (string.Equals(GetFinishReason(choice0), ChatCompletionClient.Constants.ResponseFields.FinishReasonContentFilter, StringComparison.OrdinalIgnoreCase))
         {
             isCompleteMessage = true;
-            return "Response blocked due to content policy";
+            return OpenAiShared.ContentFilterRefusal;
         }
 
         return null;

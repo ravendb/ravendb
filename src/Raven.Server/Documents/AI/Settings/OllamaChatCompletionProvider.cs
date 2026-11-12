@@ -25,7 +25,7 @@ internal class OllamaChatCompletionProvider : AbstractOpenAiChatCompletionProvid
 
     public override string GetRelativeModelsUri() => OllamaShared.V1Prefix + base.GetRelativeModelsUri();
 
-    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => OllamaShared.ParseOllamaError(content, response);
+    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => OllamaShared.ParseOllamaError(content);
 
     public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
     {

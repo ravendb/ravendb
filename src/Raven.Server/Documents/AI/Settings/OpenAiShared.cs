@@ -13,8 +13,11 @@ namespace Raven.Server.Documents.AI.Settings;
 // and Responses (OpenAiResponsesProvider). Code moves here when the Responses code needs it; it is never copied.
 internal static class OpenAiShared
 {
-    public const string OpenAiOrganizationHeader = "OpenAI-Organization";
-    public const string OpenAiProjectHeader = "OpenAI-Project";
+    private const string OpenAiOrganizationHeader = "OpenAI-Organization";
+    private const string OpenAiProjectHeader = "OpenAI-Project";
+
+    // The refusal message when the provider blocks content and gives no more detail. Used by every OpenAI-family provider.
+    public const string ContentFilterRefusal = "Response blocked due to content policy";
 
     public static void AddOpenAiHeaders(HttpRequestMessage request, OpenAiSettings settings)
     {
