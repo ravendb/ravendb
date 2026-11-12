@@ -155,7 +155,6 @@ The Studio (`src/Raven.Studio`) is a **Knockout.js → React hybrid** managed by
 ### General
 - Code marked as `PERF` is performance-sensitive - do not modify unless explicitly required; notify the user if changes are needed
 - Remove copyright notices from files (project no longer uses them)
-- Remove UTF-8 BOM markers when found
 - Server HTTP handlers must inherit from `ServerRequestHandler`, `DatabaseRequestHandler`, or `ShardedDatabaseRequestHandler` (not `RequestHandler` directly) - CI enforces this
 
 ## Other Notes
