@@ -7,7 +7,6 @@ import {
     resolveConnectionString,
 } from "@/pages/setup/add-app-wizard/connection-string";
 
-/** How many source tables one app can process. Unlimited tables are planned. */
 export const MAX_SELECTED_TABLES = 10_000;
 
 /** A discovered table can be used when discovery succeeded, the table is supported, and CDC
@@ -74,7 +73,6 @@ export function getTableKey(table: SourceTableRef): string {
     return `${table.sourceTableSchema ?? ""}.${table.sourceTableName}`;
 }
 
-/** Human-readable table label: "schema.table", the table name alone when there is no schema, or empty without a name. */
 export function getTableLabel(table: { sourceTableSchema?: string | null; sourceTableName?: string | null }): string {
     if (!table.sourceTableName) {
         return "";

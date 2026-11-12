@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { PlannerAnswer, PlannerQuestion } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
-/** The choice of an answer in the operator's own words rather than one of the options. */
 export const CUSTOM_ANSWER = "custom";
 
 /** `choice` is the picked option's index, `CUSTOM_ANSWER`, or empty while nothing is picked. */

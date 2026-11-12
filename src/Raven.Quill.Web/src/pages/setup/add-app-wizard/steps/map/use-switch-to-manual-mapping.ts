@@ -5,10 +5,6 @@ import { resolveConnectionDefaultSchema } from "@/pages/setup/add-app-wizard/dis
 import { addUnmappedSelectedTables } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 import { useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
 
-/**
- * Leaves the planner for the editor, stopping any turn it still runs. A mapping the form already holds
- * from an earlier visit is kept whole, and the selected tables it does not map yet are scaffolded.
- */
 export function useSwitchToManualMapping() {
     const { getValues } = useFormContext<AppFormData>();
     const adoptTables = useAdoptMapTables();

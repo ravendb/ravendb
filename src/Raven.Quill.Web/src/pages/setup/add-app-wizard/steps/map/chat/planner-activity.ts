@@ -17,7 +17,6 @@ const PROPERTY_CASE_LABELS: Record<string, string> = {
     SnakeCase: "snake_case",
 };
 
-/** Where each collection the turn touched ended up, its last frame deciding. */
 export function getTurnOutcomes(activity: PlannerActivity[]): TurnOutcomes {
     const outcomes = new Map<string, keyof TurnOutcomes>();
 
@@ -108,7 +107,6 @@ export function isBuildingCollections(turn: PlannerReplyTurn): boolean {
     );
 }
 
-/** The one line a turn's tool activity folds into, e.g. "Built 2 of 3 collections · 1 failed". */
 export function getActivityHeadline(turn: PlannerReplyTurn, progress: PlanProgress): ActivityHeadline {
     const builtProgress = `${progress.builtCount} of ${progress.totalCount} built`;
 
@@ -148,7 +146,6 @@ export function describeConventions(activity: Extract<PlannerActivity, { type: "
     return parts.length > 0 ? parts.join(", ") : "Naming conventions updated";
 }
 
-/** An area's first turn builds from the start; any other turn builds once it touched a collection. */
 export function describeWork(turn: PlannerReplyTurn): string {
     return turn.isOpening || isBuildingCollections(turn) ? "Building collections" : "Working on your prompt";
 }

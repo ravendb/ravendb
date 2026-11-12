@@ -134,7 +134,6 @@ export function selectWorkingChat(state: PlannerState): PlannerChatId | undefine
     return selectWorkingChats(state).at(0);
 }
 
-/** The prompt or answers the chat's latest turn replied to. An opening turn replies to none. */
 export function getLatestUserTurn(chat: PlannerChat): PlannerPromptTurn | PlannerAnswersTurn | undefined {
     const latestReply = getLatestReply(chat.turns);
 
@@ -145,7 +144,6 @@ export function getLatestUserTurn(chat: PlannerChat): PlannerPromptTurn | Planne
     return chat.turns.findLast((turn) => turn.kind !== "planner");
 }
 
-/** Whether an area chat's latest turn built the area, as its first build or a later Build the rest. */
 export function isBuildTurn(areaChat: PlannerChat): boolean {
     if (getLatestReply(areaChat.turns)?.isOpening) {
         return true;

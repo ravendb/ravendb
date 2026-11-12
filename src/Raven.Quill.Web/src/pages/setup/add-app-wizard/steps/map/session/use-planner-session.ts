@@ -55,11 +55,6 @@ export type PlannerSession = ReturnType<typeof createPlannerSession>;
 /** Only the newest plan/get may land: an older answer would roll back what a later frame moved on. */
 let latestPlanRead = 0;
 
-/**
- * Drives the proposal agent's chat and one chat per area, one turn at a time. Requests
- * carry only the slug, since the server holds the plan and the conversations. A turn's frames move the plan
- * forward.
- */
 export function usePlannerSession(): PlannerSession {
     const { getValues } = useFormContext<AppFormData>();
 
@@ -248,7 +243,6 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
     const ask = (chatId: PlannerChatId, prompt: PlannerPrompt) =>
         chatId === null ? askProposal(prompt) : askArea(chatId, prompt);
 
-    /** Builds an area: its first build starts its agent, later ones ask it for what is still missing. */
     const buildArea = async (area: string, pendingCollections: string[]) => {
         if (!isAreaStarted(getStore(), area)) {
             await startArea(area);
@@ -311,7 +305,7 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
             await sendAnswers(chatId, answers);
         },
 
-        /** Runs a chat's failed turn again, as a new turn. A build asks only for what is still missing by now. */
+        /** A build asks only for what is still missing by now. */
         retry: async (chatId: PlannerChatId, pendingCollections: string[]) => {
             if (!canStartTurn()) {
                 return;

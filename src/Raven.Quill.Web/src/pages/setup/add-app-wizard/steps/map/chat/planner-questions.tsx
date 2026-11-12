@@ -21,10 +21,6 @@ import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/sessio
 
 const CLOSE_LABEL = "Close, and write a message instead";
 
-/**
- * The planner's questions, one at a time, in place of the composer. The recommended answer is preselected,
- * number keys pick an option, and a question without options takes an answer in the operator's words.
- */
 export function PlannerQuestions({
     chatId,
     questions,
@@ -208,7 +204,6 @@ export function PlannerQuestions({
     );
 }
 
-/** What is left in place of the closed questions, so the operator can still come back to them. */
 export function PlannerQuestionsReminder({
     chatId,
     questionCount,

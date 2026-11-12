@@ -13,7 +13,6 @@ const ROW_CLASSES =
 export type RadioListOption = {
     value: string;
     label: ReactNode;
-    /** Shown at the row's end, e.g. the key that picks it. */
     hint?: ReactNode;
 };
 

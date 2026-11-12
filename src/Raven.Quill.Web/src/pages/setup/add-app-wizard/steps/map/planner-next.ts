@@ -16,13 +16,11 @@ export type PlannerNextInput = {
     unbuiltCount: number;
 };
 
-const GOES_ON: PlannerNextState = { isNextDisabled: false, note: "" };
-
 export function getPlannerNextState(input: PlannerNextInput): PlannerNextState {
     const blocked = (note: string): PlannerNextState => ({ isNextDisabled: true, note });
 
     if (input.isManualMapping) {
-        return GOES_ON;
+        return { isNextDisabled: false, note: "" };
     }
 
     if (!input.hasSession) {

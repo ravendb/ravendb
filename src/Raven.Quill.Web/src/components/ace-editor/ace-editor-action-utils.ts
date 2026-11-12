@@ -24,7 +24,6 @@ export function formatCss(css: string): string {
     return formatWithMode(css, cssMode);
 }
 
-// Beautify a script without a live editor, the same way the editor's Format action does.
 export function formatJavaScript(script: string): string {
     return formatWithMode(script, javascriptMode);
 }

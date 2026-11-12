@@ -46,7 +46,6 @@ export type WizardConfirmNext = {
     onConfirm?: () => void;
 };
 
-/** Lets a step move the wizard itself, for actions inside the step that end in another step. */
 export type WizardStepNavigation<StepId extends string = string> = {
     goToPreviousStep: () => void;
     /**

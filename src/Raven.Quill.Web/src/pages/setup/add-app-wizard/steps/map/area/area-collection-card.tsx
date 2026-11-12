@@ -69,7 +69,7 @@ export function AreaCollectionCard({ collection }: { collection: PlanCollection 
                     {isFailed && (
                         <CardAction
                             label="Ask the planner to fix it"
-                            disabled={!canAsk}
+                            isDisabled={!canAsk}
                             onClick={() => actions.askToFix(collection)}
                         >
                             <Sparkle className="text-primary-strong" aria-hidden="true" />
@@ -78,7 +78,7 @@ export function AreaCollectionCard({ collection }: { collection: PlanCollection 
                     {canOpen && (
                         <CardAction
                             label="Edit by hand"
-                            disabled={!canEdit}
+                            isDisabled={!canEdit}
                             onClick={() => actions.openCollection(collection.area, collection.name)}
                         >
                             <Table2 aria-hidden="true" />
@@ -86,7 +86,7 @@ export function AreaCollectionCard({ collection }: { collection: PlanCollection 
                     )}
                     <CardAction
                         label={isRemoving ? `Keep ${collection.name} in the plan` : "Remove"}
-                        disabled={!canEdit}
+                        isDisabled={!canEdit}
                         isDestructive={!isRemoving}
                         onClick={toggleRemoval}
                     >
@@ -101,13 +101,13 @@ export function AreaCollectionCard({ collection }: { collection: PlanCollection 
 
 function CardAction({
     label,
-    disabled,
+    isDisabled,
     isDestructive = false,
     onClick,
     children,
 }: {
     label: string;
-    disabled: boolean;
+    isDisabled: boolean;
     isDestructive?: boolean;
     onClick: () => void;
     children: ReactNode;
@@ -119,7 +119,7 @@ function CardAction({
                     variant="outline"
                     size="icon-sm"
                     aria-label={label}
-                    disabled={disabled}
+                    disabled={isDisabled}
                     className={cn(isDestructive && "text-badge-destructive-fg hover:bg-badge-destructive-bg")}
                     onClick={onClick}
                 >

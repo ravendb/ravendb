@@ -42,7 +42,6 @@ export type EditedApp = {
     planner: RestoredPlannerSession | null;
 };
 
-/** A new app's wizard continued from the draft the server stored, after the page reloaded. */
 export type ResumedDraft = {
     initialStep: AppStepId;
     storeState: DraftStoreState;
