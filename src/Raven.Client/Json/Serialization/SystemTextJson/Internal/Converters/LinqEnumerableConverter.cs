@@ -51,20 +51,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
         {
-            Type elementType = GetEnumerableElementType(typeToConvert);
-            Type converterType = typeof(LinqEnumerableConverterInner<>).MakeGenericType(elementType);
+            Type converterType = typeof(LinqEnumerableConverterInner<>).MakeGenericType(TypeShape.Of(typeToConvert).ItemType);
             return (JsonConverter)Activator.CreateInstance(converterType, nonPublic: true);
-        }
-
-        private static Type GetEnumerableElementType(Type type)
-        {
-            foreach (Type interfaceType in type.GetInterfaces())
-            {
-                if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == typeof(IEnumerable<>))
-                    return interfaceType.GetGenericArguments()[0];
-            }
-
-            return typeof(object);
         }
 
         private sealed class LinqEnumerableConverterInner<T> : JsonConverter<IEnumerable<T>>
