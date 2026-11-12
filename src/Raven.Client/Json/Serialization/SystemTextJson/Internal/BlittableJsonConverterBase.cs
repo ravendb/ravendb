@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
@@ -22,6 +23,30 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
             Conventions = conventions as SystemTextJsonSerializationConventions
                           ?? throw new ArgumentException($"Expected {nameof(SystemTextJsonSerializationConventions)} but got {conventions.GetType()}", nameof(conventions));
+        }
+
+        protected object DeserializeEntity(Type type, BlittableJsonReaderObject json, string id, out Type entityType)
+        {
+            DocumentConventions conventions = Conventions.Conventions;
+            object defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
+            object entity = defaultValue;
+            entityType = type;
+
+            string documentTypeAsString = conventions.GetClrType(id, json);
+            if (documentTypeAsString != null)
+            {
+                Type documentType = conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
+                if (documentType != null && type.IsAssignableFrom(documentType))
+                {
+                    entityType = documentType;
+                    entity = Conventions.DeserializeEntityFromBlittable(documentType, json);
+                }
+            }
+
+            if (Equals(entity, defaultValue))
+                entity = Conventions.DeserializeEntityFromBlittable(type, json);
+
+            return entity;
         }
 
         public void PopulateEntity(object entity, BlittableJsonReaderObject json)

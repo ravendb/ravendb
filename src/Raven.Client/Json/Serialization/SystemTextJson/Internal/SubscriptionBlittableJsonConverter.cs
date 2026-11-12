@@ -19,25 +19,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             try
             {
-                var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
-                var entity = defaultValue;
-
-                Type entityType = type;
-                var documentTypeAsString = Conventions.Conventions.GetClrType(id, json);
-                if (documentTypeAsString != null)
-                {
-                    var documentType = Conventions.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
-                    if (documentType != null && type.IsAssignableFrom(documentType))
-                    {
-                        entityType = documentType;
-                        entity = Conventions.DeserializeEntityFromBlittable(documentType, json);
-                    }
-                }
-
-                if (Equals(entity, defaultValue))
-                {
-                    entity = Conventions.DeserializeEntityFromBlittable(type, json);
-                }
+                object entity = DeserializeEntity(type, json, id, out Type entityType);
 
                 if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel && entity != null)
                 {
