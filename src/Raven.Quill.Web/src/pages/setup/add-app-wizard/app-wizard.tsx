@@ -28,7 +28,6 @@ import {
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
-import { isEditorMapping } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { WizardHandledError } from "@/components/form/wizard/wizard-step-error";
 import type { RestoredPlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
 
@@ -84,7 +83,7 @@ export function AppWizard({ defaultValues, editedApp, resumedDraft }: AppWizardP
                 dataSource: values.dataSource?.source,
                 isEditing,
                 hasAppliedPlan,
-                isManualMapping: isEditorMapping(useSetupWizardStore.getState().mapOrigin),
+                mapOrigin: useSetupWizardStore.getState().mapOrigin,
             });
             return zodResolver(buildAppSchemaForFlow(flow, takenSlugs))(values, context, options);
         },
@@ -240,8 +239,8 @@ function AppWizardBody({
         name: "dataSource.source",
     });
 
-    const isManualMapping = useSetupWizardStore((state) => isEditorMapping(state.mapOrigin));
-    const flow = getAppFlow({ dataSource, isEditing, hasAppliedPlan, isManualMapping });
+    const mapOrigin = useSetupWizardStore((state) => state.mapOrigin);
+    const flow = getAppFlow({ dataSource, isEditing, hasAppliedPlan, mapOrigin });
 
     return (
         <FormWizard

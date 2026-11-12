@@ -6,9 +6,8 @@ import { addUnmappedSelectedTables } from "@/pages/setup/add-app-wizard/steps/ma
 import { useAdoptMapTables } from "@/pages/setup/add-app-wizard/steps/map/use-adopt-map-tables";
 
 /**
- * Leaves the planner for the editor, stopping any turn it still runs. A mapping the form already holds -
- * imported, or carried over from an earlier visit - is kept whole, and the selected tables it does not
- * map yet are scaffolded.
+ * Leaves the planner for the editor, stopping any turn it still runs. A mapping the form already holds
+ * from an earlier visit is kept whole, and the selected tables it does not map yet are scaffolded.
  */
 export function useSwitchToManualMapping() {
     const { getValues } = useFormContext<AppFormData>();

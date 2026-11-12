@@ -30,8 +30,9 @@ function PlannerWelcome({ isBusy, onManualMapping }: { isBusy: boolean; onManual
     const switchToManualMapping = useSwitchToManualMapping();
     const setMapOrigin = useSetupWizardStore((state) => state.setMapOrigin);
 
-    // Choosing the planner over a mapping made by hand or imported takes the editor out of the flow;
-    // the plan replaces that mapping once the app is created from it.
+    // Choosing the planner over a mapping made by hand takes the editor out of the flow; the plan
+    // replaces that mapping once the app is created from it. An imported mapping never gets here:
+    // its flow has no planner step.
     const start = () => {
         if (isEditorMapping(useSetupWizardStore.getState().mapOrigin)) {
             setMapOrigin(null);
