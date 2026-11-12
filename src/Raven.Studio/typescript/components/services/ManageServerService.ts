@@ -36,7 +36,6 @@ import registerSsoUserEntryCommand = require("commands/auth/registerSsoUserEntry
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
 import backupDecisionLogWebSocketClient = require("common/backupDecisionLogWebSocketClient");
-import { BackupDecisionLogMessage } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
 import uploadDebugPackageForAnalysisCommand = require("commands/maintenance/uploadDebugPackageForAnalysisCommand");
 import removeDebugPackageAnalysisCommand = require("commands/maintenance/removeDebugPackageAnalysisCommand");
 import getDebugPackageAnalysisSummaryCommand = require("commands/maintenance/getDebugPackageAnalysisSummaryCommand");
@@ -204,7 +203,9 @@ export default class ManageServerService {
         return new getClusterDomainsCommand().execute();
     }
 
-    watchBackupDecisionLog(...args: ConstructorParameters<typeof backupDecisionLogWebSocketClient>) {
+    watchBackupDecisionLog(
+        ...args: ConstructorParameters<typeof backupDecisionLogWebSocketClient>
+    ): Pick<backupDecisionLogWebSocketClient, "dispose"> {
         return new backupDecisionLogWebSocketClient(...args);
     }
 
