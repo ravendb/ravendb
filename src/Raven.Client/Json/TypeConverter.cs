@@ -160,22 +160,8 @@ namespace Raven.Client.Json
         {
             using (var writer = conventions.Serialization.CreateWriter(context))
             {
-                var serializer = conventions.Serialization.CreateSerializer();
-
-                writer.WriteStartObject();
-                writer.WritePropertyName("Value");
-
-                if (writeTypeNames)
-                    serializer.Serialize(writer, value, typeof(object));
-                else
-                    serializer.Serialize(writer, value);
-
-                writer.WriteEndObject();
-
-                writer.FinalizeDocument();
-
-                var reader = writer.CreateReader();
-                return reader["Value"];
+                var reader = conventions.Serialization.SerializeAsValueProperty(writer, value, writeTypeNames ? typeof(object) : null);
+                return reader[SerializationConventionsExtensions.ValuePropertyName];
             }
         }
 
