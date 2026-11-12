@@ -1,4 +1,3 @@
-using System.Net.Http;
 using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
 
@@ -11,7 +10,7 @@ internal static class OllamaShared
     // Ollama serves its OpenAI-compatible endpoints under /v1
     public const string V1Prefix = "v1/";
 
-    public static AiError ParseOllamaError(BlittableJsonReaderObject content, HttpResponseMessage response)
+    public static AiError ParseOllamaError(BlittableJsonReaderObject content)
     {
         // Ollama does not provide structured error responses, so we return the raw content as the error message.
         return new AiError

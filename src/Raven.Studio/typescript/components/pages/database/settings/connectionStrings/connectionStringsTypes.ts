@@ -181,8 +181,6 @@ export interface AiConnection extends ConnectionBase {
         endpoint?: string;
         embeddingsMaxConcurrentBatches?: number;
         enablePromptCache?: boolean;
-        // No UI yet: kept from the loaded connection string so a save does not clear it
-        reasoningEffort?: string;
     };
     huggingFaceSettings?: {
         apiKey?: string;
