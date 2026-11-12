@@ -140,6 +140,44 @@ public class RavenDB_27589 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
+    public async Task Mock_OllamaResponses_AsksForTheSchemaInAFinalRequestAfterAPlainTextAnswer()
+    {
+        using var store = GetDocumentStore();
+
+        var ollama = new OllamaResponsesProvider(new OllamaSettings("http://localhost:11434", "qwen") { ApiMode = OpenAiApiMode.Responses });
+        var requests = await RunMockConversationAsync(store, ollama,
+        [
+            ResponsesWire.Response("completed", ResponsesWire.FunctionCall("call_mock", "RecentOrder", "{}")),
+            // a plain-text answer, sent without the schema
+            ResponsesWire.Response("completed", ResponsesWire.TextMessage("I found the order")),
+            ResponsesWire.Response("completed", ResponsesWire.TextMessage("{\"Answer\":\"done\"}"))
+        ]);
+
+        // on Responses the schema goes in text.format, not response_format
+        Assert.Equal(3, requests.Count);
+        foreach (var toolTurn in requests.SkipLast(1))
+        {
+            Assert.NotNull(toolTurn["tools"]);
+            Assert.Null(toolTurn["text"]);
+        }
+
+        var finalTurn = requests.Last();
+        Assert.Null(finalTurn["tools"]);
+        Assert.Equal("json_schema", finalTurn["text"]!["format"]!.Value<string>("type"));
+
+        // the plain-text answer, then the request-only ask for the final answer
+        var input = finalTurn["input"]!.ToList();
+        Assert.Equal("assistant", input[^2].Value<string>("role"));
+        Assert.Equal("I found the order", input[^2]["content"]![0]!.Value<string>("text"));
+        Assert.Equal("user", input[^1].Value<string>("role"));
+        Assert.Equal(FinalAnswerPrompt, input[^1].Value<string>("content"));
+
+        var messages = await GetStoredMessagesAsync(store, MockConversationId);
+        Assert.Contains("done", messages.Last()["content"]!.ToString());
+        Assert.DoesNotContain(messages, m => m["content"]?.ToString() == "I found the order");
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task Mock_Ollama_AnswerOnlyInReasoning_ReachesTheFinalRequest()
     {
         using var store = GetDocumentStore();
