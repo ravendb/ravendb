@@ -38,8 +38,68 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return NullableDateTimeOffset;
         }
 
+        private const int DefaultRavenFormatLength = 27;
+
+        private const int DefaultRavenFormatUtcLength = 28;
+
+        private const int RoundtripDateTimeOffsetLength = 33;
+
         private static void ThrowUnparseable(string value, Type type) =>
             throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
+
+        private static bool TryReadDefaultRavenFormat(ref Utf8JsonReader reader, out DateTime value)
+        {
+            value = default;
+            if (reader.TokenType != JsonTokenType.String || reader.HasValueSequence)
+                return false;
+
+            ReadOnlySpan<byte> s = reader.ValueSpan;
+            DateTimeKind kind;
+            switch (s.Length)
+            {
+                case DefaultRavenFormatLength:
+                    kind = DateTimeKind.Unspecified;
+                    break;
+                case DefaultRavenFormatUtcLength when s[DefaultRavenFormatLength] == (byte)'Z':
+                    kind = DateTimeKind.Utc;
+                    break;
+                default:
+                    return false;
+            }
+
+            if (s[4] != (byte)'-' || s[7] != (byte)'-' || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':' || s[19] != (byte)'.')
+                return false;
+
+            if (TryReadDigits(s.Slice(0, 4), out int year) == false ||
+                TryReadDigits(s.Slice(5, 2), out int month) == false ||
+                TryReadDigits(s.Slice(8, 2), out int day) == false ||
+                TryReadDigits(s.Slice(11, 2), out int hour) == false ||
+                TryReadDigits(s.Slice(14, 2), out int minute) == false ||
+                TryReadDigits(s.Slice(17, 2), out int second) == false ||
+                TryReadDigits(s.Slice(20, 7), out int fraction) == false)
+                return false;
+
+            if (year == 0 || month == 0 || month > 12 || day == 0 || day > DateTime.DaysInMonth(year, month) || hour > 23 || minute > 59 || second > 59)
+                return false;
+
+            value = new DateTime(year, month, day, hour, minute, second, kind).AddTicks(fraction);
+            return true;
+        }
+
+        private static bool TryReadDigits(ReadOnlySpan<byte> digits, out int value)
+        {
+            value = 0;
+            for (int i = 0; i < digits.Length; i++)
+            {
+                int digit = digits[i] - '0';
+                if ((uint)digit > 9)
+                    return false;
+
+                value = value * 10 + digit;
+            }
+
+            return true;
+        }
 
         private static DateTime ReadDateTimeKey(string value)
         {
@@ -78,6 +138,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
+                if (TryReadDefaultRavenFormat(ref reader, out DateTime value))
+                    return value;
+
                 string s = reader.GetString();
                 if (s != null)
                 {
@@ -98,11 +161,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return default;
             }
 
-            public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+            public override unsafe void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
             {
-                if (value.Kind == DateTimeKind.Unspecified)
-                    value = DateTime.SpecifyKind(value, DateTimeKind.Local);
-                writer.WriteStringValue(value.GetDefaultRavenFormat());
+                byte* buffer = stackalloc byte[DefaultRavenFormatUtcLength];
+                int size = value.GetDefaultRavenFormat(buffer, DefaultRavenFormatUtcLength, value.Kind == DateTimeKind.Utc);
+                writer.WriteStringValue(new ReadOnlySpan<byte>(buffer, size));
             }
 
             public override DateTime ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -140,6 +203,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override void Write(Utf8JsonWriter writer, DateTimeOffset value, JsonSerializerOptions options)
             {
+#if NET8_0_OR_GREATER
+                Span<byte> buffer = stackalloc byte[RoundtripDateTimeOffsetLength];
+                if (value.TryFormat(buffer, out int written, DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture))
+                {
+                    writer.WriteStringValue(buffer.Slice(0, written));
+                    return;
+                }
+#endif
+
                 writer.WriteStringValue(value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
             }
 
