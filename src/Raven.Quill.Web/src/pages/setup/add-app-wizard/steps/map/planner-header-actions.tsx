@@ -40,7 +40,7 @@ export function PlannerHeaderActions({ isBusy }: WizardHeaderComponentProps) {
                 variant="destructive"
                 icon={null}
                 title="Start over?"
-                description="This clears every conversation, the plan and your edits, including the built collections. The tables you selected stay as they are."
+                description="This clears every conversation, the plan and your edits, including the built collections. The tables you selected stay as they are. This cannot be undone."
                 confirmLabel="Start over"
                 onConfirm={startPlannerOver}
             />

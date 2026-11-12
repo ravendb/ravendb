@@ -232,7 +232,7 @@ describe("addUnmappedSelectedTables", () => {
             rootTable("", { collectionName: "Draft" }),
         ];
 
-        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Invoice"), null);
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Invoice"), null, "public");
 
         expect(completed.map((table) => [table.sourceTableName, table.collectionName])).toEqual([
             ["Customer", "Clients"],
@@ -241,13 +241,31 @@ describe("addUnmappedSelectedTables", () => {
             ["Invoice", "Invoice"],
         ]);
     });
+
+    it("takes a mapped table without a schema for the one in the default schema", () => {
+        const tables = [
+            rootTable("Customer", {
+                sourceTableSchema: null,
+                embeddedTables: [embeddedTable("Address", { sourceTableSchema: "" })],
+            }),
+            rootTable("Order", { sourceTableSchema: "sales" }),
+        ];
+
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Order"), null, "public");
+
+        expect(completed.map((table) => [table.sourceTableSchema, table.sourceTableName])).toEqual([
+            [null, "Customer"],
+            ["sales", "Order"],
+            ["public", "Order"],
+        ]);
+    });
 });
 
 describe("collectMappedSourceTableKeys", () => {
     it("keeps disabled roots, so the unmapped alert does not offer to map them again", () => {
         const tables = [rootTable("Customer", { disabled: true, embeddedTables: [embeddedTable("Address")] })];
 
-        expect([...collectMappedSourceTableKeys(tables)]).toEqual(["public::customer", "public::address"]);
+        expect([...collectMappedSourceTableKeys(tables, "public")]).toEqual(["public::customer", "public::address"]);
     });
 });
 

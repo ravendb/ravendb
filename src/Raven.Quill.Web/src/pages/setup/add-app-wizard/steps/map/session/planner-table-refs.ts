@@ -27,7 +27,10 @@ export function resolveProposalTables(proposal: MigrationProposal, selectedTable
     };
 }
 
-/** A table without a schema reads from the provider's default schema, as CDC Sink resolves it. */
+/**
+ * A root table without a schema reads from the provider's default schema, as CDC Sink resolves it. An
+ * embedded table without one reads from its parent's: applying the plan writes that schema into the mapping.
+ */
 export function resolveConfigTables(
     config: CdcSinkTableConfig,
     selectedTables: SelectedTables,
@@ -35,17 +38,21 @@ export function resolveConfigTables(
 ): ConfigTableRef {
     const resolve = createTableResolver(selectedTables);
 
-    const resolveTable = (table: CdcSinkTableConfig | CdcSinkEmbeddedTableConfig): ConfigTableRef => ({
-        table: resolve(
-            getTableLabel({
-                sourceTableSchema: table.sourceTableSchema?.trim() || defaultSchema,
-                sourceTableName: table.sourceTableName?.trim(),
-            }),
-        ),
-        embeddedTables: (table.embeddedTables ?? []).map(resolveTable),
-    });
+    const resolveTable = (
+        table: CdcSinkTableConfig | CdcSinkEmbeddedTableConfig,
+        parentSchema: string | null,
+    ): ConfigTableRef => {
+        const schema = table.sourceTableSchema?.trim() || parentSchema;
 
-    return resolveTable(config);
+        return {
+            table: resolve(
+                getTableLabel({ sourceTableSchema: schema, sourceTableName: table.sourceTableName?.trim() }),
+            ),
+            embeddedTables: (table.embeddedTables ?? []).map((embedded) => resolveTable(embedded, schema)),
+        };
+    };
+
+    return resolveTable(config, defaultSchema);
 }
 
 function createTableResolver(selectedTables: SelectedTables) {

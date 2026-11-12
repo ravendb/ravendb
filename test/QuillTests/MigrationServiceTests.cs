@@ -275,7 +275,34 @@ public class MigrationServiceTests(ITestOutputHelper output) : RavenTestBase(out
 
         var state = await MigrationSamples.LoadStateAsync(store, Slug);
         Assert.Equal("Orders", Assert.Single(state!.LastMapConfiguration!.Tables).CollectionName);
-        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 1 }, state.AppliedPlanVersions);
+        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 1 }, state.LastMapPlanVersions);
+        Assert.Null(state.AppliedPlanVersions);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Plan_discard_forgets_the_plan_and_the_versions_applied_from_it()
+    {
+        using var store = await StoreWithSchemaAsync(planId: PlanId);
+        using (var session = store.OpenAsyncSession())
+        {
+            var seeded = await session.LoadAsync<WizardState>(WizardState.DocumentIdFor(Slug));
+            seeded.PlanSelectedTables = [new SelectedSourceTable("orders", "public")];
+            seeded.LastMapPlanVersions = new() { ["Orders"] = 2 };
+            seeded.AppliedPlanVersions = new() { ["Orders"] = 1 };
+            await session.SaveChangesAsync();
+        }
+
+        var refusal = await NewService(store, StubPlannerHandler.Replying())
+            .PlanDiscardAsync(new MigrationPlanDiscardRequest(Slug), CancellationToken.None);
+
+        Assert.Null(refusal);
+
+        var state = await MigrationSamples.LoadStateAsync(store, Slug);
+        Assert.Null(state!.PlanId);
+        Assert.Null(state.PlanSelectedTables);
+        Assert.Null(state.LastMapPlanVersions);
+        Assert.Null(state.AppliedPlanVersions);
+        Assert.NotNull(state.LastDiscoveredSchema);
     }
 
     [RavenFact(RavenTestCategory.Quill)]

@@ -94,6 +94,7 @@ export const defaultApiMocks = {
         migrationMocks.areaAsk(),
         migrationMocks.stop(),
         migrationMocks.planGetMissing(),
+        migrationMocks.planDiscard(),
         migrationMocks.planSave(),
         migrationMocks.apply(),
     ],

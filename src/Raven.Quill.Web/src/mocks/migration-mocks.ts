@@ -49,6 +49,12 @@ export const migrationMocks = {
                 code: null,
             }),
         ),
+    /** The AI service that keeps the plan cannot be reached. */
+    planGetUnavailable: () =>
+        apiHttp.post("/api/setup/migration/plan/get", ({ response }) =>
+            response(502).json({ error: "The AI service could not be reached.", errors: null, code: null }),
+        ),
+    planDiscard: () => apiHttp.post("/api/setup/migration/plan/discard", ({ response }) => response(204).empty()),
     planSave: (warnings: string[] = []) =>
         apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(200).json({ issues: [], warnings })),
     /** The api's mapping validator refused the changes; nothing was saved. */

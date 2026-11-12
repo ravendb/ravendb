@@ -2,6 +2,7 @@ import type { StateCreator } from "zustand";
 import { api } from "@/api/api";
 import type { MigrationFrame, MigrationPlanGetResponse } from "@/api/generated/server-api";
 import type { SetupWizardState } from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { isEditorMapping, type MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import {
     applyPlannerFrame,
     applyStoredPlan,
@@ -70,7 +71,7 @@ export type PlannerActions = {
     togglePlannerArea: (area: string) => void;
     setPlannerExpandedAreas: (areas: string[]) => void;
     setPlannerFilter: (filter: string) => void;
-    /** The plan the server stores is not cleared here: the next proposal replaces it. */
+    /** Discards the plan on the server too, so a reloaded wizard does not bring it back. */
     startPlannerOver: () => void;
     resetPlannerState: () => void;
 };
@@ -201,21 +202,43 @@ export const createPlannerSlice: StateCreator<SetupWizardState, [], [], PlannerA
         setPlannerFilter: (filter) => set({ plannerFilter: filter }),
 
         startPlannerOver: () => {
-            void stopTurns();
+            const slug = get().plannerSlug;
+
+            // A turn that is still ending could store its plan after the discard.
+            void stopTurns().then(() => discardPlanOnServer(slug));
             set((state) => ({
                 ...initialPlannerState,
                 plannerSlug: state.plannerSlug,
                 plannerIsChatOpen: state.plannerIsChatOpen,
+                mapOrigin: withoutAppliedPlan(state.mapOrigin),
             }));
         },
 
         resetPlannerState: () => {
             void stopTurns();
             abortStreams();
-            set(initialPlannerState);
+            set((state) => ({ ...initialPlannerState, mapOrigin: withoutAppliedPlan(state.mapOrigin) }));
         },
     };
 };
+
+/** The next plan can have the same collections and versions, so it must not pass for the applied one. */
+function withoutAppliedPlan(origin: MapOrigin | null): MapOrigin | null {
+    return isEditorMapping(origin) ? origin : null;
+}
+
+// A failed discard only costs a reload its fresh start, so it does not hold the wizard back.
+async function discardPlanOnServer(slug: string | null): Promise<void> {
+    if (!slug) {
+        return;
+    }
+
+    try {
+        await api.services.setup.migrationPlanDiscard({ slug });
+    } catch (error) {
+        console.error("Could not discard the plan:", error);
+    }
+}
 
 function stopTurnOnServer(slug: string | null, chatId: PlannerChatId): Promise<void> {
     if (!slug) {

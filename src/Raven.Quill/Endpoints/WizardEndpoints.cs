@@ -123,9 +123,19 @@ public static class WizardEndpoints
             .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict)
             .Produces<MigrationPlanSaveOutcome>(StatusCodes.Status422UnprocessableEntity)
             .Produces<ApiErrorResponse>(StatusCodes.Status502BadGateway);
+        group.MapPost("/migration/plan/discard", PlanDiscardAsync)
+            .WithName("setup.migrationPlanDiscard")
+            .WithDescription(
+                "Forgets the plan of an app, so a reloaded wizard starts the planner over instead of reopening it. " +
+                "The mapping the app runs on stays. 204 also when the app has no plan.")
+            .Accepts<MigrationPlanDiscardRequest>("application/json")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
         group.MapPost("/migration/apply", ApplyMigrationAsync)
             .WithName("setup.migrationApply")
-            .WithDescription("Assembles the registered collections of the plan into a CDC configuration and hands it to the map step.")
+            .WithDescription(
+                "Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. " +
+                "The plan counts as applied to the app only once provision succeeds.")
             .Accepts<MigrationApplyRequest>("application/json")
             .Produces<MigrationApplyResponse>()
             .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
@@ -195,6 +205,7 @@ public static class WizardEndpoints
                 state.LastMapAt = null;
                 state.PlanId = null;
                 state.PlanSelectedTables = null;
+                state.LastMapPlanVersions = null;
                 state.AppliedPlanVersions = null;
             }
 
@@ -497,7 +508,7 @@ public static class WizardEndpoints
                 return Results.BadRequest(new ApiErrorResponse($"no slug {body.Slug} found"));
             state.LastMapConfiguration = cdcConfig;
             state.LastMapAt = DateTime.UtcNow;
-            state.AppliedPlanVersions = null;
+            state.LastMapPlanVersions = null;
             await session.StoreAsync(state, wizardId, ct);
             await session.SaveChangesAsync(ct);
         }
@@ -565,6 +576,9 @@ public static class WizardEndpoints
             ? StatusCodes.Status422UnprocessableEntity
             : StatusCodes.Status200OK);
     }
+
+    private static async Task<IResult> PlanDiscardAsync(MigrationPlanDiscardRequest body, MigrationService service, CancellationToken ct) =>
+        await service.PlanDiscardAsync(body, ct) is { } refusal ? Refused(refusal) : Results.NoContent();
 
     private static IResult Refused(MigrationService.Refusal refusal) =>
         Results.Json(new ApiErrorResponse(refusal.Message), statusCode: refusal.Status switch
@@ -736,6 +750,14 @@ public static class WizardEndpoints
             new PutConnectionStringOperation<SqlConnectionString>(transplantedCs), ct);
 
         await CreateOrUpdateCdcAsync(store, app, state.LastMapConfiguration, ct);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            session.Advanced.Patch<WizardState, Dictionary<string, int>?>(
+                WizardState.DocumentIdFor(slug), wizard => wizard.AppliedPlanVersions, state.LastMapPlanVersions);
+            await session.SaveChangesAsync(ct);
+        }
+
         if (logger.IsInfoEnabled)
             logger.Info(
                 $"Provisioned app slug={app.Slug} id={app.Id} cdcTask={app.CdcTaskName}");

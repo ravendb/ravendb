@@ -18,7 +18,7 @@ export function usePlannerSelectionConfirm(): WizardConfirmNext {
         isRequired: hasSession && !haveSameTables(tables, plannerSelectedTables ?? []),
         title: "Start the planner over?",
         description:
-            "The plan was made from a different table selection. Continuing stops the planner and discards the plan, and you start over on the next step.",
+            "The plan was made from a different table selection. Continuing stops the planner and discards the plan, and you start over on the next step. This cannot be undone.",
         confirmLabel: "Start over",
         onConfirm: startPlannerOver,
     };

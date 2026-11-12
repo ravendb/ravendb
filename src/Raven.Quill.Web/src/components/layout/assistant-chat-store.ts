@@ -4,9 +4,9 @@ import { api } from "@/api/api";
 import {
     describeAssistantError,
     isAssistantConsentRequired,
-    isQuillSessionExpired,
     type AssistantRelevantLink,
 } from "@/api/custom-services/assistant-service";
+import { isQuillSessionExpired } from "@/api/http-client";
 import { markSessionExpired } from "@/lib/query-client";
 
 export type AssistantMessage = {

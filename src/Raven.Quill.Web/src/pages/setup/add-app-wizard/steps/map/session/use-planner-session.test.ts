@@ -14,7 +14,12 @@ const migration = vi.hoisted(() => ({
     areaAsk: vi.fn(),
 }));
 
-const setup = vi.hoisted(() => ({ migrationPlanGet: vi.fn(), migrationPlanSave: vi.fn(), migrationStop: vi.fn() }));
+const setup = vi.hoisted(() => ({
+    migrationPlanGet: vi.fn(),
+    migrationPlanSave: vi.fn(),
+    migrationPlanDiscard: vi.fn(),
+    migrationStop: vi.fn(),
+}));
 
 vi.mock("@/api/api", () => ({ api: { services: { migration, setup } } }));
 
@@ -75,6 +80,7 @@ beforeEach(() => {
     useSetupWizardStore.getState().reset();
     setup.migrationPlanGet.mockResolvedValue(EMPTY_PLAN);
     setup.migrationStop.mockResolvedValue(undefined);
+    setup.migrationPlanDiscard.mockResolvedValue(undefined);
 });
 
 describe("createPlannerSession", () => {
@@ -503,5 +509,43 @@ describe("createPlannerSession", () => {
         await turn;
 
         expect(setup.migrationStop).toHaveBeenCalledWith({ slug: "shop", agent: "Proposal" });
+    });
+
+    it("discards the plan on the server when starting over, once the running turn is stopped", async () => {
+        const sales = stoppableStream();
+        const serverCalls: string[] = [];
+        migration.areaStart.mockImplementation(sales.stream);
+        setup.migrationStop.mockImplementation(async () => {
+            serverCalls.push("stop");
+        });
+        setup.migrationPlanDiscard.mockImplementation(async () => {
+            serverCalls.push("discard");
+        });
+        const store = useSetupWizardStore.getState();
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        const session = newSession();
+
+        void session.buildArea("Sales", ["Orders"]);
+        await vi.waitFor(() => expect(migration.areaStart).toHaveBeenCalledOnce());
+        store.startPlannerOver();
+
+        await vi.waitFor(() => expect(setup.migrationPlanDiscard).toHaveBeenCalledWith({ slug: "shop" }));
+        expect(serverCalls).toEqual(["stop", "discard"]);
+        sales.stop();
+    });
+
+    it("forgets the applied plan when starting over, but keeps a mapping made in the editor", () => {
+        const store = useSetupWizardStore.getState();
+        store.openPlannerSession({ slug: "shop", connectKey: "shop", selectedTables: [], defaultSchema: "dbo" });
+        store.setMapOrigin({ source: "planner", planKey: "shop|Orders@1" });
+
+        store.startPlannerOver();
+
+        expect(useSetupWizardStore.getState().mapOrigin).toBeNull();
+
+        store.setMapOrigin({ source: "manual" });
+        store.startPlannerOver();
+
+        expect(useSetupWizardStore.getState().mapOrigin).toEqual({ source: "manual" });
     });
 });

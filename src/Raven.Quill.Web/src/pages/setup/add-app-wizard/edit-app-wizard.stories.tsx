@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { appsMocks, sampleAppCdcConfiguration } from "@/mocks/apps-mocks";
 import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { migrationMocks, plannerDraft } from "@/mocks/migration-mocks";
@@ -70,6 +70,31 @@ export const PlanMadeApp: Story = {
 
         expect(steps.getByText("Plan your document model")).toBeInTheDocument();
         expect(steps.queryByText("Map schema")).not.toBeInTheDocument();
+    },
+};
+
+// The AI service keeps the plan. When it cannot be reached, the operator retries or opens the editor without it.
+export const PlanUnavailable: Story = {
+    parameters: {
+        msw: mockHandlers({
+            setup: [
+                setupMocks.draft({ ...plannerDraft, isAppCreated: true }),
+                migrationMocks.planGetUnavailable(),
+                ...defaultApiMocks.setup,
+            ],
+        }),
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(await canvas.findByText("The plan of this app could not be loaded")).toBeInTheDocument();
+        expect(canvas.getByRole("button", { name: "Retry" })).toBeEnabled();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Edit the mapping without the plan" }));
+
+        const steps = within(await canvas.findByLabelText("Setup steps"));
+        expect(steps.getByText("Map schema")).toBeInTheDocument();
+        expect(steps.queryByText("Plan your document model")).not.toBeInTheDocument();
     },
 };
 
