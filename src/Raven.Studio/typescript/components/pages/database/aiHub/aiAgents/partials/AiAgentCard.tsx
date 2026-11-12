@@ -89,7 +89,7 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
                     variant="link"
                     className="p-0"
                 >
-                    <Icon icon="copy-to-clipboard" margin="ms-1" />
+                    <Icon icon="copy" margin="ms-1" />
                 </Button>
             </div>
             <div className="mt-2 text-truncate" title={config.SystemPrompt}>

@@ -93,7 +93,7 @@ function SizedNotificationDetailsTable<T>({
                         onClick={copyAsCsv}
                         disabled={visibleCount === 0}
                     >
-                        <Icon icon="copy-to-clipboard" />
+                        <Icon icon="copy" />
                         Copy as CSV
                     </Button>
                     <Button

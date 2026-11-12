@@ -80,7 +80,7 @@ function DateTooltip({ date, copyValue }: { date: Date; copyValue: string | null
                 <span className="small-label">Actions</span>
                 <div className="d-flex gap-2">
                     <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
-                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                        <Icon icon="copy" margin="m-0" />
                     </Button>
                 </div>
             </div>

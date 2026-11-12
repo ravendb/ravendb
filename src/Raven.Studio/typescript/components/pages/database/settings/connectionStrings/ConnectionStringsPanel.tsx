@@ -164,7 +164,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                 }
                                 size="xs"
                             >
-                                <Icon icon="copy-to-clipboard" />
+                                <Icon icon="copy" />
                             </Button>
                         </RichPanelDetailItem>
                     </RichPanelDetails>
