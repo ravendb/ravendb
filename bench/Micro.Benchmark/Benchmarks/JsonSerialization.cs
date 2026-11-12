@@ -102,7 +102,6 @@ namespace Micro.Benchmark.Benchmarks
                 });
             }
 
-            // Pre-create blittable documents for deserialization benchmarks using Newtonsoft
             var converter = _newtonsoftConventions.Serialization.DefaultConverter;
             _smallBlittable = converter.ToBlittable(_smallEntity, _context);
             _mediumBlittable = converter.ToBlittable(_mediumEntity, _context);
@@ -114,8 +113,6 @@ namespace Micro.Benchmark.Benchmarks
         {
             _context?.Dispose();
         }
-
-        // === SERIALIZATION (Entity → Blittable) ===
 
         [Benchmark(Description = "Newtonsoft Serialize Small")]
         public BlittableJsonReaderObject Newtonsoft_Serialize_Small()
@@ -153,8 +150,6 @@ namespace Micro.Benchmark.Benchmarks
             return _stjConventions.Serialization.DefaultConverter.ToBlittable(_largeEntity, _context);
         }
 
-        // === DESERIALIZATION (Blittable → Entity) ===
-
         [Benchmark(Description = "Newtonsoft Deserialize Small")]
         public SmallEntity Newtonsoft_Deserialize_Small()
         {
@@ -190,8 +185,6 @@ namespace Micro.Benchmark.Benchmarks
         {
             return _stjConventions.Serialization.DeserializeEntityFromBlittable<LargeEntity>(_largeBlittable);
         }
-
-        // === Entity Classes ===
 
         public class SmallEntity
         {
