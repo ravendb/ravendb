@@ -61,6 +61,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static readonly ConcurrentDictionary<Type, Dictionary<string, int>> _memberRanks = new();
 
+        private static readonly ConcurrentDictionary<Type, DictionaryComparerKeeper> _comparerKeepers = new();
+
         private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> _caseSensitiveOptions = new();
 
         private static readonly ConditionalWeakTable<JsonTypeInfo, BoundConstructor> _boundConstructors = new();
@@ -1781,20 +1783,34 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (existing == null || value == null || existing.GetType() != value.GetType())
                 return value;
 
-            Type type = value.GetType();
-            if (type.IsGenericType == false || type.GetGenericTypeDefinition() != typeof(Dictionary<,>))
-                return value;
+            DictionaryComparerKeeper keeper = _comparerKeepers.GetOrAdd(value.GetType(), static type =>
+                type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>)
+                    ? (DictionaryComparerKeeper)Activator.CreateInstance(typeof(DictionaryComparerKeeper<,>).MakeGenericType(type.GetGenericArguments()))
+                    : null);
 
-            PropertyInfo comparerProperty = type.GetProperty(nameof(Dictionary<object, object>.Comparer));
-            object comparer = comparerProperty.GetValue(existing);
-            if (Equals(comparer, comparerProperty.GetValue(value)))
-                return value;
+            return keeper == null ? value : keeper.Keep(existing, value);
+        }
 
-            var dictionary = (IDictionary)Activator.CreateInstance(type, comparer);
-            foreach (DictionaryEntry entry in (IDictionary)value)
-                dictionary[entry.Key] = entry.Value;
+        private abstract class DictionaryComparerKeeper
+        {
+            public abstract object Keep(object existing, object value);
+        }
 
-            return dictionary;
+        private sealed class DictionaryComparerKeeper<TKey, TValue> : DictionaryComparerKeeper
+        {
+            public override object Keep(object existing, object value)
+            {
+                IEqualityComparer<TKey> comparer = ((Dictionary<TKey, TValue>)existing).Comparer;
+                var source = (Dictionary<TKey, TValue>)value;
+                if (Equals(comparer, source.Comparer))
+                    return value;
+
+                var dictionary = new Dictionary<TKey, TValue>(source.Count, comparer);
+                foreach (KeyValuePair<TKey, TValue> entry in source)
+                    dictionary[entry.Key] = entry.Value;
+
+                return dictionary;
+            }
         }
 
         private static Type GetStringDictionaryType(Type type)
