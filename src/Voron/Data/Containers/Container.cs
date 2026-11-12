@@ -1364,8 +1364,19 @@ namespace Voron.Data.Containers
 
             var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
             var page = llt.GetPage(pageNum);
-            if (page.IsOverflow || newSize <= 0)
-                return false;
+            Debug.Assert(newSize > 0);
+
+            if (page.IsOverflow)
+            {
+                if (newSize <= MaxSizeInsideContainerPage ||
+                    VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize) != VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize))
+                    return false;
+
+                page = llt.ModifyPage(pageNum);
+                page.OverflowSize = newSize;
+                space = page.AsSpan(PageHeader.SizeOf, newSize);
+                return true;
+            }
 
             var index = OffsetToIndex(offset);
             var metadata = new Container(page).MetadataFor(index);
