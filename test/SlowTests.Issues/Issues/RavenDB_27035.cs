@@ -528,6 +528,56 @@ public class RavenDB_27035 : RavenTestBase
         return session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray();
     }
 
+    private class Movies_ByTitleWithDynamicField : AbstractIndexCreationTask<Movie>
+    {
+        public Movies_ByTitleWithDynamicField()
+        {
+            Map = movies => from m in movies
+                            select new
+                            {
+                                m.Title,
+                                _ = CreateField("Dyn", m.Year)
+                            };
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void AnIndexWithDynamicFieldsThatRecordsTheMarkerPerEntryKeepsTheOrderByOptimizations(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            for (var i = 0; i < 10; i++)
+                session.Store(new Movie { Id = $"movies/{i}", Title = (long)i, Year = 2000 + i });
+
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Movies_ByTitleWithDynamicField());
+        Indexes.WaitForIndexing(store);
+
+        using var session2 = store.OpenSession();
+
+        var scanned = session2.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleWithDynamicField' order by Title as long include timings()")
+            .Timings(out var scanTimings)
+            .ToList();
+
+        var scanPlan = Assert.IsType<QueryInspectionNode>(scanTimings.QueryPlan);
+        Assert.Equal(10, scanned.Count);
+        Assert.True(PlanContains(scanPlan, "TermNumericRangeProvider"), PlanOperations(scanPlan));
+        Assert.False(PlanContains(scanPlan, "SortingMatch"), PlanOperations(scanPlan));
+
+        var streamed = session2.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleWithDynamicField' where exists(Title) order by Title include timings()")
+            .Timings(out var streamTimings)
+            .ToList();
+
+        var streamPlan = Assert.IsType<QueryInspectionNode>(streamTimings.QueryPlan);
+        Assert.Equal(10, streamed.Count);
+        Assert.False(PlanContains(streamPlan, "SortingMatch"), PlanOperations(streamPlan));
+    }
+
     private static string PlanOperations(QueryInspectionNode node)
     {
         var operations = new List<string>();

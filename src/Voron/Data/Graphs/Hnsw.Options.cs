@@ -37,6 +37,10 @@ public partial class Hnsw
         [FieldOffset(32)]
         public ContainerId LastUsedContainerId;
 
+        // Layer 0 holds every node and carries the fine-grained search, so it gets twice the
+        // edges of the upper layers (Mmax0 = 2 * M in the HNSW paper).
+        public int MaxEdgesAtLevel(int level) => level == 0 ? NumberOfEdges * 2 : NumberOfEdges;
+
         public int MaxLevel => BitOperations.Log2((ulong)CountOfVectors);
 
         public int CurrentMaxLevel(int reduceBy) => BitOperations.Log2((ulong)(CountOfVectors - reduceBy));

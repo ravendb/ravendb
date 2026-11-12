@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { appsMocks, sampleAppCdcConfiguration } from "@/mocks/apps-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
+import { migrationMocks, plannerDraft } from "@/mocks/migration-mocks";
+import { setupMocks } from "@/mocks/setup-mocks";
 import { EditAppWizard } from "./edit-app-wizard";
 
 const meta = {
@@ -38,16 +40,80 @@ export const Default: Story = {
 // A configuration written outside the wizard says why instead of opening an empty mapping.
 export const UnsupportedConfiguration: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                apps: [
-                    appsMocks.cdcGet({
-                        configuration: { name: "cdc/acme-shop", tables: [] },
-                        connectionString: sampleAppCdcConfiguration.connectionString,
-                    }),
-                    ...defaultApiMocks.apps,
-                ],
-            },
-        },
+        msw: mockHandlers({
+            apps: [
+                appsMocks.cdcGet({
+                    configuration: { name: "cdc/acme-shop", tables: [] },
+                    connectionString: sampleAppCdcConfiguration.connectionString,
+                }),
+                ...defaultApiMocks.apps,
+            ],
+        }),
+    },
+};
+
+// The planner applied this app's mapping and the plan still holds what was applied, so the plan reopens in
+// place of the mapping editor.
+export const PlanMadeApp: Story = {
+    parameters: {
+        msw: mockHandlers({
+            setup: [
+                setupMocks.draft({ ...plannerDraft, isAppCreated: true }),
+                migrationMocks.planGet(),
+                ...defaultApiMocks.setup,
+            ],
+        }),
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const steps = within(await canvas.findByLabelText("Setup steps"));
+
+        expect(steps.getByText("Plan your document model")).toBeInTheDocument();
+        expect(steps.queryByText("Map schema")).not.toBeInTheDocument();
+    },
+};
+
+// The AI service keeps the plan. When it cannot be reached, the operator retries or opens the editor without it.
+export const PlanUnavailable: Story = {
+    parameters: {
+        msw: mockHandlers({
+            setup: [
+                setupMocks.draft({ ...plannerDraft, isAppCreated: true }),
+                migrationMocks.planGetUnavailable(),
+                ...defaultApiMocks.setup,
+            ],
+        }),
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+
+        expect(await canvas.findByText("The plan of this app could not be loaded")).toBeInTheDocument();
+        expect(canvas.getByRole("button", { name: "Retry" })).toBeEnabled();
+
+        await userEvent.click(canvas.getByRole("button", { name: "Edit the mapping without the plan" }));
+
+        const steps = within(await canvas.findByLabelText("Setup steps"));
+        expect(steps.getByText("Map schema")).toBeInTheDocument();
+        expect(steps.queryByText("Plan your document model")).not.toBeInTheDocument();
+    },
+};
+
+// The plan moved on after it was applied, so it no longer shows what the app runs on and the editor opens.
+export const PlanChangedSinceApplied: Story = {
+    parameters: {
+        msw: mockHandlers({
+            setup: [
+                setupMocks.draft({ ...plannerDraft, isAppCreated: true, appliedPlanVersions: { Orders: 1 } }),
+                migrationMocks.planGet(),
+                ...defaultApiMocks.setup,
+            ],
+        }),
+    },
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const steps = within(await canvas.findByLabelText("Setup steps"));
+
+        expect(steps.getByText("Map schema")).toBeInTheDocument();
+        expect(steps.queryByText("Plan your document model")).not.toBeInTheDocument();
     },
 };

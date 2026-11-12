@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents;
@@ -7,6 +8,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -32,6 +34,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private static readonly int _oldSchemaSize = 7;
 
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
+
+        // Progress is reported at most once per percent and interval, because every database load timeout exception carries the whole init log.
+        internal static TimeSpan MinimumProgressReportInterval = TimeSpan.FromSeconds(10);
         
         private static readonly Slice AttachmentsEtagSlice;
         private static readonly Slice AttachmentsHashSlice;
@@ -54,6 +59,13 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         public bool Update(UpdateStep step)
         {
             var isSharded = step.DocumentsStorage is ShardedDocumentsStorage;
+
+            if (isSharded)
+            {
+                var database = ShardedDocumentDatabase.CastToShardedDocumentDatabase(step.DocumentsStorage.DocumentDatabase);
+                database.ShardingConfiguration ??= database.ReadDatabaseRecord().Sharding;
+            }
+
             step.WriteTx.CreateTree(AttachmentsFlagAndHashSlice, isIndexTree: true);
             
             TableSchema attachmentsSchemaBase = new TableSchema();
@@ -104,8 +116,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 });
             }
 
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex);
-            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, PopulateAttachmentsFlagAndHashDynamicIndex, pass: 1);
+            UpdateSchemaInternal(step, attachmentsSchemaBase, dynamicIndex, isSharded, AttachmentsTableSchemaUpdate, pass: 2);
             // This code misses the schemaBase.SerializeSchemaIntoTableTree call.
             // It works for runtime operations, but not for features that use offline database files,
             // which use the serialized schema from disk to perform their operations.
@@ -115,11 +127,14 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         }
 
         private void UpdateSchemaInternal(UpdateStep step, TableSchema attachmentsSchemaBase, TableSchema.DynamicKeyIndexDef dynamicIndex, bool isSharded,
-            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update)
+            Func<TableSchema.DynamicKeyIndexDef, Table, Slice, TableValueBuilder, bool> update, int pass)
         {
             var skip = 0L;
             var processed = 0L;
             var done = false;
+
+            UpgradeProgress progress = new(step, $"Schema upgrade from version #{From} to version #{To}: pass {pass} of 2",
+                step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata)?.NumberOfEntries ?? 0);
 
             while (done == false)
             {
@@ -167,6 +182,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         {
                             step.Commit(context);
                             step.RenewTransactions();
+                            progress.BatchCommitted(skip);
                             continue;
                         }
 
@@ -183,6 +199,51 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         step.WriteTx.LowLevelTransaction.OnRollBack -= ((ShardedDocumentsStorage)step.DocumentsStorage).OnFailure;
                     }
                 }
+            }
+
+            progress.Completed(skip + processed);
+        }
+
+        private sealed class UpgradeProgress
+        {
+            private readonly UpdateStep _step;
+            private readonly string _prefix;
+            private readonly long _total;
+            private readonly Stopwatch _sinceLastReport = Stopwatch.StartNew();
+            private int _lastReportedPercent;
+            private long _lastReported = -1;
+
+            public UpgradeProgress(UpdateStep step, string prefix, long total)
+            {
+                _step = step;
+                _prefix = prefix;
+                _total = total;
+            }
+
+            public void BatchCommitted(long migrated)
+            {
+                int percent = Percent(migrated);
+                if (percent <= _lastReportedPercent || _sinceLastReport.Elapsed < MinimumProgressReportInterval)
+                    return;
+
+                _lastReportedPercent = percent;
+                Report(migrated, percent);
+            }
+
+            public void Completed(long migrated)
+            {
+                if (migrated != _lastReported)
+                    Report(migrated, Percent(migrated));
+            }
+
+            private int Percent(long migrated) => _total == 0 ? 100 : (int)(migrated * 100 / _total);
+
+            private void Report(long migrated, int percent)
+            {
+                _lastReported = migrated;
+                _sinceLastReport.Restart();
+                _step.DocumentsStorage.DocumentDatabase.AddToInitLog?.Invoke(LogLevel.Debug,
+                    $"{_prefix}, migrated {migrated:#,#;;0} of {_total:#,#;;0} attachments ({percent}%)");
             }
         }
 

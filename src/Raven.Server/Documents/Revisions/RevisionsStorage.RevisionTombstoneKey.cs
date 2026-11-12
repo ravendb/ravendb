@@ -402,9 +402,11 @@ namespace Raven.Server.Documents.Revisions
                 if (foundRevision)
                 {
                     revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref revTvr);
+                    // the flags of the revision being removed, not of the tombstone that removes it
+                    var revisionFlags = TableValueToFlags((int)RevisionsTable.Flags, ref revTvr);
                     revisionsTable.Delete(revTvr.Id);
                     using (GetKeyPrefix(context.Allocator, tombstoneKey.DocIdSlice, out Slice prefixSlice))
-                        IncrementCountOfRevisions(context, prefixSlice, -1);
+                        UpdateRevisionCountsByOne(context, revisionFlags, prefixSlice, revisionsTable, revisionEtag, increment: false);
                 }
                 else
                 {

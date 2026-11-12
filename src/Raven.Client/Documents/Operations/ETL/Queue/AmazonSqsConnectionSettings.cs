@@ -67,6 +67,27 @@ public sealed class AmazonSqsConnectionSettings
         return json;
     }
 
+    public DynamicJsonValue ToAuditJson()
+    {
+        var json = new DynamicJsonValue
+        {
+            [nameof(Basic)] = Basic == null
+                ? null
+                : new DynamicJsonValue
+                {
+                    [nameof(Basic.RegionName)] = Basic.RegionName
+                },
+            [nameof(Passwordless)] = Passwordless
+        };
+
+        if (UseEmulator)
+        {
+            json[nameof(UseEmulator)] = UseEmulator;
+        }
+
+        return json;
+    }
+
     public string GetQueueUrl()
     {
         // this is just static part of the url, dynamic parts are not accessible

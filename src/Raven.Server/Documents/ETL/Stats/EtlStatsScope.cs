@@ -232,6 +232,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int TransformationErrorCount => _stats.TransformationErrorCount;
 
+        public long LastTransformationErrorEtag => _stats.LastTransformationErrorEtag;
+
         public string ChangeVector => _stats.ChangeVector;
 
         public string BatchTransformationCompleteReason => _stats.BatchTransformationCompleteReason;
@@ -282,6 +284,12 @@ namespace Raven.Server.Documents.ETL.Stats
         {
             if (etag > _stats.LastLoadedEtag)
                 _stats.LastLoadedEtag = etag;
+        }
+
+        public void RecordLastTransformationErrorEtag(long etag)
+        {
+            if (etag > _stats.LastTransformationErrorEtag)
+                _stats.LastTransformationErrorEtag = etag;
         }
 
         public void RecordLastFilteredOutEtag(long etag, EtlItemType type)

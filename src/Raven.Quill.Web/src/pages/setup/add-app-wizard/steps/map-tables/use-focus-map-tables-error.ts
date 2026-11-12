@@ -12,7 +12,7 @@ import {
     type FormRootTable,
     type MapActiveTable,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
-import { getSourceTableLabel } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
+import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
 
 const CHILD_TABLE_LIST_KEYS = new Set(["embeddedTables", "linkedTables"]);
 
@@ -38,7 +38,7 @@ export function useFocusMapTablesError() {
             return;
         }
 
-        const label = getSourceTableLabel(getValues(target.path)) || "Unassigned table";
+        const label = getTableLabel(getValues(target.path)) || "Unassigned table";
         const message = findFirstErrorMessage(getError(target.path));
 
         toast.error(message ? `Table "${label}": ${message}` : `Table "${label}" has configuration errors.`);

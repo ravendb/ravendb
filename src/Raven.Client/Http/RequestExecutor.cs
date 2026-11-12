@@ -337,6 +337,9 @@ namespace Raven.Client.Http
             try
             {
                 Dispose();
+
+                if (_leftToFinalizer == false && Logger.IsWarnEnabled)
+                    Logger.Warn($"{GetType().Name} for '{_databaseName}' ({TopologyNodes?.FirstOrDefault()?.Url ?? _lastKnownUrls?.FirstOrDefault()}) wasn't properly disposed");
             }
 #pragma warning disable CS0168
             catch (Exception e)
@@ -501,9 +504,7 @@ namespace Raven.Client.Http
             // maintenance operations and should not appear as child spans of unrelated user traces.
             // Setting Activity.Current = null here is safe: AsyncLocal semantics ensure the caller's
             // Activity is unaffected once this method returns from its await.
-#if NETCOREAPP3_1_OR_GREATER
             Activity.Current = null;
-#endif
 
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
@@ -2078,6 +2079,14 @@ namespace Raven.Client.Http
         protected string[] _lastKnownUrls;
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
         internal bool Disposed => _disposeOnceRunner.Disposed;
+        private bool _leftToFinalizer;
+
+        internal void ForgetAbout()
+        {
+            _leftToFinalizer = true;
+            // Dispose() also disposes the cache, so we don't want the finalizer of its unmanaged buffers to be invoked
+            Cache.SuppressUnmanagedBuffersFinalize();
+        }
 
         public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback?.Length > 0;
 

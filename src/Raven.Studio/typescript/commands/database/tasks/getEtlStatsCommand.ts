@@ -20,7 +20,7 @@ class getEtlStatsCommand extends commandBase {
         }
         const url = endpoints.databases.etl.etlStats + this.urlEncodeArgs(args);
 
-        return this.query<EtlTaskStats[]>(url, null, this.db, (results) => results.Results)
+        return this.query<EtlTaskStats[]>(url, null, this.db, (results) => results.Results, { timeout: commandBase.perNodeRequestTimeoutMs })
             .fail((response: JQueryXHR) => this.reportError(`Failed to fetch ETL stats`, response.responseText, response.statusText));
     }
 }

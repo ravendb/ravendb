@@ -126,15 +126,17 @@ public sealed class QuillHost : IAsyncDisposable
     public Task<DiscoverResponse> SetupDiscoverAsync(DiscoverRequest body, string slug = DefaultWizardSlug) =>
         QuillHttp.PostAsync<DiscoverResponse>(Client, QuillRoutes.SetupDiscover, body with { Slug = slug });
 
+    public Task<WizardDraftResponse> SetupDraftAsync(string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync<WizardDraftResponse>(Client, QuillRoutes.SetupDraft, new WizardDraftRequest(slug));
+
+    public Task SetupDraftSaveAsync(WizardDraftSaveRequest body, string slug = DefaultWizardSlug) =>
+        QuillHttp.PostAsync(Client, QuillRoutes.SetupDraftSave, body with { Slug = slug });
+
     public Task<CdcSinkConfiguration> SetupMapAsync(MapRequest body) =>
         QuillHttp.PostAsync<CdcSinkConfiguration>(Client, QuillRoutes.SetupMap, body);
 
     public Task<VerifyCdcResponse> VerifyCdcAsync(VerifyCdcRequest body, string slug = DefaultWizardSlug) =>
         QuillHttp.PostAsync<VerifyCdcResponse>(Client, QuillRoutes.SetupVerifyCdc, body with { Slug = slug });
-
-    /// A non-success AI status still returns HTTP 200 with the status on the payload.
-    public Task<SuggestCdcResponse> SuggestCdcAsync(SuggestCdcRequest body, string slug = DefaultWizardSlug) =>
-        QuillHttp.PostAsync<SuggestCdcResponse>(Client, QuillRoutes.SuggestCdc, body with { Slug = slug });
 
     public Task<TestMappingResponse> TestMappingAsync(TestMappingRequest body, string slug = DefaultWizardSlug) =>
         QuillHttp.PostAsync<TestMappingResponse>(Client, QuillRoutes.SetupTestMapping, body with { Slug = slug });

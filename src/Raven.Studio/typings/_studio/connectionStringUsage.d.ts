@@ -8,7 +8,7 @@
 // receives them over the wire and needs the shapes. Keep in sync with:
 //   src/Raven.Client/Documents/Operations/ConnectionStrings/ConnectionString.cs
 //   src/Raven.Client/ServerWide/Operations/ConnectionStrings/ServerWideConnectionString.cs
-declare module Raven.Client.Documents.Operations.ConnectionStrings {
+declare namespace Raven.Client.Documents.Operations.ConnectionStrings {
     type ConnectionStringUsageKind =
         | "RavenEtl"
         | "SqlEtl"

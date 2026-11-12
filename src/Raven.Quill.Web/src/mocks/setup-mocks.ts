@@ -3,11 +3,10 @@ import type {
     ConnectResult,
     DiscoverResponse,
     ProvisionResponse,
-    SuggestCdcResponse,
     TestMappingResponse,
     VerifyCdcResponse,
+    WizardDraftResponse,
 } from "@/api/generated/server-api";
-import { delay } from "msw";
 import { apiHttp } from "./api-http";
 
 export const setupMocks = {
@@ -15,18 +14,17 @@ export const setupMocks = {
         apiHttp.post("/api/setup/connect", ({ response }) => response(200).json(result)),
     discover: (discovery: DiscoverResponse = sampleDiscovery) =>
         apiHttp.post("/api/setup/discover", ({ response }) => response(200).json(discovery)),
+    draft: (draft: WizardDraftResponse) =>
+        apiHttp.post("/api/setup/draft", ({ response }) => response(200).json(draft)),
+    draftMissing: () =>
+        apiHttp.post("/api/setup/draft", ({ response }) =>
+            response(404).json({ error: "no wizard draft found", errors: null, code: null }),
+        ),
+    draftSave: () => apiHttp.post("/api/setup/draft/save", ({ response }) => response(204).empty()),
     verifyCdc: (result: VerifyCdcResponse = sampleCdcVerification) =>
         apiHttp.post("/api/setup/verify-cdc", ({ response }) => response(200).json(result)),
     map: (configuration: CdcSinkConfiguration = sampleCdcConfiguration) =>
         apiHttp.post("/api/setup/map", ({ response }) => response(200).json(configuration)),
-    suggestCdc: (suggestion: SuggestCdcResponse = sampleCdcSuggestion) =>
-        apiHttp.post("/api/setup/suggest/cdc", ({ response }) => response(200).json(suggestion)),
-    /** Never answers, so the map-tables step stays in its "suggesting" state. */
-    suggestCdcPending: () =>
-        apiHttp.post("/api/setup/suggest/cdc", async ({ response }) => {
-            await delay("infinite");
-            return response(200).json(sampleCdcSuggestion);
-        }),
     testMapping: (result: TestMappingResponse = sampleMappingTest) =>
         apiHttp.post("/api/setup/test-mapping", ({ response }) => response(200).json(result)),
     provision: (result: ProvisionResponse = { id: "apps/1", slug: "demo" }) =>
@@ -358,12 +356,6 @@ export const sampleCdcConfiguration: CdcSinkConfiguration = {
             disabled: false,
         },
     ],
-};
-
-export const sampleCdcSuggestion: SuggestCdcResponse = {
-    configuration: sampleCdcConfiguration,
-    rationale: ["Customers and Orders have primary keys and CDC enabled, so both can be mapped."],
-    status: "Success",
 };
 
 export const sampleMappingTest: TestMappingResponse = {

@@ -57,12 +57,6 @@ public class RavenRetryFactAttribute : RetryFactAttribute, ITraitAttribute, Xuni
         set => Requires = value ? Requires | RavenServiceRequirement.NpgSql : Requires & ~RavenServiceRequirement.NpgSql;
     }
 
-    public bool MongoDBRequired 
-    { 
-        get => Requires.HasFlag(RavenServiceRequirement.MongoDB);
-        set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
-    }
-
     public new string Skip
     {
         get

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -191,6 +192,25 @@ public class AiConnectionStringsTests : RavenTestBase
         {
             var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(embeddingsGenerationConfiguration.Connection)));
             Assert.Contains($"Value of `{nameof(OpenAiSettings.Model)}` field cannot be empty.", exception.Message);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public void PutAiConnectionString_WithoutProviderSettings_ShouldThrow()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var connectionString = new AiConnectionString { Name = "no-provider", Identifier = "no-provider", ModelType = AiModelType.Chat };
+
+            var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(connectionString)));
+            Assert.Contains("At least one of the following settings must be set", exception.Message);
+
+            // every provider settings property has to be listed in the error
+            var settingsNames = typeof(AiConnectionString).GetProperties()
+                .Where(p => typeof(AbstractAiSettings).IsAssignableFrom(p.PropertyType))
+                .Select(p => p.Name);
+            foreach (var name in settingsNames)
+                Assert.Contains(name, exception.Message);
         }
     }
 

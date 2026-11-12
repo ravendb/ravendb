@@ -39,8 +39,8 @@ export default function EditCdcSinkTaskDiscoverySchemasModal({
             <Modal.Header onCloseClick={onClose} className="pb-0">
                 <h3 className="m-0">Discover tables</h3>
             </Modal.Header>
-            <InnerForm onSubmit={handleSubmit(handleDiscover)}>
-                <Modal.Body className="vstack gap-3">
+            <Modal.Body>
+                <InnerForm onSubmit={handleSubmit(handleDiscover)} className="vstack gap-3">
                     <RichAlert variant="info">
                         Leave schemas empty to fetch tables from the default schema of the configured connection.
                         <br />
@@ -55,22 +55,22 @@ export default function EditCdcSinkTaskDiscoverySchemasModal({
                         defaultValue={{ value: "" }}
                         emptyMessage="No schemas added"
                     />
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button variant="link" onClick={onClose}>
-                        Cancel
-                    </Button>
-                    <ButtonWithSpinner
-                        variant="primary"
-                        onClick={handleSubmit(handleDiscover)}
-                        isSpinning={asyncGetSchema.loading}
-                        className="rounded-pill"
-                        icon="search"
-                    >
-                        Discover
-                    </ButtonWithSpinner>
-                </Modal.Footer>
-            </InnerForm>
+                </InnerForm>
+            </Modal.Body>
+            <Modal.Footer>
+                <Button variant="link" onClick={onClose}>
+                    Cancel
+                </Button>
+                <ButtonWithSpinner
+                    variant="primary"
+                    onClick={handleSubmit(handleDiscover)}
+                    isSpinning={asyncGetSchema.loading}
+                    className="rounded-pill"
+                    icon="search"
+                >
+                    Discover
+                </ButtonWithSpinner>
+            </Modal.Footer>
         </Modal>
     );
 }

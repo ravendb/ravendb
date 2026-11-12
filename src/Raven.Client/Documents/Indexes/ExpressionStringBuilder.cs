@@ -1575,6 +1575,16 @@ namespace Raven.Client.Documents.Indexes
             }
 
             if (node.Method.DeclaringType == typeof(MemoryExtensions) &&
+                node.Method.Name is "Max" or "Min" &&
+                node.Arguments.Count == 1 &&
+                node.Arguments[0] is MethodCallExpression { Method.Name: "op_Implicit" } spanCall)
+            {
+                // since .NET 11 array.Max()/array.Min() bind to MemoryExtensions.Max/Min(ReadOnlySpan<T>), emit them as Enumerable.Max/Min
+                Visit(Expression.Call(typeof(Enumerable), node.Method.Name, node.Method.GetGenericArguments(), spanCall.Arguments[0]));
+                return node;
+            }
+
+            if (node.Method.DeclaringType == typeof(MemoryExtensions) &&
                 node.Method.Name is "Contains" or "ContainsAny" &&
                 node.Arguments.Count > 1)
             {

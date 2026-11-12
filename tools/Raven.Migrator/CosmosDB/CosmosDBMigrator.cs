@@ -98,8 +98,8 @@ namespace Raven.Migrator.CosmosDB
 
                 await MigrationHelpers.MigrateNoSqlDatabase(
                     _configuration,
-                    async (mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
-                        await MigrateSingleCollection(client, database, mongoCollectionName, ravenCollectionName, jsonTextWriter, streamWriter));
+                    async (sourceCollectionName, ravenCollectionName, jsonTextWriter, streamWriter) =>
+                        await MigrateSingleCollection(client, database, sourceCollectionName, ravenCollectionName, jsonTextWriter, streamWriter));
             }
         }
 

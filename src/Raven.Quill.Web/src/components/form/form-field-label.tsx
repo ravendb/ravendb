@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { FieldLabel } from "@/components/shadcn/ui/field";
 
 type FormFieldLabelProps = {
-    htmlFor: string;
+    htmlFor?: string;
     label?: ReactNode;
     addon?: ReactNode;
 };

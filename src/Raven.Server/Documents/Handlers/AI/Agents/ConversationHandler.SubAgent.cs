@@ -345,7 +345,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 [ChatCompletionClient.Constants.JsonSchemaFields.Type] = ChatCompletionClient.Constants.JsonSchemaFields.TypeObject,
                 [ChatCompletionClient.Constants.JsonSchemaFields.Properties] = properties,
-                [ChatCompletionClient.Constants.JsonSchemaFields.Required] = required
+                [ChatCompletionClient.Constants.JsonSchemaFields.Required] = required,
+                [ChatCompletionClient.Constants.JsonSchemaFields.AdditionalProperties] = false
             }, "tool/parameters").ToString();
         }
 

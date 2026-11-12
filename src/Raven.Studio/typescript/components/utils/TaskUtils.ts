@@ -244,7 +244,6 @@ export default class TaskUtils {
         // Trim any trailing hyphens
         result = result.replace(/-+$/, "");
 
-        // Return default identifier if empty
-        return result.length === 0 ? "AiConnectionStringIdentifier" : result;
+        return result.length === 0 ? null : result;
     }
 }

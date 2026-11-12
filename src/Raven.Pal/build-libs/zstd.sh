@@ -27,16 +27,19 @@ function zstd_lib_release {
     return 0
 }
 
+# Extra flags go through MOREFLAGS: setting CFLAGS / LDFLAGS on the make command line would drop the flags the zstd
+# makefile adds for the shared library (-O3 -fPIC -fvisibility=hidden, -shared -pthread).
+
 function zstd_lib_arm32 {
     zstd_lib_release arm32 \
-        make lib-release CC=arm-linux-gnueabihf-gcc CFLAGS="-Werror -Os" && \
+        make lib-release CC=arm-linux-gnueabihf-gcc MOREFLAGS="-Werror" && \
         cp zstd/lib/libzstd.so "${ARTIFACTS_DIR}/libzstd.arm.32.so" >> ${ZSTD_LOG} 2>&1
 }
 
 
 function zstd_lib_arm64 {
     zstd_lib_release arm64 \
-        make lib-release CC=aarch64-linux-gnu-gcc CFLAGS="-Werror -Os" && \
+        make lib-release CC=aarch64-linux-gnu-gcc MOREFLAGS="-Werror" && \
         cp zstd/lib/libzstd.so "${ARTIFACTS_DIR}/libzstd.arm.64.so" >> ${ZSTD_LOG} 2>&1
 }
 
@@ -45,7 +48,7 @@ function zstd_lib_win32 {
         make lib-release \
             CC=i686-w64-mingw32-gcc \
             OS=Windows_NT \
-            CFLAGS="-Ofast -fomit-frame-pointer -m32 -march=pentium3 -static-libgcc -mtune=westmere" && \
+            CFLAGS="-Ofast -fomit-frame-pointer -m32 -march=pentium3 -static-libgcc -mtune=westmere -DZSTD_MULTITHREAD" && \
         cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.x86.dll" >> ${ZSTD_LOG} 2>&1
 }
 
@@ -54,7 +57,7 @@ function zstd_lib_win64 {
         make lib-release \
             OS=Windows_NT \
             CC=x86_64-w64-mingw32-gcc \
-            CFLAGS="-Ofast -fomit-frame-pointer -m64 -mtune=westmere" && \
+            CFLAGS="-Ofast -fomit-frame-pointer -m64 -mtune=westmere -DZSTD_MULTITHREAD" && \
         cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.x64.dll" >> ${ZSTD_LOG} 2>&1
 }
 
@@ -73,9 +76,18 @@ function zstd_lib_osx {
             V=1 \
             UNAME="Darwin" \
             CC="/osxcross/target/bin/o64-clang" \
-            CFLAGS="-arch x86_64 -mmacosx-version-min=${OSX_VERSION_MIN} -march=${OSX_CPU_ARCH} -O2 -g" \
-            LDFLAGS="-arch x86_64 -mmacosx-version-min=${OSX_VERSION_MIN} -march=${OSX_CPU_ARCH}" && \
-        cp zstd/lib/libzstd.dylib "${ARTIFACTS_DIR}/libzstd.mac.64.dylib"
+            MOREFLAGS="-arch x86_64 -mmacosx-version-min=${OSX_VERSION_MIN} -march=${OSX_CPU_ARCH}" && \
+        cp zstd/lib/libzstd.dylib "${ARTIFACTS_DIR}/libzstd.mac.x64.dylib"
+}
+
+function zstd_lib_osx_arm64 {
+    zstd_lib_release osx_arm64 \
+        make lib-release \
+            V=1 \
+            UNAME="Darwin" \
+            CC="/osxcross/target/bin/oa64-clang" \
+            MOREFLAGS="-arch arm64 -mmacosx-version-min=11.0" && \
+        cp zstd/lib/libzstd.dylib "${ARTIFACTS_DIR}/libzstd.mac.arm64.dylib"
 }
 
 function zstd_cross_build {
@@ -84,13 +96,12 @@ function zstd_cross_build {
     echo ""
 
     sum=0
-    for target in linux64 arm32 arm64 win32 win64 osx
+    for target in linux64 arm32 arm64 win32 win64 osx osx_arm64
     do
-        "zstd_lib_$target"
-        sum=$(( $sum + 1 ))
+        "zstd_lib_$target" && sum=$(( $sum + 1 ))
     done
 
-    if [[ $sum != 6 ]]; then
+    if [[ $sum != 7 ]]; then
         echo -ne "${C_YELLOW}[`date`] ${C_L_RED}Some builds failed...${NC}"
         return 1
     fi

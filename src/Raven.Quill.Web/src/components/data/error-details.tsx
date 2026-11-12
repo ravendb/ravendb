@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { CopyableCode } from "@/components/data/copyable-code";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/shadcn/ui/collapsible";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +16,12 @@ export function ErrorDetails({ details }: { details: string }) {
                 />
                 {isOpen ? "Hide details" : "Show details"}
             </CollapsibleTrigger>
-            <CollapsibleContent>
-                <pre className="mt-2 max-h-64 overflow-auto rounded-md bg-destructive/5 p-2 text-xs whitespace-pre-wrap">
-                    {details}
-                </pre>
+            <CollapsibleContent className="mt-2">
+                <CopyableCode
+                    code={details}
+                    copyLabel="Copy the error details"
+                    className="max-h-64 overflow-y-auto rounded-md border-0 bg-destructive/5"
+                />
             </CollapsibleContent>
         </Collapsible>
     );

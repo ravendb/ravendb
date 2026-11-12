@@ -52,10 +52,13 @@ export default function RemoteAttachments() {
     const form = useForm<RemoteAttachmentsFormData>({
         resolver: remoteAttachmentsYupResolver,
         mode: "all",
-        defaultValues: async () =>
-            remoteAttachmentsUtils.mapFromDto(
-                await dispatch(remoteAttachmentsActions.fetchRemoteAttachments(databaseName)).unwrap()
-            ),
+        defaultValues: async () => {
+            const dto = await dispatch(remoteAttachmentsActions.fetchRemoteAttachments(databaseName))
+                .unwrap()
+                .catch((): null => null);
+
+            return remoteAttachmentsUtils.mapFromDto(dto);
+        },
     });
 
     const { handleSubmit, formState, reset } = form;
@@ -80,7 +83,7 @@ export default function RemoteAttachments() {
 
     useRemoteAttachmentsSideEffects(form);
 
-    if (loadStatus === "loading") {
+    if (loadStatus === "loading" || formState.isLoading) {
         return <LoadingView />;
     }
 

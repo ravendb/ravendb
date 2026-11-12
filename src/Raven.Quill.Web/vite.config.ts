@@ -5,7 +5,7 @@ import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import svgr from "vite-plugin-svgr";
 
-const EMPTY_MODULE = path.resolve(__dirname, "./scripts/empty-module.js");
+const EMPTY_MODULE = path.resolve(import.meta.dirname, "./scripts/empty-module.js");
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
         plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss(), svgr()],
         resolve: {
             alias: {
-                "@": path.resolve(__dirname, "./src"),
+                "@": path.resolve(import.meta.dirname, "./src"),
                 // The widget theme editor parses custom CSS with postcss, which reaches for these four
                 // only in its source map handling - dead weight for parsing a string. postcss drops them
                 // through its own `browser` field, but the dev dependency optimizer ignores that field and

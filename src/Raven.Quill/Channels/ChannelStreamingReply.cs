@@ -18,17 +18,17 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
 
     protected virtual bool CanPreview => true;
 
-    protected abstract Task ShowPreviewAsync(string text);
+    protected abstract Task ShowPreviewAsync(string text, CancellationToken token);
 
-    protected abstract Task SendFinalAsync(string text);
+    protected abstract Task SendFinalAsync(string text, CancellationToken token);
 
-    protected abstract Task EditFinalAsync(string text);
+    protected abstract Task EditFinalAsync(string text, CancellationToken token);
 
     protected abstract void CloseCurrentMessage();
 
     protected abstract void LogFlushFailure(Exception error);
 
-    public async ValueTask OnChunkAsync(string chunk)
+    public async ValueTask OnChunkAsync(string chunk, CancellationToken token)
     {
         _buffer.Append(chunk);
 
@@ -37,9 +37,9 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
 
         try
         {
-            await FlushPreviewAsync();
+            await FlushPreviewAsync(token);
         }
-        catch (Exception e) when (e is not OperationCanceledException)
+        catch (Exception e) when (token.IsCancellationRequested == false)
         {
             LogFlushFailure(e);
         }
@@ -49,7 +49,7 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
         }
     }
 
-    public async Task FinalizeAsync()
+    public async Task FinalizeAsync(CancellationToken token)
     {
         var pending = _buffer.ToString(_flushedUpTo, PendingLength);
         if (string.IsNullOrWhiteSpace(pending))
@@ -59,13 +59,13 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
         for (var i = 0; i < parts.Count; i++)
         {
             if (i == 0 && HasOpenMessage)
-                await EditFinalAsync(parts[i]);
+                await EditFinalAsync(parts[i], token);
             else
-                await SendFinalAsync(parts[i]);
+                await SendFinalAsync(parts[i], token);
         }
     }
 
-    private async Task FlushPreviewAsync()
+    private async Task FlushPreviewAsync(CancellationToken token)
     {
         while (PendingLength > messageLimit)
         {
@@ -76,9 +76,9 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
             if (segment.Length > 0)
             {
                 if (HasOpenMessage)
-                    await EditFinalAsync(segment);
+                    await EditFinalAsync(segment, token);
                 else
-                    await SendFinalAsync(segment);
+                    await SendFinalAsync(segment, token);
 
                 CloseCurrentMessage();
                 LastShownText = "";
@@ -93,7 +93,7 @@ internal abstract class ChannelStreamingReply(int messageLimit, TimeSpan editDeb
         if (preview.Length == 0 || preview == LastShownText || CanPreview == false)
             return;
 
-        await ShowPreviewAsync(preview);
+        await ShowPreviewAsync(preview, token);
         LastShownText = preview;
     }
 }

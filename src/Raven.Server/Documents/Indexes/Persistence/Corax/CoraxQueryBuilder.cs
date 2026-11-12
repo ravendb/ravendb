@@ -46,7 +46,7 @@ public static partial class CoraxQueryBuilder
         public FieldMetadata CompoundField;
         public bool Forward => SortField.Ascending;
 
-        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting, bool hasDynamics)
+        public StreamingOptimization(IndexSearcher searcher, OrderMetadata[] orderMetadata, bool hasBoosting, bool dynamicFieldsMayBypassMarker)
         {
             bool hasSpecialSorter = false;
             foreach (var order in orderMetadata ?? Array.Empty<OrderMetadata>())
@@ -58,7 +58,7 @@ public static partial class CoraxQueryBuilder
 
             if (orderMetadata is null or { Length: 0 }
                 || hasSpecialSorter
-                || hasDynamics
+                || dynamicFieldsMayBypassMarker
                 || searcher.HasMultipleTermsInField(orderMetadata[0].Field)
                 || hasBoosting)
             {
@@ -185,7 +185,9 @@ public static partial class CoraxQueryBuilder
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
             sortMetadata = GetSortMetadata(builderParameters, out var hasEmptySortingMatches);
-            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, builderParameters.HasDynamics);
+            var dynamicFieldsMayBypassMarker = builderParameters.HasDynamics
+                                               && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(builderParameters.Index.Definition.Version) == false;
+            var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost, dynamicFieldsMayBypassMarker);
             
             if (metadata.Query.Where is not null)
             {
@@ -194,9 +196,8 @@ public static partial class CoraxQueryBuilder
                     ? builderParameters.AllEntries.Replay() 
                     : MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
-            // CreateField can bypass the multi-term marker; also rules out dynamic sort fields
             else if (sortMetadata is [{ FieldType: MatchCompareFieldType.Floating or MatchCompareFieldType.Integer or MatchCompareFieldType.Sequence } sortBy, ..]
-                     && builderParameters.HasDynamics == false
+                     && dynamicFieldsMayBypassMarker == false
                      && indexSearcher.SortFieldTreeCoversAllEntries(sortBy.Field, sortBy.FieldType))
             {
                 // The cap counts terms, so it may only be applied while every scanned term yields a returned document.
@@ -492,7 +493,9 @@ public static partial class CoraxQueryBuilder
             }
 
             //e.g. or (not exists(Field))
+            builderParameters.NegationDepth++;
             var inner = ToCoraxQuery(builderParameters, ne.Expression, ref builderParameters.StreamingDisabled, exact);
+            builderParameters.NegationDepth--;
             inner = MaterializeWhenNeeded(builderParameters, inner, ref builderParameters.StreamingDisabled);
             return builderParameters.IndexSearcher.AndNot(builderParameters.IndexSearcher.AllEntries(), inner);
         }
@@ -555,7 +558,7 @@ public static partial class CoraxQueryBuilder
                 case MethodType.Regex:
                     return HandleRegex(builderParameters, me, ref leftOnlyOptimization);
                 case MethodType.MoreLikeThis:
-                    return builderParameters.AllEntries.Replay();
+                    return builderParameters.IndexSearcher.AllEntries();
                 default:
                     QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, queryParameters);
                     return null; // never hit
@@ -575,7 +578,9 @@ public static partial class CoraxQueryBuilder
         if (left is CoraxWhenQuery)
             left = builderParameters.AllEntries.Replay();
 
+        builderParameters.NegationDepth++;
         IQueryMatch right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
+        builderParameters.NegationDepth--;
         Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
 
         return right is CoraxWhenQuery
@@ -796,9 +801,13 @@ public static partial class CoraxQueryBuilder
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters.Allocator, fieldName, builderParameters.Index, builderParameters.IndexFieldsMapping,
             builderParameters.FieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, hasBoost: builderParameters.HasBoost);
 
-        return streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.Exists)
-            ? builderParameters.IndexSearcher.ExistsQuery(fieldMetadata, forward: streamingOptimization.Forward, streamingEnabled: true)
-            : builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
+        if (streamingOptimization.TrySetMultiTermMatchAsStreamingField(fieldMetadata, MethodType.Exists) == false)
+            return builderParameters.IndexSearcher.ExistsQuery(fieldMetadata);
+
+        var sortBy = streamingOptimization.SortField;
+        var nullIsSmallest = (sortBy.NullsSortMode ?? builderParameters.Index.Configuration.NullsSortMode) == NullsSortMode.NullsSmallest;
+        var terms = builderParameters.IndexSearcher.BetweenQuery(sortBy.Field, Constants.BeforeAllKeys, Constants.AfterAllKeys, forward: sortBy.Ascending, streamingEnabled: true);
+        return builderParameters.IndexSearcher.IncludeNullMatch(in sortBy.Field, terms, sortBy.Ascending, nullIsSmallest);
     }
 
     private static IQueryMatch HandleStartsWith(Parameters builderParameters, MethodExpression expression, bool exact, ref StreamingOptimization streamingOptimization)
@@ -925,8 +934,13 @@ public static partial class CoraxQueryBuilder
                     metadata.QueryText, queryParameters);
         }
 
+        if (float.IsFinite(boost) == false || boost < 0)
+            throw new InvalidQueryException($"The boost value must be a finite, non-negative number, but was {val}", metadata.QueryText, queryParameters);
+
 
         var query = ToCoraxQuery(builderParameters, expression.Arguments[0], ref builderParameters.StreamingDisabled, exact);
+        if (builderParameters.HasBoost == false)
+            return query;
 
         switch (query)
         {
@@ -1273,17 +1287,18 @@ public static partial class CoraxQueryBuilder
             return null;
         }
 
+        if (query.Metadata.HasMoreLikeThis) // MoreLikeThis orders its matches by score itself
+            return null;
+
         var orderByFields = query.Metadata.OrderBy;
 
         if (orderByFields == null)
         {
-            if (builderParameters.HasBoost && (
-                    index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved 
-                    || index.Configuration.CoraxVectorSearchOrderByScoreAutomatically))
+            if (builderParameters.HasBoost && builderParameters.AllowImplicitScoreOrdering)
             {
-                // in case when we've single vector clause and we exose the score, we have to go through 
-                // order by primitive to retrieve them; however scores are detected as natively sorted
-                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false)
+                // in case when we've single vector clause and we exose the score or documents are boosted, we have to go through 
+                // order by primitive to retrieve or boost them; otherwise scores are detected as natively sorted
+                if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false && builderParameters.IndexSearcher.DocumentsAreBoosted == false)
                     return null;
                 
                 if (builderParameters.Metadata.HasVectorSearch == false)
@@ -1385,7 +1400,8 @@ public static partial class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullsSortMode);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullsSortMode,
+                    useNearestPoint: IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(index.Definition.Version));
                 continue;
             }
 

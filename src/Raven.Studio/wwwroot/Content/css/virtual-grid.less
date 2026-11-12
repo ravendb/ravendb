@@ -1,4 +1,6 @@
-﻿.virtual-grid, .static-grid {
+@import "sortable-header.less";
+
+.virtual-grid, .static-grid {
     background-color: @panel-bg;
     padding: @grid-gutter-width/4;
     overflow-x: hidden;
@@ -73,50 +75,9 @@
             align-items: center;
             order: 10;
             flex-shrink: 0;
-
-            &:before, &::after {
-                font-family: 'icomoon' !important;
-                opacity: 0.2;
-                font-size: 10px;
-                line-height: 8px;
-            }
-
-            &:before {
-                content: '\f128';
-            }
-            &:after {
-                content: '\f114';
-            }
         }
 
-        &:hover {
-            .sortable-controls {
-                &:before {
-                    opacity: 0.5;
-                }
-
-                &:after {
-                    opacity: 0.5;
-                }
-            }
-        }
-
-        &.asc, &.desc {
-        }
-
-        &.asc {
-            .sortable-controls:before {
-                opacity: 1;
-                color: var(--bs-primary);
-            }
-        }
-
-        &.desc {
-            .sortable-controls:after {
-                opacity: 1;
-                color: var(--bs-primary);
-            }
-        }
+        .sortable-header();
     }
 
     .checked-column-header {

@@ -23,6 +23,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import useCertificatePermissionsConfirm from "components/pages/resources/manageServer/certificates/utils/useCertificatePermissionsConfirm";
 import Modal from "components/common/Modal";
 import Form from "react-bootstrap/Form";
+import useUniqueId from "components/hooks/useUniqueId";
 
 type SecurityClearance = Raven.Client.ServerWide.Operations.Certificates.SecurityClearance;
 
@@ -31,6 +32,9 @@ export default function CertificatesGenerateModal() {
     const { databasesService } = useServices();
     const { reportEvent } = useEventsCollector();
     const permissionsConfirm = useCertificatePermissionsConfirm();
+    const titleId = useUniqueId("generate-certificate-title");
+
+    const close = () => dispatch(certificatesActions.isGenerateModalOpenToggled());
 
     const downloadCertFormRef = useRef<HTMLFormElement>(null);
 
@@ -72,6 +76,7 @@ export default function CertificatesGenerateModal() {
                 reset(formData);
                 dispatch(certificatesActions.fetchData());
                 dispatch(certificatesActions.isGenerateModalOpenToggled());
+                dispatch(certificatesActions.isReadyModalOpenToggled());
             } catch {
                 notificationCenter.instance.openDetailsForOperationById(null, operationId);
             }
@@ -79,17 +84,22 @@ export default function CertificatesGenerateModal() {
     };
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleGenerate)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="certificate" addon="plus" color="primary" className="fs-1" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Generate client certificate</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="certificate" addon="plus" size="lg" color="primary" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Generate client certificate
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
@@ -104,14 +114,11 @@ export default function CertificatesGenerateModal() {
                         <CertificatesExpireField />
                         <hr />
                         <CertificatesPermissionsField />
+                        <hr />
                         <Certificates2FAField />
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner

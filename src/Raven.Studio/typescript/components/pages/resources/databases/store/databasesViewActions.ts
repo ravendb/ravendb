@@ -92,7 +92,7 @@ export const syncDatabaseDetails = (): AppThunk<UnsubscribeListener> => (dispatc
 export const loadDatabasesDetails = (nodeTags: string[]) => async (dispatch: AppDispatch) => {
     dispatch(databasesViewSlice.actions.initDetails(nodeTags));
 
-    const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.fetchDatabases(nodeTag)));
+    const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.loadNodeDatabases(nodeTag)));
 
     await Promise.all(tasks);
 };
@@ -111,7 +111,7 @@ export const reloadDatabasesDetails: AppAsyncThunk = async (dispatch, getState) 
     const state = getState();
     const nodeTags = clusterSelectors.allNodeTags(state);
 
-    const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.fetchDatabases(nodeTag)));
+    const tasks = nodeTags.map((nodeTag) => dispatch(databasesViewSliceInternal.loadNodeDatabases(nodeTag)));
 
     await Promise.all(tasks);
 };

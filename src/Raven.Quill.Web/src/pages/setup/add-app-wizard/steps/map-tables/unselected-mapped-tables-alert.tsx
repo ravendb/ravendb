@@ -3,19 +3,22 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/ui/alert";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ExpandableTableNames } from "@/pages/setup/add-app-wizard/steps/map-tables/expandable-table-names";
+import { getTableLabel, resolveConnectionDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
 import {
     collectMappedSourceTables,
     getSourceTableKey,
-    getSourceTableLabel,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
 
 export function UnselectedMappedTablesAlert() {
     const { control, getValues } = useFormContext<AppFormData>();
     const mappedTables = useWatch({ control, name: "mapTables.tables" }) ?? [];
 
-    const selectedKeys = new Set(getValues("verifySchema.tables").map(getSourceTableKey));
+    const defaultSchema = resolveConnectionDefaultSchema(getValues("externalConnection"));
+    const selectedKeys = new Set(
+        getValues("verifySchema.tables").map((table) => getSourceTableKey(table, defaultSchema)),
+    );
     const unselectedTables = collectMappedSourceTables(mappedTables).filter((table) => {
-        const key = getSourceTableKey(table);
+        const key = getSourceTableKey(table, defaultSchema);
 
         return key !== null && !selectedKeys.has(key);
     });
@@ -36,7 +39,7 @@ export function UnselectedMappedTablesAlert() {
             </AlertTitle>
             <AlertDescription>
                 <span>
-                    <ExpandableTableNames labels={unselectedTables.map((table) => getSourceTableLabel(table) ?? "")} />{" "}
+                    <ExpandableTableNames labels={unselectedTables.map((table) => getTableLabel(table))} />{" "}
                     {isSingle ? "was" : "were"} not selected in Verify your schema, but the mapping still includes{" "}
                     {isSingle ? "it" : "them"}. To leave {isSingle ? "it" : "them"} out, remove{" "}
                     {isSingle ? "it" : "them"} from the mapping.

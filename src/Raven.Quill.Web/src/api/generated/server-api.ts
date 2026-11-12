@@ -406,23 +406,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{slug}/channels/{channelId}/slack/webhook": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description The event subscription configuration for this channel: the public request URL, ready to paste into the Slack app's Event Subscriptions page. */
-        get: operations["slack.webhookInfo"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/apps/{slug}/slack/health": {
         parameters: {
             query?: never;
@@ -430,7 +413,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-channel connection health for the app's Slack channels: bot token validity (cached a few minutes) plus in-memory webhook and send activity since the last restart. */
+        /** @description Per-channel connection health for the app's Slack channels: bot token validity plus the live Socket Mode connection state and the inbound and send activity seen since the channel's socket last started. */
         get: operations["slack.health"];
         put?: never;
         post?: never;
@@ -447,7 +430,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Per-channel connection health for the app's Discord channels: bot token validity (cached a few minutes) plus the live gateway connection state and the inbound and send activity seen since the last restart. */
+        /** @description Per-channel connection health for the app's Discord channels: bot token validity plus the live gateway connection state and the inbound and send activity seen since the channel's gateway last started. */
         get: operations["discord.health"];
         put?: never;
         post?: never;
@@ -464,9 +447,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns a web-widget channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default. */
+        /** @description Returns an embedded chat channel's own theme plus the resolved app default, for the theme editor. A null theme means the channel follows the app default. */
         get: operations["iframe.getTheme"];
-        /** @description Saves a web-widget channel's theme. A null theme clears the channel's choice so it follows the app default. */
+        /** @description Saves an embedded chat channel's theme. A null theme clears the channel's choice so it follows the app default. */
         put: operations["iframe.updateTheme"];
         post?: never;
         delete?: never;
@@ -482,9 +465,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns the app-level default web-widget theme applied to channels that make no choice of their own. */
+        /** @description Returns the app-level default chat widget theme applied to channels that make no choice of their own. */
         get: operations["iframe.getDefaultTheme"];
-        /** @description Saves the app-level default web-widget theme. A null theme resets it to the built-in default. */
+        /** @description Saves the app-level default chat widget theme. A null theme resets it to the built-in default. */
         put: operations["iframe.updateDefaultTheme"];
         post?: never;
         delete?: never;
@@ -503,7 +486,7 @@ export interface paths {
         /** @description Lists the app's active embed links (non-expired, non-revoked), most recent first. Each item carries its token, the channel + agent it targets, the bound parameters, the TTL/cap, and how many turns it has consumed — so the operator can audit and revoke links. */
         get: operations["embedLinks.list"];
         put?: never;
-        /** @description Mints a per-user embed link for an iFrame channel (by channelId). SERVER-SIDE ONLY: it needs the operator key, which must never reach a browser, and it sends no CORS headers — call it from your backend and pass only the returned url to the page. Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
+        /** @description Mints a per-user embed link for an embedded chat channel (by channelId). SERVER-SIDE ONLY: it needs the operator key, which must never reach a browser, and it sends no CORS headers — call it from your backend and pass only the returned url to the page. Parameters are validated against the channel's agent and bound into the link server-side (never client-supplied). ttlSeconds and maxInvocations are bounded; both default when omitted. Returns the opaque token + an absolute, paste-ready embed URL. */
         post: operations["embedLinks.mint"];
         delete?: never;
         options?: never;
@@ -864,6 +847,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description What the wizard stored for an app, so a reloaded wizard continues where it was and an edit can reopen the plan the app's mapping was applied from. 404 when nothing is stored for the slug. */
+        post: operations["setup.draft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/draft/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Keeps what only the wizard knows - the app name, the selected tables and the step it moved on to - for a reloaded wizard to continue from. */
+        post: operations["setup.draftSave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/discover": {
         parameters: {
             query?: never;
@@ -913,7 +930,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/setup/suggest/cdc": {
+    "/api/setup/migration/proposal/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -922,7 +939,144 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["setup.suggestCdc"];
+        /** @description Begins a migration: the proposal agent groups the discovered schema into areas and collections and sets the naming conventions. Streams NDJSON frames; the done frame, or the error frame of a start that failed after the api created the plan, carries the plan id the api keeps the plan under. 409 while a proposal turn or a manual save of the app runs. */
+        post: operations["setup.migrationProposalStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/proposal/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One more turn with the proposal agent: a question, a re-proposal, or the conventions before the first area starts. 409 while a proposal turn or a manual save of the app runs. */
+        post: operations["setup.migrationProposalAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/area/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Opens an area for the first time: the area agent builds every collection the proposal gave it. Once per area; later opens read the cards from plan/get. The turn finishes even if the browser leaves. 409 while the area's turn or a manual save of the app runs. */
+        post: operations["setup.migrationAreaStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/area/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description One more turn with an area's agent. The message names the collections it is about. 409 while the area's turn or a manual save of the app runs. */
+        post: operations["setup.migrationAreaAsk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Stops the running turn of the proposal or of one area, in the api too; its stream ends with an error frame and the area is free again. Leaving the page does not stop a turn. 204 also when none runs. */
+        post: operations["setup.migrationStop"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/plan/get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The plan as the api stores it and the proposal it accepted. */
+        post: operations["setup.migrationPlanGet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/plan/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Saves the unsaved changes of an area view together, or none of them. 409 while a planner turn or another save of the app runs; 422 with the issues the api's mapping validator found, located in the configuration. */
+        post: operations["setup.migrationPlanSave"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/plan/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Forgets the plan of an app, so a reloaded wizard starts the planner over instead of reopening it. The mapping the app runs on stays. 204 also when the app has no plan. */
+        post: operations["setup.migrationPlanDiscard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/setup/migration/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. The plan counts as applied to the app only once provision succeeds. */
+        post: operations["setup.migrationApply"];
         delete?: never;
         options?: never;
         head?: never;
@@ -954,7 +1108,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Creates the app, or updates it when one already exists under the same slug. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. A slug whose database exists without an app behind it => 409. */
+        /** @description Creates the app. Updating one that already exists under the same slug requires updateExisting, so a new app cannot silently take over a live one. The slug (also the app's database name, used in public embed URLs) derives from appName unless an explicit slug is supplied; either is normalized to lowercase ASCII alphanumerics with hyphens. A slug already taken, or whose database exists without an app behind it => 409. */
         post: operations["setup.provision"];
         delete?: never;
         options?: never;
@@ -982,6 +1136,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AbsorbedTable: {
+            table?: null | string;
+            how?: null | string;
+            why?: null | string;
+        };
         ActivityEventDto: {
             id: string;
             appId: string;
@@ -1089,6 +1248,7 @@ export interface components {
             huggingFaceSettings?: components["schemas"]["HuggingFaceSettings"];
             mistralAiSettings?: components["schemas"]["MistralAiSettings"];
             vertexSettings?: components["schemas"]["VertexSettings"];
+            anthropicSettings?: components["schemas"]["AnthropicSettings"];
             modelType?: components["schemas"]["AiModelType"];
             name?: null | string;
         };
@@ -1116,7 +1276,7 @@ export interface components {
         /** @enum {unknown} */
         AiConnectionStringUsageKind: "AiAgent" | "GenAi" | "EmbeddingsGeneration";
         /** @enum {unknown} */
-        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex";
+        AiConnectorType: "None" | "OpenAi" | "AzureOpenAi" | "Ollama" | "Embedded" | "Google" | "HuggingFace" | "MistralAi" | "Vertex" | "Anthropic";
         AiConversationMessage: {
             role?: components["schemas"]["AiMessageRole"];
             content?: null | string;
@@ -1162,6 +1322,18 @@ export interface components {
             /** Format: int64 */
             reasoningTokens?: number;
         };
+        AnthropicSettings: {
+            apiKey?: null | string;
+            model?: null | string;
+            endpoint?: null | string;
+            /** Format: int32 */
+            maxOutputTokens?: null | number;
+            reasoningEffort?: null | string;
+            enablePromptCache?: null | boolean;
+            apiVersion?: null | string;
+            /** Format: int32 */
+            embeddingsMaxConcurrentBatches?: null | number;
+        };
         ApiErrorResponse: {
             error?: null | string;
             errors?: null | string[];
@@ -1189,7 +1361,7 @@ export interface components {
             adaptersCount: number;
             /** Format: int32 */
             agentsCount: number;
-            channelsLabel: null | string;
+            channelTypes: components["schemas"]["ChannelType"][];
             statusSubtitle: null | string;
             /** Format: date-time */
             createdAt: string;
@@ -1229,6 +1401,7 @@ export interface components {
         AppUsageMetrics: {
             conversations: components["schemas"]["MetricCard"];
             tokens: components["schemas"]["MetricCard"];
+            buckets: string[];
         };
         AppUsageResponse: {
             metrics: components["schemas"]["AppUsageMetrics"];
@@ -1410,9 +1583,10 @@ export interface components {
             telegram?: null | components["schemas"]["TelegramSummaryResponse"];
             slack?: null | components["schemas"]["SlackSummaryResponse"];
             discord?: null | components["schemas"]["DiscordSummaryResponse"];
+            setupError?: null | string;
         };
         /** @enum {unknown} */
-        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord" | null;
+        ChannelType: "IFrame" | "Telegram" | "WhatsApp" | "Slack" | "Discord";
         ChatRequest: {
             agentId: string;
             prompt: string;
@@ -1552,6 +1726,10 @@ export interface components {
             unsupportedReason?: null | string;
             warnings: string[];
         };
+        DroppedTable: {
+            table?: null | string;
+            why?: null | string;
+        };
         EditAgentRequest: {
             configuration: components["schemas"]["AiAgentConfiguration"];
             actionBindings: null | {
@@ -1650,6 +1828,148 @@ export interface components {
             delta: number;
             sparkline: number[];
         };
+        MigrationApplyRequest: {
+            slug: string;
+        };
+        MigrationApplyResponse: {
+            configuration: null | components["schemas"]["CdcSinkConfiguration"];
+            unmappedTables: string[];
+            errors: string[];
+        };
+        MigrationAreaAskRequest: {
+            slug: string;
+            area: string;
+            prompt: string;
+        };
+        MigrationAreaStartRequest: {
+            slug: string;
+            area: string;
+        };
+        MigrationFrame: components["schemas"]["MigrationFrameProposalFrame"] | components["schemas"]["MigrationFrameCollectionFrame"] | components["schemas"]["MigrationFrameTransientCollectionErrorFrame"] | components["schemas"]["MigrationFrameRejectedCollectionFrame"] | components["schemas"]["MigrationFrameRemovedFrame"] | components["schemas"]["MigrationFrameConventionsFrame"] | components["schemas"]["MigrationFrameNoteFrame"] | components["schemas"]["MigrationFrameReplyFrame"] | components["schemas"]["MigrationFrameDoneFrame"] | components["schemas"]["MigrationFrameErrorFrame"];
+        MigrationFrameCollectionFrame: {
+            /** @enum {string} */
+            type: "collection";
+            status: string;
+            collection: string;
+            /** Format: int32 */
+            version: number;
+            rationale?: null | string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            warnings: string[];
+        };
+        MigrationFrameConventionsFrame: {
+            /** @enum {string} */
+            type: "conventions";
+            propertyCase: components["schemas"]["PropertyCase"];
+            propertyLanguage?: null | string;
+            notes?: null | string;
+        };
+        MigrationFrameDoneFrame: {
+            /** @enum {string} */
+            type: "done";
+            conversationId: string;
+            planId: string;
+            /** Format: double */
+            usagePercentage?: null | number;
+        };
+        MigrationFrameErrorFrame: {
+            /** @enum {string} */
+            type: "error";
+            message: string;
+            planId?: null | string;
+            code?: null | string;
+        };
+        MigrationFrameNoteFrame: {
+            /** @enum {string} */
+            type: "note";
+            text: string;
+        };
+        MigrationFrameProposalFrame: {
+            /** @enum {string} */
+            type: "proposal";
+            proposal: components["schemas"]["MigrationProposal"];
+        };
+        MigrationFrameRejectedCollectionFrame: {
+            /** @enum {string} */
+            type: "rejectedCollection";
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            collection: string;
+            errors: components["schemas"]["ValidationIssue"][];
+        };
+        MigrationFrameRemovedFrame: {
+            /** @enum {string} */
+            type: "removed";
+            collection?: null | string;
+            reason?: null | string;
+        };
+        MigrationFrameReplyFrame: {
+            /** @enum {string} */
+            type: "reply";
+            reply?: null | string;
+            gaps?: null | string[];
+            openQuestions?: null | components["schemas"]["OpenQuestion"][];
+        };
+        MigrationFrameTransientCollectionErrorFrame: {
+            /** @enum {string} */
+            type: "transientCollectionError";
+            collection: string;
+            errors: components["schemas"]["ValidationIssue"][];
+        };
+        MigrationPlanChange: {
+            kind: components["schemas"]["PlanChangeKind"];
+            area: string;
+            collection: string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            newName?: null | string;
+            moveToArea?: null | string;
+        };
+        MigrationPlanDiscardRequest: {
+            slug: string;
+        };
+        MigrationPlanDocument: {
+            id?: string;
+            licenseId?: null | string;
+            customerId?: null | string;
+            slug?: null | string;
+            conventions?: components["schemas"]["NamingConventions"];
+            entries?: {
+                [key: string]: components["schemas"]["PlanEntry"];
+            };
+        };
+        MigrationPlanGetRequest: {
+            slug: string;
+        };
+        MigrationPlanGetResponse: {
+            plan: components["schemas"]["MigrationPlanDocument"];
+            proposal: null | components["schemas"]["MigrationProposal"];
+        };
+        MigrationPlanSaveOutcome: {
+            issues: components["schemas"]["ValidationIssue"][];
+            warnings: string[];
+        };
+        MigrationPlanSaveRequest: {
+            slug: string;
+            changes: components["schemas"]["MigrationPlanChange"][];
+        };
+        MigrationProposal: {
+            areas: components["schemas"]["ProposedArea"][];
+            dropped: components["schemas"]["DroppedTable"][];
+            enables: string[];
+        };
+        MigrationProposalAskRequest: {
+            slug: string;
+            prompt: string;
+        };
+        MigrationProposalStartRequest: {
+            slug: string;
+            selectedTables?: null | components["schemas"]["SelectedSourceTable"][];
+            prompt?: null | string;
+        };
+        MigrationStopRequest: {
+            slug: string;
+            agent: components["schemas"]["PlannerAgent"];
+            area?: null | string;
+        };
         MintEmbedLinkRequest: {
             channelId: string;
             parameters?: null | Record<string, unknown>;
@@ -1672,6 +1992,11 @@ export interface components {
             apiKey?: null | string;
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
+        };
+        NamingConventions: {
+            propertyCase?: components["schemas"]["PropertyCase"];
+            propertyLanguage?: null | string;
+            notes?: null | string;
         };
         OllamaSettings: {
             uri?: null | string;
@@ -1699,6 +2024,27 @@ export interface components {
             /** Format: int32 */
             embeddingsMaxConcurrentBatches?: null | number;
         };
+        OpenQuestion: {
+            question: string;
+            options: string[];
+            /** Format: int32 */
+            recommended?: null | number;
+        };
+        /** @enum {unknown} */
+        PlanChangeKind: "Edit" | "Rename" | "Move" | "Delete";
+        PlanEntry: {
+            area?: null | string;
+            rationale?: null | string;
+            config?: null | components["schemas"]["CdcSinkTableConfig"];
+            /** Format: int32 */
+            version?: number;
+            warnings?: string[];
+            status?: components["schemas"]["PlanEntryStatus"];
+        };
+        /** @enum {unknown} */
+        PlanEntryStatus: "Registered" | "Rejected" | "Removed";
+        /** @enum {unknown} */
+        PlannerAgent: "Proposal" | "Area";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -1706,6 +2052,25 @@ export interface components {
             status?: null | number;
             detail?: null | string;
             instance?: null | string;
+        };
+        /** @enum {unknown} */
+        PropertyCase: "Unspecified" | "SnakeCase" | "CamelCase" | "PascalCase";
+        ProposedArea: {
+            area?: null | string;
+            collections: components["schemas"]["ProposedCollection"][];
+            why?: null | string;
+        };
+        ProposedCollection: {
+            collection?: null | string;
+            rootTable?: null | string;
+            absorbs: components["schemas"]["AbsorbedTable"][];
+            why?: null | string;
+            fields?: null | components["schemas"]["ProposedField"][];
+        };
+        ProposedField: {
+            table: string;
+            column: string;
+            property: string;
         };
         ProvisionAgentResponse: {
             agentId: string;
@@ -1725,6 +2090,8 @@ export interface components {
         ProvisionRequest: {
             appName: string;
             slug?: null | string;
+            /** @default false */
+            updateExisting: boolean;
         };
         ProvisionResponse: {
             id: string;
@@ -1805,17 +2172,19 @@ export interface components {
             enabled: boolean;
             tokenValid: null | boolean;
             tokenError: null | string;
+            socketConnected: boolean;
+            /** Format: date-time */
+            lastConnectedAt: null | string;
+            lastSocketError: null | string;
             /** Format: date-time */
             lastInboundAt: null | string;
-            /** Format: date-time */
-            lastSignatureFailureAt: null | string;
             /** Format: date-time */
             lastSendErrorAt: null | string;
             lastSendError: null | string;
         };
         SlackProvisionRequest: {
             botToken: null | string;
-            signingSecret: null | string;
+            appToken: null | string;
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
@@ -1830,13 +2199,11 @@ export interface components {
         };
         SlackUpdateRequest: {
             botToken?: null | string;
-            signingSecret?: null | string;
+            appToken?: null | string;
             parameterBindings?: null | {
                 [key: string]: components["schemas"]["ChannelParameterBinding"];
             };
-        };
-        SlackWebhookInfoResponse: {
-            requestUrl: string;
+            signingSecret?: null | string;
         };
         SuggestAgentRequest: {
             intentPrompt: null | string;
@@ -1844,17 +2211,6 @@ export interface components {
         };
         SuggestAgentResponse: {
             configurations: components["schemas"]["AiAgentConfiguration"][];
-            rationale: string[];
-            status: string;
-        };
-        SuggestCdcRequest: {
-            intentPrompt: null | string;
-            selectedTables: components["schemas"]["SelectedSourceTable"][];
-            /** @default  */
-            slug: string;
-        };
-        SuggestCdcResponse: {
-            configuration: null | components["schemas"]["CdcSinkConfiguration"];
             rationale: string[];
             status: string;
         };
@@ -1953,6 +2309,14 @@ export interface components {
         UsageResponse: {
             points: components["schemas"]["UsagePoint"][];
             writesByApp: components["schemas"]["AppWrites"][];
+            isWritesUnavailable: boolean;
+        };
+        ValidationIssue: {
+            message: string;
+            path?: null | string;
+            table?: null | string;
+            column?: null | string;
+            property?: null | string;
         };
         VerifyCdcRequest: {
             tables: components["schemas"]["VerifyCdcTableRequest"][];
@@ -2031,6 +2395,32 @@ export interface components {
             theme: null | components["schemas"]["WidgetTheme"];
             defaultTheme: components["schemas"]["WidgetTheme"];
             fontOptions: components["schemas"]["WidgetFontOption"][];
+        };
+        WizardDraftRequest: {
+            slug: string;
+        };
+        WizardDraftResponse: {
+            isAppCreated: boolean;
+            appName: string;
+            provider: string;
+            connectionString: string;
+            isConnected: boolean;
+            discoverSchemas: string[];
+            discovery: null | components["schemas"]["DiscoverResponse"];
+            selectedTables: components["schemas"]["SelectedSourceTable"][];
+            step: null | string;
+            hasPlan: boolean;
+            planSelectedTables: components["schemas"]["SelectedSourceTable"][];
+            appliedPlanVersions: null | {
+                [key: string]: number;
+            };
+        };
+        WizardDraftSaveRequest: {
+            appName: string;
+            selectedTables: components["schemas"]["SelectedSourceTable"][];
+            step: string;
+            /** @default  */
+            slug: string;
         };
         WizardError: {
             message: string;
@@ -2369,6 +2759,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthStatusResponse"];
                 };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -2973,38 +3370,6 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
-    "slack.webhookInfo": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                channelId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlackWebhookInfoResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
         };
@@ -3970,6 +4335,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
         };
     };
     "settings.feedback": {
@@ -4159,6 +4533,79 @@ export interface operations {
             };
         };
     };
+    "setup.draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WizardDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WizardDraftResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.draftSave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WizardDraftSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.discover": {
         parameters: {
             query?: never;
@@ -4258,7 +4705,7 @@ export interface operations {
             };
         };
     };
-    "setup.suggestCdc": {
+    "setup.migrationProposalStart": {
         parameters: {
             query?: never;
             header?: never;
@@ -4267,7 +4714,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SuggestCdcRequest"];
+                "application/json": components["schemas"]["MigrationProposalStartRequest"];
             };
         };
         responses: {
@@ -4277,7 +4724,285 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SuggestCdcResponse"];
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationProposalAsk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationProposalAskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationAreaStart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationAreaStartRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationAreaAsk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationAreaAskRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/x-ndjson": components["schemas"]["MigrationFrame"];
+                };
+            };
+        };
+    };
+    "setup.migrationStop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationStopRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationPlanGet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanGetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanGetResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationPlanSave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanSaveOutcome"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationPlanSaveOutcome"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationPlanDiscard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanDiscardRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    "setup.migrationApply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationApplyResponse"];
                 };
             };
             /** @description Bad Request */
@@ -4408,6 +5133,7 @@ export interface operations {
     };
 }
 
+export type AbsorbedTable = components["schemas"]["AbsorbedTable"];
 export type ActivityEventDto = components["schemas"]["ActivityEventDto"];
 export type AgentDetailsResponse = components["schemas"]["AgentDetailsResponse"];
 export type AgentParameterSummary = components["schemas"]["AgentParameterSummary"];
@@ -4439,6 +5165,7 @@ export type AiModelsResponse = components["schemas"]["AiModelsResponse"];
 export type AiModelType = components["schemas"]["AiModelType"];
 export type AiToolCallResult = components["schemas"]["AiToolCallResult"];
 export type AiUsage = components["schemas"]["AiUsage"];
+export type AnthropicSettings = components["schemas"]["AnthropicSettings"];
 export type ApiErrorResponse = components["schemas"]["ApiErrorResponse"];
 export type AppCdcConfigurationResponse = components["schemas"]["AppCdcConfigurationResponse"];
 export type ApplianceAppResponse = components["schemas"]["ApplianceAppResponse"];
@@ -4492,6 +5219,7 @@ export type DiscoverForeignKeyResponse = components["schemas"]["DiscoverForeignK
 export type DiscoverRequest = components["schemas"]["DiscoverRequest"];
 export type DiscoverResponse = components["schemas"]["DiscoverResponse"];
 export type DiscoverTableResponse = components["schemas"]["DiscoverTableResponse"];
+export type DroppedTable = components["schemas"]["DroppedTable"];
 export type EditAgentRequest = components["schemas"]["EditAgentRequest"];
 export type EmbeddedSettings = components["schemas"]["EmbeddedSettings"];
 export type EmbedLinkSummaryResponse = components["schemas"]["EmbedLinkSummaryResponse"];
@@ -4506,12 +5234,48 @@ export type LicenseResponse = components["schemas"]["LicenseResponse"];
 export type LoginRequest = components["schemas"]["LoginRequest"];
 export type MapRequest = components["schemas"]["MapRequest"];
 export type MetricCard = components["schemas"]["MetricCard"];
+export type MigrationApplyRequest = components["schemas"]["MigrationApplyRequest"];
+export type MigrationApplyResponse = components["schemas"]["MigrationApplyResponse"];
+export type MigrationAreaAskRequest = components["schemas"]["MigrationAreaAskRequest"];
+export type MigrationAreaStartRequest = components["schemas"]["MigrationAreaStartRequest"];
+export type MigrationFrame = components["schemas"]["MigrationFrame"];
+export type MigrationFrameCollectionFrame = components["schemas"]["MigrationFrameCollectionFrame"];
+export type MigrationFrameConventionsFrame = components["schemas"]["MigrationFrameConventionsFrame"];
+export type MigrationFrameDoneFrame = components["schemas"]["MigrationFrameDoneFrame"];
+export type MigrationFrameErrorFrame = components["schemas"]["MigrationFrameErrorFrame"];
+export type MigrationFrameNoteFrame = components["schemas"]["MigrationFrameNoteFrame"];
+export type MigrationFrameProposalFrame = components["schemas"]["MigrationFrameProposalFrame"];
+export type MigrationFrameRejectedCollectionFrame = components["schemas"]["MigrationFrameRejectedCollectionFrame"];
+export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRemovedFrame"];
+export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
+export type MigrationFrameTransientCollectionErrorFrame = components["schemas"]["MigrationFrameTransientCollectionErrorFrame"];
+export type MigrationPlanChange = components["schemas"]["MigrationPlanChange"];
+export type MigrationPlanDiscardRequest = components["schemas"]["MigrationPlanDiscardRequest"];
+export type MigrationPlanDocument = components["schemas"]["MigrationPlanDocument"];
+export type MigrationPlanGetRequest = components["schemas"]["MigrationPlanGetRequest"];
+export type MigrationPlanGetResponse = components["schemas"]["MigrationPlanGetResponse"];
+export type MigrationPlanSaveOutcome = components["schemas"]["MigrationPlanSaveOutcome"];
+export type MigrationPlanSaveRequest = components["schemas"]["MigrationPlanSaveRequest"];
+export type MigrationProposal = components["schemas"]["MigrationProposal"];
+export type MigrationProposalAskRequest = components["schemas"]["MigrationProposalAskRequest"];
+export type MigrationProposalStartRequest = components["schemas"]["MigrationProposalStartRequest"];
+export type MigrationStopRequest = components["schemas"]["MigrationStopRequest"];
 export type MintEmbedLinkRequest = components["schemas"]["MintEmbedLinkRequest"];
 export type MintEmbedLinkResponse = components["schemas"]["MintEmbedLinkResponse"];
 export type MistralAiSettings = components["schemas"]["MistralAiSettings"];
+export type NamingConventions = components["schemas"]["NamingConventions"];
 export type OllamaSettings = components["schemas"]["OllamaSettings"];
 export type OpenAiSettings = components["schemas"]["OpenAiSettings"];
+export type OpenQuestion = components["schemas"]["OpenQuestion"];
+export type PlanChangeKind = components["schemas"]["PlanChangeKind"];
+export type PlanEntry = components["schemas"]["PlanEntry"];
+export type PlanEntryStatus = components["schemas"]["PlanEntryStatus"];
+export type PlannerAgent = components["schemas"]["PlannerAgent"];
 export type ProblemDetails = components["schemas"]["ProblemDetails"];
+export type PropertyCase = components["schemas"]["PropertyCase"];
+export type ProposedArea = components["schemas"]["ProposedArea"];
+export type ProposedCollection = components["schemas"]["ProposedCollection"];
+export type ProposedField = components["schemas"]["ProposedField"];
 export type ProvisionAgentResponse = components["schemas"]["ProvisionAgentResponse"];
 export type ProvisionChannelRequest = components["schemas"]["ProvisionChannelRequest"];
 export type ProvisionChannelResponse = components["schemas"]["ProvisionChannelResponse"];
@@ -4532,11 +5296,8 @@ export type SlackChannelHealthResponse = components["schemas"]["SlackChannelHeal
 export type SlackProvisionRequest = components["schemas"]["SlackProvisionRequest"];
 export type SlackSummaryResponse = components["schemas"]["SlackSummaryResponse"];
 export type SlackUpdateRequest = components["schemas"]["SlackUpdateRequest"];
-export type SlackWebhookInfoResponse = components["schemas"]["SlackWebhookInfoResponse"];
 export type SuggestAgentRequest = components["schemas"]["SuggestAgentRequest"];
 export type SuggestAgentResponse = components["schemas"]["SuggestAgentResponse"];
-export type SuggestCdcRequest = components["schemas"]["SuggestCdcRequest"];
-export type SuggestCdcResponse = components["schemas"]["SuggestCdcResponse"];
 export type TelegramChannelMessages = components["schemas"]["TelegramChannelMessages"];
 export type TelegramProvisionRequest = components["schemas"]["TelegramProvisionRequest"];
 export type TelegramSummaryResponse = components["schemas"]["TelegramSummaryResponse"];
@@ -4550,6 +5311,7 @@ export type UpdateChannelRequest = components["schemas"]["UpdateChannelRequest"]
 export type UpdateWidgetThemeRequest = components["schemas"]["UpdateWidgetThemeRequest"];
 export type UsagePoint = components["schemas"]["UsagePoint"];
 export type UsageResponse = components["schemas"]["UsageResponse"];
+export type ValidationIssue = components["schemas"]["ValidationIssue"];
 export type VerifyCdcRequest = components["schemas"]["VerifyCdcRequest"];
 export type VerifyCdcResponse = components["schemas"]["VerifyCdcResponse"];
 export type VerifyCdcTableRequest = components["schemas"]["VerifyCdcTableRequest"];
@@ -4565,6 +5327,9 @@ export type WidgetRadius = components["schemas"]["WidgetRadius"];
 export type WidgetTheme = components["schemas"]["WidgetTheme"];
 export type WidgetThemeColors = components["schemas"]["WidgetThemeColors"];
 export type WidgetThemeResponse = components["schemas"]["WidgetThemeResponse"];
+export type WizardDraftRequest = components["schemas"]["WizardDraftRequest"];
+export type WizardDraftResponse = components["schemas"]["WizardDraftResponse"];
+export type WizardDraftSaveRequest = components["schemas"]["WizardDraftSaveRequest"];
 export type WizardError = components["schemas"]["WizardError"];
 
 export const API_ENDPOINTS = {
@@ -4647,15 +5412,24 @@ export const API_ENDPOINTS = {
     setup: {
         connect: "/setup/connect",
         discover: "/setup/discover",
+        draft: "/setup/draft",
+        draftSave: "/setup/draft/save",
         map: "/setup/map",
+        migrationApply: "/setup/migration/apply",
+        migrationAreaAsk: "/setup/migration/area/ask",
+        migrationAreaStart: "/setup/migration/area/start",
+        migrationPlanDiscard: "/setup/migration/plan/discard",
+        migrationPlanGet: "/setup/migration/plan/get",
+        migrationPlanSave: "/setup/migration/plan/save",
+        migrationProposalAsk: "/setup/migration/proposal/ask",
+        migrationProposalStart: "/setup/migration/proposal/start",
+        migrationStop: "/setup/migration/stop",
         provision: "/setup/provision",
-        suggestCdc: "/setup/suggest/cdc",
         testMapping: "/setup/test-mapping",
         verifyCdc: "/setup/verify-cdc",
     },
     slack: {
         health: (slug: string) => `/apps/${encodeURIComponent(slug)}/slack/health`,
-        webhookInfo: (slug: string, channelId: string) => `/apps/${encodeURIComponent(slug)}/channels/${encodeURIComponent(channelId)}/slack/webhook`,
     },
     stats: {
         activity: (slug: string) => `/apps/${encodeURIComponent(slug)}/activity`,
@@ -4754,15 +5528,24 @@ export function createServerApi(client: ApiClient) {
         setup: {
             connect: (request: ConnectRequest) => client.post<ConnectResult, ApiErrorResponse>(API_ENDPOINTS.setup.connect, request),
             discover: (request: DiscoverRequest) => client.post<DiscoverResponse, ApiErrorResponse>(API_ENDPOINTS.setup.discover, request),
+            draft: (request: WizardDraftRequest) => client.post<WizardDraftResponse, ApiErrorResponse>(API_ENDPOINTS.setup.draft, request),
+            draftSave: (request: WizardDraftSaveRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.draftSave, request),
             map: (request: MapRequest) => client.post<CdcSinkConfiguration, ApiErrorResponse>(API_ENDPOINTS.setup.map, request),
+            migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
+            migrationAreaAsk: (request: MigrationAreaAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaAsk, request, { responseType: "response" }),
+            migrationAreaStart: (request: MigrationAreaStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaStart, request, { responseType: "response" }),
+            migrationPlanDiscard: (request: MigrationPlanDiscardRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationPlanDiscard, request),
+            migrationPlanGet: (request: MigrationPlanGetRequest) => client.post<MigrationPlanGetResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationPlanGet, request),
+            migrationPlanSave: (request: MigrationPlanSaveRequest) => client.post<MigrationPlanSaveOutcome, ApiErrorResponse | MigrationPlanSaveOutcome>(API_ENDPOINTS.setup.migrationPlanSave, request),
+            migrationProposalAsk: (request: MigrationProposalAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationProposalAsk, request, { responseType: "response" }),
+            migrationProposalStart: (request: MigrationProposalStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationProposalStart, request, { responseType: "response" }),
+            migrationStop: (request: MigrationStopRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationStop, request),
             provision: (request: ProvisionRequest) => client.post<ProvisionResponse, ApiErrorResponse>(API_ENDPOINTS.setup.provision, request),
-            suggestCdc: (request: SuggestCdcRequest) => client.post<SuggestCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.suggestCdc, request),
             testMapping: (request: TestMappingRequest) => client.post<TestMappingResponse, ApiErrorResponse>(API_ENDPOINTS.setup.testMapping, request),
             verifyCdc: (request: VerifyCdcRequest) => client.post<VerifyCdcResponse, ApiErrorResponse>(API_ENDPOINTS.setup.verifyCdc, request),
         },
         slack: {
             health: (slug: string) => client.get<SlackChannelHealthResponse[], ApiErrorResponse>(API_ENDPOINTS.slack.health(slug)),
-            webhookInfo: (slug: string, channelId: string) => client.get<SlackWebhookInfoResponse, ApiErrorResponse>(API_ENDPOINTS.slack.webhookInfo(slug, channelId)),
         },
         stats: {
             activity: (slug: string) => client.get<ActivityEventDto[], ApiErrorResponse>(API_ENDPOINTS.stats.activity(slug)),

@@ -169,4 +169,16 @@ export const globalTypes = {
       ],
     },
   },
+  language: {
+    name: "Language",
+    description: "Studio UI language",
+    defaultValue: "en",
+    toolbar: {
+      icon: "globe",
+      items: [
+        { value: "en", title: "English" },
+        { value: "pl", title: "Polski" },
+      ],
+    },
+  },
 };

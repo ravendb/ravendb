@@ -1,6 +1,7 @@
 //  Main Menu
 $menu-width: 280px;
 $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
+$collections-list-shrink-limit: 200px;
 #main-menu {
     z-index: 1040;
     position: sticky;
@@ -258,6 +259,17 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         }
     }
     .collections-list {
+        display: flex;
+        flex-direction: column;
+        flex: 0 1 content;
+        // With flex-basis: content, height only sets the shrink limit: min(content, $collections-list-shrink-limit)
+        height: $collections-list-shrink-limit;
+
+        & > ul {
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
         a {
             padding: $gutter-xxs $gutter-sm;
         }

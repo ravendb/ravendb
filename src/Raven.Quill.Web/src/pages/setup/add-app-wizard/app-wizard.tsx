@@ -1,8 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
-import { useSetupWizardStore, type SelectedSourceTable } from "@/pages/setup/add-app-wizard/app-wizard-store";
-import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import {
+    useSetupWizardStore,
+    type DraftStoreState,
+    type SelectedSourceTable,
+} from "@/pages/setup/add-app-wizard/app-wizard-store";
+import { type AppFormData, type AppStepId } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { FormWizard, type WizardCompletion } from "@/components/form/wizard/form-wizard";
 import { buildAppSchemaForFlow, getAppFlow, useAppSteps } from "@/pages/setup/add-app-wizard/app-wizard-flow";
 import { useNavigate } from "react-router";
@@ -23,8 +27,9 @@ import {
     DialogTitle,
 } from "@/components/shadcn/ui/dialog";
 import { CdcPerformanceSection } from "@/pages/apps/cdc-performance-section";
-import { cancelAbandonedSuggestions } from "@/pages/setup/add-app-wizard/steps/map-tables/suggest-map-tables-query";
 import { VERIFY_CDC_QUERY_KEY } from "@/pages/setup/add-app-wizard/steps/verify/verify-cdc-query";
+import { WizardHandledError } from "@/components/form/wizard/wizard-step-error";
+import type { RestoredPlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/planner-slice";
 
 /** The app the wizard is editing, instead of creating a new one. */
 export type EditedApp = {
@@ -33,18 +38,28 @@ export type EditedApp = {
     discoverSchemas: string[];
     /** Tables the stored mapping covers, the baseline for the "Selection changed" stepper badge. */
     initialSelectedTables: SelectedSourceTable[];
+    /** The plan the stored mapping was applied from, when the plan still stands as it was applied. */
+    planner: RestoredPlannerSession | null;
+};
+
+export type ResumedDraft = {
+    initialStep: AppStepId;
+    storeState: DraftStoreState;
 };
 
 type AppWizardProps = {
     defaultValues: AppFormData;
     editedApp?: EditedApp;
+    resumedDraft?: ResumedDraft;
 };
 
 type CreatedApp = { slug: string; name: string };
 
-export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
+export function AppWizard({ defaultValues, editedApp, resumedDraft }: AppWizardProps) {
     const resetStore = useSetupWizardStore((state) => state.reset);
     const startEditingApp = useSetupWizardStore((state) => state.startEditingApp);
+    const resumeDraft = useSetupWizardStore((state) => state.resumeDraft);
+    const restorePlannerSession = useSetupWizardStore((state) => state.restorePlannerSession);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [createdApp, setCreatedApp] = useState<CreatedApp | null>(null);
@@ -52,7 +67,9 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
     const [isSaved, setIsSaved] = useState(false);
     // Seeded once: a later prop identity change must not discard the operator's work.
     const [editedAppSeed] = useState(() => editedApp);
+    const [resumedDraftSeed] = useState(() => resumedDraft);
     const isEditing = editedAppSeed !== undefined;
+    const hasAppliedPlan = !!editedAppSeed?.planner;
 
     const appsQuery = useQuery(api.queries.apps.list());
     const takenSlugs = (appsQuery.data ?? []).map((app) => app.slug).filter((slug) => slug !== editedAppSeed?.slug);
@@ -61,7 +78,12 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         mode: "onChange",
         defaultValues,
         resolver: async (values, context, options) => {
-            const flow = getAppFlow({ dataSource: values.dataSource?.source, isEditing });
+            const flow = getAppFlow({
+                dataSource: values.dataSource?.source,
+                isEditing,
+                hasAppliedPlan,
+                mapOrigin: useSetupWizardStore.getState().mapOrigin,
+            });
             return zodResolver(buildAppSchemaForFlow(flow, takenSlugs))(values, context, options);
         },
     });
@@ -76,18 +98,26 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
             startEditingApp(editedAppSeed.slug, editedAppSeed.discoverSchemas, editedAppSeed.initialSelectedTables);
         }
 
+        if (editedAppSeed?.planner) {
+            restorePlannerSession(editedAppSeed.planner);
+        }
+
+        if (resumedDraftSeed) {
+            resumeDraft(resumedDraftSeed.storeState);
+        }
+
         return () => {
-            cancelAbandonedSuggestions(queryClient);
             queryClient.removeQueries({ queryKey: VERIFY_CDC_QUERY_KEY });
             resetStore();
         };
-    }, [editedAppSeed, queryClient, resetStore, startEditingApp]);
+    }, [editedAppSeed, resumedDraftSeed, queryClient, resetStore, restorePlannerSession, resumeDraft, startEditingApp]);
 
     const provisionMutation = useMutation({
         mutationFn: async (formValues: AppFormData) => {
             return await api.services.setup.provision({
                 appName: formValues.externalConnection.appName,
                 slug: formValues.externalConnection.slug,
+                updateExisting: isEditing,
             });
         },
         onSuccess: async (result, formValues) => {
@@ -115,21 +145,33 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
         },
     });
 
+    // An action rather than a plain submit: the last step's own work (applying the plan, or the mapping)
+    // has to run before the app is provisioned from it.
+    const completion: WizardCompletion = {
+        ...(isEditing ? EDIT_COMPLETION : CREATE_COMPLETION),
+        type: "action",
+        onComplete: () =>
+            form.handleSubmit(async (values) => {
+                // The mutation reports its own failure, so the wizard does not alert about it again.
+                await provisionMutation.mutateAsync(values).catch((error: unknown) => {
+                    throw new WizardHandledError(error);
+                });
+            })(),
+    };
+
     return (
         <FormProvider {...form}>
-            <form
-                onSubmit={form.handleSubmit(async (values) => await provisionMutation.mutateAsync(values))}
-                onKeyDown={preventEnterKeySubmission}
-                className="h-full"
-            >
+            <form onSubmit={(event) => event.preventDefault()} onKeyDown={preventEnterKeySubmission} className="h-full">
                 <AppWizardBody
                     cancel={() =>
                         navigate(
                             editedAppSeed ? appRoutes.app(editedAppSeed.slug, "data-source") : appRoutes.dashboard(),
                         )
                     }
-                    completion={isEditing ? EDIT_COMPLETION : CREATE_COMPLETION}
+                    completion={completion}
+                    initialStep={resumedDraftSeed?.initialStep}
                     isEditing={isEditing}
+                    hasAppliedPlan={hasAppliedPlan}
                     isSaved={isSaved}
                 />
             </form>
@@ -141,14 +183,12 @@ export function AppWizard({ defaultValues, editedApp }: AppWizardProps) {
     );
 }
 
-const CREATE_COMPLETION: WizardCompletion = {
-    type: "submit",
+const CREATE_COMPLETION = {
     label: "Create app & continue",
     busyLabel: "Creating app...",
 };
 
-const EDIT_COMPLETION: WizardCompletion = {
-    type: "submit",
+const EDIT_COMPLETION = {
     label: "Save changes",
     busyLabel: "Saving changes...",
 };
@@ -178,12 +218,16 @@ function AppCreatedDialog({ app, onContinue }: { app: CreatedApp | null; onConti
 function AppWizardBody({
     cancel,
     completion,
+    initialStep,
     isEditing,
+    hasAppliedPlan,
     isSaved,
 }: {
     cancel: () => void;
     completion: WizardCompletion;
+    initialStep?: AppStepId;
     isEditing: boolean;
+    hasAppliedPlan: boolean;
     isSaved: boolean;
 }) {
     const steps = useAppSteps();
@@ -194,7 +238,17 @@ function AppWizardBody({
         name: "dataSource.source",
     });
 
-    const flow = getAppFlow({ dataSource, isEditing });
+    const mapOrigin = useSetupWizardStore((state) => state.mapOrigin);
+    const flow = getAppFlow({ dataSource, isEditing, hasAppliedPlan, mapOrigin });
 
-    return <FormWizard steps={steps} flow={flow} cancel={cancel} completion={completion} isSaved={isSaved} />;
+    return (
+        <FormWizard
+            steps={steps}
+            flow={flow}
+            initialStep={initialStep}
+            cancel={cancel}
+            completion={completion}
+            isSaved={isSaved}
+        />
+    );
 }

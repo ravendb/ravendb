@@ -5,6 +5,16 @@ const baseKey = "setup";
 
 export function createSetupQueries(api: ServerApi["setup"]) {
     return {
+        draft: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "draft", slug],
+                queryFn: () => api.draft({ slug }),
+            }),
+        migrationPlan: (slug: string) =>
+            queryOptions({
+                queryKey: [baseKey, "migrationPlan", slug],
+                queryFn: () => api.migrationPlanGet({ slug }),
+            }),
         testMapping: (request: TestMappingRequest) =>
             queryOptions({
                 queryKey: [baseKey, "testMapping", request],

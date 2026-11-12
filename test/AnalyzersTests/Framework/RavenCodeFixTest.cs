@@ -1,0 +1,209 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CodeActions;
+using Microsoft.CodeAnalysis.CodeFixes;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
+
+namespace AnalyzersTests.Framework
+{
+    /// <summary>
+    /// Test harness for code fixes. Compiles source using the same reference setup as RavenAnalyzerTest,
+    /// runs the specified analyzer and code fix provider, and returns the fixed source code.
+    /// </summary>
+    internal static class RavenCodeFixTest
+    {
+        private static readonly Lazy<IReadOnlyList<MetadataReference>> DefaultReferences =
+            new(BuildDefaultReferences);
+
+        /// <summary>
+        /// Applies the first code fix offered by <typeparamref name="TFix"/> for the first
+        /// diagnostic produced by <typeparamref name="TAnalyzer"/> in <paramref name="source"/>.
+        /// Returns the resulting document text. Throws if no diagnostics or fixes are found.
+        /// </summary>
+        internal static Task<string> ApplyFixAsync<TAnalyzer, TFix>(string source)
+            where TAnalyzer : DiagnosticAnalyzer, new()
+            where TFix : CodeFixProvider, new()
+            => ApplyFixAsync<TAnalyzer, TFix>(source, System.Array.Empty<string>());
+
+        /// <summary>
+        /// Overload that compiles <paramref name="additionalSources"/> (e.g. a GlobalUsings.cs) into the
+        /// same compilation/project so cross-file symbols and <c>global using</c>s resolve, but applies the
+        /// fix only to the primary <paramref name="source"/> document and returns its fixed text.
+        /// </summary>
+        internal static async Task<string> ApplyFixAsync<TAnalyzer, TFix>(string source, string[] additionalSources)
+            where TAnalyzer : DiagnosticAnalyzer, new()
+            where TFix : CodeFixProvider, new()
+        {
+            // Match the project's settings (LangVersion=preview, Nullable=enable) so snippets compile
+            // and behave the same way the analyzers and code fixes see them at build time.
+            CSharpParseOptions parseOptions = new(LanguageVersion.Preview);
+            SyntaxTree tree = CSharpSyntaxTree.ParseText(source, parseOptions);
+
+            List<SyntaxTree> trees = [tree];
+            foreach (string additional in additionalSources)
+                trees.Add(CSharpSyntaxTree.ParseText(additional, parseOptions));
+
+            CSharpCompilationOptions compilationOptions =
+                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+                    .WithNullableContextOptions(NullableContextOptions.Enable);
+
+            CSharpCompilation compilation = CSharpCompilation.Create(
+                assemblyName: "TestAssembly",
+                syntaxTrees: trees,
+                references: DefaultReferences.Value,
+                options: compilationOptions);
+
+            // Fail fast if the compilation has errors
+            ImmutableArray<Diagnostic> compileErrors = compilation.GetDiagnostics()
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .ToImmutableArray();
+
+            if (!compileErrors.IsEmpty)
+            {
+                string errors = string.Join("\n", compileErrors.Select(d => d.ToString()));
+                throw new InvalidOperationException(
+                    $"Test compilation has {compileErrors.Length} error(s):\n{errors}");
+            }
+
+            // Run the analyzer to get diagnostics
+            TAnalyzer analyzer = new();
+            CompilationWithAnalyzers compilationWithAnalyzers =
+                compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(analyzer));
+
+            // Order by source position: analyzer diagnostics aren't ordered (more so under concurrent
+            // execution), so picking the "first" must be deterministic to keep the fix tests stable.
+            // Restrict to the primary tree so a diagnostic in an additional source cannot be picked.
+            ImmutableArray<Diagnostic> diagnostics =
+                [.. (await compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync())
+                    .Where(d => d.Location.SourceTree == tree)
+                    .OrderBy(d => d.Location.SourceSpan.Start)];
+
+            if (diagnostics.IsEmpty)
+                throw new InvalidOperationException("Expected at least one diagnostic from the analyzer.");
+
+            // Create workspace and document
+            using AdhocWorkspace workspace = new();
+            ProjectInfo projectInfo = ProjectInfo.Create(
+                ProjectId.CreateNewId(),
+                VersionStamp.Create(),
+                name: "TestProject",
+                assemblyName: "TestAssembly",
+                language: LanguageNames.CSharp)
+                .WithMetadataReferences(DefaultReferences.Value)
+                // Parse/compile the workspace document the same way as the analyzer compilation so
+                // diagnostic spans line up and newer syntax parses identically.
+                .WithParseOptions(parseOptions)
+                .WithCompilationOptions(compilationOptions);
+
+            Project project = workspace.AddProject(projectInfo);
+
+            DocumentId primaryDocumentId = DocumentId.CreateNewId(project.Id);
+            workspace.AddDocument(DocumentInfo.Create(
+                primaryDocumentId,
+                name: "TestDocument.cs",
+                sourceCodeKind: SourceCodeKind.Regular,
+                loader: TextLoader.From(TextAndVersion.Create(SourceText.From(source), VersionStamp.Create()))));
+
+            for (int i = 0; i < additionalSources.Length; i++)
+            {
+                workspace.AddDocument(DocumentInfo.Create(
+                    DocumentId.CreateNewId(project.Id),
+                    name: $"AdditionalDocument{i}.cs",
+                    sourceCodeKind: SourceCodeKind.Regular,
+                    loader: TextLoader.From(TextAndVersion.Create(SourceText.From(additionalSources[i]), VersionStamp.Create()))));
+            }
+
+            // Retrieve the primary document from the final solution so its semantic model sees the
+            // additional documents (a document handle from an earlier AddDocument is a stale snapshot).
+            Document document = workspace.CurrentSolution.GetDocument(primaryDocumentId)!;
+
+            // Get the root and semantic model for the document
+            SyntaxNode? root = await document.GetSyntaxRootAsync();
+            SemanticModel? semanticModel = await document.GetSemanticModelAsync();
+
+            if (root == null || semanticModel == null)
+                throw new InvalidOperationException("Failed to get syntax root or semantic model.");
+
+            // Use the first diagnostic
+            Diagnostic firstDiagnostic = diagnostics[0];
+
+            TFix fixProvider = new();
+            List<CodeAction> registeredActions = [];
+
+            await fixProvider.RegisterCodeFixesAsync(
+                new CodeFixContext(
+                    document,
+                    firstDiagnostic,
+                    (action, _) => registeredActions.Add(action),
+                    CancellationToken.None));
+
+            if (registeredActions.Count == 0)
+                throw new InvalidOperationException("No code fixes were registered for the first diagnostic.");
+
+            // Apply the first registered code fix
+            CodeAction firstAction = registeredActions[0];
+            ImmutableArray<CodeActionOperation> operations = await firstAction.GetOperationsAsync(CancellationToken.None);
+
+            if (operations.Length == 0)
+                throw new InvalidOperationException("No operations returned from the code action.");
+
+            // Apply all operations to the workspace
+            foreach (CodeActionOperation op in operations)
+            {
+                if (op is ApplyChangesOperation applyOp)
+                    applyOp.Apply(workspace, CancellationToken.None);
+            }
+
+            // Get the modified document
+            Document? modifiedDoc = workspace.CurrentSolution.GetDocument(document.Id);
+            if (modifiedDoc == null)
+                throw new InvalidOperationException("Failed to retrieve modified document.");
+
+            SourceText? text = await modifiedDoc.GetTextAsync();
+            if (text == null)
+                throw new InvalidOperationException("Failed to get text from modified document.");
+
+            return text.ToString();
+        }
+
+        private static IReadOnlyList<MetadataReference> BuildDefaultReferences()
+        {
+            HashSet<string> added = new(StringComparer.OrdinalIgnoreCase);
+            List<MetadataReference> refs = [];
+
+            // BCL and runtime assemblies
+            string trusted = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string ?? string.Empty;
+            foreach (string path in trusted.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                TryAdd(path);
+
+            // Raven.Client and co-located dependencies
+            string outputDir = Path.GetDirectoryName(
+                typeof(Raven.Client.Documents.Session.IDocumentSession).Assembly.Location)!;
+            foreach (string dll in Directory.GetFiles(outputDir, "*.dll"))
+                TryAdd(dll);
+
+            return refs;
+
+            void TryAdd(string path)
+            {
+                if (!added.Add(path)) return;
+                try
+                {
+                    using var stream = File.OpenRead(path);
+                    using var pe = new System.Reflection.PortableExecutable.PEReader(stream);
+                    if (!pe.HasMetadata) return;
+                    refs.Add(MetadataReference.CreateFromFile(path));
+                }
+                catch { /* skip unreadable or non-managed files */ }
+            }
+        }
+    }
+}

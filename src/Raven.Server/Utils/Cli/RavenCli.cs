@@ -1273,6 +1273,9 @@ namespace Raven.Server.Utils.Cli
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFunc = CommandPrint, Experimental = true }, // test cli
         };
 
+        // set when the CLI session ended with a shutdown request (and not e.g. with a logout of a remote pipe connection)
+        public bool ShutdownRequested { get; private set; }
+
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring, bool usingNamedPipes)
         {
             _server = server;
@@ -1326,6 +1329,7 @@ namespace Raven.Server.Utils.Cli
                         case "exit":
                         case "shutdown":
                         case "q":
+                            ShutdownRequested = true;
                             return false;
 
                         case "reset":
@@ -1466,7 +1470,7 @@ namespace Raven.Server.Utils.Cli
                     {
                         if (parsedCommand.Command == Command.RestartServer)
                         {
-                            if (Program.IsRunningNonInteractive || _writer == Console.Out)
+                            if (Program.IsRunningNonInteractive || Program.IsRunningAsWindowsService || _writer == Console.Out)
                             {
                                 if (_usingNamedPipes)
                                 {
@@ -1481,13 +1485,15 @@ namespace Raven.Server.Utils.Cli
                         }
                         if (parsedCommand.Command == Command.Shutdown)
                         {
-                            if (Program.IsRunningNonInteractive || _writer == Console.Out)
+                            if (Program.IsRunningNonInteractive || Program.IsRunningAsWindowsService || _writer == Console.Out)
                             {
                                 if (_usingNamedPipes)
                                 {
                                     const string str = "Shutting down the server";
                                     PrintBothToConsoleAndRemotePipe(str, this, Delimiter.Shutdown);
                                 }
+
+                                ShutdownRequested = true;
                                 return false;
                             }
 

@@ -38,10 +38,12 @@ namespace Corax.Querying.Matches
 
         private bool _doNotSortResults;
 
+        private readonly bool _innerIsEmpty;
         private readonly bool _useBitmap;
         private readonly bool _useBitmapForAndWith;
         private readonly long _lastEntryId;
         private GrowableBitArray _excludedBitmap;
+        private long _excludedMatches;
         private bool _excludedBitmapInitialized;
         private bool _excludedBitmapIsEmpty;
         private bool _bitmapExhausted;
@@ -70,6 +72,7 @@ namespace Corax.Querying.Matches
 
             _context = context;
             _isAndWithBuffer = false;
+            _innerIsEmpty = inner.Count == 0 && inner.Confidence == QueryCountConfidence.High && inner.IsBoosting == false;
             _useBitmap = useBitmap;
             _useBitmapForAndWith = useBitmapForAndWith;
             _lastEntryId = lastEntryId;
@@ -84,6 +87,9 @@ namespace Corax.Querying.Matches
         {
             if (_isAndWithBuffer)
                 throw new InvalidOperationException($"We cannot execute `{nameof(Fill)}` after initiating a `{nameof(AndWith)}` operation.");
+
+            if (_innerIsEmpty)
+                return 0;
 
             if (_useBitmap)
                 return FillViaBitmap(matches);
@@ -265,7 +271,10 @@ namespace Corax.Querying.Matches
                 if (totalResults == 0)
                 {
                     _bitmapExhausted = true;
-                    _excludedBitmap.Dispose();
+
+                    // Score needs it to skip the excluded matches and disposes it then
+                    if (_inner.IsBoosting == false)
+                        _excludedBitmap.Dispose();
                     return 0;
                 }
 
@@ -313,7 +322,9 @@ namespace Corax.Querying.Matches
                 : default;
             while (_outer.Fill(workingBuffer) is var read and > 0)
             {
+
                 _excludedBitmap.AddRange(workingBuffer.Slice(0, read));
+                _excludedMatches += read;
                 _token.ThrowIfCancellationRequested();
             }
 
@@ -326,8 +337,56 @@ namespace Corax.Querying.Matches
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Score(Span<long> matches, Span<float> scores, float boostFactor)
         {
+            // An OR ancestor passes its own matches, so we restore the scores of the excluded ones after the inner scored them
+            if (_inner.IsBoosting && ExcludedMatches > 0)
+            {
+                using var excluded = new BinaryMatchScoringBuffer(_context, (int)Math.Min(matches.Length, ExcludedMatches));
+                for (var i = 0; i < matches.Length; i++)
+                {
+                    if (IsExcluded(matches[i]))
+                        excluded.Add(matches[i], i);
+                }
+
+                // When the final results contain documents that were excluded, we must keep their incoming scores, since the inner might bump them.
+                excluded.SaveScores(scores);
+                _inner.Score(matches, scores, boostFactor);
+                
+                // Restore the scores of all excluded matches, since this primitive must not affect them.
+                excluded.RestoreScores(scores);
+
+                if (_excludedBitmapInitialized)
+                    _excludedBitmap.Dispose();
+                return;
+            }
+
+            if (_inner.IsBoosting && _isAndWithBuffer && _excludedBitmapInitialized == false)
+            {
+                if (_buffer.Count == 0)
+                    return;
+
+                using var own = new BinaryMatchScoringBuffer(_context, Math.Min(matches.Length, _buffer.Count));
+                for (var i = 0; i < matches.Length; i++)
+                {
+                    if (_buffer.Results.BinarySearch(matches[i]) >= 0)
+                        own.Add(matches[i], i);
+                }
+
+                _inner.Score(own.Matches, own.Scores, boostFactor);
+                own.AddScoresTo(scores);
+                return;
+            }
+
             _inner.Score(matches, scores, boostFactor);
         }
+
+        // AndWith without the bitmap keeps its results in the buffer instead of the excluded matches
+        private long ExcludedMatches => _excludedBitmapInitialized
+            ? _excludedBitmapIsEmpty ? 0 : _excludedMatches
+            : _buffer.IsInitialized && _isAndWithBuffer == false ? _buffer.Count : 0;
+
+        private bool IsExcluded(long id) => _excludedBitmapInitialized
+            ? _excludedBitmap.Contains(id)
+            : _buffer.Results.BinarySearch(id) >= 0;
 
         public QueryInspectionNode Inspect()
         {

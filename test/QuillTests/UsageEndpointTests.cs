@@ -92,12 +92,9 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Usage_degrades_to_empty_when_index_not_deployed()
+    public async Task Usage_reports_zeros_for_an_app_with_no_recorded_turns()
     {
         await using var app = await NewAppAsync();
-        // delete the auto-deployed index → exercise not-deployed path (must degrade to empty, not 500)
-        await app.Store.Maintenance.ForDatabase(app.Slug).SendAsync(
-            new DeleteIndexOperation(new ConversationMetricsIndex().IndexName));
 
         var now = DateTime.UtcNow;
         var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
@@ -196,25 +193,39 @@ public class UsageEndpointTests(ITestOutputHelper output, QuillCollectionHost co
         var now = DateTime.UtcNow;
         var usage = await Host.GetUsageAsync(now.Year, now.Month);
 
-        // license write metering reports nothing in tests; each app still gets a row (0 writes)
+        // the stubbed license usage names no test app; each app still gets a row (0 writes)
         // so the dashboard can key the WRU column by slug
+        Assert.False(usage.IsWritesUnavailable);
         Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app1.Slug).Writes);
         Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app2.Slug).Writes);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Usage_tolerates_conversation_doc_missing_usage_and_messages()
+    public async Task Usage_flags_writes_as_unavailable_when_the_license_server_is_down()
+    {
+        await using var app = await NewAppAsync();
+        LicenseStats.IsUsageUnavailable = true;
+
+        var now = DateTime.UtcNow;
+        var usage = await Host.GetUsageAsync(now.Year, now.Month);
+
+        Assert.True(usage.IsWritesUnavailable);
+        Assert.Equal(0, Assert.Single(usage.WritesByApp, w => w.Slug == app.Slug).Writes);
+        Assert.All(usage.Points, p => Assert.Equal(0, p.Writes));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Usage_counts_recorded_turns_only_ignoring_stray_conversation_docs()
     {
         await using var app = await NewAppAsync();
         var now = DateTime.UtcNow;
         var earlierToday = EarlierToday(now);
         await SeedConversationAsync(app.Store, app.Slug, "chats/a", "support", earlierToday, messages: 2, tokens: 100);
-        // doc missing TotalUsage/Messages → index reads via DynamicNullObject (contributes 0, not NRE)
         await PutConversationDocAsync(app.Store, app.Slug, "chats/min",
             new { Agent = "support", CreatedAt = earlierToday, LastMessageAt = earlierToday });
 
         var points = (await Host.GetUsageAsync(now.Year, now.Month, now.Day)).Points;
-        Assert.Equal(2, Sum(points, p => p.Conversations));
+        Assert.Equal(1, Sum(points, p => p.Conversations));
         Assert.Equal(2, Sum(points, p => p.Messages));
         Assert.Equal(100, Sum(points, p => p.Tokens));
     }

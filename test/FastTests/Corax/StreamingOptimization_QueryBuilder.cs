@@ -91,18 +91,22 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [InlineData(false, BitmapAndFillMode.Force)]
     public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues, BitmapAndFillMode mode) // where Name = X and Field < 1 order by Name => where Name = x and Field < 1
     {
-        Func<IAsyncDocumentSession, IndexQuery> query = session =>
-            session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
-                .WhereEquals(p => p.Name, "maciej")
-                .AndAlso()
-                .WhereLessThan(p => p.First, 10)
-                .OrderBy(x => x.Name)
-                .GetIndexQuery();
+        foreach (var name in new[] { "maciej", "3.14" })
+        {
+            Func<IAsyncDocumentSession, IndexQuery> query = session =>
+                session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
+                    .WhereEquals(p => p.Name, name)
+                    .AndAlso()
+                    .WhereLessThan(p => p.First, 10)
+                    .OrderBy(x => x.Name)
+                    .GetIndexQuery();
 
-        if (mode == BitmapAndFillMode.Off)
-            await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
-        else
-            await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+            // 'maciej' is not indexed, so that And is known to be empty and cannot yield duplicates
+            if (name == "3.14" && mode == BitmapAndFillMode.Off)
+                await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
+            else
+                await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+        }
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
@@ -123,26 +127,30 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [InlineData(false, BitmapAndFillMode.Force)]
     public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues, BitmapAndFillMode mode) // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by Name => skip order by
     {
-        Func<IAsyncDocumentSession, IndexQuery> query = session =>
-            session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
-                .OpenSubclause()
-                .WhereEquals(p => p.Name, "maciej")
-                .AndAlso()
-                .WhereLessThan(p => p.First, 10)
-                .CloseSubclause()
-                .AndAlso()
-                .OpenSubclause()
-                .WhereEquals(p => p.Second, 2)
-                .AndAlso()
-                .WhereLessThan(p => p.First, 10)
-                .CloseSubclause()
-                .OrderBy(x => x.Name)
-                .GetIndexQuery();
+        foreach (var (name, second) in new[] { ("maciej", 2D), ("3.14", 3.14D) })
+        {
+            Func<IAsyncDocumentSession, IndexQuery> query = session =>
+                session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
+                    .OpenSubclause()
+                    .WhereEquals(p => p.Name, name)
+                    .AndAlso()
+                    .WhereLessThan(p => p.First, 10)
+                    .CloseSubclause()
+                    .AndAlso()
+                    .OpenSubclause()
+                    .WhereEquals(p => p.Second, second)
+                    .AndAlso()
+                    .WhereLessThan(p => p.First, 10)
+                    .CloseSubclause()
+                    .OrderBy(x => x.Name)
+                    .GetIndexQuery();
 
-        if (mode == BitmapAndFillMode.Off)
-            await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
-        else
-            await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+            // 'maciej' is not indexed, so that And is known to be empty and cannot yield duplicates
+            if (name == "3.14" && mode == BitmapAndFillMode.Off)
+                await TestQueryBuilder<DeduplicationMatch<BinaryMatch>>(hasMultipleValues, query, mode);
+            else
+                await TestQueryBuilder<BinaryMatch>(hasMultipleValues, query, mode);
+        }
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
@@ -364,7 +372,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+    public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<IncludeNullMatch<MultiTermMatch>>(hasMultipleValues, session =>
         session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>()
             .WhereExists(p => p.Name)
             .OrderBy(x => x.Name)
@@ -420,10 +428,18 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
             .GetIndexQuery());
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(RangesTests))]
-    public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
+    [MemberData(nameof(RangesTests), false)]
+    public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending) =>
+        await AssertRangeQuery(this, hasMultipleValues, leftInclusive, rightInclusive, ascending);
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+    [MemberData(nameof(RangesTests), false)]
+    public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending) =>
+        await AssertRangeQueryCannotApplyStreaming(this, hasMultipleValues, leftInclusive, rightInclusive, ascending);
+
+    public static async Task AssertRangeQuery(RavenTestBase self, bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
-        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>>(hasMultipleValues, session =>
+        await TestQueryBuilder<DeduplicationMatch<MultiTermMatch>, DtoIndexSingleValues>(self, hasMultipleValues, session =>
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
@@ -446,11 +462,9 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         );
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-    [MemberData(nameof(RangesTests))]
-    public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
+    public static async Task AssertRangeQueryCannotApplyStreaming(RavenTestBase self, bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
-        await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
+        await TestQueryBuilder<SortingMatch, DtoIndexSingleValues>(self, hasMultipleValues, session =>
             {
                 var query = session.Advanced.AsyncDocumentQuery<Dto, DtoIndexSingleValues>();
 
@@ -475,8 +489,16 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         );
     }
 
-    public static IEnumerable<object[]> RangesTests()
+    public static IEnumerable<object[]> RangesTests(bool fullMatrix)
     {
+        if (fullMatrix == false)
+        {
+            // covers every value of every parameter, the full matrix runs in SlowTests.Corax.StreamingOptimization_RangeMatrix
+            yield return new object[] { false, true, false, true };
+            yield return new object[] { true, false, true, false };
+            yield break;
+        }
+
         var boolean = new bool[] { false, true };
 
         foreach (var hasMultipleValues in boolean)

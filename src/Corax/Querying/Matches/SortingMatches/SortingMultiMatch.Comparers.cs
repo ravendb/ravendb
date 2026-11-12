@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using Corax.Utils.Spatial;
 using Sparrow;
@@ -117,12 +118,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             readScores.Fill(Bm25Relevance.InitialScoreValue);
             match._inner.Score(batchResults, readScores, 1f);
             
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match,
@@ -142,12 +138,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             match._inner.Score(batchResults, readScores, 1f);
             match._token.ThrowIfCancellationRequested();
 
-            // If we need to do documents boosting then we need to modify the based on documents stored score. 
-            if (match._searcher.DocumentsAreBoosted)
-            {
-                // We get the boosting tree and go to check every document. 
-                BoostDocuments(match, batchResults, readScores);
-            }
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: true);
 
             // Note! readScores & indexes are aliased and same as batchTermIds
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
@@ -165,26 +156,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 match._results.Add(batchResults[indexes[i]]);
                 if (match._sortingDataTransfer.IncludeScores)
                     match._scoresResults.Add((float)batchTerms[indexes[i]].Double);
-            }
-        }
-
-        private static void BoostDocuments(SortingMultiMatch<TInner> match, Span<long> batchResults, Span<float> readScores)
-        {
-            var tree = match._searcher.GetDocumentBoostTree();
-            if (tree is {NumberOfEntries: > 0})
-            {
-                // We are going to read from the boosting tree all the boosting values and apply that to the scores array.
-                ref var scoresRef = ref MemoryMarshal.GetReference(readScores);
-                ref var matchesRef = ref MemoryMarshal.GetReference(batchResults);
-                for (int idx = 0; idx < batchResults.Length; idx++)
-                {
-                    var ptr = (float*)tree.ReadPtr(Unsafe.Add(ref matchesRef, idx), out var _);
-                    if (ptr == null)
-                        continue;
-
-                    ref var scoresIdx = ref Unsafe.Add(ref scoresRef, idx);
-                    scoresIdx *= *ptr;
-                }
             }
         }
 
@@ -569,29 +540,38 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
     private struct EntryComparerBySpatial : IEntryComparer, IComparer<UnmanagedSpan>
     {
-        private SpatialReader _reader;
-        private (double X, double Y) _center;
-        private SpatialUnits _units;
-        private double _round;
+        private SpatialDistanceReader _reader;
+        private Dictionary<long, double> _distances;
         private int _comparerId;
         private UnmanagedSpan<long> _batchResults;
         private double _missingValueForInnerSorter;
-        
+
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
         public void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId)
         {
             _batchResults = batchResults;
             _comparerId = comparerId;
-            _center = (match._orderMetadata[_comparerId].Point.X, match._orderMetadata[_comparerId].Point.Y);
-            _units = match._orderMetadata[_comparerId].Units;
-            _round = match._orderMetadata[_comparerId].Round;
-            _reader = match._searcher.SpatialReader(match._orderMetadata[_comparerId].Field.FieldName);
+            _reader = new SpatialDistanceReader(match._searcher, match._orderMetadata[_comparerId]);
+            _distances = match._orderMetadata[_comparerId].UseNearestPoint ? new Dictionary<long, double>() : null;
 
             if (comparerId > 0)
             {
                 _missingValueForInnerSorter = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
             }
+        }
+
+        private double GetDistanceForCompare(long entryId)
+        {
+            if (_distances != null && _distances.TryGetValue(entryId, out var cached))
+                return cached;
+
+            var distance = _reader.TryGetDistance(entryId, out var result) == false
+                ? _missingValueForInnerSorter
+                : result.Distance;
+
+            _distances?.Add(entryId, distance);
+            return distance;
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -620,18 +600,10 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             for (int i = 0; i < batchResults.Length; i++)
             {
-                SpatialResult distance; 
-                if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
+                if (_reader.TryGetDistance(batchResults[i], out var distance) == false)
                 {
                     var distanceForMissing = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
                     distance = new SpatialResult() { Distance = distanceForMissing, Latitude = Double.NaN, Longitude = Double.NaN };
-                }
-                else
-                {
-                    distance = new SpatialResult()
-                    {
-                        Distance = SpatialUtils.GetGeoDistance(coords, _center, _round, _units), Longitude = coords.Lng, Latitude = coords.Lat
-                    };
                 }
                 heapSorter.Insert(i, distance);
             }
@@ -651,14 +623,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             // always as asc, if comparer is desc it's wrapped into Descending<> and params are switched
 
-            double xDistance =
-                _reader.TryGetSpatialPoint(_batchResults[x], out var coords) == false 
-                ? _missingValueForInnerSorter 
-                : SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
-
-            double yDistance = _reader.TryGetSpatialPoint(_batchResults[y], out coords) == false 
-                ? _missingValueForInnerSorter
-                : SpatialUtils.GetGeoDistance(coords, _center, _round, _units);
+            var xDistance = GetDistanceForCompare(_batchResults[x]);
+            var yDistance = GetDistanceForCompare(_batchResults[y]);
 
             return xDistance.CompareTo(yDistance);
         }

@@ -13,7 +13,15 @@ const specPath = process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH
     ? path.resolve(webDirectory, process.env.RAVEN_QUILL_OPENAPI_SPEC_PATH)
     : path.resolve(repoRoot, "src", "Raven.Quill", "obj", "openapi", "quill.json");
 const outputPath = path.resolve(webDirectory, "src", "api", "generated", "server-api.ts");
-const openApiTypescriptCliPath = path.resolve(webDirectory, "node_modules", "openapi-typescript", "bin", "cli.js");
+const openApiTypescriptCliPath = path.resolve(
+    webDirectory,
+    "packages",
+    "api-codegen",
+    "node_modules",
+    "openapi-typescript",
+    "bin",
+    "cli.js",
+);
 const tempSpecPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.json`);
 const tempTypesPath = path.join(os.tmpdir(), `raven-quill-openapi-${process.pid}.ts`);
 
@@ -84,7 +92,7 @@ function buildSchemaAliases(schemas) {
             throw new Error(`Schema name '${name}' is not a valid TypeScript identifier.`);
         }
 
-        lines.push(`export type ${name} = components[\"schemas\"][\"${name}\"];`);
+        lines.push(`export type ${name} = components["schemas"]["${name}"];`);
     }
 
     return lines.join("\n");
@@ -100,7 +108,7 @@ function buildEndpointHelpers(operations) {
         for (const helperName of [...group.keys()].sort((left, right) => left.localeCompare(right))) {
             const operation = group.get(helperName);
             if (operation.pathParameters.length === 0) {
-                lines.push(`        ${helperName}: \"${operation.routePath}\",`);
+                lines.push(`        ${helperName}: "${operation.routePath}",`);
                 continue;
             }
 

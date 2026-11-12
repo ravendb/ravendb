@@ -1,4 +1,4 @@
-import React, { ComponentProps, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, ComponentProps, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import {
@@ -20,7 +20,15 @@ import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { ActionMeta, GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import {
+    ActionMeta,
+    GetOptionValue,
+    GroupBase,
+    InputActionMeta,
+    OnChangeValue,
+    OptionsOrGroups,
+    Props as SelectProps,
+} from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
@@ -32,7 +40,6 @@ import { InputType } from "../../../typings/_studio/react-bootstrap";
 import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
 import useBoolean from "components/hooks/useBoolean";
-import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 import { MultiRadioToggle } from "./toggles/MultiRadioToggle";
 import "./VerificationCodeInput.scss";
 import { ConditionalPopover } from "./ConditionalPopover";
@@ -179,6 +186,7 @@ export function FormRadio<TFieldValues extends FieldValues, TName extends FieldP
         <div className="position-relative">
             <div className="d-flex flex-grow-1">
                 <Radio
+                    name={name}
                     selected={value === props.value}
                     toggleSelection={() => {
                         onChange(props.value);
@@ -336,7 +344,7 @@ export function FormSelectCreatable<
                     value={selectedOptions}
                     onChange={onSelectChange}
                     onCreateOption={onCreateOption}
-                    disabled={formState.isSubmitting}
+                    isDisabled={formState.isSubmitting}
                     getOptionValue={getOptionValue}
                     {...selectRest}
                 />
@@ -364,6 +372,7 @@ export function FormSelectAutocomplete<
 ) {
     const {
         field: { onChange, value },
+        formState,
     } = useController({
         name: props.name,
         control: props.control,
@@ -371,10 +380,12 @@ export function FormSelectAutocomplete<
 
     const { value: isInitialOpen, setValue: setIsInitialOpen } = useBoolean(false);
 
+    const isDisabled = props.isDisabled || formState.isSubmitting;
+
     const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
     const labelAccessor = props.getOptionLabel ?? ((option: any) => option.label);
 
-    const handleFilterOption = (option: FilterOptionOption<Option>, inputValue: string) => {
+    const handleFilterOption: SelectProps<Option, IsMulti, Group>["filterOption"] = (option, inputValue) => {
         if (isInitialOpen) {
             return true;
         }
@@ -405,7 +416,7 @@ export function FormSelectAutocomplete<
         setIsInitialOpen(true);
     };
 
-    const inputValue = props.isDisabled ? "" : (value ?? "");
+    const inputValue = isDisabled ? "" : (value ?? "");
     const components = props.components ? { ...props.components, Input: InputNotHidden } : { Input: InputNotHidden };
 
     return (
@@ -413,11 +424,12 @@ export function FormSelectAutocomplete<
             inputValue={inputValue}
             onInputChange={handleInputChange}
             tabSelectsValue
-            controlShouldRenderValue={!!props.isDisabled}
+            controlShouldRenderValue={isDisabled}
             filterOption={handleFilterOption}
             onFocus={handleFocus}
             blurInputOnSelect
             {...props}
+            isDisabled={isDisabled}
             components={components} // Override to ensure Input is not hidden
         />
     );
@@ -625,7 +637,7 @@ function FormInputGeneral<
                             name={name}
                             type={actualInputType}
                             onBlur={onBlur}
-                            onChange={(x) => handleValueChange(x.currentTarget.value)}
+                            onChange={(x: ChangeEvent<HTMLInputElement>) => handleValueChange(x.currentTarget.value)}
                             value={value == null ? "" : value}
                             isInvalid={invalid}
                             className={classNames(
@@ -703,8 +715,8 @@ function FormToggle<TFieldValues extends FieldValues, TName extends FieldPath<TF
                     isInvalid={invalid}
                     onBlur={onBlur}
                     color="primary"
-                    disabled={formState.isSubmitting}
                     {...rest}
+                    disabled={formState.isSubmitting || rest.disabled}
                 />
             </div>
         </div>
@@ -782,7 +794,7 @@ export function FormPathSelector<
                         ref={inputRef}
                         name={name}
                         type="text"
-                        onChange={(x) => onChange(x.currentTarget.value)}
+                        onChange={(x: ChangeEvent<HTMLInputElement>) => onChange(x.currentTarget.value)}
                         value={formValuePath == null ? "" : formValuePath}
                         isInvalid={invalid}
                         className="position-relative d-flex flex-grow-1"
@@ -965,12 +977,13 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
     iconClassName,
 }: FormErrorIconProps<TFieldValues>) {
     const { hasErrors, message } = useErrorMessage({ control, paths });
+    const { submitCount } = useFormState({ control });
 
     useEffect(() => {
         if (hasErrors) {
             onError?.();
         }
-    }, [hasErrors]);
+    }, [hasErrors, submitCount]);
 
     if (!hasErrors) {
         return null;

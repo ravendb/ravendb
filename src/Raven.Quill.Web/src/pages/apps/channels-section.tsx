@@ -11,7 +11,7 @@ import { SectionTable, SectionTableSkeleton } from "@/components/table/section-t
 import { appRoutes } from "@/lib/app-routes";
 import { CHANNEL_TYPE_LABELS } from "@/lib/channel-type-labels";
 import { AddChannelMenu } from "@/pages/apps/channels/add-channel-menu";
-import type { FixedAgent } from "@/pages/apps/channels/web-widget-channel-form";
+import type { FixedAgent } from "@/pages/apps/channels/channel-form-types";
 import { GenerateEmbedLinkDialog } from "@/pages/apps/channels/generate-embed-link-dialog";
 import { DeleteChannelDialog } from "@/pages/apps/channels/delete-channel-dialog";
 import { SectionCard } from "@/pages/apps/section-card";
@@ -111,7 +111,7 @@ export function ChannelsSection({
                                     </TableCell>
                                     {!fixedAgent && <TableCell className="font-medium">{agent?.name}</TableCell>}
                                     <TableCell>
-                                        <EnabledStatus isEnabled={channel.enabled} />
+                                        <EnabledStatus isEnabled={channel.enabled} setupError={channel.setupError} />
                                     </TableCell>
                                     <TableCell>{channel.type ? CHANNEL_TYPE_LABELS[channel.type] : "—"}</TableCell>
                                     <TableCell className="text-muted-foreground tabular-nums">

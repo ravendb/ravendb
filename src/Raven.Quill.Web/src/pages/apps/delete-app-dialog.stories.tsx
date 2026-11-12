@@ -6,13 +6,10 @@ import { DeleteAppDialog } from "./delete-app-dialog";
 
 const APP = sampleApps[0]!;
 
-// Tests, not catalogue entries: `!dev` keeps these out of the Storybook sidebar while
-// `pnpm test:storybook` still runs them. Play functions are the only way to exercise a
-// component here — the unit project runs in node with no DOM.
 const meta = {
     title: "Apps/DeleteAppDialog",
     component: DeleteAppDialog,
-    tags: ["!dev"],
+    tags: ["test-only"],
     args: {
         slug: APP.slug,
         appName: APP.name,

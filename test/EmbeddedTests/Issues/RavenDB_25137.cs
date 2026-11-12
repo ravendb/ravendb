@@ -33,8 +33,9 @@ namespace EmbeddedTests.Issues
                 bool killed = false;
                 embedded.ForTestingPurposesOnly().OnProcessKilled = process => killed = true;
 
-                using (var cts = new CancellationTokenSource(0))
+                using (var cts = new CancellationTokenSource())
                 {
+                    cts.Cancel();
                     embedded.StartServer(options);
 
                     Assert.True(cts.IsCancellationRequested);

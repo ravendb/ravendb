@@ -1,7 +1,8 @@
 import type { DiscoverForeignKeyResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
+import { formatJavaScript } from "@/components/ace-editor/ace-editor-action-utils";
 import { toStringValueItems } from "@/lib/form-utils";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { isColumnSupported, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableKey, isColumnSupported, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import type {
     FormColumnMapping,
     FormEmbeddedTable,
@@ -36,20 +37,29 @@ export function propertyNameFromJoinColumn(column: string): string {
     return pascalCase(stripIdSuffix(column)) || pascalCase(column);
 }
 
-export function getSourceTableLabel(table: SourceTableRef) {
-    return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
-}
-
-/** Normalized identity of a source table, matching the case-insensitive comparison the
- * validation schema uses for duplicate root tables. Null when the table has no name yet. */
-export function getSourceTableKey(table: SourceTableRef): string | null {
+/** Normalized, case-insensitive identity of a source table. Null when the table has no name yet.
+ * With a default schema, a table without a schema is the one CDC Sink reads: "Orders" is "public.Orders". */
+export function getSourceTableKey(table: SourceTableRef, defaultSchema: string | null): string | null {
     const name = table.sourceTableName?.trim().toLowerCase();
 
     if (!name) {
         return null;
     }
 
-    return `${table.sourceTableSchema?.trim().toLowerCase() ?? ""}::${name}`;
+    const schema = table.sourceTableSchema?.trim() || defaultSchema || "";
+
+    return `${schema.toLowerCase()}::${name}`;
+}
+
+export function haveSameTables(current: MappedSourceTable[], other: MappedSourceTable[]): boolean {
+    if (current.length !== other.length) {
+        return false;
+    }
+
+    // Where identifiers are case-sensitive, public."Orders" and public.orders are two tables.
+    const currentKeys = new Set(current.map(getTableKey));
+
+    return other.every((table) => currentKeys.has(getTableKey(table)));
 }
 
 /** A source table the mapping refers to, in the shape the verify-schema selection and the CDC
@@ -59,11 +69,14 @@ export type MappedSourceTable = AppFormData["verifySchema"]["tables"][number];
 /** Source tables whose data the given roots capture: the roots themselves plus their nested embedded
  * tables, keyed and deduped in encounter order. Linked tables don't count - a link only references
  * documents by id, so the linked table still needs its own root mapping. */
-function collectSourceTables(rootTables: FormRootTable[]): Map<string, MappedSourceTable> {
+function collectSourceTables(
+    rootTables: FormRootTable[],
+    defaultSchema: string | null,
+): Map<string, MappedSourceTable> {
     const collected = new Map<string, MappedSourceTable>();
 
     const visit = (table: SourceTableRef & { embeddedTables?: FormEmbeddedTable[] }) => {
-        const key = getSourceTableKey(table);
+        const key = getSourceTableKey(table, defaultSchema);
         const sourceTableName = table.sourceTableName?.trim();
 
         // The key already rejects a blank name; the guard is what convinces TypeScript of it.
@@ -84,13 +97,15 @@ function collectSourceTables(rootTables: FormRootTable[]): Map<string, MappedSou
 /** Source tables whose changes CDC must capture for the mapping to work. Disabled roots (and their
  * subtrees) are not ingested, so they need no capture infrastructure. */
 export function collectMappedSourceTables(tables: FormRootTable[]): MappedSourceTable[] {
-    return [...collectSourceTables(tables.filter((table) => !table.disabled)).values()];
+    const enabledTables = tables.filter((table) => !table.disabled);
+
+    return [...collectSourceTables(enabledTables, null).values()];
 }
 
 /** Keys of every source table the mapping refers to, disabled roots included: a disabled root was
  * disabled on purpose, and the unmapped-tables alert would otherwise offer to map it a second time. */
-export function collectMappedSourceTableKeys(tables: FormRootTable[]): Set<string> {
-    return new Set(collectSourceTables(tables).keys());
+export function collectMappedSourceTableKeys(tables: FormRootTable[], defaultSchema: string): Set<string> {
+    return new Set(collectSourceTables(tables, defaultSchema).keys());
 }
 
 export function createEmptyRootTable(): FormRootTable {
@@ -232,6 +247,21 @@ export function scaffoldTables(
     });
 }
 
+/** Root tables outside the selection stay: the editor flags them, and dropping one is the operator's call. */
+export function addUnmappedSelectedTables(
+    tables: FormRootTable[],
+    selectedTables: AppFormData["verifySchema"]["tables"],
+    discoverResult: DiscoverResponse | null,
+    defaultSchema: string,
+): FormRootTable[] {
+    const mappedKeys = collectMappedSourceTableKeys(tables, defaultSchema);
+    const unmappedTables = selectedTables.filter(
+        (table) => !mappedKeys.has(getSourceTableKey(table, defaultSchema) ?? ""),
+    );
+
+    return [...tables, ...scaffoldTables(unmappedTables, discoverResult)];
+}
+
 export function findDiscoveredTable(
     discoverResult: DiscoverResponse | null,
     sourceTableSchema: string | null | undefined,
@@ -273,6 +303,22 @@ export function getForeignKeysToTable(source: DiscoverTableResponse, target: Dis
             (foreignKey.referencedSchema ?? "") === (target.sourceTableSchema ?? "") &&
             foreignKey.referencedTable === target.sourceTableName,
     );
+}
+
+type TableWithScripts = Pick<FormRootTable, "patch" | "onDelete"> & { embeddedTables: FormEmbeddedTable[] };
+
+/** The AI writes its scripts compactly, often on one line; they open in the editor as its Format action leaves them. */
+export function formatTableScripts<TTable extends TableWithScripts>(table: TTable): TTable {
+    return {
+        ...table,
+        patch: formatScript(table.patch),
+        onDelete: table.onDelete && { ...table.onDelete, patch: formatScript(table.onDelete.patch) },
+        embeddedTables: table.embeddedTables.map(formatTableScripts),
+    };
+}
+
+function formatScript(script: string | null): string | null {
+    return script ? formatJavaScript(script) : script;
 }
 
 /** Walks the form errors object along a dotted field path, e.g. "mapTables.tables.0". */

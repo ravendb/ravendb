@@ -73,5 +73,17 @@ namespace FastTests.Blittable
                 }
             }
         }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void ReturnAfterDisposeFreesTheBuffer()
+        {
+            var pool = new UnmanagedBuffersPool(RavenLogManager.Instance.CreateNullLogger(), string.Empty);
+            var allocation = pool.Allocate(128);
+
+            pool.Dispose();
+            pool.Return(allocation);
+
+            Assert.Equal(0, pool.GetAllocatedMemorySize());
+        }
     }
 }

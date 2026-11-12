@@ -78,6 +78,10 @@ Push-Location $serverDir;
 Try
 {
     Invoke-Expression -Command ".\$rvn windows-service register --service-name $name";
+    if ($LASTEXITCODE -ne 0) {
+        throw "Registering the '$name' service failed (rvn exit code: $LASTEXITCODE)."
+    }
+
     Start-Service -Name $name
 }
 catch

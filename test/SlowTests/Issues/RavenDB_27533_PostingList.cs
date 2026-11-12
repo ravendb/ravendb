@@ -247,6 +247,173 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
         AssertContents(model);
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CollapsingABranchThatOwesALevelMustPassItToItsChild()
+    {
+        var model = new SortedSet<long>();
+        GrowUntilDepthThree(model, atLeastRootChildren: 3);
+
+        var rootChildren = RootChildren();
+        long markedBranch = rootChildren[^1].Page;
+        Assert.Equal(ExtendedPageType.PostingListBranch, TypeOf(markedBranch));
+
+        // pretend an earlier collapse left this branch one level shallower than its siblings
+        SetCollapsedLevels(markedBranch, 1);
+
+        // drain from the top: the marked branch cannot merge into its sibling of a different height, so it
+        // shrinks until its last two leaves merge and it collapses into the survivor
+        for (int round = 0; TypeOf(markedBranch) == ExtendedPageType.PostingListBranch; round++)
+        {
+            Assert.True(round < 200 && model.Count > 0, "the marked branch never collapsed");
+            RemoveFromTop(model, 20_000);
+        }
+
+        Assert.Equal(rootChildren.Length, RootChildren().Length);
+        Assert.Equal(markedBranch, RootChildren()[^1].Page);
+        Assert.Equal(ExtendedPageType.PostingListLeaf, TypeOf(markedBranch));
+
+        // the branch owed one level and its child was collapsed into it, so the survivor owes both
+        Assert.Equal(2, CollapsedLevelsOf(markedBranch));
+
+        AssertContents(model);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void MarkedBranchThatOverflowsMustWrapBeforeItSplits()
+    {
+        var model = new SortedSet<long>();
+        long gap = GrowUntilDepthThree(model, atLeastRootChildren: 3);
+
+        var rootChildren = RootChildren();
+        long markedBranch = rootChildren[0].Page;
+        Assert.Equal(ExtendedPageType.PostingListBranch, TypeOf(markedBranch));
+        Assert.All(ChildrenOf(markedBranch), child => Assert.Equal(ExtendedPageType.PostingListLeaf, TypeOf(child)));
+
+        // pretend a collapse left this whole subtree one level shallower than its siblings
+        SetCollapsedLevels(markedBranch, 1);
+
+        // doubling the density of its last leaves splits them, until the branch has no room for another leaf
+        // and has to split itself: that must wrap it in place, not split it next to its siblings in the root
+        long from = ChildrenWithKeys(markedBranch)[^8].Key;
+        while (TypeOf(ChildrenOf(markedBranch)[0]) == ExtendedPageType.PostingListLeaf && RootChildren().Length == rootChildren.Length)
+        {
+            FillRange(model, from, rootChildren[1].Key, gap);
+            gap /= 2;
+        }
+
+        Assert.Equal(rootChildren.Length, RootChildren().Length);
+        Assert.Equal(markedBranch, RootChildren()[0].Page);
+        Assert.Equal(ExtendedPageType.PostingListBranch, TypeOf(markedBranch));
+        Assert.Equal(0, CollapsedLevelsOf(markedBranch));
+
+        var wrapped = ChildrenOf(markedBranch);
+        Assert.True(wrapped.Length >= 2, "the wrapper should hold the branch it wrapped and its split sibling");
+        Assert.All(wrapped, child =>
+        {
+            Assert.Equal(ExtendedPageType.PostingListBranch, TypeOf(child));
+            Assert.Equal(0, CollapsedLevelsOf(child));
+            AssertChildrenAreLeaves(child);
+        });
+
+        AssertContents(model);
+        AssertEveryPageHoldsOnlyItsRange();
+    }
+
+    /// <summary>
+    /// Adds ascending values until the tree has three levels and the root at least the requested number of children.
+    /// Wide gaps keep the encoded values big, so a leaf holds few of them and the tree gets deep with fewer values.
+    /// Returns the gap between consecutive values.
+    /// </summary>
+    private long GrowUntilDepthThree(SortedSet<long> model, int atLeastRootChildren)
+    {
+        const long step = 1L << 40;
+        long next = step;
+
+        while (true)
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var list = wtx.OpenPostingList(Name);
+                for (int i = 0; i < 100_000; i++, next += step)
+                {
+                    list.Add(next);
+                    model.Add(next);
+                }
+
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                var list = rtx.OpenPostingList(Name);
+                if (list.State.Depth >= 3 && RootChildren(list).Length >= atLeastRootChildren)
+                    return step;
+            }
+        }
+    }
+
+    private void RemoveFromTop(SortedSet<long> model, int count)
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var list = wtx.OpenPostingList(Name);
+            foreach (long value in model.Reverse().Take(count).ToList())
+            {
+                list.Remove(value);
+                model.Remove(value);
+            }
+
+            wtx.Commit();
+        }
+    }
+
+    private (long Key, long Page)[] ChildrenWithKeys(long branchPageNumber)
+    {
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            var branch = new PostingListBranchPage(list.Llt.GetPage(branchPageNumber));
+            var children = new (long, long)[branch.Header->NumberOfEntries];
+            for (int i = 0; i < children.Length; i++)
+                children[i] = branch.GetByIndex(i);
+            return children;
+        }
+    }
+
+    /// <summary>
+    /// Every page must only hold values inside the range its parent assigns to it. A wrapper that took over the range
+    /// of the page it wrapped with a wrong separator shows up here, and as values that route to a page which does not
+    /// hold them. PostingList.Verify does the same, but it is compiled out of Release builds.
+    /// </summary>
+    private void AssertEveryPageHoldsOnlyItsRange()
+    {
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            AssertRange(list, list.State.RootPage, long.MinValue, long.MaxValue);
+        }
+    }
+
+    private static void AssertRange(PostingList list, long pageNumber, long min, long maxExclusive)
+    {
+        var page = list.Llt.GetPage(pageNumber);
+        if (((PostingListLeafPageHeader*)page.Pointer)->PageType == ExtendedPageType.PostingListLeaf)
+        {
+            var values = new PostingListLeafPage(page).GetDebugOutput();
+            Assert.All(values, value => Assert.True(value >= min && value < maxExclusive, $"page {pageNumber} holds {value}, outside of its range [{min}, {maxExclusive})"));
+            return;
+        }
+
+        var branch = new PostingListBranchPage(page);
+        for (int i = 0; i < branch.Header->NumberOfEntries; i++)
+        {
+            (long key, long child) = branch.GetByIndex(i);
+            Assert.True(key >= min, $"page {pageNumber} routes {key} to page {child}, below its own range start {min}");
+            long end = i + 1 < branch.Header->NumberOfEntries ? branch.GetByIndex(i + 1).Item1 : maxExclusive;
+            AssertRange(list, child, key, end);
+        }
+    }
+
     private static List<long> AllPagesOf(PostingList list)
     {
         return list.AllPages();

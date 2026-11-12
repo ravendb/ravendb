@@ -14,7 +14,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class ArtificalActions(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama | RavenAiIntegration.Anthropic, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanAddArtificialActionsToConversation(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -26,7 +26,7 @@ public class ArtificalActions(ITestOutputHelper output) : RavenTestBase(output)
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
         agent.Parameters.Add(new AiAgentParameter("company", "The company ID"));
         agent.Identifier = "shopping-assistant";
-        agent.SampleObject = JsonConvert.SerializeObject(new ModelAnswer(true, "reason for the true/false recommendation"));
+        agent.SampleObject = JsonConvert.SerializeObject(new ModelAnswer("reason why you recommend eating it or not", true));
 
         var createResult = await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance);
         var chat = store.AI.Conversation(
@@ -35,12 +35,12 @@ public class ArtificalActions(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
         chat.AddArtificialActionWithResponse("GetUserAllergies", "Gluten, Lactose");
-        chat.SetUserPrompt("Should I get regular cheese?");
+        chat.SetUserPrompt("Do you recommend that I eat regular cheese?");
         var r = await chat.RunAsync<ModelAnswer>(CancellationToken.None);
 
         Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.False(r.Answer.Recommend, r.Answer.Reason);
     }
 
-    private record ModelAnswer(bool Recommend, string Reason);
+    private record ModelAnswer(string Reason, bool Recommend);
 }

@@ -167,4 +167,149 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
             Assert.Equal(above.Min, buffer[0]);
         }
     }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void SeekIntoConsecutiveEmptiedLeavesMustFindTheValuesOfTheNextLeaf()
+    {
+        var model = new SortedSet<long>();
+        var (k1, k2, _) = EmptyTwoConsecutiveRootChildren(model);
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            Span<long> buffer = stackalloc long[16];
+
+            // both seeks land in an emptied leaf, and the next leaf with values is behind another emptied leaf
+            foreach (long from in new[] { k1 + 2, k2 + 2 })
+            {
+                Assert.DoesNotContain(from, model);
+                var above = model.GetViewBetween(from, long.MaxValue);
+
+                var it = list.Iterate();
+                Assert.True(it.Seek(from), $"Seek({from}) said nothing >= {from} exists, but {above.Min} does");
+
+                Assert.True(it.Fill(buffer, out int read) && read > 0);
+                Assert.Equal(above.Min, buffer[0]);
+            }
+
+            var beyond = list.Iterate();
+            Assert.False(beyond.Seek(model.Max + 2), "nothing is >= a value above the maximum");
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void FillAcrossConsecutiveEmptiedLeavesMustNotStop()
+    {
+        var model = new SortedSet<long>();
+        var (k1, _, _) = EmptyTwoConsecutiveRootChildren(model);
+
+        long lastBeforeTheGap = model.GetViewBetween(long.MinValue, k1 - 1).Max;
+        var expected = model.GetViewBetween(lastBeforeTheGap, long.MaxValue).Take(5_000).ToList();
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            var it = list.Iterate();
+            Assert.True(it.Seek(lastBeforeTheGap));
+
+            // a small buffer, so that filling has to walk past the emptied leaves on its own. Seek only finds the
+            // leaf, so the first values may be older than the one it was given
+            var actual = new List<long>();
+            Span<long> buffer = stackalloc long[64];
+            while (actual.Count < expected.Count && it.Fill(buffer, out int read) && read > 0)
+            {
+                for (int i = 0; i < read; i++)
+                {
+                    if (buffer[i] >= lastBeforeTheGap)
+                        actual.Add(buffer[i]);
+                }
+            }
+
+            Assert.Equal(expected, actual.Take(expected.Count).ToList());
+        }
+    }
+
+    /// <summary>
+    /// Builds a tree whose root has at least four children, then drains the second and the third of them: each
+    /// collapses into a leaf as it drains and is emptied, and the leaf stays because its left sibling is a branch
+    /// and nothing merges a leaf into a branch. Returns the first value of the range of the children 1, 2 and 3.
+    /// </summary>
+    private (long K1, long K2, long K3) EmptyTwoConsecutiveRootChildren(SortedSet<long> model)
+    {
+        const long step = 1L << 40;
+        long next = step;
+
+        (long Key, long Page)[] children;
+        while (true)
+        {
+            using (var wtx = Env.WriteTransaction())
+            {
+                var list = wtx.OpenPostingList(Name);
+                for (int i = 0; i < 100_000; i++, next += step)
+                {
+                    list.Add(next);
+                    model.Add(next);
+                }
+
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+            {
+                var list = rtx.OpenPostingList(Name);
+                if (list.State.Depth < 3)
+                    continue;
+
+                children = RootChildren(list);
+                if (children.Length >= 4)
+                    break;
+            }
+        }
+
+        // the later one first, so that the one in front of it is still a branch when it drains
+        Drain(model, children[2].Key, children[3].Key - 1);
+        Drain(model, children[1].Key, children[2].Key - 1);
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var list = rtx.OpenPostingList(Name);
+            var now = RootChildren(list);
+            Assert.Equal(children.Length, now.Length);
+
+            Assert.Equal(ExtendedPageType.PostingListBranch, ((PostingListLeafPageHeader*)list.Llt.GetPage(now[0].Page).Pointer)->PageType);
+            Assert.Equal(ExtendedPageType.PostingListBranch, ((PostingListLeafPageHeader*)list.Llt.GetPage(now[3].Page).Pointer)->PageType);
+            foreach (int emptied in new[] { 1, 2 })
+            {
+                var header = (PostingListLeafPageHeader*)list.Llt.GetPage(now[emptied].Page).Pointer;
+                Assert.Equal(ExtendedPageType.PostingListLeaf, header->PageType);
+                Assert.Equal(0, header->NumberOfEntries);
+            }
+        }
+
+        return (children[1].Key, children[2].Key, children[3].Key);
+    }
+
+    private void Drain(SortedSet<long> model, long from, long toInclusive)
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var list = wtx.OpenPostingList(Name);
+            foreach (long value in model.GetViewBetween(from, toInclusive).ToList())
+            {
+                list.Remove(value);
+                model.Remove(value);
+            }
+
+            wtx.Commit();
+        }
+    }
+
+    private static (long Key, long Page)[] RootChildren(PostingList list)
+    {
+        var branch = new PostingListBranchPage(list.Llt.GetPage(list.State.RootPage));
+        var children = new (long, long)[branch.Header->NumberOfEntries];
+        for (int i = 0; i < children.Length; i++)
+            children[i] = branch.GetByIndex(i);
+        return children;
+    }
 }

@@ -94,7 +94,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         reportEvent("certificates", "renew");
         await manageServerService.forceRenewServerCertificate();
         await dispatch(certificatesActions.fetchData());
-        dispatch(certificatesActions.isRenewedModalOpenToggled());
     });
 
     const handleRenewServerCertificate = async () => {
@@ -472,7 +471,7 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
     }
 
     return (
-        <div className="hstack gap-1">
+        <div className="d-flex flex-wrap gap-1">
             {dbAccessArray.map(({ databaseName, accessLevel }) => (
                 <Badge key={databaseName} bg={getAccessColor(accessLevel)} title={getAccessTitle(accessLevel)} pill>
                     <Icon icon={getAccessIcon(accessLevel)} />

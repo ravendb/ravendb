@@ -2,7 +2,7 @@ import "./AddNewOngoingTask.scss";
 import { AboutViewHeading } from "components/common/AboutView";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import React from "react";
+import React, { ChangeEvent } from "react";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
@@ -104,7 +104,7 @@ function TaskSearchInput({
                 title="Filter tasks"
                 className="filtering-input"
                 value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchText(e.target.value)}
             />
         </div>
     );

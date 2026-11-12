@@ -1,7 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { FieldPath } from "react-hook-form/dist/types/path/eager";
+import { FieldPath } from "react-hook-form";
 import {
     EmbeddedTablePath,
     LinkedTablePath,

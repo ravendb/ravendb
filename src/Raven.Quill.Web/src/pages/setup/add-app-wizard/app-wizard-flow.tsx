@@ -10,34 +10,39 @@ import {
 } from "@/pages/setup/add-app-wizard/app-wizard-validation";
 import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-source/choose-data-source-step";
 import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
-import { MAP_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
+import { MapSourceBadge } from "@/pages/setup/add-app-wizard/steps/map/map-source-badge";
+import { isEditorMapping, type MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
-import { MapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/map-schema-step";
-import { useMapAiConsentBlock } from "@/pages/setup/add-app-wizard/steps/map/use-map-ai-consent-block";
+import { PlannerExportConfigAction } from "@/pages/setup/add-app-wizard/steps/map/planner-export-config-action";
+import { PlannerHeaderActions } from "@/pages/setup/add-app-wizard/steps/map/planner-header-actions";
+import { PlannerStep } from "@/pages/setup/add-app-wizard/steps/map/planner-step";
+import { usePlannerNext } from "@/pages/setup/add-app-wizard/steps/map/use-planner-next";
+import { useApplyPlanner } from "@/pages/setup/add-app-wizard/steps/map/use-apply-planner";
+import { usePlannerUnbuiltConfirm } from "@/pages/setup/add-app-wizard/steps/map/use-planner-unbuilt-confirm";
 import { MapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-step";
 import { PreviewStep } from "@/pages/setup/add-app-wizard/steps/preview/preview-step";
 import { ExportConfigAction } from "@/pages/setup/add-app-wizard/steps/preview/export-config-action";
 import { ImportConfigHeaderAction } from "@/pages/setup/add-app-wizard/steps/connect/import-config-header-action";
 import { VerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/verify-schema-step";
 import { useConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
-import { useMapSchemaStep } from "@/pages/setup/add-app-wizard/steps/map/use-map-schema-step";
+import { usePlannerConnectionConfirm } from "@/pages/setup/add-app-wizard/steps/connect/use-planner-connection-confirm";
 import { useFocusMapTablesError } from "@/pages/setup/add-app-wizard/steps/map-tables/use-focus-map-tables-error";
 import { useMapTablesStep } from "@/pages/setup/add-app-wizard/steps/map-tables/use-map-tables-step";
-import { useIsMapTablesNextDisabled } from "@/pages/setup/add-app-wizard/steps/map-tables/use-suggested-map-tables";
 import { useIsVerifyCdcRunning, useVerifyCdcStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-cdc-step";
-import { useVerifySchemaStep } from "@/pages/setup/add-app-wizard/steps/verify/use-verify-schema-step";
+import { usePlannerSelectionConfirm } from "@/pages/setup/add-app-wizard/steps/verify/use-planner-selection-confirm";
 import { VerifySelectionChangedBadge } from "@/pages/setup/add-app-wizard/steps/verify/verify-selection-changed-badge";
 
 export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     const connectSourceBeforeNext = useConnectSourceStep();
-    const verifySchemaBeforeNext = useVerifySchemaStep();
+    const plannerConnectionConfirm = usePlannerConnectionConfirm();
     const verifyCdcBeforeNext = useVerifyCdcStep();
     const isVerifyCdcRunning = useIsVerifyCdcRunning();
-    const mapSchemaBeforeNext = useMapSchemaStep();
-    const mapAiConsentBlock = useMapAiConsentBlock();
+    const plannerSelectionConfirm = usePlannerSelectionConfirm();
+    const plannerNext = usePlannerNext();
+    const plannerUnbuiltConfirm = usePlannerUnbuiltConfirm();
+    const applyPlanner = useApplyPlanner();
     const mapTablesBeforeNext = useMapTablesStep();
     const focusMapTablesError = useFocusMapTablesError();
-    const isMapTablesNextDisabled = useIsMapTablesNextDisabled();
 
     return {
         dataSource: {
@@ -59,6 +64,7 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             headerAction: ImportConfigHeaderAction,
             validate: "externalConnection",
             beforeNext: connectSourceBeforeNext,
+            confirmNext: plannerConnectionConfirm,
             badgeFields: [],
             badge: ({ isComplete }) => {
                 if (!isComplete) {
@@ -76,31 +82,27 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             bodyComponent: VerifySchemaStep,
             isFullHeight: true,
             validate: "verifySchema",
-            // the CDC dry run gates Next, so only warm the AI suggestion once it passes
-            beforeNext: async (progress) => {
-                await verifyCdcBeforeNext(progress);
-                verifySchemaBeforeNext();
-            },
+            beforeNext: verifyCdcBeforeNext,
+            confirmNext: plannerSelectionConfirm,
             // Advancing mid-run would carry a selection the dry run has not answered for yet.
             isNextDisabled: isVerifyCdcRunning,
             badgeFields: ["verifySchema.tables"],
             badge: ({ values }) => <VerifySelectionChangedBadge tables={values.verifySchema.tables} />,
         },
         map: {
-            title: "How would you like to map your schema?",
-            bodyComponent: MapSchemaStep,
-            validate: "map",
-            beforeNext: mapSchemaBeforeNext,
-            isNextDisabled: mapAiConsentBlock.isNextDisabled,
-            nextDisabledReason: mapAiConsentBlock.nextDisabledReason,
-            badgeFields: ["map.source"],
-            badge: ({ isComplete, values }) => {
-                if (!isComplete) {
-                    return null;
-                }
-
-                return <Badge variant="primary">{getOptionLabel(MAP_SOURCE_OPTIONS, values.map?.source)}</Badge>;
-            },
+            title: "Plan your document model",
+            bodyComponent: PlannerStep,
+            headerAction: PlannerHeaderActions,
+            isFullHeight: true,
+            // The mapping is produced by the planner, not by form fields, so there is nothing here
+            // for the resolver to check. Applying it is what finishing the step does.
+            validate: false,
+            beforeNext: applyPlanner,
+            confirmNext: plannerUnbuiltConfirm,
+            isNextDisabled: plannerNext.isNextDisabled,
+            nextNote: plannerNext.note,
+            footerComponent: PlannerExportConfigAction,
+            badge: ({ isComplete }) => (isComplete ? <MapSourceBadge /> : null),
         },
         mapTables: {
             title: "Map schema",
@@ -110,7 +112,8 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
             validate: "mapTables",
             onValidationFailed: focusMapTablesError,
             beforeNext: mapTablesBeforeNext,
-            isNextDisabled: isMapTablesNextDisabled || isVerifyCdcRunning,
+            isNextDisabled: isVerifyCdcRunning,
+            footerComponent: ExportConfigAction,
         },
         preview: {
             title: "Preview before full ingest",
@@ -123,20 +126,45 @@ export const useAppSteps = (): WizardSteps<AppStepId, AppFormData> => {
     };
 };
 
-export const getAppFlow = ({ dataSource, isEditing }: { dataSource: string; isEditing?: boolean }): AppStepId[] => {
+export const getAppFlow = ({
+    dataSource,
+    isEditing,
+    hasAppliedPlan,
+    mapOrigin,
+}: {
+    dataSource: string;
+    isEditing?: boolean;
+    /** The edited app's mapping was applied from its plan, as the plan still stands. */
+    hasAppliedPlan?: boolean;
+    mapOrigin: MapOrigin | null;
+}): AppStepId[] => {
     // The "Choose data source" step is temporarily dropped from the UI; uncomment the
     // "dataSource" entries below to bring it back.
     if (dataSource === "ravendb") {
         return [/* "dataSource", */ "preview"];
     }
 
-    // The edit seed pins the map source to "manual", so the "How would you like to map your
-    // schema?" step has nothing to ask.
-    if (isEditing) {
-        return ["externalConnection", "verifySchema", "mapTables", "preview"];
+    // "Preview before full ingest" is left out of these flows for now: it cannot show embedded tables yet.
+
+    // An edited app arrives with its stored mapping, so it goes straight to the editor - unless its plan made
+    // that mapping, which then opens in the planner as it does for a new app.
+    if (isEditing && !hasAppliedPlan) {
+        return ["externalConnection", "verifySchema", "mapTables"];
     }
 
-    return [/* "dataSource", */ "externalConnection", "verifySchema", "map", "mapTables", "preview"];
+    // The planner cannot continue from an imported mapping yet: the export carries no app name or slug,
+    // and the planner keys its work by them. Until it can, an import goes straight to the editor.
+    if (mapOrigin?.source === "import") {
+        return ["externalConnection", "verifySchema", "mapTables"];
+    }
+
+    // The planner's collections are edited in its own step, so the editor is a step only for manual mapping.
+    return [
+        /* "dataSource", */ "externalConnection",
+        "verifySchema",
+        "map",
+        ...(isEditorMapping(mapOrigin) ? (["mapTables"] as const) : []),
+    ];
 };
 
 export const buildAppSchemaForFlow = (flow: AppStepId[], takenSlugs: string[] = []) => {

@@ -18,11 +18,15 @@ import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
 import InputGroupText from "react-bootstrap/InputGroupText";
 import { useAsyncCallback } from "react-async-hook";
+import useUniqueId from "components/hooks/useUniqueId";
 
 export default function CertificatesRegisterSsoServerModal() {
     const dispatch = useAppDispatch();
     const { manageServerService } = useServices();
     const { reportEvent } = useEventsCollector();
+    const titleId = useUniqueId("register-sso-server-title");
+
+    const close = () => dispatch(certificatesActions.isRegisterSsoServerModalOpenToggled());
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
@@ -94,17 +98,22 @@ export default function CertificatesRegisterSsoServerModal() {
     const showFilePicker = !urlLoaded;
 
     return (
-        <Modal show size="lg" centered contentClassName="modal-border bulge-primary">
+        <Modal
+            show
+            size="lg"
+            centered
+            contentClassName="modal-border bulge-primary"
+            backdrop="static"
+            onHide={close}
+            aria-labelledby={titleId}
+        >
             <FormProvider {...form}>
                 <Form onSubmit={handleSubmit(handleRegister)}>
-                    <Modal.Header
-                        className="vstack gap-4"
-                        onCloseClick={() => dispatch(certificatesActions.isRegisterSsoServerModalOpenToggled())}
-                    >
-                        <div className="text-center">
-                            <Icon icon="certificate" className="fs-1" color="primary" margin="m-0" />
-                        </div>
-                        <div className="text-center lead">Register SSO server certificate</div>
+                    <Modal.Header className="pt-3 pb-0" onCloseClick={close}>
+                        <Icon icon="certificate" size="lg" color="primary" margin="me-3" />
+                        <h3 id={titleId} className="mb-0">
+                            Register SSO server certificate
+                        </h3>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
@@ -138,7 +147,7 @@ export default function CertificatesRegisterSsoServerModal() {
                                     type="url"
                                     placeholder="https://sso.example.com"
                                     value={urlInput}
-                                    onChange={(e) => {
+                                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
                                         setUrlInput(e.target.value);
                                         asyncFetchCert.reset();
                                         setUrlLoaded(null);
@@ -205,11 +214,7 @@ export default function CertificatesRegisterSsoServerModal() {
                         )}
                     </Modal.Body>
                     <Modal.Footer>
-                        <Button
-                            variant="link"
-                            onClick={() => dispatch(certificatesActions.isRegisterSsoServerModalOpenToggled())}
-                            className="link-muted"
-                        >
+                        <Button variant="link" onClick={close} className="link-muted">
                             Cancel
                         </Button>
                         <ButtonWithSpinner

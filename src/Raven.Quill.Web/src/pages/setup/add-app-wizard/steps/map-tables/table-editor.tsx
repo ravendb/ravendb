@@ -35,7 +35,7 @@ export function TableEditor() {
     return <ActiveTableEditor key={mapActiveTable.path} activeTable={mapActiveTable} />;
 }
 
-function ActiveTableEditor({ activeTable }: { activeTable: MapActiveTable }) {
+export function ActiveTableEditor({ activeTable }: { activeTable: MapActiveTable }) {
     const { control } = useFormContext<AppFormData>();
     const setMapActiveTable = useSetupWizardStore((state) => state.setMapActiveTable);
     const tableActions = useTableActions();

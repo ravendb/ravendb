@@ -16,6 +16,14 @@ namespace Raven.Client.Exceptions
         public string RequestId { get; set; }
     }
 
+    public sealed class UnsupportedAiQueryParameterException(string message) : AiException(message)
+    {
+    }
+
+    public sealed class AiAgentParameterCollisionException(string message) : AiException(message)
+    {
+    }
+
     public sealed class RefusedToAnswerException(string message) : AiException(message)
     {
         public string Refusal;
@@ -35,6 +43,10 @@ namespace Raven.Client.Exceptions
     public class UnsuccessfulAiRequestException : AiException
     {
         public HttpStatusCode StatusCode { get; internal set; }
+
+        public UnsuccessfulAiRequestException(string message) : base(message)
+        {
+        }
 
         public UnsuccessfulAiRequestException(string message, HttpStatusCode statusCode) : base(message)
         {

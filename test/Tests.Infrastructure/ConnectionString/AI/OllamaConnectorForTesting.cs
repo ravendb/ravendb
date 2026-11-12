@@ -19,6 +19,9 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
 {
+    // The Ollama tests were run on qwen3-vl:4b-instruct; qwen2.5:0.5b is too small to call tools reliably.
+    // Switch to it here and on the CI Ollama host when the Ollama tests are enabled or run locally.
+    // An agent with tools and a schema needs the schema in its prompt, as Ollama recommends (see RavenDB_27589.SchemaInPrompt).
     public const string Model = "qwen2.5:0.5b";
 
     public GenAiOllamaConnectorForTesting()
