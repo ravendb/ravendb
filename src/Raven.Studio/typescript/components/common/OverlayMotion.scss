@@ -1,0 +1,82 @@
+@use "sass:map";
+
+$motion-duration: 150ms;
+$slide-distance: 0.5rem;
+$negative-slide-distance: -$slide-distance;
+
+$sides: (
+    "top": (
+        slide-from: 0 $slide-distance,
+        origin: center bottom,
+    ),
+    "bottom": (
+        slide-from: 0 $negative-slide-distance,
+        origin: center top,
+    ),
+    "start": (
+        slide-from: $slide-distance 0,
+        origin: right center,
+    ),
+    "end": (
+        slide-from: $negative-slide-distance 0,
+        origin: left center,
+    ),
+);
+
+$aligned-placement-origins: (
+    "top-start": left bottom,
+    "top-end": right bottom,
+    "bottom-start": left top,
+    "bottom-end": right top,
+    "left-start": right top,
+    "left-end": right bottom,
+    "right-start": left top,
+    "right-end": left bottom,
+);
+
+@media (prefers-reduced-motion: no-preference) {
+    .popover.overlay-motion,
+    .tooltip.overlay-motion {
+        transition:
+            opacity $motion-duration ease,
+            scale $motion-duration ease;
+
+        &:not(.show) {
+            opacity: 0;
+            scale: 0.95;
+        }
+
+        &.show {
+            animation: overlay-enter $motion-duration ease;
+        }
+
+        @each $side, $motion in $sides {
+            &.bs-popover-#{$side},
+            &.bs-tooltip-#{$side} {
+                --overlay-slide-from: #{map.get($motion, slide-from)};
+
+                transform-origin: map.get($motion, origin);
+            }
+        }
+
+        @each $placement, $origin in $aligned-placement-origins {
+            &[data-popper-placement="#{$placement}"] {
+                transform-origin: $origin;
+            }
+        }
+    }
+}
+
+.popover.overlay-motion:has(.overlay-pending),
+.tooltip.overlay-motion:has(.overlay-pending) {
+    opacity: 0;
+    pointer-events: none;
+    animation: none;
+}
+
+@keyframes overlay-enter {
+    from {
+        scale: 0.95;
+        translate: var(--overlay-slide-from);
+    }
+}

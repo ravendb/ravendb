@@ -1,0 +1,167 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+$preview-width: 446px;
+$header-height: 42px;
+$fade-height: 132px;
+$badge-height: 18px;
+$tip-size: 12px;
+
+.document-preview-target {
+    width: fit-content;
+    max-width: 100%;
+}
+
+.popover.document-preview-popover {
+    --bs-popover-max-width: none;
+    --bs-popover-bg: #{colors.$panel-bg-1-var};
+    --bs-popover-border-color: #{colors.$border-color-light-var};
+    --bs-popover-arrow-border: #{colors.$border-color-light-var};
+
+    width: $preview-width;
+
+    > .popover-arrow::after {
+        display: none;
+    }
+
+    > .popover-arrow::before {
+        top: calc((var(--bs-popover-arrow-width) - #{$tip-size}) / 2);
+        width: $tip-size;
+        height: $tip-size;
+        border-style: solid;
+        border-color: var(--bs-popover-arrow-border);
+        background-color: var(--bs-popover-bg);
+        transform: rotate(45deg);
+    }
+
+    &.bs-popover-end > .popover-arrow::before {
+        right: calc(#{$tip-size} / -2);
+        left: auto;
+        border-width: 0 0 var(--bs-popover-border-width) var(--bs-popover-border-width);
+    }
+
+    &.bs-popover-start > .popover-arrow::before {
+        right: auto;
+        left: calc(#{$tip-size} / -2);
+        border-width: var(--bs-popover-border-width) var(--bs-popover-border-width) 0 0;
+    }
+}
+
+.document-preview-header {
+    display: flex;
+    align-items: center;
+    gap: sizes.$gutter-xxxs;
+    height: $header-height;
+    padding: sizes.$gutter-xxs sizes.$gutter-xs;
+}
+
+.document-preview-id {
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--monospace-font), var(--bs-font-monospace);
+    font-size: sizes.$font-size-sm;
+    color: colors.$text-emphasis-var;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.document-preview-copy.btn {
+    padding: sizes.$gutter-xxxs;
+    line-height: 1;
+    color: colors.$text-muted-var;
+    font-size: sizes.$font-size-root;
+
+    &:hover {
+        color: colors.$text-emphasis-var;
+    }
+}
+
+.document-preview-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: sizes.$gutter-sm;
+}
+
+.document-preview-body {
+    display: flex;
+    gap: sizes.$gutter-xs;
+    padding: 0 sizes.$gutter-xs sizes.$gutter-xs;
+}
+
+.document-preview-content {
+    flex: 1;
+    min-width: 0;
+    padding: sizes.$gutter-xxs;
+    border-radius: sizes.$gutter-xxs;
+    background-color: colors.$well-bg-var;
+    font-family: var(--monospace-font), var(--bs-font-monospace);
+    font-size: sizes.$font-size-sm;
+    line-height: 1.5;
+}
+
+.document-preview-code {
+    position: relative;
+    color: colors.$text-color-var;
+
+    .key {
+        color: var(--token-keyword);
+    }
+
+    .string {
+        color: var(--token-string);
+    }
+
+    .literal {
+        color: var(--token-operator);
+    }
+}
+
+.document-preview-line {
+    overflow: hidden;
+    white-space: pre;
+    text-overflow: ellipsis;
+
+    &.metadata {
+        opacity: 0.6;
+    }
+}
+
+.document-preview-fade {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: $fade-height;
+    background: linear-gradient(to bottom, transparent, colors.$well-bg-var);
+}
+
+.document-preview-hidden-lines {
+    color: colors.$text-muted-var;
+    text-align: center;
+}
+
+.document-preview-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: sizes.$gutter-xxs;
+}
+
+.document-preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: sizes.$gutter-xxs;
+    height: $badge-height;
+    padding: 0 sizes.$gutter-xs;
+    border-radius: sizes.$border-radius-pill;
+    font-size: sizes.$font-size-xs;
+    font-weight: 600;
+    color: colors.$black;
+
+    @each $name, $color in colors.$flags {
+        &.#{$name} {
+            background-color: $color;
+        }
+    }
+}

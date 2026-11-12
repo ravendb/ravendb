@@ -1242,6 +1242,69 @@ return docs[0];`,
         });
     }
 
+    static documentWithMetadata(id: string): document {
+        return new document({
+            "@metadata": {
+                "@id": id,
+                "@collection": "Orders",
+                "@change-vector": "A:1739-fBnLiw7ULEy60+IPspNqvg",
+                "@last-modified": "2018-07-27T12:11:53.1973529Z",
+                "@flags": "HasRevisions, HasAttachments, HasCounters, HasTimeSeries",
+                "@attachments": [
+                    {
+                        Name: "invoice.pdf",
+                        Hash: "Ns6WUhWRHjFGRJpI3e44yhGGG+Y9/9kYV8pmOObQiCk=",
+                        ContentType: "application/pdf",
+                        Size: 48_213,
+                    },
+                ],
+                "@counters": ["Likes", "Views"],
+                "@timeseries": ["Deliveries"],
+            },
+            Company: "companies/65-A",
+            Employee: "employees/1-A",
+            Freight: 8.53,
+            Lines: [
+                { Discount: 0.2, PricePerUnit: 19, Product: "products/2-A", ProductName: "Chang", Quantity: 24 },
+                { Discount: 0, PricePerUnit: 10, Product: "products/3-A", ProductName: "Aniseed Syrup", Quantity: 4 },
+                {
+                    Discount: 0,
+                    PricePerUnit: 22,
+                    Product: "products/4-A",
+                    ProductName: "Chef Anton's Cajun Seasoning",
+                    Quantity: 1,
+                },
+                {
+                    Discount: 0.02,
+                    PricePerUnit: 25,
+                    Product: "products/6-A",
+                    ProductName: "Grandma's Boysenberry Spread",
+                    Quantity: 1,
+                },
+                {
+                    Discount: 0.05,
+                    PricePerUnit: 30,
+                    Product: "products/7-A",
+                    ProductName: "Uncle Bob's Organic Dried Pears",
+                    Quantity: 1,
+                },
+            ],
+            OrderedAt: "1998-05-06T00:00:00.0000000",
+            RequireAt: "1998-06-03T00:00:00.0000000",
+            ShipTo: {
+                City: "Albuquerque",
+                Country: "USA",
+                Line1: "2817 Milton Dr.",
+                Line2: null,
+                Location: { Latitude: 35.1154322, Longitude: -106.6710792 },
+                PostalCode: "87110",
+                Region: "NM",
+            },
+            ShipVia: "shippers/2-A",
+            ShippedAt: null,
+        });
+    }
+
     static documentsPreview(): pagedResultWithAvailableColumns<document> {
         const items = DatabasesStubs.documentsPreviewItems(0, 5);
 

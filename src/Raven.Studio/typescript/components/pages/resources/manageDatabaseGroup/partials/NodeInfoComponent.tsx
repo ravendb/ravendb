@@ -16,7 +16,7 @@ import { useServices } from "components/hooks/useServices";
 import useConfirm from "components/common/ConfirmDialog";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useSortable } from "@dnd-kit/sortable";

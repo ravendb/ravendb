@@ -30,6 +30,7 @@ interface UseDocumentsColumnsProps {
     collectionName: string | null;
     tableBodyWidthInPx: number;
     getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
+    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"];
 }
 
 const NO_COLUMNS: string[] = [];
@@ -60,6 +61,7 @@ export function useDocumentsColumns({
     collectionName,
     tableBodyWidthInPx,
     getPropertyPreviewResolver,
+    getDocumentPreviewSource,
 }: UseDocumentsColumnsProps) {
     const { appUrl } = useAppUrls();
     const isAllDocuments = collectionName === null;
@@ -93,6 +95,7 @@ export function useDocumentsColumns({
         columnsWithValues: isAllDocuments ? NO_COLUMNS : previewedColumns,
         databaseName,
         getPreviewValueResolver: getPropertyPreviewResolver,
+        getDocumentPreviewSource,
     });
 
     const defaultColumnVisibility = useSettledColumnVisibility(propertyColumns.initialColumnVisibility);
@@ -103,8 +106,8 @@ export function useDocumentsColumns({
     );
 
     const metadataColumnDefs = useMemo(
-        () => (isAllDocuments ? createMetadataColumns(databaseName, appUrl) : []),
-        [isAllDocuments, databaseName, appUrl]
+        () => (isAllDocuments ? createMetadataColumns(databaseName, appUrl, getDocumentPreviewSource) : []),
+        [isAllDocuments, databaseName, appUrl, getDocumentPreviewSource]
     );
 
     const columnDefs = useMemo(
@@ -257,7 +260,11 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
     };
 }
 
-function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<document>[] {
+function createMetadataColumns(
+    databaseName: string,
+    appUrl: AppUrl,
+    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"]
+): ColumnDef<document>[] {
     return [
         {
             id: ID_COLUMN_NAME,
@@ -269,6 +276,7 @@ function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<
                     collection={row.original.getCollection()}
                     databaseName={databaseName}
                     hasHyperlink
+                    previewSource={getDocumentPreviewSource(row.original)}
                 />
             ),
             enableHiding: false,

@@ -31,6 +31,8 @@ export const AllDocumentsStory: StoryObj<AllDocumentsStoryArgs> = {
                 ? { items: [], totalResultCount: 0, availableColumns: [], continuationToken: null, resultEtag: "1" }
                 : undefined
         );
+        mockServices.databasesService.withGeneratedDocumentWithMetadata();
+        mockServices.databasesService.withDocumentRevisionsCount();
 
         return (
             <div style={{ height: "600px" }}>
@@ -59,6 +61,8 @@ export const CollectionStory: StoryObj<CollectionStoryArgs> = {
         mockStore.accessManager.with_databaseAccess({ [name]: databaseAccess });
         mockStore.collectionsTracker.with_Collections([], name);
         mockServices.databasesService.withGeneratedDocumentsPreview(totalCount);
+        mockServices.databasesService.withGeneratedDocumentWithMetadata();
+        mockServices.databasesService.withDocumentRevisionsCount();
 
         return (
             <div style={{ height: "600px" }}>

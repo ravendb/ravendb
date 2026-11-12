@@ -4,6 +4,7 @@ import * as Stories from "./DocumentsPage.stories";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import appUrl from "common/appUrl";
+import copyToClipboard from "common/copyToClipboard";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -761,6 +762,199 @@ describe("DocumentsPage", () => {
         expect(scrollContainer.scrollTop).toBe(0);
         fireEvent.scroll(scrollContainer, { target: { scrollTop: 0 } });
         expect(screen.queryByRole("button", { name: "Scroll to top" })).not.toBeInTheDocument();
+    });
+
+    describe("document preview", () => {
+        const hoverDocumentId = async (screen: Screen, documentId: string) => {
+            fireEvent.mouseEnter(screen.getByText(documentId).closest(".cell-preview-target"));
+            await act(async () => {
+                jest.advanceTimersByTime(200);
+            });
+            return screen.getByRole("tooltip");
+        };
+
+        const renderOrders = async () => {
+            const view = rtlRender(<CollectionStory collection="Orders" isSharded={false} totalCount={5} />);
+            expect(await view.screen.findByText("orders/1-A")).toBeInTheDocument();
+            return view;
+        };
+
+        const holdDocumentRequest = () => {
+            let release: (document: documentModel) => void;
+            mockServices.databasesService
+                .getMock("getDocumentWithMetadata")
+                .mockImplementation(() => new Promise((resolve) => (release = resolve)));
+            return (document: documentModel) => act(async () => release(document));
+        };
+
+        beforeEach(() => {
+            jest.useFakeTimers();
+        });
+
+        it("opens the preview only once the document arrives", async () => {
+            const { screen } = await renderOrders();
+            const releaseDocument = holdDocumentRequest();
+
+            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
+            await act(async () => {
+                jest.advanceTimersByTime(200);
+            });
+            expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+            await releaseDocument(DatabasesStubs.documentWithMetadata("orders/1-A"));
+
+            const preview = await screen.findByRole("tooltip");
+            expect(preview.querySelector(".overlay-pending")).not.toBeInTheDocument();
+            expect(preview).toHaveTextContent('"Company": "companies/65-A",');
+        });
+
+        it("opens a trimmed value's preview only once the value arrives", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+            const releaseDocument = holdDocumentRequest();
+
+            fireEvent.mouseEnter(screen.getByText("compa...").closest(".cell-preview-target"));
+            await act(async () => {
+                jest.advanceTimersByTime(200);
+            });
+            expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+            await releaseDocument(
+                new documentModel({ "@metadata": { "@id": "orders/1-A" }, Company: "companies/1-A" })
+            );
+
+            const preview = await screen.findByRole("tooltip");
+            expect(preview.querySelector(".overlay-pending")).not.toBeInTheDocument();
+            expect(within(preview).getByTitle("Copy to clipboard")).toBeInTheDocument();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+        });
+
+        it("shows the document with what it has when hovering its ID", async () => {
+            const { screen } = await renderOrders();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(await within(preview).findByTitle("29 revisions")).toHaveTextContent("29");
+            expect(within(preview).getByTitle("1 attachment")).toHaveTextContent("1");
+            expect(within(preview).getByTitle("2 counters")).toHaveTextContent("2");
+            expect(within(preview).getByTitle("1 time series")).toHaveTextContent("1");
+            expect(preview).toHaveTextContent('"Company": "companies/65-A",');
+            expect(preview).toHaveTextContent('"Product": "products/2-A",');
+            expect(within(preview).getByText("+50 lines")).toBeInTheDocument();
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledWith(
+                "orders/1-A",
+                DATABASE_NAME,
+                true
+            );
+            expect(mockServices.databasesService.getMock("getDocumentRevisionsCount")).toHaveBeenCalledWith(
+                "orders/1-A",
+                DATABASE_NAME
+            );
+        });
+
+        it("starts loading the document as soon as the pointer reaches its ID", async () => {
+            const { screen } = await renderOrders();
+
+            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
+
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledWith(
+                "orders/1-A",
+                DATABASE_NAME,
+                true
+            );
+        });
+
+        it("opens the preview with the document it already loaded", async () => {
+            const { screen } = await renderOrders();
+
+            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
+            await flushFetches();
+            await act(async () => {
+                jest.advanceTimersByTime(200);
+            });
+
+            expect(within(screen.getByRole("tooltip")).getByTitle("29 revisions")).toBeInTheDocument();
+        });
+
+        it("copies the ID from the preview", async () => {
+            const copy = jest.spyOn(copyToClipboard, "copy").mockImplementation(() => {});
+            const { screen } = await renderOrders();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+            fireEvent.click(within(preview).getByRole("button", { name: "Copy ID" }));
+
+            expect(copy).toHaveBeenCalledWith("orders/1-A", "Document ID has been copied to clipboard");
+        });
+
+        it("does not ask for the revisions count of a document without revisions", async () => {
+            const { screen } = await renderOrders();
+
+            const preview = await hoverDocumentId(screen, "orders/2-A");
+
+            expect(await within(preview).findByTitle("1 attachment")).toBeInTheDocument();
+            expect(within(preview).queryByTitle(/revision/)).not.toBeInTheDocument();
+            expect(mockServices.databasesService.getMock("getDocumentRevisionsCount")).not.toHaveBeenCalled();
+        });
+
+        it("says when the previewed document no longer exists", async () => {
+            const { screen } = await renderOrders();
+            mockServices.databasesService.getMock("getDocumentWithMetadata").mockResolvedValue(null);
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(await within(preview).findByText("The document no longer exists")).toBeInTheDocument();
+            expect(preview).not.toHaveTextContent('"Company"');
+        });
+
+        it("loads the document once for its preview and its trimmed values", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+            expect(preview).toHaveTextContent('"Company": "companies/1-A"');
+
+            fireEvent.mouseEnter(screen.getByText("compa...").closest(".cell-preview-target"));
+            await act(async () => {
+                jest.advanceTimersByTime(200);
+            });
+
+            expect(await screen.findByTitle("Copy to clipboard")).toBeInTheDocument();
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledTimes(1);
+        });
+
+        it("shows the document's metadata as the document editor does", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(preview).toHaveTextContent('"@metadata": { "@collection": "Orders" }');
+            expect(preview).not.toHaveTextContent('"@id"');
+        });
+
+        it("dims the document's metadata in the preview, as the document editor does", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+            const lineOf = (key: string) => within(preview).getByText(`"${key}"`).closest(".document-preview-line");
+
+            expect(lineOf("@collection")).toHaveClass("metadata");
+            expect(lineOf("Company")).not.toHaveClass("metadata");
+        });
+
+        it("shows the preview from the ID in all documents", async () => {
+            const { screen } = rtlRender(<AllDocumentsStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(await within(preview).findByTitle("29 revisions")).toBeInTheDocument();
+            expect(preview).toHaveTextContent('"Employee": "employees/1-A",');
+        });
     });
 
     describe("selection actions", () => {

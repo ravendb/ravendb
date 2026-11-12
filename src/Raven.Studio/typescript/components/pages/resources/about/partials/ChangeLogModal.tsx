@@ -14,7 +14,7 @@ import { RichAlert } from "components/common/RichAlert";
 import { EmptySet } from "components/common/EmptySet";
 import { PageNavigation } from "components/common/PaginationBar";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import Modal from "components/common/Modal";
 

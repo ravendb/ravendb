@@ -289,6 +289,16 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
     }
 
+    withGeneratedDocumentWithMetadata() {
+        this.mocks.getDocumentWithMetadata.mockImplementation(async (id) => DatabasesStubs.documentWithMetadata(id));
+    }
+
+    withDocumentRevisionsCount(
+        dto?: MockedValue<Raven.Client.Documents.Session.Operations.GetRevisionsCountOperation.DocumentRevisionsCount>
+    ) {
+        return this.mockResolvedValue(this.mocks.getDocumentRevisionsCount, dto, { RevisionsCount: 29 });
+    }
+
     withRemoteAttachmentsConfiguration(
         dto?: MockedValue<Raven.Client.Documents.Attachments.RemoteAttachmentsConfiguration>
     ) {
