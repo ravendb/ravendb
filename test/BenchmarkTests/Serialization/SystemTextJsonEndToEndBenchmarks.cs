@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
@@ -10,11 +11,11 @@ using Raven.Client.Json.Serialization.SystemTextJson;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Client
+namespace BenchmarkTests.Serialization
 {
     public class SystemTextJsonEndToEndBenchmarks : RavenTestBase
     {
-        public SystemTextJsonEndToEndBenchmarks(Xunit.ITestOutputHelper output) : base(output)
+        public SystemTextJsonEndToEndBenchmarks(ITestOutputHelper output) : base(output)
         {
         }
 
