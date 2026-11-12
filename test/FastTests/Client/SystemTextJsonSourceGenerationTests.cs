@@ -4,7 +4,10 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -218,6 +221,71 @@ namespace FastTests.Client
                 Assert.NotNull(loaded);
                 Assert.Equal("reflection works", loaded.Value);
             }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SourceGeneratedTypesBindConstructorParametersLikeReflection()
+        {
+            DocumentConventions conventions = CreateEdgeCaseConventions();
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"Oren\",\"Age\":40}", "constructor"))
+            {
+                var read = conventions.Serialization.DefaultConverter.FromBlittable<ConstructedWithUnboundParameter>(json);
+
+                Assert.Equal("Oren", read.Name);
+                Assert.Equal(40, read.Age);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SourceGeneratedTypesRejectNewtonsoftReferencePreservationLikeReflection()
+        {
+            DocumentConventions conventions = CreateEdgeCaseConventions();
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var exception = Assert.Throws<NotSupportedException>(() => conventions.Serialization.DefaultConverter.ToBlittable(new ReferencedByJsonObject { Name = "x" }, context));
+
+                Assert.Contains(nameof(ReferencedByJsonObject), exception.Message);
+                Assert.Contains("IsReference", exception.Message);
+            }
+        }
+
+        private static DocumentConventions CreateEdgeCaseConventions()
+        {
+            return new DocumentConventions
+            {
+                Serialization = new SystemTextJsonSerializationConventions
+                {
+                    SourceGenerationContext = EdgeCaseJsonContext.Default
+                }
+            };
+        }
+
+        public class ConstructedWithUnboundParameter
+        {
+            public ConstructedWithUnboundParameter(string name, int age, string unbound)
+            {
+                Name = name;
+                Age = age;
+            }
+
+            public string Name { get; }
+
+            public int Age { get; }
+        }
+
+        [Newtonsoft.Json.JsonObject(IsReference = true)]
+        public class ReferencedByJsonObject
+        {
+            public string Name { get; set; }
+        }
+
+        [JsonSerializable(typeof(ConstructedWithUnboundParameter))]
+        [JsonSerializable(typeof(ReferencedByJsonObject))]
+        internal partial class EdgeCaseJsonContext : JsonSerializerContext
+        {
         }
 
         // --- Entity classes ---
