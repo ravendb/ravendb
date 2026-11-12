@@ -1855,5 +1855,56 @@ namespace FastTests.Client
                 Assert.Equal(42, extraNumber);
             }
         }
+
+        private class IgnoresNullIdentity
+        {
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string Id { get; set; }
+
+            public string Name { get; set; }
+        }
+
+        private class HoldsIgnoresNullIdentity
+        {
+            public string Id { get; set; }
+
+            public IgnoresNullIdentity Child { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task IdentityPropertyKeepsItsJsonIgnoreCondition()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = new SystemTextJsonSerializationConventions()
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new HoldsIgnoresNullIdentity { Id = "holders/1", Child = new IgnoresNullIdentity { Name = "child" } });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("holders/1");
+                Assert.True(raw.TryGet(nameof(HoldsIgnoresNullIdentity.Child), out BlittableJsonReaderObject child));
+                Assert.False(child.TryGetMember(nameof(IgnoresNullIdentity.Id), out _));
+                Assert.True(child.TryGet(nameof(IgnoresNullIdentity.Name), out string name));
+                Assert.Equal("child", name);
+            }
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = store.Conventions.Serialization.DefaultConverter.ToBlittable(new IgnoresNullIdentity { Name = "root" }, context))
+                    Assert.False(json.TryGetMember(nameof(IgnoresNullIdentity.Id), out _));
+
+                using (BlittableJsonReaderObject json = store.Conventions.Serialization.DefaultConverter.ToBlittable(new IgnoresNullIdentity { Id = "children/1", Name = "root" }, context))
+                {
+                    Assert.True(json.TryGet(nameof(IgnoresNullIdentity.Id), out string id));
+                    Assert.Equal("children/1", id);
+                }
+            }
+        }
     }
 }
