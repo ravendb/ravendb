@@ -10,7 +10,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 {
     // ISO 8601 standard
     // More info available at: https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#Roundtrip
-    internal sealed class DateOnlyConverter : JsonConverterFactory
+    internal sealed class DateOnlyConverter : JsonConverter<DateOnly>
     {
         public static readonly DateOnlyConverter Instance = new();
 
@@ -18,94 +18,33 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
         }
 
-        public override bool CanConvert(Type typeToConvert)
+        public override unsafe DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            return typeToConvert == typeof(DateOnly) || typeToConvert == typeof(DateOnly?);
-        }
+            if (reader.TokenType != JsonTokenType.String)
+                throw new InvalidOperationException("Expected string, Got " + reader.TokenType);
 
-        public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
-        {
-            if (typeToConvert == typeof(DateOnly))
-                return DateOnlyConverterInner.Instance;
+            string value = reader.GetString();
 
-            return NullableDateOnlyConverter.Instance;
-        }
-
-        private sealed class DateOnlyConverterInner : JsonConverter<DateOnly>
-        {
-            public static readonly DateOnlyConverterInner Instance = new();
-
-            public override unsafe DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            fixed (char* buffer = value.AsSpan())
             {
-                if (reader.TokenType != JsonTokenType.String)
-                    throw new InvalidOperationException("Expected string, Got " + reader.TokenType);
-
-                string value = reader.GetString();
-
-                fixed (char* buffer = value.AsSpan())
+                if (LazyStringParser.TryParseDateOnly(buffer, value.Length, out DateOnly dateOnly) == false)
                 {
-                    if (LazyStringParser.TryParseDateOnly(buffer, value.Length, out DateOnly dateOnly) == false)
+                    if (LazyStringParser.TryParseDateTime(buffer, value.Length, out DateTime dt, out _, true) is LazyStringParser.Result.Failed
+                        or LazyStringParser.Result.DateTimeOffset)
                     {
-                        if (LazyStringParser.TryParseDateTime(buffer, value.Length, out DateTime dt, out _, true) is LazyStringParser.Result.Failed
-                            or LazyStringParser.Result.DateTimeOffset)
-                        {
-                            throw new InvalidOperationException("Expected DateOnly, Got " + value);
-                        }
-
-                        return DateOnly.FromDateTime(dt);
+                        throw new InvalidOperationException("Expected DateOnly, Got " + value);
                     }
 
-                    return dateOnly;
+                    return DateOnly.FromDateTime(dt);
                 }
-            }
 
-            public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
-            {
-                writer.WriteStringValue(value.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
+                return dateOnly;
             }
         }
 
-        private sealed class NullableDateOnlyConverter : JsonConverter<DateOnly?>
+        public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
         {
-            public static readonly NullableDateOnlyConverter Instance = new();
-
-            public override unsafe DateOnly? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                if (reader.TokenType == JsonTokenType.Null)
-                    return null;
-
-                if (reader.TokenType != JsonTokenType.String)
-                    throw new InvalidOperationException("Expected string, Got " + reader.TokenType);
-
-                string value = reader.GetString();
-
-                fixed (char* buffer = value.AsSpan())
-                {
-                    if (LazyStringParser.TryParseDateOnly(buffer, value.Length, out DateOnly dateOnly) == false)
-                    {
-                        if (LazyStringParser.TryParseDateTime(buffer, value.Length, out DateTime dt, out _, true) is LazyStringParser.Result.Failed
-                            or LazyStringParser.Result.DateTimeOffset)
-                        {
-                            throw new InvalidOperationException("Expected DateOnly, Got " + value);
-                        }
-
-                        return DateOnly.FromDateTime(dt);
-                    }
-
-                    return dateOnly;
-                }
-            }
-
-            public override void Write(Utf8JsonWriter writer, DateOnly? value, JsonSerializerOptions options)
-            {
-                if (value == null)
-                {
-                    writer.WriteNullValue();
-                    return;
-                }
-
-                writer.WriteStringValue(value.Value.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
-            }
+            writer.WriteStringValue(value.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture));
         }
     }
 }

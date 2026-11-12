@@ -11,6 +11,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
     {
         public static readonly DateTimeISO8601Converter Instance = new();
 
+        private static readonly JsonConverter<DateTime?> NullableDateTime = new NullableConverter<DateTime>(DateTimeConverterInner.Instance);
+
+        private static readonly JsonConverter<DateTimeOffset?> NullableDateTimeOffset = new NullableConverter<DateTimeOffset>(DateTimeOffsetConverterInner.Instance);
+
         private DateTimeISO8601Converter()
         {
         }
@@ -28,10 +32,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (typeToConvert == typeof(DateTime))
                 return DateTimeConverterInner.Instance;
             if (typeToConvert == typeof(DateTime?))
-                return NullableDateTimeConverterInner.Instance;
+                return NullableDateTime;
             if (typeToConvert == typeof(DateTimeOffset))
                 return DateTimeOffsetConverterInner.Instance;
-            return NullableDateTimeOffsetConverterInner.Instance;
+            return NullableDateTimeOffset;
         }
 
         private static void ThrowUnparseable(string value, Type type) =>
@@ -79,7 +83,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 {
                     if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time))
                     {
-                        if (s.EndsWith("+00:00"))
+                        if (s.EndsWith("+00:00", StringComparison.Ordinal))
                             return time.ToUniversalTime();
                         return time;
                     }
@@ -109,60 +113,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
             {
                 writer.WritePropertyName(FormatDateTimeKey(value));
-            }
-        }
-
-        private sealed class NullableDateTimeConverterInner : JsonConverter<DateTime?>
-        {
-            public static readonly NullableDateTimeConverterInner Instance = new();
-
-            public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                if (reader.TokenType == JsonTokenType.Null)
-                    return null;
-
-                string s = reader.GetString();
-                if (s != null)
-                {
-                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time))
-                    {
-                        if (s.EndsWith("+00:00"))
-                            return time.ToUniversalTime();
-                        return time;
-                    }
-
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
-                    if (lucene != default)
-                        return DateTime.SpecifyKind(lucene, DateTimeKind.Local);
-
-                    ThrowUnparseable(s, typeToConvert);
-                }
-
-                return null;
-            }
-
-            public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
-            {
-                if (value == null)
-                {
-                    writer.WriteNullValue();
-                    return;
-                }
-
-                DateTime dt = value.Value;
-                if (dt.Kind == DateTimeKind.Unspecified)
-                    dt = DateTime.SpecifyKind(dt, DateTimeKind.Local);
-                writer.WriteStringValue(dt.GetDefaultRavenFormat());
-            }
-
-            public override DateTime? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            {
-                return ReadDateTimeKey(reader.GetString());
-            }
-
-            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
-            {
-                writer.WritePropertyName(FormatDateTimeKey(value.Value));
             }
         }
 
@@ -204,50 +154,30 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
         }
 
-        private sealed class NullableDateTimeOffsetConverterInner : JsonConverter<DateTimeOffset?>
+        private sealed class NullableConverter<T>(JsonConverter<T> inner) : JsonConverter<T?>
+            where T : struct
         {
-            public static readonly NullableDateTimeOffsetConverterInner Instance = new();
-
-            public override DateTimeOffset? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                if (reader.TokenType == JsonTokenType.Null)
-                    return null;
-
-                string s = reader.GetString();
-                if (s != null)
-                {
-                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
-                        return time;
-
-                    DateTime lucene = LuceneDateTimeConverter.TryParseLucene(s);
-                    if (lucene != default)
-                        return new DateTimeOffset(lucene, DateTimeOffset.Now.Offset);
-
-                    ThrowUnparseable(s, typeToConvert);
-                }
-
-                return null;
+                return reader.TokenType == JsonTokenType.Null ? null : inner.Read(ref reader, typeof(T), options);
             }
 
-            public override void Write(Utf8JsonWriter writer, DateTimeOffset? value, JsonSerializerOptions options)
+            public override void Write(Utf8JsonWriter writer, T? value, JsonSerializerOptions options)
             {
                 if (value == null)
-                {
                     writer.WriteNullValue();
-                    return;
-                }
-
-                writer.WriteStringValue(value.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+                else
+                    inner.Write(writer, value.Value, options);
             }
 
-            public override DateTimeOffset? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+            public override T? ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                return ReadDateTimeOffsetKey(reader.GetString());
+                return inner.ReadAsPropertyName(ref reader, typeof(T), options);
             }
 
-            public override void WriteAsPropertyName(Utf8JsonWriter writer, DateTimeOffset? value, JsonSerializerOptions options)
+            public override void WriteAsPropertyName(Utf8JsonWriter writer, T? value, JsonSerializerOptions options)
             {
-                writer.WritePropertyName(FormatDateTimeOffsetKey(value.Value));
+                inner.WriteAsPropertyName(writer, value.Value, options);
             }
         }
     }
