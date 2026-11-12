@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,8 +17,6 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
-using Sparrow.LowMemory;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -89,7 +87,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var readerFacetInfo in returnedReaders)
             {
-                IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
+                ArrayPool<int>.Shared.Return(readerFacetInfo.Results.Array);
             }
 
             return results.Values
@@ -155,7 +153,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
                             ApplyAggregation(result.Value.Aggregations, collectionOfFacetValues, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase, _state);
-                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+                            ArrayPool<int>.Shared.Return(intersectedDocuments.Documents);
                             intersectedDocuments.Documents = null;
                         }
                     }
@@ -203,7 +201,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     {
                         if (intersectedDocuments.Documents != null)
                         {
-                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+                            ArrayPool<int>.Shared.Return(intersectedDocuments.Documents);
                         }
                         continue;
                     }
@@ -333,7 +331,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var result = new IntersectDocs();
             if (needToApplyAggregation)
             {
-                result.Documents = IntArraysPool.Instance.AllocateArray();
+                result.Documents = ArrayPool<int>.Shared.Rent(InitialPooledArraySize);
             }
 
             if (o1 < o2)
@@ -376,7 +374,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (result.Count == 0 && needToApplyAggregation)
             {
-                IntArraysPool.Instance.FreeArray(result.Documents);
+                ArrayPool<int>.Shared.Return(result.Documents);
                 result.Documents = null;
             }
             return result;
@@ -411,81 +409,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             private void IncreaseSize()
             {
-                var newDocumentsArray = IntArraysPool.Instance.AllocateArray(Count * 2);
+                var newDocumentsArray = ArrayPool<int>.Shared.Rent(Count * 2);
                 Array.Copy(Documents, newDocumentsArray, Count);
-                IntArraysPool.Instance.FreeArray(Documents);
+                ArrayPool<int>.Shared.Return(Documents);
                 Documents = newDocumentsArray;
             }
         }
 
-        private sealed class IntArraysPool : ILowMemoryHandler
-        {
-            public static readonly IntArraysPool Instance = new IntArraysPool();
-
-            private readonly ConcurrentDictionary<int, ObjectPool<int[]>> _arraysPoolBySize = new ConcurrentDictionary<int, ObjectPool<int[]>>();
-            //private readonly TimeSensitiveStore<ObjectPool<int[]>> _timeSensitiveStore = new TimeSensitiveStore<ObjectPool<int[]>>(TimeSpan.FromDays(1));
-
-            private IntArraysPool()
-            {
-            }
-
-            public int[] AllocateArray(int arraySize = 1024)
-            {
-                var roundedSize = GetRoundedSize(arraySize);
-                var matchingQueue = _arraysPoolBySize.GetOrAdd(roundedSize, x => new ObjectPool<int[]>(() => new int[roundedSize]));
-
-                var allocatedArray = matchingQueue.Allocate();
-
-                //_timeSensitiveStore.Seen(matchingQueue);
-
-                return allocatedArray;
-            }
-
-            public void FreeArray(int[] returnedArray)
-            {
-                if (returnedArray.Length != GetRoundedSize(returnedArray.Length))
-                {
-                    throw new ArgumentException("Array size does not match current array size constraints");
-                }
-
-
-                var matchingQueue = _arraysPoolBySize.GetOrAdd(returnedArray.Length, x => new ObjectPool<int[]>(() => new int[returnedArray.Length]));
-                matchingQueue.Free(returnedArray);
-            }
-
-            private static int GetRoundedSize(int size)
-            {
-                const int roundSize = 1024;
-                if (size % roundSize == 0)
-                {
-                    return size;
-                }
-
-                return (size / roundSize + 1) * roundSize;
-            }
-
-            private static void RunIdleOperations()
-            {
-                //_timeSensitiveStore.ForAllExpired(x =>
-                //{
-                //    var matchingQueue = _arraysPoolBySize.FirstOrDefault(y => y.Value == x).Key;
-                //    if (matchingQueue != 0)
-                //    {
-                //        ObjectPool<int[]> removedQueue;
-                //        _arraysPoolBySize.TryRemove(matchingQueue, out removedQueue);
-                //    }
-                //});
-            }
-
-            public void LowMemory(LowMemorySeverity lowMemorySeverity)
-            {
-                RunIdleOperations();
-            }
-
-            public void LowMemoryOver()
-            {
-            }
-        }
+        private const int InitialPooledArraySize = 1024;
 
         private sealed class ReaderFacetInfo
         {
@@ -500,7 +431,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public ReaderFacetInfo()
             {
-                _current = IntArraysPool.Instance.AllocateArray();
+                _current = ArrayPool<int>.Shared.Rent(InitialPooledArraySize);
                 _matches = new LinkedList<int[]>();
             }
 
@@ -509,7 +440,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_pos >= _current.Length)
                 {
                     _matches.AddLast(_current);
-                    _current = IntArraysPool.Instance.AllocateArray();
+                    _current = ArrayPool<int>.Shared.Rent(InitialPooledArraySize);
                     _pos = 0;
                 }
                 _current[_pos++] = doc + DocBase;
@@ -523,17 +454,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     size += match.Length;
                 }
 
-                var mergedAndSortedArray = IntArraysPool.Instance.AllocateArray(size);
+                var mergedAndSortedArray = ArrayPool<int>.Shared.Rent(size);
                 var curMergedArrayIndex = 0;
                 foreach (var match in _matches)
                 {
                     Array.Copy(match, 0, mergedAndSortedArray, curMergedArrayIndex, match.Length);
                     curMergedArrayIndex += match.Length;
-                    IntArraysPool.Instance.FreeArray(match);
+                    ArrayPool<int>.Shared.Return(match);
                 }
 
                 Array.Copy(_current, 0, mergedAndSortedArray, curMergedArrayIndex, _pos);
-                IntArraysPool.Instance.FreeArray(_current);
+                ArrayPool<int>.Shared.Return(_current);
                 curMergedArrayIndex += _pos;
                 _current = null;
                 _pos = 0;
