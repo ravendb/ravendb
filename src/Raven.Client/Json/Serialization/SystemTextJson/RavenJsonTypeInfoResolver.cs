@@ -18,6 +18,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Raven.Client.Util;
@@ -354,11 +355,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private void AssertMemberTypeCanBeResolved(Type memberType)
         {
-#if NETSTANDARD2_0
-            if (memberType.IsByRef && _conventions.IgnoreByRefMembers == false)
-#else
-            if ((memberType.IsByRef || memberType.IsByRefLike) && _conventions.IgnoreByRefMembers == false)
-#endif
+            if (IsByRef(memberType) && _conventions.IgnoreByRefMembers == false)
                 ThrowByRefNotSupported();
 
             if (memberType.IsPointer && _conventions.IgnoreUnsafeMembers == false)
@@ -646,10 +643,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     if (propertyInfo.GetIndexParameters().Length > 0 || memberNames.Add(propertyInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterProperty(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, propertyInfo.Name))
+                    if (ShouldFilterMember(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, propertyInfo.Name))
                         continue;
 
-                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, propertyInfo, propertyInfo.PropertyType, CreateGetter(propertyInfo), CreateSetter(propertyInfo)));
+                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, propertyInfo));
                 }
 
                 foreach (FieldInfo fieldInfo in type.GetFields(flags))
@@ -657,10 +654,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     if ((fieldInfo.IsPublic == false && fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false) || memberNames.Add(fieldInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterField(fieldInfo) || IsIgnoredBySystemTextJson(fieldInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
+                    if (ShouldFilterMember(fieldInfo, isRecord) || IsIgnoredBySystemTextJson(fieldInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
                         continue;
 
-                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo, fieldInfo.FieldType, CreateGetter(fieldInfo), CreateSetter(fieldInfo)));
+                    typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo));
                 }
             }
         }
@@ -737,66 +734,51 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return null;
         }
 
-        private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member, Type memberType, Func<object, object> get, Action<object, object> set)
+        private static JsonPropertyInfo CreateJsonProperty(JsonTypeInfo typeInfo, MemberInfo member)
         {
             string name = typeInfo.Options.PropertyNamingPolicy?.ConvertName(member.Name) ?? member.Name;
 
-            JsonPropertyInfo property = typeInfo.CreateJsonPropertyInfo(memberType, name);
+            JsonPropertyInfo property = typeInfo.CreateJsonPropertyInfo(member.GetMemberType(), name);
             property.AttributeProvider = member;
-            property.Get = get;
-            property.Set = set;
+            property.Get = CreateGetter(member);
+            property.Set = CreateSetter(member);
             return property;
         }
 
-        private static Func<object, object> CreateGetter(PropertyInfo propertyInfo)
+        private static Func<object, object> CreateGetter(MemberInfo member)
         {
-            if (propertyInfo.GetMethod == null)
-                return null;
-
-            if (propertyInfo.GetMethod.IsStatic || propertyInfo.GetIndexParameters().Length != 0 || CanCompileAccessors(propertyInfo.DeclaringType) == false)
-                return propertyInfo.GetValue;
+            switch (member)
+            {
+                case PropertyInfo { GetMethod: null }:
+                    return null;
+                case PropertyInfo property when property.GetMethod.IsStatic || property.GetIndexParameters().Length != 0 || CanCompileAccessors(property.DeclaringType) == false:
+                    return property.GetValue;
+                case FieldInfo field when field.IsStatic || CanCompileAccessors(field.DeclaringType) == false:
+                    return field.GetValue;
+            }
 
             ParameterExpression target = Expression.Parameter(typeof(object), "target");
-            Expression value = Expression.Property(Expression.Convert(target, propertyInfo.DeclaringType), propertyInfo);
+            Expression value = Expression.MakeMemberAccess(Expression.Convert(target, member.DeclaringType), member);
             return Expression.Lambda<Func<object, object>>(Expression.Convert(value, typeof(object)), target).Compile();
         }
 
-        private static Action<object, object> CreateSetter(PropertyInfo propertyInfo)
+        private static Action<object, object> CreateSetter(MemberInfo member)
         {
-            if (propertyInfo.SetMethod == null)
-                return null;
-
-            if (propertyInfo.SetMethod.IsStatic || propertyInfo.GetIndexParameters().Length != 0 || CanCompileAccessors(propertyInfo.DeclaringType) == false)
-                return propertyInfo.SetValue;
+            switch (member)
+            {
+                case PropertyInfo { SetMethod: null }:
+                case FieldInfo { IsInitOnly: true }:
+                    return null;
+                case PropertyInfo property when property.SetMethod.IsStatic || property.GetIndexParameters().Length != 0 || CanCompileAccessors(property.DeclaringType) == false:
+                    return property.SetValue;
+                case FieldInfo field when field.IsStatic || CanCompileAccessors(field.DeclaringType) == false:
+                    return field.SetValue;
+            }
 
             ParameterExpression target = Expression.Parameter(typeof(object), "target");
             ParameterExpression value = Expression.Parameter(typeof(object), "value");
-            Expression property = Expression.Property(Expression.Convert(target, propertyInfo.DeclaringType), propertyInfo);
-            return Expression.Lambda<Action<object, object>>(Expression.Assign(property, Expression.Convert(value, propertyInfo.PropertyType)), target, value).Compile();
-        }
-
-        private static Func<object, object> CreateGetter(FieldInfo fieldInfo)
-        {
-            if (fieldInfo.IsStatic || CanCompileAccessors(fieldInfo.DeclaringType) == false)
-                return fieldInfo.GetValue;
-
-            ParameterExpression target = Expression.Parameter(typeof(object), "target");
-            Expression value = Expression.Field(Expression.Convert(target, fieldInfo.DeclaringType), fieldInfo);
-            return Expression.Lambda<Func<object, object>>(Expression.Convert(value, typeof(object)), target).Compile();
-        }
-
-        private static Action<object, object> CreateSetter(FieldInfo fieldInfo)
-        {
-            if (fieldInfo.IsInitOnly)
-                return null;
-
-            if (fieldInfo.IsStatic || CanCompileAccessors(fieldInfo.DeclaringType) == false)
-                return fieldInfo.SetValue;
-
-            ParameterExpression target = Expression.Parameter(typeof(object), "target");
-            ParameterExpression value = Expression.Parameter(typeof(object), "value");
-            Expression field = Expression.Field(Expression.Convert(target, fieldInfo.DeclaringType), fieldInfo);
-            return Expression.Lambda<Action<object, object>>(Expression.Assign(field, Expression.Convert(value, fieldInfo.FieldType)), target, value).Compile();
+            Expression access = Expression.MakeMemberAccess(Expression.Convert(target, member.DeclaringType), member);
+            return Expression.Lambda<Action<object, object>>(Expression.Assign(access, Expression.Convert(value, member.GetMemberType())), target, value).Compile();
         }
 
         private static Func<object> CreateFactory(ConstructorInfo constructor)
@@ -824,8 +806,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             Dictionary<string, int> ranks = _memberRanks.GetOrAdd(typeInfo.Type, GetNewtonsoftMemberRanks);
             List<JsonPropertyInfo> ordered = typeInfo.Properties
-                .OrderBy(property => property.AttributeProvider is MemberInfo member && ranks.TryGetValue(member.Name, out int rank) ? rank : int.MaxValue)
                 .OrderBy(property => property.AttributeProvider is MemberInfo member ? GetNewtonsoftOrder(member) : -1)
+                .ThenBy(property => property.AttributeProvider is MemberInfo member && ranks.TryGetValue(member.Name, out int rank) ? rank : int.MaxValue)
                 .ToList();
 
             typeInfo.Properties.Clear();
@@ -1875,101 +1857,50 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             for (int i = typeInfo.Properties.Count - 1; i >= 0; i--)
             {
-                JsonPropertyInfo property = typeInfo.Properties[i];
-                if (ShouldFilterProperty(property, isRecord) || (property.AttributeProvider is MemberInfo member && IsIgnoredBySystemTextJson(member)))
+                if (typeInfo.Properties[i].AttributeProvider is MemberInfo member && (ShouldFilterMember(member, isRecord) || IsIgnoredBySystemTextJson(member)))
                     typeInfo.Properties.RemoveAt(i);
             }
         }
 
-        private bool ShouldFilterProperty(JsonPropertyInfo property, bool isRecord)
+        private bool ShouldFilterMember(MemberInfo member, bool isRecord)
         {
-            ICustomAttributeProvider attributeProvider = property.AttributeProvider;
-            if (attributeProvider == null)
-                return false;
+            switch (member)
+            {
+                case FieldInfo field when field.IsPublic == false && field.IsDefined(typeof(ForceJsonSerializationAttribute)) == false:
+                case PropertyInfo when isRecord && member.Name == Sparrow.Extensions.TypeExtensions.RecordEqualityContractPropertyName:
+                case PropertyInfo when member.DeclaringType == typeof(Exception) && member.Name == nameof(Exception.TargetSite):
+                    return true;
+            }
 
-            if (attributeProvider is EventInfo)
-                return true;
-
-            if (attributeProvider is FieldInfo fieldInfo)
-                return ShouldFilterField(fieldInfo);
-
-            if (attributeProvider is PropertyInfo propertyInfo)
-                return ShouldFilterProperty(propertyInfo, isRecord);
-
-            if (HasCompilerGeneratedAttribute(attributeProvider))
-                return true;
-
-            if (HasJsonIgnoreAttribute(attributeProvider))
-                return true;
-
-            return false;
+            return IsUnsupportedMemberType(member.GetMemberType()) || HasCompilerGeneratedAttribute(member) || HasJsonIgnoreAttribute(member);
         }
 
-        private bool ShouldFilterField(FieldInfo fieldInfo)
+        private bool IsUnsupportedMemberType(Type memberType)
         {
-            if (fieldInfo.IsPublic == false && fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false)
-                return true;
-
-#if NETSTANDARD2_0
-            if (fieldInfo.FieldType.IsByRef)
-#else
-            if (fieldInfo.FieldType.IsByRef || fieldInfo.FieldType.IsByRefLike)
-#endif
+            if (IsByRef(memberType))
             {
                 if (_conventions.IgnoreByRefMembers == false)
                     ThrowByRefNotSupported();
                 return true;
             }
 
-            if (fieldInfo.FieldType == typeof(IntPtr) || fieldInfo.FieldType.IsPointer)
+            if (memberType == typeof(IntPtr) || memberType.IsPointer)
             {
                 if (_conventions.IgnoreUnsafeMembers == false)
                     ThrowPointersNotSupported();
                 return true;
             }
-
-            if (HasCompilerGeneratedAttribute(fieldInfo))
-                return true;
-
-            if (HasJsonIgnoreAttribute(fieldInfo))
-                return true;
 
             return false;
         }
 
-        private bool ShouldFilterProperty(PropertyInfo propertyInfo, bool isRecord)
+        private static bool IsByRef(Type type)
         {
-            if (isRecord && propertyInfo.Name == Sparrow.Extensions.TypeExtensions.RecordEqualityContractPropertyName)
-                return true;
-
-            if (propertyInfo.DeclaringType == typeof(Exception) && propertyInfo.Name == nameof(Exception.TargetSite))
-                return true;
-
 #if NETSTANDARD2_0
-            if (propertyInfo.PropertyType.IsByRef)
+            return type.IsByRef;
 #else
-            if (propertyInfo.PropertyType.IsByRef || propertyInfo.PropertyType.IsByRefLike)
+            return type.IsByRef || type.IsByRefLike;
 #endif
-            {
-                if (_conventions.IgnoreByRefMembers == false)
-                    ThrowByRefNotSupported();
-                return true;
-            }
-
-            if (propertyInfo.PropertyType == typeof(IntPtr) || propertyInfo.PropertyType.IsPointer)
-            {
-                if (_conventions.IgnoreUnsafeMembers == false)
-                    ThrowPointersNotSupported();
-                return true;
-            }
-
-            if (HasCompilerGeneratedAttribute(propertyInfo))
-                return true;
-
-            if (HasJsonIgnoreAttribute(propertyInfo))
-                return true;
-
-            return false;
         }
 
         private static bool HasCompilerGeneratedAttribute(ICustomAttributeProvider member)
