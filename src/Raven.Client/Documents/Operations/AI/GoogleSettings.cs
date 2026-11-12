@@ -1,5 +1,6 @@
 ﻿#pragma warning disable SKEXP0070
 using System;
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -19,6 +20,36 @@ public sealed class GoogleSettings : OpenAiBaseSettings
 
     /// <summary>The version of Google AI to use.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
+
+    // Google has only Chat Completions
+    /// <summary>
+    /// Not supported for Google: a value is a validation error (Google only has Chat Completions).
+    /// </summary>
+    public override OpenAiApiMode? ApiMode
+    {
+        get => base.ApiMode;
+        set => base.ApiMode = value;
+    }
+
+    /// <summary>
+    /// Not supported for Google: a value is a validation error.
+    /// </summary>
+    public override string ReasoningEffort
+    {
+        get => base.ReasoningEffort;
+        set => base.ReasoningEffort = value;
+    }
+
+    public override void ValidateFields(List<string> errors)
+    {
+        base.ValidateFields(errors);
+
+        if (ApiMode.HasValue)
+            errors.Add($"`{nameof(ApiMode)}` is not supported for Google: Google only has the Chat Completions API.");
+
+        if (string.IsNullOrWhiteSpace(ReasoningEffort) == false)
+            errors.Add($"`{nameof(ReasoningEffort)}` is not supported for Google.");
+    }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {

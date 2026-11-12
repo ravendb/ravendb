@@ -21,6 +21,24 @@ namespace SlowTests.Server.Documents.AI
 {
     public class AzureOpenAiResponsesProviderTests(ITestOutputHelper output) : RavenTestBase(output)
     {
+        [RavenFact(RavenTestCategory.Ai)]
+        public void Settings_Google_RejectsApiModeAndReasoningEffort()
+        {
+            var errors = new List<string>();
+            new GoogleSettings("gemini-2.5-flash", "k") { ApiMode = OpenAiApiMode.ChatCompletions }.ValidateFields(errors);
+            var error = Assert.Single(errors);
+            Assert.Contains(nameof(GoogleSettings.ApiMode), error);
+
+            errors.Clear();
+            new GoogleSettings("gemini-2.5-flash", "k") { ReasoningEffort = "high" }.ValidateFields(errors);
+            error = Assert.Single(errors);
+            Assert.Contains(nameof(GoogleSettings.ReasoningEffort), error);
+
+            errors.Clear();
+            new GoogleSettings("gemini-2.5-flash", "k").ValidateFields(errors);
+            Assert.Empty(errors);
+        }
+
         private const string Blocked = "Response blocked due to content policy: violence (high severity)";
 
         [RavenTheory(RavenTestCategory.Ai)]
