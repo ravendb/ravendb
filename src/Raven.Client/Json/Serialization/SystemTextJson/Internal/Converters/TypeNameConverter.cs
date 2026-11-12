@@ -95,18 +95,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (typeNameHandling == TypeNameHandling.None || declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
                 return null;
 
-            Type converterType = typeNameHandling == TypeNameHandling.Objects
-                ? typeof(AlwaysConverter<>).MakeGenericType(declaredType)
-                : typeof(AutoConverter<>).MakeGenericType(declaredType);
-
-            return (JsonConverter)Activator.CreateInstance(converterType);
+            Type converterType = typeof(DeclaredTypeConverter<>).MakeGenericType(declaredType);
+            return (JsonConverter)Activator.CreateInstance(converterType, [typeNameHandling == TypeNameHandling.Objects]);
         }
 
         private static bool IsCandidate(Type declaredType, JsonSerializerOptions options)
         {
-            if (declaredType == typeof(object))
-                return true;
-
             if (declaredType.IsValueType || declaredType == typeof(string) || declaredType.IsPointer || declaredType.IsByRef)
                 return false;
 
@@ -939,22 +933,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return true;
         }
 
-        private sealed class AutoConverter<T> : JsonConverter<T>
+        private sealed class DeclaredTypeConverter<T>(bool alwaysWriteObjectTypeName) : JsonConverter<T>
         {
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
                 (T)TypeNameConverter.Read(ref reader, typeof(T), options);
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
-                TypeNameConverter.WriteValue(writer, value, typeof(T), alwaysWriteObjectTypeName: false, options);
-        }
-
-        private sealed class AlwaysConverter<T> : JsonConverter<T>
-        {
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-                (T)TypeNameConverter.Read(ref reader, typeof(T), options);
-
-            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
-                TypeNameConverter.WriteValue(writer, value, typeof(T), alwaysWriteObjectTypeName: true, options);
+                TypeNameConverter.WriteValue(writer, value, typeof(T), alwaysWriteObjectTypeName, options);
         }
     }
 }
