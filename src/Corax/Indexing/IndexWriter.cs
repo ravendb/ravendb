@@ -1287,9 +1287,7 @@ namespace Corax.Indexing
             if (_deletedEntriesTermsLocations.Count == 0)
                 return;
 
-            var entryIds = _deletedEntriesTermsLocations.Keys.ToArray();
-            Array.Sort(entryIds);
-            foreach (var entryId in entryIds)
+            foreach (var entryId in _deletedEntriesTermsLocations.Keys)
             {
                 Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)_deletedEntriesTermsLocations[entryId]);
                 bool removed = _entryIdToLocation.TryRemove(entryId);
