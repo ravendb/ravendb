@@ -1,7 +1,6 @@
 using System.Net.Http;
 using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.AI.Settings;
 
@@ -26,9 +25,4 @@ internal sealed class AzureOpenAiResponsesProvider : AbstractOpenAiResponsesProv
     public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => AzureOpenAiShared.ParseAzureError(content, response);
 
     protected override string GetProviderRefusal(BlittableJsonReaderObject response) => AzureOpenAiShared.GetBlockedContentFilterMessage(response);
-
-    protected override void HandleCompletionRequestPayload(DynamicJsonValue body)
-    {
-        AddTemperatureAndReasoning(body, _settings);
-    }
 }

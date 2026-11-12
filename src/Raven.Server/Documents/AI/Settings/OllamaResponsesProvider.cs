@@ -25,11 +25,11 @@ internal sealed class OllamaResponsesProvider : AbstractOpenAiResponsesProvider
 
     public override string GetRelativeModelsUri() => OllamaShared.V1Prefix + base.GetRelativeModelsUri();
 
-    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => OllamaShared.ParseOllamaError(content, response);
+    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => OllamaShared.ParseOllamaError(content);
 
     protected override void HandleCompletionRequestPayload(DynamicJsonValue body)
     {
-        AddTemperatureAndReasoning(body, _settings);
+        base.HandleCompletionRequestPayload(body);
 
         if (_settings.Think.HasValue)
             body[Wire.Think] = _settings.Think.Value;
