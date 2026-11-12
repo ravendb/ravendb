@@ -4,14 +4,11 @@ import moment from "moment";
 import Card from "react-bootstrap/Card";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
-import { BackupDecisionEvent, BackupDecisionRow, BackupQueueSummary } from "../backupDecisionLogTypes";
-import { getNewestRowPerStream } from "../backupDecisionLogUtils";
+import { BackupDecisionLogSummary, BackupDecisionOutcome } from "../backupDecisionLogTypes";
 
 interface BackupDecisionLogStatusCardsProps {
-    queue: BackupQueueSummary;
-    rows: BackupDecisionRow[];
-    oldestAt: string | null;
+    summary: BackupDecisionLogSummary;
+    runnerStartTime: string;
 }
 
 interface StatusCardProps {
@@ -46,70 +43,62 @@ function StatusCard({ title, value, caption, tooltip, isDanger }: StatusCardProp
     );
 }
 
-function getHeldBackCaption(heldBackRows: BackupDecisionRow[], heldBackTaskCount: number) {
-    if (heldBackRows.length === 0) {
-        return "Nothing is stopping backups";
+function getHeldBackCaption({ HeldBack, ServerBlock }: BackupDecisionLogSummary) {
+    if (ServerBlock) {
+        return `All backups: ${ServerBlock.Reason}`;
     }
-    return (
-        heldBackRows[0].Reason ??
-        `${heldBackTaskCount} ${pluralizeHelpers.pluralize(heldBackTaskCount, "task", "tasks", true)} held back`
-    );
+    if (HeldBack.Longest) {
+        return HeldBack.Longest.Reason ?? `Longest: task '${HeldBack.Longest.TaskName}'`;
+    }
+    return "Nothing is stopping backups";
 }
 
-function summarizeEvent(rows: BackupDecisionRow[], event: BackupDecisionEvent) {
-    const matching = rows.filter((x) => x.Event === event);
-    const latest = matching[0];
+const getOutcomeCaption = (latest: BackupDecisionOutcome | null) =>
+    latest ? `Latest: task '${latest.TaskName}', ${formatTime(latest.Time)}` : "";
 
-    return {
-        count: matching.reduce((total, x) => total + x.Count, 0),
-        caption: latest ? `Latest: task '${latest.TaskName}', ${formatTime(latest.LastAt)}` : "",
-    };
-}
-
-export default function BackupDecisionLogStatusCards({ queue, rows, oldestAt }: BackupDecisionLogStatusCardsProps) {
-    const failed = summarizeEvent(rows, "Failed");
-    const completed = summarizeEvent(rows, "Completed");
-    const since = oldestAt ? ` - since ${formatTime(oldestAt)}` : "";
-    const newestPerStream = getNewestRowPerStream(rows);
-    const waitingTaskCount = newestPerStream.filter((x) => x.TaskId !== null && x.Event === "Waiting").length;
-    const heldBackRows = newestPerStream.filter((x) => x.Event === "HeldBack");
-    const heldBackTaskCount = heldBackRows.filter((x) => x.TaskId !== null).length;
+export default function BackupDecisionLogStatusCards({ summary, runnerStartTime }: BackupDecisionLogStatusCardsProps) {
+    const { Running, WaitingForSchedule, HeldBack, Failed, Completed } = summary;
+    const since = ` - since ${formatTime(runnerStartTime)}`;
 
     return (
         <div className="hstack gap-3 flex-wrap align-items-stretch mb-4">
             <StatusCard
                 title="Running now"
-                value={`${queue.CurrentNumberOfRunningBackups}/${queue.MaxNumberOfConcurrentBackups}`}
-                caption={`Up to ${queue.MaxNumberOfConcurrentBackups} can run at once`}
+                value={`${Running.Current}/${Running.Max}`}
+                caption={
+                    Running.WaitingForSlot > 0
+                        ? `${Running.WaitingForSlot} waiting for a free slot`
+                        : `Up to ${Running.Max} can run at once`
+                }
             />
             <StatusCard
                 title="Waiting for schedule"
-                value={waitingTaskCount}
+                value={WaitingForSchedule.Count}
                 caption={
-                    queue.NextBackupTaskName && queue.NextBackupUtc
-                        ? `Next: task '${queue.NextBackupTaskName}' - ${formatTime(queue.NextBackupUtc)}`
+                    WaitingForSchedule.NextBackupTaskName && WaitingForSchedule.NextBackupUtc
+                        ? `Next: task '${WaitingForSchedule.NextBackupTaskName}' - ${formatTime(WaitingForSchedule.NextBackupUtc)}`
                         : "Nothing scheduled"
                 }
                 tooltip="Backups that are scheduled and waiting for their time to come."
             />
             <StatusCard
                 title="Held back"
-                value={heldBackTaskCount}
-                caption={getHeldBackCaption(heldBackRows, heldBackTaskCount)}
+                value={HeldBack.Count}
+                caption={getHeldBackCaption(summary)}
                 tooltip="Backups that are due but not allowed to start right now, for example because of a limit or a resource shortage."
             />
             <StatusCard
                 title={`Failed${since}`}
-                value={failed.count}
-                caption={failed.caption}
-                tooltip="Backups that failed since the time shown."
-                isDanger={failed.count > 0}
+                value={Failed.Count}
+                caption={getOutcomeCaption(Failed.Latest)}
+                tooltip="Backups that failed since the backup scheduler started on this node."
+                isDanger={Failed.Count > 0}
             />
             <StatusCard
                 title={`Completed${since}`}
-                value={completed.count}
-                caption={completed.caption}
-                tooltip="Backups that completed successfully since the time shown."
+                value={Completed.Count}
+                caption={getOutcomeCaption(Completed.Latest)}
+                tooltip="Backups that completed successfully since the backup scheduler started on this node."
             />
         </div>
     );

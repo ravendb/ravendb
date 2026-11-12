@@ -7,7 +7,6 @@ import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinitio
 import { SharedStubs } from "test/stubs/SharedStubs";
 import { mockJQueryError } from "test/mocks/utils";
 import { BackupDecisionLogDetails } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -152,25 +151,17 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withBackupDecisionLog(dto?: MockedValue<BackupDecisionLogDetails>) {
         const details = this.createValue(dto, ManageServerStubs.backupDecisionLog());
-        this.mocks.getBackupDecisionLog.mockImplementation(async (databaseName) => ({
-            ...details,
-            Entries: details.Entries.filter(
-                (x) =>
-                    !databaseName || x.Source === "Server" || DatabaseUtils.shardGroupKey(x.Database) === databaseName
-            ),
-        }));
+        this.mocks.watchBackupDecisionLog.mockImplementation((_query, onMessage) => {
+            const timeout = setTimeout(() => onMessage({ ...details, Type: "Snapshot" }));
+            return { dispose: () => clearTimeout(timeout) };
+        });
         return details;
     }
 
-    withThrowingGetBackupDecisionLog() {
-        this.mocks.getBackupDecisionLog.mockRejectedValue(new Error());
-    }
-
-    withPauseBackupScheduler() {
-        this.mocks.pauseBackupScheduler.mockResolvedValue(undefined);
-    }
-
-    withResumeBackupScheduler() {
-        this.mocks.resumeBackupScheduler.mockResolvedValue(undefined);
+    withFailingBackupDecisionLog() {
+        this.mocks.watchBackupDecisionLog.mockImplementation((_query, _onMessage, onError) => {
+            const timeout = setTimeout(onError);
+            return { dispose: () => clearTimeout(timeout) };
+        });
     }
 }

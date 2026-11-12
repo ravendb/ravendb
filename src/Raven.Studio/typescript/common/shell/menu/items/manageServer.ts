@@ -281,12 +281,6 @@ function getManageServerMenuItem() {
             css: 'icon-backups',
             dynamicHash: appUrl.forBackupDecisionLog,
             requiredAccess: "Operator",
-            search: {
-                innerActions: [
-                    { name: "Pause backup scheduler" },
-                    { name: "Resume backup scheduler" },
-                ],
-            },
         }),
         new leafMenuItem({
             route: 'admin/settings/runningQueries',

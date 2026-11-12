@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { isEqual } from "lodash";
-import moment from "moment";
 import Badge from "react-bootstrap/Badge";
 import { AboutViewHeading } from "components/common/AboutView";
 import { EmptySet } from "components/common/EmptySet";
@@ -11,59 +10,42 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useAppSelector } from "components/store";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 import BackupDecisionLogFilters from "./partials/BackupDecisionLogFilters";
 import BackupDecisionLogInfoHub from "./partials/BackupDecisionLogInfoHub";
 import BackupDecisionLogStatusCards from "./partials/BackupDecisionLogStatusCards";
 import BackupDecisionLogTable from "./partials/BackupDecisionLogTable";
 import { BackupDecisionFilters, emptyBackupDecisionFilters } from "./backupDecisionLogTypes";
 import { useBackupDecisionLog } from "./hooks/useBackupDecisionLog";
-import { filterDecisions } from "./backupDecisionLogUtils";
 
 export default function BackupDecisionLog() {
     const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
     const [filters, setFilters] = useState<BackupDecisionFilters>(emptyBackupDecisionFilters);
-    const { details, trackedDatabases, rows, oldestAt, isError, reload } = useBackupDecisionLog(filters.databases);
+    const { details, lastDetails, isError, reconnect } = useBackupDecisionLog(filters);
 
     const isFiltering = !isEqual(filters, emptyBackupDecisionFilters);
-    const visibleRows = useMemo(() => filterDecisions(rows, filters), [rows, filters]);
-    const taskNames = useMemo(
-        () => [...new Set(rows.map((x) => x.TaskName).filter((x): x is string => x !== null))].sort(),
-        [rows]
-    );
-    const databaseNames = useMemo(
-        () => [...new Set((trackedDatabases ?? []).map((x) => DatabaseUtils.shardGroupKey(x)))],
-        [trackedDatabases]
-    );
 
     const renderContent = () => {
         if (!details && isError) {
-            return <LoadError error="Unable to load the backup decision log" refresh={reload} />;
+            return <LoadError error="Unable to load the backup decision log" refresh={reconnect} />;
         }
         if (!details) {
             return <LoadingView />;
         }
-        if (rows.length === 0 && !isFiltering) {
-            return <EmptySet>No decisions yet</EmptySet>;
+        if (details.Entries.length === 0) {
+            return <EmptySet>{isFiltering ? "No decisions match the current filters" : "No decisions yet"}</EmptySet>;
         }
 
-        const entriesCount = details.Entries.length;
-        const eventsText = pluralizeHelpers.pluralize(entriesCount, "event", "events", true);
+        const shownCount = details.Entries.length;
+        const eventsText = pluralizeHelpers.pluralize(details.TotalResults, "event", "events", true);
 
         return (
             <>
-                {entriesCount > 0 && (
-                    <div className="text-muted mb-2">
-                        {filters.databases.length > 0
-                            ? `Showing ${entriesCount} ${eventsText} for the selected databases.`
-                            : `Showing the newest ${entriesCount} ${eventsText}, back to ${moment(oldestAt).format("HH:mm")}. Choose a database to see further back.`}
-                    </div>
-                )}
-                {visibleRows.length === 0 ? (
-                    <EmptySet>No decisions match the current filters</EmptySet>
-                ) : (
-                    <BackupDecisionLogTable rows={visibleRows} />
-                )}
+                <div className="text-muted mb-2">
+                    {shownCount < details.TotalResults
+                        ? `Showing the newest ${shownCount} of ${details.TotalResults} ${eventsText}. Use filters to see older ones.`
+                        : `Showing ${shownCount} ${eventsText}.`}
+                </div>
+                <BackupDecisionLogTable entries={details.Entries} />
             </>
         );
     };
@@ -84,15 +66,20 @@ export default function BackupDecisionLog() {
                     </Badge>
                 </PopoverWithHoverWrapper>
             </div>
-            {details && <BackupDecisionLogStatusCards queue={details.Queue} rows={rows} oldestAt={oldestAt} />}
-            {trackedDatabases && (
-                <BackupDecisionLogFilters
-                    filters={filters}
-                    onChange={setFilters}
-                    taskNames={taskNames}
-                    databaseNames={databaseNames}
-                    matchCount={visibleRows.length}
-                />
+            {lastDetails && (
+                <>
+                    <BackupDecisionLogStatusCards
+                        summary={lastDetails.Summary}
+                        runnerStartTime={lastDetails.RunnerStartTime}
+                    />
+                    <BackupDecisionLogFilters
+                        filters={filters}
+                        onChange={setFilters}
+                        databaseNames={lastDetails.Databases}
+                        tasks={lastDetails.Tasks}
+                        matchCount={details?.TotalResults ?? null}
+                    />
+                </>
             )}
             {renderContent()}
         </div>

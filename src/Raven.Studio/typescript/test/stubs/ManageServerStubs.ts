@@ -708,113 +708,113 @@ export class ManageServerStubs {
 
     static backupDecisionLog(): BackupDecisionLogDetails {
         const minutesAgo = (minutes: number) => moment().add(-minutes, "minutes").toISOString();
-        const serverEntry = (
-            overrides: Pick<BackupDecisionLogEntry, "Time" | "Kind" | "Detail" | "Reason">
+        const invoices = { Database: "Invoices", Shard: null as number | null };
+        const ordersShard = { Database: "Orders", Shard: 0 };
+        const dailyBackup = { ...invoices, TaskId: 1, TaskName: "Daily backup" };
+        const weeklyBackup = { ...ordersShard, TaskId: 2, TaskName: "Weekly full backup" };
+        const hourlyBackup = { ...invoices, TaskId: 3, TaskName: "Hourly incremental" };
+
+        let id = 0;
+        const entry = (
+            overrides: Partial<BackupDecisionLogEntry> & Pick<BackupDecisionLogEntry, "Category" | "Reason">,
+            firstMinutesAgo: number,
+            lastMinutesAgo = firstMinutesAgo
         ): BackupDecisionLogEntry => ({
-            Source: "Server",
+            Id: ++id,
+            FirstTime: minutesAgo(firstMinutesAgo),
+            LastTime: minutesAgo(lastMinutesAgo),
+            Count: 1,
+            Detail: null,
+            Source: "Task",
             Database: null,
+            Shard: null,
             TaskId: null,
             TaskName: null,
+            NodeTag: "A",
             ...overrides,
         });
-        const taskEntry = (
-            overrides: Partial<BackupDecisionLogEntry> & Pick<BackupDecisionLogEntry, "Time" | "Kind" | "Reason">
-        ): BackupDecisionLogEntry => ({
-            Source: "Task",
-            Database: "Invoices",
-            TaskId: 1,
-            TaskName: "Daily backup",
-            Detail: null,
-            ...overrides,
-        });
-
         const notDueYetReason = "The next backup is scheduled for later, nothing to do yet";
-        const runnerTicks = [1, 2, 3, 4, 5].flatMap((minutes) => [
-            taskEntry({ Time: minutesAgo(minutes), Kind: "Policy", Detail: "BackupTime", Reason: notDueYetReason }),
-            taskEntry({
-                Time: minutesAgo(minutes),
-                Kind: "Policy",
-                Detail: "BackupTime",
-                Reason: notDueYetReason,
-                Database: "Orders$0",
-                TaskId: 2,
-                TaskName: "Weekly full backup",
-            }),
-            taskEntry({
-                Time: minutesAgo(minutes),
-                Kind: "Policy",
-                Detail: "BackupDisabled",
-                Reason: "Cannot start backup Hourly incremental because it is disabled.",
-                TaskId: 3,
-                TaskName: "Hourly incremental",
-            }),
-        ]);
+        const disabledReason = "Cannot start backup Hourly incremental because it is disabled.";
+        const failedReason = "Backup destination is unreachable: connection timed out";
 
         const entries: BackupDecisionLogEntry[] = [
-            ...runnerTicks,
-            serverEntry({
-                Time: minutesAgo(8),
-                Kind: "Info",
-                Detail: null,
-                Reason: "Backup scheduler started",
-            }),
-            serverEntry({
-                Time: minutesAgo(20),
-                Kind: "Policy",
-                Detail: "CpuCredits",
-                Reason: "CPU credits are low, scheduled backups are held back",
-            }),
-            taskEntry({
-                Time: minutesAgo(35),
-                Kind: "Failed",
-                Reason: "Backup destination is unreachable: connection timed out",
-                Database: "Orders$0",
-                TaskId: 2,
-                TaskName: "Weekly full backup",
-            }),
-            taskEntry({
-                Time: minutesAgo(40),
-                Kind: "Started",
-                Reason: "It is time to run the backup",
-                Database: "Orders$0",
-                TaskId: 2,
-                TaskName: "Weekly full backup",
-            }),
-            taskEntry({
-                Time: minutesAgo(50),
-                Kind: "Cancelled",
-                Detail: "The backup task was disabled while the backup was running",
-                Reason: "Backup task 3",
-                TaskId: 3,
-                TaskName: "Hourly incremental",
-            }),
-            taskEntry({
-                Time: minutesAgo(60),
-                Kind: "Completed",
-                Reason: "Backup completed successfully",
-            }),
+            entry(
+                { ...dailyBackup, Category: "Waiting", Detail: "BackupTime", Reason: notDueYetReason, Count: 5 },
+                5,
+                1
+            ),
+            entry(
+                { ...weeklyBackup, Category: "Waiting", Detail: "BackupTime", Reason: notDueYetReason, Count: 5 },
+                5,
+                1
+            ),
+            entry(
+                { ...hourlyBackup, Category: "HeldBack", Detail: "BackupDisabled", Reason: disabledReason, Count: 5 },
+                5,
+                1
+            ),
+            entry({ Source: "Server", Category: "Waiting", Detail: "Startup", Reason: "Backup scheduler started" }, 8),
+            entry(
+                {
+                    Source: "Server",
+                    Category: "HeldBack",
+                    Detail: "CpuCredits",
+                    Reason: "CPU credits are low, scheduled backups are held back",
+                },
+                20
+            ),
+            entry({ ...weeklyBackup, Category: "Failed", Reason: failedReason }, 35),
+            entry({ ...weeklyBackup, Category: "Started", Reason: "It is time to run the backup" }, 40),
+            entry(
+                {
+                    ...hourlyBackup,
+                    Category: "Cancelled",
+                    Detail: "disabled",
+                    Reason: "The task was disabled while its backup was running.",
+                },
+                50
+            ),
+            entry({ ...dailyBackup, Category: "Completed", Reason: "Backup completed successfully" }, 60),
         ];
 
         return {
             NodeTag: "A",
-            MaxEntriesPerLog: 512,
-            Queue: {
-                QueueLength: 3,
-                TrackedTasks: 3,
-                TrackedDatabases: 3,
-                StaleTasks: 0,
-                RunningTasks: 1,
-                BlockedTasks: 3,
-                CurrentNumberOfRunningBackups: 1,
-                MaxNumberOfConcurrentBackups: 4,
-                RunnerFrequencyInSec: 10,
-                NextBackupUtc: moment().add(23, "minutes").toISOString(),
-                NextBackupDatabase: "Invoices",
-                NextBackupTaskName: "Daily backup",
+            RunnerStartTime: minutesAgo(120),
+            Summary: {
+                Running: { Current: 1, Max: 4, WaitingForSlot: 0 },
+                WaitingForSchedule: {
+                    Count: 2,
+                    NextBackupUtc: moment().add(23, "minutes").toISOString(),
+                    NextBackupDatabase: "Invoices",
+                    NextBackupTaskName: "Daily backup",
+                },
+                HeldBack: {
+                    Count: 1,
+                    Longest: {
+                        ...hourlyBackup,
+                        Detail: "BackupDisabled",
+                        Reason: disabledReason,
+                        Since: minutesAgo(5),
+                    },
+                },
+                ServerBlock: null,
+                Failed: {
+                    Count: 1,
+                    Latest: { ...weeklyBackup, Time: minutesAgo(35), Error: failedReason },
+                },
+                Completed: {
+                    Count: 1,
+                    Latest: { ...dailyBackup, Time: minutesAgo(60), Error: null },
+                },
             },
-            Databases: ["Invoices", "Orders$0", "Orders$1"],
             Entries: entries,
             TotalResults: entries.length,
+            Databases: ["Invoices", "Orders"],
+            Tasks: [dailyBackup, weeklyBackup, hourlyBackup].map(({ Database, TaskId, TaskName }) => ({
+                Database,
+                TaskId,
+                TaskName,
+            })),
         };
     }
 }
