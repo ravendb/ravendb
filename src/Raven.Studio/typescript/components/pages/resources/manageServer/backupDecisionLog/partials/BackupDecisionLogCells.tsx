@@ -2,6 +2,7 @@ import { Getter } from "@tanstack/react-table";
 import moment from "moment";
 import Badge from "react-bootstrap/Badge";
 import appUrl from "common/appUrl";
+import generalUtils from "common/generalUtils";
 import { Icon } from "components/common/Icon";
 import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
@@ -23,15 +24,16 @@ const eventStyles: Record<BackupDecisionLogEntry["Category"], { color: ThemeColo
     HeldBack: { color: "warning", icon: "pause" },
 };
 
-const dateFormat = "YYYY MMMM Do";
-const timeFormat = "h:mm A";
+const timeOnlyFormat = "h:mm A";
 
-function formatTimeText({ FirstTime, LastTime, Count }: BackupDecisionLogEntry) {
-    const last = moment(LastTime);
-    if (Count > 1 && FirstTime !== LastTime) {
-        return `${last.format(dateFormat)}, ${moment(FirstTime).format(timeFormat)} - ${last.format(timeFormat)}`;
+function getRangeText({ FirstTime, LastTime, Count }: BackupDecisionLogEntry): string | undefined {
+    if (Count === 1 || FirstTime === LastTime) {
+        return undefined;
     }
-    return `${last.format(dateFormat)}, ${last.format(timeFormat)}`;
+    const first = moment(FirstTime);
+    const last = moment(LastTime);
+    const lastFormat = first.isSame(last, "day") ? timeOnlyFormat : generalUtils.dateFormat;
+    return `${first.format(generalUtils.dateFormat)} - ${last.format(lastFormat)}`;
 }
 
 export function TimeCell({ entry }: EntryProps) {
@@ -43,7 +45,8 @@ export function TimeCell({ entry }: EntryProps) {
             <DateFormatterCell<BackupDecisionLogEntry, string>
                 cell={null}
                 getValue={(() => entry.LastTime) as Getter<string>}
-                displayText={formatTimeText(entry)}
+                displayFormat={generalUtils.dateFormat}
+                displayText={getRangeText(entry)}
                 isCopyable
             />
         </div>

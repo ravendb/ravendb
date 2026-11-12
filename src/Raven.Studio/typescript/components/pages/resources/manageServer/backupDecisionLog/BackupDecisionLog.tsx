@@ -14,7 +14,7 @@ import BackupDecisionLogFilters from "./partials/BackupDecisionLogFilters";
 import BackupDecisionLogInfoHub from "./partials/BackupDecisionLogInfoHub";
 import BackupDecisionLogStatusCards from "./partials/BackupDecisionLogStatusCards";
 import BackupDecisionLogTable from "./partials/BackupDecisionLogTable";
-import { BackupDecisionFilters, emptyBackupDecisionFilters } from "./backupDecisionLogTypes";
+import { BackupDecisionFilters, BackupDecisionLogDetails, emptyBackupDecisionFilters } from "./backupDecisionLogTypes";
 import { useBackupDecisionLog } from "./hooks/useBackupDecisionLog";
 
 export default function BackupDecisionLog() {
@@ -23,32 +23,6 @@ export default function BackupDecisionLog() {
     const { details, lastDetails, isError, reconnect } = useBackupDecisionLog(filters);
 
     const isFiltering = !isEqual(filters, emptyBackupDecisionFilters);
-
-    const renderContent = () => {
-        if (!details && isError) {
-            return <LoadError error="Unable to load the backup decision log" refresh={reconnect} />;
-        }
-        if (!details) {
-            return <LoadingView />;
-        }
-        if (details.Entries.length === 0) {
-            return <EmptySet>{isFiltering ? "No decisions match the current filters" : "No decisions yet"}</EmptySet>;
-        }
-
-        const shownCount = details.Entries.length;
-        const eventsText = pluralizeHelpers.pluralize(details.TotalResults, "event", "events", true);
-
-        return (
-            <>
-                <div className="text-muted mb-2">
-                    {shownCount < details.TotalResults
-                        ? `Showing the newest ${shownCount} of ${details.TotalResults} ${eventsText}. Use filters to see older ones.`
-                        : `Showing ${shownCount} ${eventsText}.`}
-                </div>
-                <BackupDecisionLogTable entries={details.Entries} />
-            </>
-        );
-    };
 
     return (
         <div className="content-padding">
@@ -81,7 +55,45 @@ export default function BackupDecisionLog() {
                     />
                 </>
             )}
-            {renderContent()}
+            <BackupDecisionLogContent
+                details={details}
+                isError={isError}
+                isFiltering={isFiltering}
+                onRefresh={reconnect}
+            />
         </div>
+    );
+}
+
+interface BackupDecisionLogContentProps {
+    details: BackupDecisionLogDetails | null;
+    isError: boolean;
+    isFiltering: boolean;
+    onRefresh: () => void;
+}
+
+function BackupDecisionLogContent({ details, isError, isFiltering, onRefresh }: BackupDecisionLogContentProps) {
+    if (!details && isError) {
+        return <LoadError error="Unable to load the backup decision log" refresh={onRefresh} />;
+    }
+    if (!details) {
+        return <LoadingView />;
+    }
+    if (details.Entries.length === 0) {
+        return <EmptySet>{isFiltering ? "No decisions match the current filters" : "No decisions yet"}</EmptySet>;
+    }
+
+    const shownCount = details.Entries.length;
+    const eventsText = pluralizeHelpers.pluralize(details.TotalResults, "event", "events", true);
+
+    return (
+        <>
+            <div className="text-muted mb-2">
+                {shownCount < details.TotalResults
+                    ? `Showing the newest ${shownCount} of ${details.TotalResults} ${eventsText}. Use filters to see older ones.`
+                    : `Showing ${shownCount} ${eventsText}.`}
+            </div>
+            <BackupDecisionLogTable entries={details.Entries} />
+        </>
     );
 }
