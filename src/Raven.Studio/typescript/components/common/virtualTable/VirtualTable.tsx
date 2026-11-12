@@ -16,6 +16,7 @@ import { values } from "lodash";
 
 interface VirtualTableProps<T> extends Omit<VirtualTableBodyWrapperProps<T>, "tableContainerRef"> {
     overscan?: number;
+    rowHeightInPx?: number;
     tableContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
@@ -29,6 +30,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
         isCompact,
         isRoundingDisabled,
         isPaddingDisabled,
+        rowHeightInPx,
     } = props;
 
     const innerTableContainerRef = useRef<HTMLDivElement>(null);
@@ -53,7 +55,8 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
     const rowVirtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: () =>
-            isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx,
+            rowHeightInPx ??
+            (isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx),
         getScrollElement: () => tableContainerRef.current,
         overscan,
     });

@@ -211,6 +211,10 @@ class appUrl {
         return "#admin/settings/captureStackTraces";
     }
 
+    static forBackupDecisionLog(): string {
+        return "#admin/settings/backupDecisionLog";
+    }
+
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";
     }

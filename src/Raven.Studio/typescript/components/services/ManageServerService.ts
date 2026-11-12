@@ -32,6 +32,7 @@ import updateCertificateCommand = require("commands/auth/updateCertificateComman
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
+import backupDecisionLogWebSocketClient = require("common/backupDecisionLogWebSocketClient");
 
 export default class ManageServerService {
     async getGlobalClientConfiguration(): Promise<ClientConfiguration> {
@@ -169,5 +170,11 @@ export default class ManageServerService {
 
     async getClusterDomains() {
         return new getClusterDomainsCommand().execute();
+    }
+
+    watchBackupDecisionLog(
+        ...args: ConstructorParameters<typeof backupDecisionLogWebSocketClient>
+    ): Pick<backupDecisionLogWebSocketClient, "dispose"> {
+        return new backupDecisionLogWebSocketClient(...args);
     }
 }

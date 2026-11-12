@@ -49,6 +49,7 @@
 
 .react-datepicker-popper {
     z-index: 1;
+    width: max-content;
 }
 .react-datepicker-popper[data-placement^="bottom"] {
     padding-top: 10px;

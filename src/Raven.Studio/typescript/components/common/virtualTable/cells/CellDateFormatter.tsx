@@ -3,6 +3,9 @@ import CellValue, { CellValueWrapper } from "components/common/virtualTable/cell
 import React, { useMemo } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import moment from "moment";
+import Button from "react-bootstrap/Button";
+import { Icon } from "components/common/Icon";
+import copyToClipboard from "common/copyToClipboard";
 
 type CellContextSubset<TData, TValue> = Pick<CellContext<TData, TValue>, "cell" | "getValue">;
 
@@ -10,6 +13,8 @@ export interface DateFormatterCellProps<TData, TValue> extends CellContextSubset
     cellClassName?: string;
     displayFormat?: string;
     showTooltip?: boolean;
+    isCopyable?: boolean;
+    displayText?: string;
 }
 
 export function DateFormatterCell<TData, TValue>({
@@ -17,6 +22,8 @@ export function DateFormatterCell<TData, TValue>({
     cellClassName,
     displayFormat,
     showTooltip = true,
+    isCopyable = false,
+    displayText,
 }: DateFormatterCellProps<TData, TValue>) {
     const rawValue = getValue();
 
@@ -42,6 +49,8 @@ export function DateFormatterCell<TData, TValue>({
         return <CellValueWrapper className={cellClassName} getValue={getValue} />;
     }
 
+    const utcIso = moment.utc(dateValue).toISOString();
+
     if (!showTooltip) {
         return <CellValueWrapper className={cellClassName} getValue={getValue} />;
     }
@@ -52,9 +61,18 @@ export function DateFormatterCell<TData, TValue>({
                 <>
                     <div className="index-errors-details-tooltip__container">
                         <b>UTC: </b>
-                        <time className="index-errors-details-tooltip__date">
-                            {moment.utc(dateValue).toISOString()}
-                        </time>
+                        <time className="index-errors-details-tooltip__date">{utcIso}</time>
+                        {isCopyable && (
+                            <Button
+                                variant="link"
+                                size="sm"
+                                className="p-0 ms-2"
+                                title="Copy to clipboard"
+                                onClick={() => copyToClipboard.copy(utcIso, "Copied to clipboard")}
+                            >
+                                <Icon icon="copy" margin="m-0" />
+                            </Button>
+                        )}
                     </div>
                     <div className="index-errors-details-tooltip__container">
                         <b>Relative: </b>
@@ -63,7 +81,7 @@ export function DateFormatterCell<TData, TValue>({
                 </>
             }
         >
-            <CellValue value={formattedDate} className={cellClassName} />
+            <CellValue value={displayText ?? formattedDate} className={cellClassName} />
         </PopoverWithHoverWrapper>
     );
 }

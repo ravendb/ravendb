@@ -6,6 +6,7 @@ import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefi
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import { SharedStubs } from "test/stubs/SharedStubs";
 import { mockJQueryError } from "test/mocks/utils";
+import { BackupDecisionLogDetails } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
 
 export default class MockManageServerService extends AutoMockService<ManageServerService> {
     constructor() {
@@ -146,5 +147,21 @@ export default class MockManageServerService extends AutoMockService<ManageServe
 
     withGenerateTwoFactorSecret(dto?: MockedValue<{ Secret: string }>) {
         return this.mockResolvedValue(this.mocks.generateTwoFactorSecret, dto, ManageServerStubs.twoFactorSecret());
+    }
+
+    withBackupDecisionLog(dto?: MockedValue<BackupDecisionLogDetails>) {
+        const details = this.createValue(dto, ManageServerStubs.backupDecisionLog());
+        this.mocks.watchBackupDecisionLog.mockImplementation((_query, onMessage) => {
+            const timeout = setTimeout(() => onMessage({ ...details, Type: "Snapshot" }));
+            return { dispose: () => clearTimeout(timeout) };
+        });
+        return details;
+    }
+
+    withFailingBackupDecisionLog() {
+        this.mocks.watchBackupDecisionLog.mockImplementation((_query, _onMessage, onError) => {
+            const timeout = setTimeout(onError);
+            return { dispose: () => clearTimeout(timeout) };
+        });
     }
 }

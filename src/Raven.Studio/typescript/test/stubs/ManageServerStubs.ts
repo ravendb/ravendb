@@ -4,6 +4,10 @@ import ClientConfiguration = Raven.Client.Documents.Operations.Configuration.Cli
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import ConfigurationEntryServerValue = Raven.Server.Config.ConfigurationEntryServerValue;
+import {
+    BackupDecisionLogDetails,
+    BackupDecisionLogEntry,
+} from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
 
 export class ManageServerStubs {
     static getClusterLogEntry(): Raven.Server.Rachis.RachisConsensus.RachisDebugLogEntry {
@@ -699,6 +703,118 @@ export class ManageServerStubs {
     static twoFactorSecret(): { Secret: string } {
         return {
             Secret: "RNHRX6WXCLZVQPJSW5NSWV64JU65E5WA",
+        };
+    }
+
+    static backupDecisionLog(): BackupDecisionLogDetails {
+        const minutesAgo = (minutes: number) => moment().add(-minutes, "minutes").toISOString();
+        const invoices = { Database: "Invoices", Shard: null as number | null };
+        const ordersShard = { Database: "Orders", Shard: 0 };
+        const dailyBackup = { ...invoices, TaskId: 1, TaskName: "Daily backup" };
+        const weeklyBackup = { ...ordersShard, TaskId: 2, TaskName: "Weekly full backup" };
+        const hourlyBackup = { ...invoices, TaskId: 3, TaskName: "Hourly incremental" };
+
+        let id = 0;
+        const entry = (
+            overrides: Partial<BackupDecisionLogEntry> & Pick<BackupDecisionLogEntry, "Category" | "Reason">,
+            firstMinutesAgo: number,
+            lastMinutesAgo = firstMinutesAgo
+        ): BackupDecisionLogEntry => ({
+            Id: ++id,
+            FirstTime: minutesAgo(firstMinutesAgo),
+            LastTime: minutesAgo(lastMinutesAgo),
+            Count: 1,
+            Detail: null,
+            Source: "Task",
+            Database: null,
+            Shard: null,
+            TaskId: null,
+            TaskName: null,
+            NodeTag: "A",
+            ...overrides,
+        });
+        const notDueYetReason = "The next backup is scheduled for later, nothing to do yet";
+        const disabledReason = "Cannot start backup Hourly incremental because it is disabled.";
+        const failedReason = "Backup destination is unreachable: connection timed out";
+
+        const entries: BackupDecisionLogEntry[] = [
+            entry(
+                { ...dailyBackup, Category: "Waiting", Detail: "BackupTime", Reason: notDueYetReason, Count: 5 },
+                5,
+                1
+            ),
+            entry(
+                { ...weeklyBackup, Category: "Waiting", Detail: "BackupTime", Reason: notDueYetReason, Count: 5 },
+                5,
+                1
+            ),
+            entry(
+                { ...hourlyBackup, Category: "HeldBack", Detail: "BackupDisabled", Reason: disabledReason, Count: 5 },
+                5,
+                1
+            ),
+            entry({ Source: "Server", Category: "Waiting", Detail: "Startup", Reason: "Backup scheduler started" }, 8),
+            entry(
+                {
+                    Source: "Server",
+                    Category: "HeldBack",
+                    Detail: "CpuCredits",
+                    Reason: "CPU credits are low, scheduled backups are held back",
+                },
+                20
+            ),
+            entry({ ...weeklyBackup, Category: "Failed", Reason: failedReason }, 35),
+            entry({ ...weeklyBackup, Category: "Started", Reason: "It is time to run the backup" }, 40),
+            entry(
+                {
+                    ...hourlyBackup,
+                    Category: "Cancelled",
+                    Detail: "disabled",
+                    Reason: "The task was disabled while its backup was running.",
+                },
+                50
+            ),
+            entry({ ...dailyBackup, Category: "Completed", Reason: "Backup completed successfully" }, 60),
+        ];
+
+        return {
+            NodeTag: "A",
+            RunnerStartTime: minutesAgo(120),
+            Summary: {
+                Running: { Current: 1, Max: 4, WaitingForSlot: 0 },
+                WaitingForSchedule: {
+                    Count: 2,
+                    NextBackupUtc: moment().add(23, "minutes").toISOString(),
+                    NextBackupDatabase: "Invoices",
+                    NextBackupTaskName: "Daily backup",
+                },
+                HeldBack: {
+                    Count: 1,
+                    Longest: {
+                        ...hourlyBackup,
+                        Detail: "BackupDisabled",
+                        Reason: disabledReason,
+                        Since: minutesAgo(5),
+                    },
+                },
+                ServerBlock: null,
+                Failed: {
+                    Count: 1,
+                    Latest: { ...weeklyBackup, Time: minutesAgo(35), Error: failedReason },
+                },
+                Completed: {
+                    Count: 1,
+                    Latest: { ...dailyBackup, Time: minutesAgo(60), Error: null },
+                },
+            },
+            Entries: entries,
+            TotalResults: entries.length,
+            Databases: ["Invoices", "Orders"],
+            Tasks: [dailyBackup, weeklyBackup, hourlyBackup].map(({ Database, TaskId, TaskName }) => ({
+                Database,
+                TaskId,
+                TaskName,
+            })),
         };
     }
 }
