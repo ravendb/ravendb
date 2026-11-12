@@ -1108,6 +1108,144 @@ namespace Sparrow.Json
             return buffers;
         }
 
+        private const int MaxStackAllocatedInsertionOrderProperties = 64;
+
+        internal void WriteJsonTo(AbstractBlittableJsonTextWriter writer)
+        {
+            AssertContextNotDisposed();
+
+            if (_metadataPtr == null)
+                ThrowObjectDisposed();
+
+            WriteObjectTo(writer, _objStart, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        private void WriteObjectTo(AbstractBlittableJsonTextWriter writer, byte* objStart, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            writer.WriteStartObject();
+
+            if (propCount > 0)
+            {
+                AllocatedMemoryData allocation = null;
+                Span<int> order = propCount <= MaxStackAllocatedInsertionOrderProperties
+                    ? stackalloc int[propCount * 2]
+                    : new Span<int>((allocation = _context.GetMemory(propCount * 2 * sizeof(int))).Address, propCount * 2);
+
+                try
+                {
+                    WritePropertiesTo(writer, objStart, metadataPtr, propCount, offsetSize, propertyIdSize, order);
+                }
+                finally
+                {
+                    if (allocation != null)
+                        _context.ReturnMemory(allocation);
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private void WritePropertiesTo(AbstractBlittableJsonTextWriter writer, byte* objStart, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize, Span<int> order)
+        {
+            long metadataSize = offsetSize + propertyIdSize + sizeof(byte);
+            Span<int> offsets = order.Slice(0, propCount);
+            Span<int> properties = order.Slice(propCount, propCount);
+
+            for (int i = 0; i < propCount; i++)
+            {
+                offsets[i] = ReadNumber(metadataPtr + i * metadataSize, offsetSize);
+                properties[i] = i;
+            }
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, properties, 0, propCount);
+
+            for (int i = 0; i < propCount; i++)
+            {
+                if (i != 0)
+                    writer.WriteComma();
+
+                byte* property = metadataPtr + properties[i] * metadataSize;
+                int propertyId = ReadNumber(property + offsetSize, propertyIdSize);
+                var token = (BlittableJsonToken)(*(property + offsetSize + propertyIdSize));
+
+                int nameOffset = ReadNumber(_propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize, _propNamesDataOffsetSize);
+                byte* name = _propNames - nameOffset;
+                int nameSize = VariableSizeEncoding.Read<int>(name, out int nameLengthSize);
+                writer.WritePropertyName(name + nameLengthSize, nameSize);
+
+                WriteValueTo(writer, token, (int)(objStart - _mem - offsets[i]));
+            }
+        }
+
+        private void WriteValueTo(AbstractBlittableJsonTextWriter writer, BlittableJsonToken token, int position)
+        {
+            switch (token & TypesMask)
+            {
+                case BlittableJsonToken.String:
+                {
+                    int size = ReadVariableSizeInt(position, out int offset);
+                    writer.WriteString(_mem + position + offset, size, skipEscaping: false);
+                    break;
+                }
+                case BlittableJsonToken.Integer:
+                    writer.WriteInteger(ReadVariableSizeLong(position));
+                    break;
+                case BlittableJsonToken.LazyNumber:
+                {
+                    int size = ReadVariableSizeInt(position, out int offset);
+                    writer.WriteLazyNumber(_mem + position + offset, size);
+                    break;
+                }
+                case BlittableJsonToken.Boolean:
+                    writer.WriteBool(ReadNumber(_mem + position, sizeof(byte)) == 1);
+                    break;
+                case BlittableJsonToken.Null:
+                    writer.WriteNull();
+                    break;
+                case BlittableJsonToken.StartObject:
+                {
+                    byte* objStart = _mem + position;
+                    int propCount = ReadVariableSizeInt(position, out int propCountOffset);
+                    WriteObjectTo(writer, objStart, objStart + propCountOffset, propCount, ProcessTokenOffsetFlags(token), ProcessTokenPropertyFlags(token));
+                    break;
+                }
+                case BlittableJsonToken.StartArray:
+                    WriteArrayTo(writer, token, position);
+                    break;
+                default:
+                    writer.WriteValue(token & TypesMask, GetObject(token, position, out _));
+                    break;
+            }
+        }
+
+        private void WriteArrayTo(AbstractBlittableJsonTextWriter writer, BlittableJsonToken token, int position)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            byte* dataStart = _mem + position;
+            int count = ReadVariableSizeInt(position, out int countOffset);
+            byte* metadataPtr = dataStart + countOffset;
+            long offsetSize = ProcessTokenOffsetFlags(token);
+
+            writer.WriteStartArray();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i != 0)
+                    writer.WriteComma();
+
+                byte* item = metadataPtr + i * (offsetSize + 1);
+                int offset = ReadNumber(item, offsetSize);
+                var itemToken = (BlittableJsonToken)(*(item + offsetSize));
+                WriteValueTo(writer, itemToken, (int)(dataStart - _mem - offset));
+            }
+
+            writer.WriteEndArray();
+        }
+
         public ulong GetHashOfPropertyNames()
         {
             AssertContextNotDisposed();

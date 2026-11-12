@@ -140,6 +140,65 @@ namespace FastTests.Client
             }
         }
 
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(BlittableJsonDocumentBuilder.UsageMode.None)]
+        [InlineData(BlittableJsonDocumentBuilder.UsageMode.CompressStrings)]
+        public void SystemTextJsonReadsTheSameJsonTextTheBlittableWrites(BlittableJsonDocumentBuilder.UsageMode usageMode)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            var manyProperties = new DynamicJsonValue();
+            for (int i = 0; i < 100; i++)
+                manyProperties["Property" + i] = i;
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject embedded = context.ReadObject(new DynamicJsonValue { ["Inner"] = "value", ["Number"] = 1.5 }, "embedded"))
+            {
+                var document = new DynamicJsonValue
+                {
+                    ["Empty"] = string.Empty,
+                    ["Plain"] = "plain",
+                    ["Escaped"] = "quote \" backslash \\ newline \n tab \t slash / done",
+                    ["ControlCharacter"] = "\u0001",
+                    ["ControlCharacters"] = "a\u0001b\u001fc",
+                    ["Unicode"] = "zażółć gęślą jaźń 你好 😀",
+                    ["Long"] = new string('a', 300) + "\"" + new string('b', 300),
+                    ["VeryLong"] = new string('c', 70_000) + "\n" + new string('d', 70_000),
+                    ["Quoted \" name"] = 1,
+                    ["Zero"] = 0,
+                    ["Negative"] = -42,
+                    ["MinLong"] = long.MinValue,
+                    ["MaxLong"] = long.MaxValue,
+                    ["Double"] = 1.5,
+                    ["Decimal"] = 12345.6789m,
+                    ["True"] = true,
+                    ["False"] = false,
+                    ["Null"] = null,
+                    ["EmptyObject"] = new DynamicJsonValue(),
+                    ["EmptyArray"] = new DynamicJsonArray(),
+                    ["Nested"] = new DynamicJsonValue
+                    {
+                        ["Name"] = "nested \" name",
+                        ["Deeper"] = new DynamicJsonValue { ["Values"] = new DynamicJsonArray { 1, "two", 3.5, null, true } }
+                    },
+                    ["Objects"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue { ["Id"] = 1, ["Name"] = "first" },
+                        new DynamicJsonValue { ["Id"] = 2, ["Name"] = "second", ["Extra"] = new DynamicJsonArray { new DynamicJsonArray { 1, 2 }, new DynamicJsonArray() } }
+                    },
+                    ["ManyProperties"] = manyProperties,
+                    ["Embedded"] = embedded
+                };
+
+                using (BlittableJsonReaderObject json = context.ReadObject(document, "document", usageMode))
+                {
+                    var element = (System.Text.Json.JsonElement)conventions.Serialization.DeserializeEntityFromBlittable(typeof(System.Text.Json.JsonElement), json);
+
+                    Assert.Equal(json.ToString(), element.GetRawText());
+                }
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public void SystemTextJsonKeepsDocumentFieldsOfIgnoredMembersOnSave()
         {

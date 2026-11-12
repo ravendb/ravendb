@@ -365,17 +365,58 @@ namespace Sparrow.Json
                 return;
             }
 
-            var size = str.Size;
+            WriteString(str.Buffer, str.Size, skipEscaping);
+        }
 
-            if (size == 1 && str.IsControlCodeCharacter(out var b))
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void WritePropertyName(byte* name, int size)
+        {
+            WriteString(name, size, skipEscaping: false);
+
+            EnsureBuffer(1);
+            Unsafe.WriteUnaligned(_buffer + _pos, Colon);
+            _pos++;
+        }
+
+        internal void WriteLazyNumber(byte* number, int size)
+        {
+            var value = new ReadOnlySpan<byte>(number, size);
+            if (value.SequenceEqual("NaN"u8))
             {
-                WriteString($@"\u{b:X4}", skipEscaping: true);
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
                 return;
             }
 
-            var strBuffer = str.Buffer;
+            if (value.SequenceEqual("Infinity"u8))
+            {
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
+                return;
+            }
+
+            if (value.SequenceEqual("-Infinity"u8))
+            {
+                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
+                return;
+            }
+
+            WriteRawString(number, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void WriteString(byte* strBuffer, int size, bool skipEscaping)
+        {
+            if (size == 1)
+            {
+                byte b = strBuffer[0];
+                if (b < 32 || (b >= 127 && b <= 159))
+                {
+                    WriteString($@"\u{b:X4}", skipEscaping: true);
+                    return;
+                }
+            }
+
             var escapeSequencePos = size;
-            var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(strBuffer, ref escapeSequencePos);
 
             // We ensure our buffer will have enough space to deal with the whole string.
 
