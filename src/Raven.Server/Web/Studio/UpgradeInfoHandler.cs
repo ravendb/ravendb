@@ -60,6 +60,12 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
 
                 if (upgradeInfoResponse.IsSuccessStatusCode == false)
                 {
+                    if (isDevBuild)
+                    {
+                        NoContentStatus();
+                        return;
+                    }
+
                     HttpContext.Response.StatusCode = (int)upgradeInfoResponse.StatusCode;
                     return;
                 }

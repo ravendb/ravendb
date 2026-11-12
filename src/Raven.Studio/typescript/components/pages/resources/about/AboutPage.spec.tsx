@@ -20,6 +20,8 @@ const {
     UsingLatestVersion,
     DevelopmentBuild,
     DevelopmentBuildWithoutStableRelease,
+    DevelopmentBuildChangelogUnavailable,
+    ChangelogUnavailable,
 } = composeStories(stories);
 
 describe("AboutPage", function () {
@@ -159,12 +161,32 @@ describe("AboutPage", function () {
             expect(await changelog.findByText(selectors.versions.noChangelog)).toBeInTheDocument();
         });
 
+        it("shows a neutral message when the changelog isn't returned", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuildChangelogUnavailable />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelogAvailable)).toBeInTheDocument();
+        });
+
         it("hides the update check", async function () {
             const { screen } = rtlRender(<DevelopmentBuild />);
 
             expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
             expect(screen.queryByRole("button", { name: selectors.versions.checkForUpdates })).not.toBeInTheDocument();
+        });
+    });
+
+    describe("changelog", function () {
+        it("shows a neutral message on a stable build when there's no changelog", async function () {
+            const { screen, fireClick } = rtlRender(<ChangelogUnavailable />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelogAvailable)).toBeInTheDocument();
         });
     });
 
@@ -263,6 +285,7 @@ const selectors = {
         checkForUpdates: /Check for updates/,
         developmentBuildNote: /Nightly and development builds don't have their own changelog/,
         noChangelog: /No changelog yet/,
+        noChangelogAvailable: /No changelog available/,
         upgradeBadge: /Can upgrade|license needs to be upgraded/,
         downgradeBadge: /Can downgrade|Can't downgrade/,
     },
