@@ -24,6 +24,16 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string DeploymentName { get; set; }
 
+    /// <summary>
+    /// The reasoning effort for models that support it. Sent as <c>reasoning.effort</c> on the Responses API;
+    /// not sent on Chat Completions. When not set, the model's default is used.
+    /// </summary>
+    public override string ReasoningEffort
+    {
+        get => base.ReasoningEffort;
+        set => base.ReasoningEffort = value;
+    }
+
     public override void ValidateFields(List<string> errors)
     {
         base.ValidateFields(errors);

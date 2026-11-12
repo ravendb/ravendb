@@ -341,7 +341,7 @@ internal static class ResponsesWire
                $"\"incomplete_details\":{details},\"error\":{error ?? "null"},\"output\":[{string.Join(",", output)}],\"usage\":{Usage}}}";
     }
 
-    public static string Error(string code, string message) =>
+    private static string Error(string code, string message) =>
         $"{{\"code\":{JsonConvert.ToString(code)},\"message\":{JsonConvert.ToString(message)}}}";
 
     public static string TextMessage(string text) =>
@@ -358,6 +358,48 @@ internal static class ResponsesWire
     public static string FunctionCall(string callId, string name, string arguments) =>
         $"{{\"type\":\"function_call\",\"id\":\"fc_{callId}\",\"call_id\":{JsonConvert.ToString(callId)},\"name\":{JsonConvert.ToString(name)}," +
         $"\"arguments\":{JsonConvert.ToString(arguments)},\"status\":\"completed\"}}";
+
+    /// <summary>
+    /// The text of one JSON property, <c>"content_filters":[...]</c>, without surrounding braces, so a builder can splice it into a response object.
+    /// Has a "prompt" and a "completion" entry, shaped like Azure's: a blocked one has blocked:true and violence filtered with severity high.
+    /// </summary>
+    public static string AzureContentFilters(bool promptBlocked, bool completionBlocked) =>
+        $"\"content_filters\":[{AzureContentFilter("prompt", promptBlocked)},{AzureContentFilter("completion", completionBlocked)}]";
+
+    /// <summary>
+    /// A "content_filters" property with one "completion" entry that is blocked but flags no category, so the entry carries no category text.
+    /// </summary>
+    public static string AzureContentFiltersBlockedWithoutCategory() =>
+        "\"content_filters\":[{\"blocked\":true,\"source_type\":\"completion\",\"content_filter_results\":" +
+        "{\"hate\":{\"filtered\":false,\"severity\":\"safe\"},\"self_harm\":{\"filtered\":false,\"severity\":\"safe\"}," +
+        "\"sexual\":{\"filtered\":false,\"severity\":\"safe\"},\"violence\":{\"filtered\":false,\"severity\":\"safe\"}}}]";
+
+    /// <summary>A non-streaming response as <see cref="Response"/>, with <paramref name="extraProperty"/> (the text of one JSON property) added at the top level.</summary>
+    public static string ResponseWithExtra(string status, string extraProperty, params string[] output) =>
+        InsertProperty(Build(status, incompleteReason: null, error: null, output), extraProperty);
+
+    /// <summary>A response.created event whose "response" carries <paramref name="extraProperty"/>.</summary>
+    public static string CreatedEvent(string extraProperty) =>
+        $"{{\"type\":\"response.created\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"in_progress\",\"output\":[],{extraProperty}}}}}";
+
+    /// <summary>A response.completed event whose "response" carries <paramref name="extraProperty"/>.</summary>
+    public static string CompletedEvent(string extraProperty) =>
+        $"{{\"type\":\"response.completed\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"completed\",\"output\":[],\"usage\":{Usage},{extraProperty}}}}}";
+
+    /// <summary>A response.incomplete event whose "response" carries <paramref name="extraProperty"/>.</summary>
+    public static string IncompleteEvent(string reason, string extraProperty) =>
+        $"{{\"type\":\"response.incomplete\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"incomplete\"," +
+        $"\"incomplete_details\":{{\"reason\":{JsonConvert.ToString(reason)}}},\"output\":[],\"usage\":{Usage},{extraProperty}}}}}";
+
+    private static string InsertProperty(string json, string property) => "{" + property + "," + json.Substring(1);
+
+    private static string AzureContentFilter(string sourceType, bool blocked)
+    {
+        var violence = blocked ? "{\"filtered\":true,\"severity\":\"high\"}" : "{\"filtered\":false,\"severity\":\"safe\"}";
+        return $"{{\"blocked\":{(blocked ? "true" : "false")},\"source_type\":\"{sourceType}\",\"content_filter_results\":" +
+               "{\"hate\":{\"filtered\":false,\"severity\":\"safe\"},\"self_harm\":{\"filtered\":false,\"severity\":\"safe\"}," +
+               $"\"sexual\":{{\"filtered\":false,\"severity\":\"safe\"}},\"violence\":{violence}}}}}";
+    }
 
     /// <summary>A full SSE stream: each event as an "event:" line plus a "data:" line. Responses streams have no [DONE].</summary>
     public static string Stream(params string[] events) =>
