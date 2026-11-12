@@ -1,9 +1,9 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import { BackupDecisionRow } from "../backupDecisionLogTypes";
+import { BackupDecisionLogEntry } from "../backupDecisionLogTypes";
 import { DatabaseCell, EventCell, ReasonCell, TaskCell, TimeCell } from "../partials/BackupDecisionLogCells";
 
-export function useBackupDecisionLogColumns(): ColumnDef<BackupDecisionRow>[] {
+export function useBackupDecisionLogColumns(): ColumnDef<BackupDecisionLogEntry>[] {
     const getSize = virtualTableUtils.getCellSizeProvider();
 
     return [
@@ -11,7 +11,7 @@ export function useBackupDecisionLogColumns(): ColumnDef<BackupDecisionRow>[] {
             id: "time",
             header: "Time",
             size: getSize(20),
-            accessorFn: (row) => new Date(row.LastAt),
+            accessorFn: (row) => new Date(row.LastTime),
             sortingFn: "datetime",
             enableSorting: true,
             cell: ({ row }) => <TimeCell entry={row.original} />,

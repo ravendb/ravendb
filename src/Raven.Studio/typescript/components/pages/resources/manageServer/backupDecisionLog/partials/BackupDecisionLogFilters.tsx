@@ -11,8 +11,13 @@ import IconName from "typings/server/icons";
 import useBoolean from "components/hooks/useBoolean";
 import useDebouncedInput from "components/hooks/useDebouncedInput";
 import useUniqueId from "components/hooks/useUniqueId";
-import { BackupDecisionEvent, BackupDecisionFilters, emptyBackupDecisionFilters } from "../backupDecisionLogTypes";
-import { backupDecisionEvents, getEventLabel } from "../backupDecisionLogUtils";
+import {
+    BackupDecisionCategory,
+    BackupDecisionFilters,
+    BackupDecisionLogTask,
+    emptyBackupDecisionFilters,
+} from "../backupDecisionLogTypes";
+import { backupDecisionCategories, getEventLabel } from "../backupDecisionLogUtils";
 
 type FilterCategory = "reason" | "event" | "database" | "task" | "date";
 
@@ -38,7 +43,11 @@ const categories = Object.keys(categoryLabels) as FilterCategory[];
 
 const formatDate = (date: Date | null) => (date ? moment(date).format("DD/MM/YYYY HH:mm") : "...");
 
-function getChipValue(category: FilterCategory, filters: BackupDecisionFilters): string | null {
+function getChipValue(
+    category: FilterCategory,
+    filters: BackupDecisionFilters,
+    tasks: BackupDecisionLogTask[]
+): string | null {
     switch (category) {
         case "reason":
             return filters.reason || null;
@@ -47,12 +56,17 @@ function getChipValue(category: FilterCategory, filters: BackupDecisionFilters):
         case "database":
             return filters.databases.length > 0 ? filters.databases.join(", ") : null;
         case "task":
-            return filters.tasks.length > 0 ? filters.tasks.join(", ") : null;
+            return filters.taskIds.length > 0 ? filters.taskIds.map((x) => getTaskLabel(x, tasks)).join(", ") : null;
         case "date":
             return filters.dateFrom || filters.dateTo
                 ? `${formatDate(filters.dateFrom)} - ${formatDate(filters.dateTo)}`
                 : null;
     }
+}
+
+function getTaskLabel(taskId: string, tasks: BackupDecisionLogTask[]) {
+    const task = tasks.find((x) => String(x.TaskId) === taskId);
+    return task ? `${task.TaskName} (${task.Database})` : taskId;
 }
 
 function toEndOfDayIfMidnight(date: Date | null) {
@@ -68,7 +82,7 @@ function clearCategory(category: FilterCategory, filters: BackupDecisionFilters)
         case "database":
             return { ...filters, databases: [] };
         case "task":
-            return { ...filters, tasks: [] };
+            return { ...filters, taskIds: [] };
         case "date":
             return { ...filters, dateFrom: null, dateTo: null };
     }
@@ -77,15 +91,15 @@ function clearCategory(category: FilterCategory, filters: BackupDecisionFilters)
 interface BackupDecisionLogFiltersProps {
     filters: BackupDecisionFilters;
     onChange: (filters: BackupDecisionFilters) => void;
-    taskNames: string[];
+    tasks: BackupDecisionLogTask[];
     databaseNames: string[];
-    matchCount: number;
+    matchCount: number | null;
 }
 
 export default function BackupDecisionLogFilters({
     filters,
     onChange,
-    taskNames,
+    tasks,
     databaseNames,
     matchCount,
 }: BackupDecisionLogFiltersProps) {
@@ -99,7 +113,7 @@ export default function BackupDecisionLogFilters({
     };
 
     const activeChips = categories
-        .map((x) => ({ category: x, value: getChipValue(x, filters) }))
+        .map((x) => ({ category: x, value: getChipValue(x, filters, tasks) }))
         .filter((x) => x.value !== null);
 
     const clearOpenCategory = () => {
@@ -160,7 +174,7 @@ export default function BackupDecisionLogFilters({
                                             <Icon icon="arrow-left" />
                                             {categoryLabels[category]}
                                         </Button>
-                                        {getChipValue(category, filters) !== null && (
+                                        {getChipValue(category, filters, tasks) !== null && (
                                             <Button
                                                 variant="link"
                                                 size="sm"
@@ -176,7 +190,7 @@ export default function BackupDecisionLogFilters({
                                         category={category}
                                         filters={filters}
                                         onChange={onChange}
-                                        taskNames={taskNames}
+                                        tasks={tasks}
                                         databaseNames={databaseNames}
                                     />
                                 </>
@@ -220,21 +234,21 @@ interface FilterCategoryMenuProps {
     category: FilterCategory;
     filters: BackupDecisionFilters;
     onChange: (filters: BackupDecisionFilters) => void;
-    taskNames: string[];
+    tasks: BackupDecisionLogTask[];
     databaseNames: string[];
 }
 
-function FilterCategoryMenu({ category, filters, onChange, taskNames, databaseNames }: FilterCategoryMenuProps) {
+function FilterCategoryMenu({ category, filters, onChange, tasks, databaseNames }: FilterCategoryMenuProps) {
     switch (category) {
         case "reason":
             return <ReasonInput filters={filters} onChange={onChange} />;
         case "event":
             return (
                 <CheckboxList
-                    options={backupDecisionEvents}
+                    options={backupDecisionCategories}
                     selected={filters.events}
                     getLabel={getEventLabel}
-                    onChange={(events: BackupDecisionEvent[]) => onChange({ ...filters, events })}
+                    onChange={(events: BackupDecisionCategory[]) => onChange({ ...filters, events })}
                 />
             );
         case "database":
@@ -248,9 +262,10 @@ function FilterCategoryMenu({ category, filters, onChange, taskNames, databaseNa
         case "task":
             return (
                 <CheckboxList
-                    options={taskNames}
-                    selected={filters.tasks}
-                    onChange={(tasks) => onChange({ ...filters, tasks })}
+                    options={tasks.map((x) => String(x.TaskId))}
+                    selected={filters.taskIds}
+                    getLabel={(taskId) => getTaskLabel(taskId, tasks)}
+                    onChange={(taskIds) => onChange({ ...filters, taskIds })}
                 />
             );
         case "date":

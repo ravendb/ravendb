@@ -2,7 +2,6 @@ import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { userEvent } from "storybook/test";
 import BackupDecisionLog from "components/pages/resources/manageServer/backupDecisionLog/BackupDecisionLog";
 import { BackupDecisionLogDetails } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
-import moment from "moment";
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -27,7 +26,7 @@ export const BackupDecisionLogStory: StoryObj<BackupDecisionLogStoryArgs> = {
         mockStore.cluster.with_Cluster();
 
         if (args.isLoadFailing) {
-            manageServerService.withThrowingGetBackupDecisionLog();
+            manageServerService.withFailingBackupDecisionLog();
         } else {
             manageServerService.withBackupDecisionLog(args.details);
         }
@@ -69,14 +68,7 @@ export const ManyCollapsedRepeats: StoryObj<BackupDecisionLogStoryArgs> = {
     ...BackupDecisionLogStory,
     args: {
         ...BackupDecisionLogStory.args,
-        details: withEntries((entries) =>
-            entries.flatMap((entry, index) =>
-                Array.from({ length: 20 * (index + 1) }, (_, repeat) => ({
-                    ...entry,
-                    Time: moment(entry.Time).add(-repeat, "seconds").toISOString(),
-                }))
-            )
-        ),
+        details: withEntries((entries) => entries.map((entry, index) => ({ ...entry, Count: 20 * (index + 1) }))),
     },
 };
 
@@ -86,9 +78,23 @@ export const ShardedEntries: StoryObj<BackupDecisionLogStoryArgs> = {
         ...BackupDecisionLogStory.args,
         details: withEntries((entries) =>
             entries.map((entry, index) =>
-                entry.Source === "Server" ? entry : { ...entry, Database: `Orders$${index % 3}` }
+                entry.Source === "Server" ? entry : { ...entry, Database: "Orders", Shard: index % 3 }
             )
         ),
+    },
+};
+
+export const ServerBlocked: StoryObj<BackupDecisionLogStoryArgs> = {
+    ...BackupDecisionLogStory,
+    args: {
+        ...BackupDecisionLogStory.args,
+        details: (x) => {
+            x.Summary.ServerBlock = {
+                Detail: "LowMemory",
+                Reason: "The server is low on memory, scheduled backups are held back",
+                Since: x.RunnerStartTime,
+            };
+        },
     },
 };
 
