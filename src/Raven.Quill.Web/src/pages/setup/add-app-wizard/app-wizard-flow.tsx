@@ -11,6 +11,7 @@ import {
 import { ChooseDataSourceStep } from "@/pages/setup/add-app-wizard/steps/data-source/choose-data-source-step";
 import { DATA_SOURCE_OPTIONS } from "@/pages/setup/add-app-wizard/steps/data-source/data-source-options";
 import { MapSourceBadge } from "@/pages/setup/add-app-wizard/steps/map/map-source-badge";
+import { isEditorMapping, type MapOrigin } from "@/pages/setup/add-app-wizard/steps/map/map-source-options";
 import { ConnectSourceStep } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-step";
 import { PlannerExportConfigAction } from "@/pages/setup/add-app-wizard/steps/map/planner-export-config-action";
 import { PlannerHeaderActions } from "@/pages/setup/add-app-wizard/steps/map/planner-header-actions";
@@ -129,13 +130,13 @@ export const getAppFlow = ({
     dataSource,
     isEditing,
     hasAppliedPlan,
-    isManualMapping,
+    mapOrigin,
 }: {
     dataSource: string;
     isEditing?: boolean;
     /** The edited app's mapping was applied from its plan, as the plan still stands. */
     hasAppliedPlan?: boolean;
-    isManualMapping?: boolean;
+    mapOrigin: MapOrigin | null;
 }): AppStepId[] => {
     // The "Choose data source" step is temporarily dropped from the UI; uncomment the
     // "dataSource" entries below to bring it back.
@@ -151,12 +152,18 @@ export const getAppFlow = ({
         return ["externalConnection", "verifySchema", "mapTables"];
     }
 
+    // The planner cannot continue from an imported mapping yet: the export carries no app name or slug,
+    // and the planner keys its work by them. Until it can, an import goes straight to the editor.
+    if (mapOrigin?.source === "import") {
+        return ["externalConnection", "verifySchema", "mapTables"];
+    }
+
     // The planner's collections are edited in its own step, so the editor is a step only for manual mapping.
     return [
         /* "dataSource", */ "externalConnection",
         "verifySchema",
         "map",
-        ...(isManualMapping ? (["mapTables"] as const) : []),
+        ...(isEditorMapping(mapOrigin) ? (["mapTables"] as const) : []),
     ];
 };
 
