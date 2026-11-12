@@ -28,6 +28,43 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return text.IndexOf('.') != -1 ? text : text + ".0";
         }
 
+#if NET8_0_OR_GREATER
+        private const int MaxNumberLength = 64;
+
+        private static void Write(Utf8JsonWriter writer, double value)
+        {
+            Span<byte> buffer = stackalloc byte[MaxNumberLength];
+            if (double.IsFinite(value) && value.TryFormat(buffer.Slice(0, MaxNumberLength - 2), out int written, "R", CultureInfo.InvariantCulture))
+                WriteNumber(writer, buffer, written);
+            else
+                writer.WriteRawValue(Format(value), skipInputValidation: true);
+        }
+
+        private static void Write(Utf8JsonWriter writer, decimal value)
+        {
+            Span<byte> buffer = stackalloc byte[MaxNumberLength];
+            if (value.TryFormat(buffer.Slice(0, MaxNumberLength - 2), out int written, "G", CultureInfo.InvariantCulture))
+                WriteNumber(writer, buffer, written);
+            else
+                writer.WriteRawValue(Format(value), skipInputValidation: true);
+        }
+
+        private static void WriteNumber(Utf8JsonWriter writer, Span<byte> buffer, int written)
+        {
+            if (buffer.Slice(0, written).IndexOfAny((byte)'.', (byte)'E', (byte)'e') == -1)
+            {
+                buffer[written++] = (byte)'.';
+                buffer[written++] = (byte)'0';
+            }
+
+            writer.WriteRawValue(buffer.Slice(0, written), skipInputValidation: true);
+        }
+#else
+        private static void Write(Utf8JsonWriter writer, double value) => writer.WriteRawValue(Format(value), skipInputValidation: true);
+
+        private static void Write(Utf8JsonWriter writer, decimal value) => writer.WriteRawValue(Format(value), skipInputValidation: true);
+#endif
+
         private sealed class DoubleConverter : JsonConverter<double>
         {
             public override double Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -40,7 +77,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override void Write(Utf8JsonWriter writer, double value, JsonSerializerOptions options)
             {
-                writer.WriteRawValue(Format(value), skipInputValidation: true);
+                FloatingPointConverters.Write(writer, value);
             }
         }
 
@@ -56,7 +93,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override void Write(Utf8JsonWriter writer, float value, JsonSerializerOptions options)
             {
-                writer.WriteRawValue(Format((double)value), skipInputValidation: true);
+                FloatingPointConverters.Write(writer, (double)value);
             }
         }
 
@@ -72,7 +109,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options)
             {
-                writer.WriteRawValue(Format(value), skipInputValidation: true);
+                FloatingPointConverters.Write(writer, value);
             }
         }
     }
