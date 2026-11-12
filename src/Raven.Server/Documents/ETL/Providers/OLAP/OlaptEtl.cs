@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
@@ -201,13 +202,23 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
         {
-            if (Statistics.LastProcessedEtag > 0 && FallbackTime == null)
+            _forTestingPurposes?.OnAfterAllBatchesCompleted?.Invoke();
+
+            if (Statistics.LastProcessedEtag > 0 && Statistics.WasLatestLoadSuccessful)
             {
                 AsyncHelpers.RunSync(() => BackupHelper.RunWithRetriesAsync(maxRetries: 3, () =>
                     {
-                        _forTestingPurposes?.BeforeSavingLastBatchTime?.Invoke();
+                        try
+                        {
+                            _forTestingPurposes?.BeforeSavingLastBatchTime?.Invoke();
 
-                        UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                            UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                        }
+                        catch (AggregateException e) when (e.InnerException is TimeoutException timeout)
+                        {
+                            ExceptionDispatchInfo.Throw(timeout);
+                        }
+
                         return Task.FromResult(0L);
                     },
                     infoMessage: "Saving the last batch time in the cluster",
@@ -394,6 +405,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             {
                 _parent = parent;
             }
+
+            internal Action OnAfterAllBatchesCompleted;
 
             internal Action BeforeSavingLastBatchTime;
 

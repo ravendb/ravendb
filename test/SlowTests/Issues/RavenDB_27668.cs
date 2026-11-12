@@ -90,8 +90,10 @@ loadToOrders(noPartition(), {
             }
         }
 
-        [RavenFact(RavenTestCategory.Etl)]
-        public async Task RestartedOlapEtlProcessShouldRetryAFailedScheduledRunRightAway()
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task RestartedOlapEtlProcessShouldRetryAFailedScheduledRunRightAway(bool forceBatchRetryAfterFailure)
         {
             using (var store = GetDocumentStore())
             {
@@ -108,10 +110,20 @@ loadToOrders(noPartition(), {
 
                 process.ForTestingPurposesOnly().SimulateLoadFailure = true;
 
+                var failedRunCompleted = false;
+                process.ForTestingPurposesOnly().OnAfterAllBatchesCompleted = () =>
+                {
+                    // a concurrent Retry Batch request clears FallbackTime without a successful export
+                    if (forceBatchRetryAfterFailure)
+                        process.ForceBatchRetry();
+
+                    Volatile.Write(ref failedRunCompleted, true);
+                };
+
                 await ModifyOrder(store);
                 process.ForTestingPurposesOnly().TriggerScheduledRun();
 
-                Assert.True(await WaitForValueAsync(() => process.FallbackTime != null, true));
+                Assert.True(await WaitForValueAsync(() => Volatile.Read(ref failedRunCompleted), true));
 
                 // the failed run used to be stored as the last batch time
                 Assert.False(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime != missedLastBatchTime, true, timeout: 3000));
@@ -195,8 +207,9 @@ loadToOrders(noPartition(), {
                 var saveAttempts = 0;
                 process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
                 {
+                    // UpdateEtlProcessState() waits on the cluster command with Task.Wait(), which wraps its TimeoutException
                     if (Interlocked.Increment(ref saveAttempts) < 3)
-                        throw new TimeoutException("Simulating a failure to save the last batch time");
+                        throw new AggregateException(new TimeoutException("Simulating a failure to save the last batch time"));
                 };
 
                 await ModifyOrder(store);
