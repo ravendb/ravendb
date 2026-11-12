@@ -30,6 +30,7 @@ public sealed class QueryBuilderParameters
     public readonly bool HasDynamics;
     public readonly Lazy<List<string>> DynamicFields;
     public readonly ByteStringContext Allocator;
+    public readonly bool AllowImplicitScoreOrdering;
     public readonly bool HasBoost;
     // Per-index compound numeric encoding mask, resolved once on the index definition (not recomputed per
     // query). The planner XORs query-side numeric values with this to match the write path.
@@ -54,7 +55,7 @@ public sealed class QueryBuilderParameters
 
     internal QueryBuilderParameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
         IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-        FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default)
+        FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default, bool allowImplicitScoreOrdering = true)
     {
         QueryTime = queryTime;
         IndexSearcher = searcher;
@@ -77,12 +78,17 @@ public sealed class QueryBuilderParameters
             ? new Lazy<List<string>>(() => IndexSearcher.GetFields())
             : null;
 
+        AllowImplicitScoreOrdering = allowImplicitScoreOrdering
+                                     && (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved
+                                         || (Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically));
+
         // in case when we've implicitly boosted, we've built primitives with scoring enabled
-        HasBoost = index.HasBoostedFields
-                   || query.Metadata.HasBoost
-                   || IsVectorSingleClause
-                   || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
-                   || HasBoostingAsOrderingType(query.Metadata.OrderBy);
+        bool queryHasBoost = index.HasBoostedFields
+                             || query.Metadata.HasBoost
+                             || IsVectorSingleClause
+                             || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
+                             || HasBoostingAsOrderingType(query.Metadata.OrderBy);
+        HasBoost = queryHasBoost && (IsVectorSingleClause || ScoresAreConsumed(query, AllowImplicitScoreOrdering));
         Allocator = allocator;
         IndexReadOperation = indexReadOperation;
         CompoundFieldNumericXorMask = index.Definition.CompoundFieldNumericXorMask;
@@ -90,6 +96,20 @@ public sealed class QueryBuilderParameters
 
     public bool NeedsScoresBuffer() => HasBoost
         && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
+
+    private static bool ScoresAreConsumed(IndexQueryServerSide query, bool allowImplicitScoreOrdering)
+    {
+        if (query.PageSize == 0)
+            return false;
+
+        if (query.Metadata.HasMoreLikeThis)
+            return true;
+
+        if (query.Metadata.OrderBy is not null)
+            return HasBoostingAsOrderingType(query.Metadata.OrderBy);
+
+        return allowImplicitScoreOrdering;
+    }
 
     private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
     {

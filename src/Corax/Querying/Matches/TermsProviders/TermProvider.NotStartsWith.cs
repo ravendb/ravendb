@@ -32,7 +32,7 @@ namespace Corax.Querying.Matches.TermsProviders
             _token = token;
         }
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
             var startWith = _startWith.Decoded();
             int count = 0;
@@ -57,6 +57,8 @@ namespace Corax.Querying.Matches.TermsProviders
                     }
                 }
 
+                if (termLengths.IsEmpty == false)
+                    termLengths[count] = termSlice.Length;
                 postingListIds[count++] = postingListId;
             }
 

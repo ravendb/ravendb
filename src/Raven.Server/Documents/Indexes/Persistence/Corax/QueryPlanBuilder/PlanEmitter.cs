@@ -8,9 +8,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryPlanBuilder;
 
 internal sealed class PlanEmitter
 {
+    private const int NoScoringGroup = -1;
+
     private readonly List<PlanOp> _ops = [];
     private int _nextRangeIdx; // index for ctx.InRangeCounts[idx] at runtime.
     private int _matchIndex;
+    private int _nextScoringGroup;
 
     private int _nextScratch = QueryPrimitives.EphemeralBitmapSlot + 1;
     private int _maxScratchUsed = QueryPrimitives.EphemeralBitmapSlot;
@@ -253,9 +256,11 @@ internal sealed class PlanEmitter
 
     private void EmitGroupInto(ClauseExecution exec, List<ClauseExecution> subExecs, MergeKind merge, bool suppressEarlyExit, int destSlot)
     {
+        int scoringGroup = exec.IsScoringGroup ? _nextScoringGroup++ : NoScoringGroup;
         if (merge == MergeKind.Fill)
         {
             EmitGroupContents(exec, subExecs, suppressEarlyExit, destSlot);
+            EmitSaveScoringGroup(destSlot, scoringGroup);
             return;
         }
 
@@ -269,6 +274,7 @@ internal sealed class PlanEmitter
         // Build the group into a fresh scratch slot, then merge it into destSlot directly — which holds the accumulator.
         using var _ = AllocateScratchSlot(out int groupSlot);
         EmitGroupContents(exec, subExecs, suppressEarlyExit: true, groupSlot);
+        EmitSaveScoringGroup(groupSlot, scoringGroup);
 
         switch (merge)
         {
@@ -283,6 +289,20 @@ internal sealed class PlanEmitter
                 _ops.Add(new PlanOp { Kind = PlanOpKind.AndNotBitmaps, BitmapLocal = destSlot, ParamIndex2 = groupSlot });
                 break;
         }
+    }
+
+    private void EmitSaveScoringGroup(int bitmapSlot, int scoringGroup)
+    {
+        if (scoringGroup == NoScoringGroup)
+            return;
+
+        Debug.Assert(int.IsNegative(scoringGroup) == false);
+        _ops.Add(new PlanOp
+        {
+            Kind = PlanOpKind.SaveScoringGroup,
+            BitmapLocal = bitmapSlot,
+            ParamIndex = scoringGroup
+        });
     }
 
     // Fold an all-negated OR sub-group (¬A ∨ ¬B ∨ … = ¬(A ∧ B ∧ …)) into the accumulator without materializing the universe
@@ -374,15 +394,18 @@ internal sealed class PlanEmitter
     /// <summary>AllIn clause leaf — logically (term0 ∩ term1 ∩ … ∩ termN).</summary>
     private void EmitAllInLeaf(ClauseExecution exec, MergeKind merge, bool suppressEarlyExit, int destSlot)
     {
+        int scoringGroup = exec.IsScoringGroup ? _nextScoringGroup++ : NoScoringGroup;
         if (merge == MergeKind.Fill)
         {
             EmitCommonInOps(exec.InTermCount, destSlot, PlanOpKind.FillFromPostingSource, PlanOpKind.AllInRangeFromPostingSource, suppressEarlyExit, Label(exec));
+            EmitSaveScoringGroup(destSlot, scoringGroup);
             return;
         }
 
         using var _ = AllocateScratchSlot(out int saveSlot);
 
         EmitCommonInOps(exec.InTermCount, saveSlot, PlanOpKind.FillFromPostingSource, PlanOpKind.AllInRangeFromPostingSource, suppressEarlyExit: true, Label(exec));
+        EmitSaveScoringGroup(saveSlot, scoringGroup);
 
         switch (merge)
         {

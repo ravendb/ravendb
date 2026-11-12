@@ -102,6 +102,15 @@ internal ref partial struct DualEmit
         CsLine($"QueryPrimitives.{IlEmitterShared.CtxFillAllEntries.Name}(ctx, {bitmapSlot});");
     }
 
+    public void EmitSaveScoringGroup(int bitmapSlot, int groupIndex)
+    {
+        Il.Emit(OpCodes.Ldarg_0);
+        IlEmitterShared.EmitLdcI4(Il, bitmapSlot);
+        IlEmitterShared.EmitLdcI4(Il, groupIndex);
+        Il.Emit(OpCodes.Call, IlEmitterShared.CtxSaveScoringGroup);
+        CsLine($"QueryPrimitives.{IlEmitterShared.CtxSaveScoringGroup.Name}(ctx, {bitmapSlot}, {groupIndex});");
+    }
+
     public void EmitGotoDone(LabelPair done)
     {
         Il.Emit(OpCodes.Br, done.Il);

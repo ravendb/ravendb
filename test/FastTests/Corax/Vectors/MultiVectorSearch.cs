@@ -120,6 +120,48 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
+    public void ScoringResultsSortedByScoreBatchByBatchGivesTheirOwnScores()
+    {
+        using var _ = GetMappings(out var bsc, out var mapping, out var getVector);
+        using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
+        {
+            var id = 1;
+            foreach (var vector in Vectors)
+            {
+                var idLocal = $"vectors/{id++}";
+                using (var entry = writer.Index(idLocal))
+                {
+                    entry.Write(0, Encodings.Utf8.GetBytes(idLocal));
+                    entry.WriteVector(1, "Vector", MemoryMarshal.Cast<float, byte>(vector));
+                    entry.EndWriting();
+                }
+            }
+
+            writer.Commit();
+        }
+
+        using var indexSearcher = new IndexSearcher(Env, mapping);
+        var metadata = mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true);
+        var ids = new long[Vectors.Length];
+        var expectedScores = new float[Vectors.Length];
+        var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true, null, 0);
+        Assert.Equal(Vectors.Length, query.Fill(ids));
+        query.Score(ids, expectedScores, 1f);
+
+        var batchIds = new long[1];
+        var batchScores = new float[Vectors.Length];
+        query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true, null, 0);
+        for (var i = 0; i < Vectors.Length; i++)
+        {
+            Assert.Equal(1, query.Fill(batchIds));
+            Assert.Equal(ids[i], batchIds[0]);
+            query.Score(batchIds, batchScores.AsSpan(i, 1), 1f);
+        }
+
+        Assert.Equal(expectedScores, batchScores);
+    }
+
+    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Querying)]
     public void FillWhenNotUsedInSingleQueryWillReturnMatchesSortedByIds()
     {
         using var _ = GetMappings(out var bsc, out var mapping, out var getVector);
@@ -177,6 +219,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             read = query.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal((long)sourceIds[1], ids[0]);
+            scores.Clear();
             query.Score(ids[..3], scores[..3], 1f);
             Assert.True(scores[0] > scores[1]);
             Assert.True(scores[1] > scores[2]);

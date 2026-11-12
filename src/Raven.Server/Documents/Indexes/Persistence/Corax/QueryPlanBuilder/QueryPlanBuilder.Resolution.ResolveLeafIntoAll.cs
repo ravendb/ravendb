@@ -138,7 +138,16 @@ internal static partial class QueryPlanBuilder
             }
         }
 
-        IQueryMatch Boosted(IQueryMatch match) => clauseExec.BoostFactor is not 0 ? walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor) : match;
+        IQueryMatch Boosted(IQueryMatch match)
+        {
+            if (clauseExec.Clause.HasBoost == false || clauseExec.BoostFactor is 0)
+                return match;
+
+            if (match is VectorSearchMatch && clauseExec.Clause.IsBoostedThroughOr)
+                return match;
+
+            return walkerCtx.IndexSearcher.Boost(match, clauseExec.BoostFactor);
+        }
 
         static bool IsCalibratedRangeClause(ClauseType type) => type switch
         {

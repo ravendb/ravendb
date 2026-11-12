@@ -10,10 +10,11 @@ using Voron.Data.RoaringBitmaps;
 namespace Corax.Querying.Matches;
 
 /// <summary>
-/// A boosted `search()` over several terms combined with OR, relevance is preserved by retaining each per-term scored
+/// A boosted `search()` over several terms combined with OR or AND, relevance is preserved by retaining each per-term scored
 /// so we can sum their BM25 contributions properly.
 /// </summary>
-public sealed class BoostedSearchMatch(ByteStringContext allocator, TermMatch[] terms, CancellationToken token = default) : IBitmapQueryMatch, IDisposable
+public sealed class BoostedSearchMatch(ByteStringContext allocator, List<IQueryMatch> terms, Constants.Search.Operator @operator, CancellationToken token = default)
+    : IBitmapQueryMatch, IDisposable
 {
     private RoaringBitmap _bitmap;
     private RoaringBitmapIterator _iterator;
@@ -66,30 +67,44 @@ public sealed class BoostedSearchMatch(ByteStringContext allocator, TermMatch[] 
         return _iterator.Fill(ref _bitmap, matches);
     }
 
-    public void Score(Span<long> matches, Span<float> scores, float boostFactor)
+    public void Score(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor, sorted: false);
+
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor, sorted: true);
+
+    private void Score(Span<long> matches, Span<float> scores, float boostFactor, bool sorted)
     {
-        // The terms are Fill'd during Initialize, which populates their BM25 state. Each term then adds its
-        // contribution for the documents it contains, leaving the rest untouched - so the total is the sum of
-        // per-term relevance, mirroring how the pipeline sums scores across separate clauses.
         EnsureInitialized();
-        for (int i = 0; i < terms.Length; i++)
+        if (@operator == Constants.Search.Operator.Or)
         {
-            terms[i].Score(matches, scores, boostFactor);
+            ScoreTerms(matches, scores, boostFactor, sorted);
+            return;
+        }
+        
+        using var _ = allocator.Allocate(matches.Length, out Span<float> andScores);
+        andScores.Clear();
+        ScoreTerms(matches, andScores, boostFactor, sorted);
+
+        for (int i = 0; i < matches.Length; i++)
+        {
+            if (_bitmap.Contains(matches[i]))
+                scores[i] += andScores[i];
         }
     }
 
-    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor)
+    private void ScoreTerms(Span<long> matches, Span<float> scores, float boostFactor, bool sorted)
     {
-        EnsureInitialized();
-        for (int i = 0; i < terms.Length; i++)
+        for (int i = 0; i < terms.Count; i++)
         {
-            terms[i].ScoreSorted(matches, scores, boostFactor);
+            if (sorted)
+                terms[i].ScoreSorted(matches, scores, boostFactor);
+            else
+                terms[i].Score(matches, scores, boostFactor);
         }
     }
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode($"{nameof(BoostedSearchMatch)} [Or]",
+        return new QueryInspectionNode($"{nameof(BoostedSearchMatch)} [{@operator}]",
             parameters: new Dictionary<string, string>
             {
                 { Constants.QueryInspectionNode.IsBoosting, IsBoosting.ToString() },
@@ -110,10 +125,15 @@ public sealed class BoostedSearchMatch(ByteStringContext allocator, TermMatch[] 
         _initialized = true;
 
         _bitmap = new RoaringBitmap(allocator);
-        for (int i = 0; i < terms.Length; i++)
+        var tempBitmap = new RoaringBitmap(allocator);
+        for (int i = 0; i < terms.Count; i++)
         {
-            QueryPrimitives.OrWithMatch(terms[i], ref _bitmap, token: token);
+            if (i == 0 || @operator == Constants.Search.Operator.Or)
+                QueryPrimitives.OrWithMatch(terms[i], ref _bitmap, token: token);
+            else
+                QueryPrimitives.AndWithMatch(terms[i], ref _bitmap, ref tempBitmap, token);
         }
+        tempBitmap.Dispose();
 
         _bitmap.PrepareForReading();
         _count = _bitmap.ComputeCount(); // cache: the pipeline may consume (steal containers from) the bitmap before Inspect()

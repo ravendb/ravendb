@@ -110,6 +110,8 @@ internal static partial class QueryPlanBuilder
         AssignParameterSlots(walkerCtx.SpatialClauses, slots);
         AssignParameterSlots(walkerCtx.VectorClauses, slots);
 
+        int scoringGroupCount = p.HasBoost ? AssignScoringGroups(walkerCtx.Clauses, walkerCtx.IsOr, count: 0) : 0;
+
         string[] parameterSlots = slots.Keys.ToArray();
         p.Metadata.CachedSlotBindings = walkerCtx.SlotBindings.ToArray();
 
@@ -134,7 +136,28 @@ internal static partial class QueryPlanBuilder
             SortSeekHintTemplateIdx = sortSeekHintIdx,
             SortSeekUseParam2 = sortSeekUseParam2,
             ValueOrdinalCount = walkerCtx.SlotBindings.Count,
+            ScoringGroupCount = scoringGroupCount,
         };
+    }
+
+    private static int AssignScoringGroups(List<ClauseInfo> clauses, bool parentIsOr, int count)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        foreach (ClauseInfo clause in clauses ?? [])
+        {
+            if (clause.IsNegated) // the excluded side of a negation is never scored
+                continue;
+
+            if (parentIsOr && clause.ClauseType is ClauseType.AndGroup or ClauseType.AllIn)
+            {
+                clause.IsScoringGroup = true;
+                count++;
+            }
+
+            count = AssignScoringGroups(clause.SubClauses, clause.ClauseType == ClauseType.OrGroup, count);
+        }
+
+        return count;
     }
 
     private static ParameterBinding[] ExtractSlotBindings(PlanParameters p)
@@ -155,15 +178,21 @@ internal static partial class QueryPlanBuilder
         foreach (ClauseInfo clause in clauses ?? [])
         {
             foreach (ParameterBinding binding in clause.Bindings ?? [])
-            {
-                if (binding is not { Source: BindingSource.QueryParameter, ParameterName: not null }) 
-                    continue;
-                if (slots.TryGetValue(binding.ParameterName, out int slot) == false)
-                    slots.Add(binding.ParameterName, slot = slots.Count);
-                binding.ParameterSlot = slot;
-            }
+                AssignParameterSlot(binding, slots);
 
-            AssignParameterSlots(clause.SubClauses, slots); 
+            if (clause.BoostBinding != null)
+                AssignParameterSlot(clause.BoostBinding, slots);
+
+            AssignParameterSlots(clause.SubClauses, slots);
+        }
+
+        static void AssignParameterSlot(ParameterBinding binding, Dictionary<string, int> slots)
+        {
+            if (binding is not { Source: BindingSource.QueryParameter, ParameterName: not null })
+                return;
+            if (slots.TryGetValue(binding.ParameterName, out int slot) == false)
+                slots.Add(binding.ParameterName, slot = slots.Count);
+            binding.ParameterSlot = slot;
         }
     }
 
@@ -180,7 +209,8 @@ internal static partial class QueryPlanBuilder
 
         // `where a OR b` cannot drive a sorted scan from one of its branches: the scan would only emit that
         // branch's documents, and the residual predicate can only filter what it walks - never re-admit the rest.
-        if (walkerCtx.IsOr)
+        // A scored plan needs every clause to score its matches, which the lookups and scans below cannot do.
+        if (walkerCtx.IsOr || p.HasBoost)
             return flags;
 
         // Only the bitmap pipeline applies the spatial / vector post-filters - the sorted and compound scans would drop them.
@@ -195,9 +225,6 @@ internal static partial class QueryPlanBuilder
         for (int i = 0; i < clauses.Count; i++)
         {
             ClauseInfo c = clauses[i];
-
-            if (HasBoostRecursive(c)) // Any boost anywhere rules out FieldSortedScan and CompoundSortedScan (no scoring stage).
-                return PlanOptimizationFlags.None;
 
             if (c.IsNegated)
                 continue;
@@ -297,19 +324,6 @@ internal static partial class QueryPlanBuilder
         }
 
         return flags;
-
-        static bool HasBoostRecursive(ClauseInfo c)
-        {
-            if (c.HasBoost)
-                return true;
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-            foreach (ClauseInfo t in c.SubClauses ?? [])
-            {
-                if (HasBoostRecursive(t))
-                    return true;
-            }
-            return false;
-        }
 
         void TryFindCompoundFieldEqualMatches(Span<int> eqBuf)
         {
@@ -825,7 +839,7 @@ internal static partial class QueryPlanBuilder
         {
             // copy - survives the regrouping below
             List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, walkerCtx.Clauses.Count - beforeCount);
-            walkerCtx.RecordPendingBoost(inner, boostBinding);
+            walkerCtx.RecordPendingBoost(inner, boostBinding, innerOp == BooleanOp.Or);
         }
 
         GroupWrapperOperands(walkerCtx, beforeCount, innerOp);

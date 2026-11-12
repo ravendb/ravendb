@@ -46,6 +46,7 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
 
     private bool _resultsPersisted;
     private int _positionOnPersistedValues = 0;
+    private int _scorePosition;
     private bool _isEmpty;
 
 
@@ -263,10 +264,14 @@ public struct MultiVectorSearchMatch : IPostFilterMatch
         }
         else
         {
-            _distances.Results[..scores.Length].CopyTo(scores);
-            _firstRetriever.DistancesToScores(scores);
+            // Streamed in score order, the read loop scores Fill's batches one by one, so we continue from the running position.
+            var distances = _distances.Results.Slice(_scorePosition, scores.Length);
             for (int i = 0; i < scores.Length; ++i)
-                scores[i] *= boostFactor;
+                scores[i] += boostFactor * _firstRetriever.DistanceToScore(distances[i]);
+
+            _scorePosition += scores.Length;
+            if (_scorePosition < _distances.Count)
+                return;
         }
 
         _matches.Dispose();

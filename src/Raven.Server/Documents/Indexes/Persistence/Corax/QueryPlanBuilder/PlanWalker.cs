@@ -16,6 +16,7 @@ internal static class PlanWalker
         if (ctx.Metadata.IsDynamic)
             DynamicFieldNameResolve(clauses);
         GroupCollapse(clauses, ctx);
+        VectorBoostCoversFilter(clauses, ctx);
         WhenRegister(clauses, ctx);
         ThrowIfErrors(ctx);
     }
@@ -110,29 +111,27 @@ internal static class PlanWalker
         {
             foreach (var t in pending.InnerClauses)
             {
-                Apply(t, pending.Factor);
+                Apply(t, pending.Factor, ctx.HasBoost, pending.InnerIsOr);
             }
         }
 
         // a group has no Bindings of its own - carry the factor down to the leaves
-        static void Apply(ClauseInfo clause, ParameterBinding factor)
+        static void Apply(ClauseInfo clause, ParameterBinding factor, bool isScored, bool throughOr)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
-            if (clause.ClauseType == ClauseType.Vector)
-                throw new NotSupportedException("Boosting the VectorSearchMatch is not supported yet.");
-
             if (clause.SubClauses is { Count: > 0 } subClauses)
             {
                 foreach (var sub in subClauses)
                 {
-                    Apply(sub, factor);
+                    Apply(sub, factor, isScored, throughOr || clause.ClauseType == ClauseType.OrGroup);
                 }
 
                 return;
             }
 
-            clause.Bindings = [..clause.Bindings ?? [], factor];
-            clause.HasBoost = true;
+            clause.BoostBinding = factor;
+            clause.HasBoost = isScored;
+            clause.IsBoostedThroughOr = throughOr;
         }
     }
 
@@ -152,6 +151,31 @@ internal static class PlanWalker
             if(list is null) continue;
             list.Add(clauses[i]);
             clauses.RemoveAt(i);
+        }
+    }
+
+    private static void VectorBoostCoversFilter(List<ClauseInfo> clauses, ResolutionContext ctx)
+    {
+        foreach (var vector in ctx.VectorClauses ?? [])
+        {
+            if (vector.HasBoost == false || vector.IsNegated || vector.WhenCondition != null)
+                continue;
+
+            foreach (var clause in clauses)
+                RemoveBoost(clause, vector.BoostBinding);
+        }
+
+        static void RemoveBoost(ClauseInfo clause, ParameterBinding factor)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            if (clause.BoostBinding == factor)
+            {
+                clause.BoostBinding = null;
+                clause.HasBoost = false;
+            }
+
+            foreach (var sub in clause.SubClauses ?? [])
+                RemoveBoost(sub, factor);
         }
     }
 }

@@ -37,6 +37,7 @@ internal static partial class QueryPlanBuilder
 
         if (metadata.CachedPlanMemo is { } memo
             && memo.PlanCacheGeneration == generation
+            && memo.HasBoost == planParams.HasBoost
             && memo.Bucket.TryGetTarget(out var warmBucket))
         {
             return Finalize(warmBucket);
@@ -45,14 +46,14 @@ internal static partial class QueryPlanBuilder
         var structuralKey = ComputeStructuralKey(planParams);
         if (planCache.GetBucket(structuralKey) is { } existing)
         {
-            metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, existing);
+            metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, planParams.HasBoost, existing);
             return Finalize(existing);
         }
 
         var template = ParseTemplate(planParams);
         template.SortMetadataTemplate = BuildSortMetadataTemplate(planParams);
         var bucket = planCache.GetOrAddBucket(structuralKey, template, planParams.CacheKey);
-        metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, bucket);
+        metadata.CachedPlanMemo = new QueryMetadata.PlanMemo(generation, planParams.HasBoost, bucket);
         return Finalize(bucket);
 
         PlanTemplate Finalize(PlanCache.PerQueryPlans b)
@@ -142,7 +143,7 @@ internal static partial class QueryPlanBuilder
             PopulateClauseValues(it, slotBindings, queryParameters, writer, builderParameters, sentinelBits);
         }
 
-        if (exec.Clause is { HasBoost: true, Bindings.Length: > 0 })
+        if (exec.Clause.BoostBinding != null)
         {
             ResolveBoostFactor(exec, slotBindings, queryParameters, builderParameters);
         }
@@ -197,12 +198,7 @@ internal static partial class QueryPlanBuilder
                 }
             }
             case ClauseType.In or ClauseType.AllIn:
-                Span<ParameterBinding> inBindings =  bindings;
-                if(exec.Clause.HasBoost)
-                {   // Boosted clauses store the boost factor in the trailing binding (read by ResolveBoostFactor via Bindings[^1]); exclude it from the IN-term walk.
-                    inBindings = inBindings[..^1];
-                }
-                ResolveInFromBindings(exec, slotBindings, queryParameters, writer, inBindings, builderParameters);
+                ResolveInFromBindings(exec, slotBindings, queryParameters, writer, bindings, builderParameters);
                 break;
             default: // Simple clause (Equals, Range, Search, Regex, etc.): single value at Bindings[0]
                 var (value, valueType) = ResolveBindingScalar(bindings[BindingIndex.Value], slotBindings, queryParameters, builderParameters);
@@ -297,7 +293,7 @@ internal static partial class QueryPlanBuilder
 
     private static void ResolveBoostFactor(ClauseExecution exec, ParameterBinding[] slotBindings, BlittableJsonReaderObject queryParameters, QueryBuilderParameters builderParameters)
     {
-        var (boostVal, boostType) = ResolveBindingScalar(exec.Clause.Bindings[^1], slotBindings, queryParameters, builderParameters);
+        var (boostVal, boostType) = ResolveBindingScalar(exec.Clause.BoostBinding, slotBindings, queryParameters, builderParameters);
         if (boostVal == null) return;
 
         exec.BoostFactor = boostType switch
@@ -579,7 +575,7 @@ internal static partial class QueryPlanBuilder
         {
             if (ReferenceEquals(exec, driving) || ReferenceEquals(exec, field2Range))
                 continue;
-            if (IsClauseBoosted(exec))
+            if (exec.Clause.HasBoost)
             {
                 rejectReason = "a filter uses boosting, which needs scoring this scan can't do";
                 return false;
@@ -843,15 +839,15 @@ internal static partial class QueryPlanBuilder
     }
 
     private static IQueryMatch ResolveSentinelRewrittenBetween(ClauseExecution exec, FieldMetadata fieldMeta,
-        IndexSearcher indexSearcher, QueryExecution queryExec, bool forward)
+        IndexSearcher indexSearcher, QueryExecution queryExec, bool forward, CancellationToken token = default)
     {
         if (exec.SentinelRewriteType == ClauseType.Exists)
             return indexSearcher.AllEntries();
         if (exec.SentinelRewriteType == ClauseType.LessThanOrEqual)
-            return exec.PackedParamValue.RangeQuery(ClauseType.LessThanOrEqual, fieldMeta, indexSearcher, queryExec, forward);
+            return exec.PackedParamValue.RangeQuery(ClauseType.LessThanOrEqual, fieldMeta, indexSearcher, queryExec, forward, token);
 
         Debug.Assert(exec.SentinelRewriteType == ClauseType.GreaterThanOrEqual);
-        IQueryMatch rangeMatch = exec.PackedParamValue.RangeQuery(ClauseType.GreaterThanOrEqual, fieldMeta, indexSearcher, queryExec, forward);
+        IQueryMatch rangeMatch = exec.PackedParamValue.RangeQuery(ClauseType.GreaterThanOrEqual, fieldMeta, indexSearcher, queryExec, forward, token);
         if (indexSearcher.TryGetPostingListForNull(in fieldMeta, out _) is false) // no null in this field, we can do a tree scan directly
             return rangeMatch;
         
@@ -879,8 +875,6 @@ internal static partial class QueryPlanBuilder
         return QueryBuilderHelper.GetFieldMetadata(in builderParams, resolvedFieldName, exact: clause.IsExact,
             hasBoost: builderParams.HasBoost && clause.IsNegated == false, forceDefaultSearchAnalyzer: forceSearchAnalyzer);
     }
-
-    private static bool IsClauseBoosted(ClauseExecution exec) => exec.Clause.HasBoost || exec.BoostFactor > 0;
 
     private static void EncodeNumericValue(Span<byte> dest, int valueType, int paramIdx, QueryExecution exec, long numericXorMask)
     {
@@ -934,9 +928,6 @@ internal static partial class QueryPlanBuilder
 
     internal static bool IsTreeScanEligibleClause(ClauseInfo clause)
     {
-        if (clause.HasBoost)
-            return false; // need scoring, cannot just scan
-
         return clause.ClauseType is ClauseType.StartsWith or ClauseType.EndsWith
             or ClauseType.Exists or ClauseType.Regex
             or ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual
@@ -947,7 +938,7 @@ internal static partial class QueryPlanBuilder
     internal static MatchDispatch GetDispatch(ClauseExecution exec)
     {
         var clause = exec.Clause;
-        if (clause is { HasBoost: false, ClauseType: ClauseType.Equals or ClauseType.NotEquals })
+        if (clause.ClauseType is ClauseType.Equals or ClauseType.NotEquals)
             return MatchDispatch.PostingList;
 
         if (exec.SentinelRewriteType != null)

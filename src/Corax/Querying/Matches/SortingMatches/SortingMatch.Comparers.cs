@@ -97,8 +97,7 @@ unsafe sealed partial class SortingMatch<TInner>
             else
                 match._inner.Score(batchResults, readScores, 1f);
 
-            match._searcher.BoostDocuments(batchResults, readScores,
-                sortedById: match._inner is not (VectorSearchMatch { ReturnsResultsByDistance: true } or MultiVectorSearchMatch { ReturnsResultsByDistance: true }));
+            match._searcher.BoostDocuments(batchResults, readScores, sortedById: match.CandidatesAreSorted);
             
             // Note! readScores & indexes are aliased and same as batchTermIds
             var heapSize = Math.Min(match._take, batchResults.Length);
@@ -145,7 +144,7 @@ unsafe sealed partial class SortingMatch<TInner>
             }
 
             for (; i < scores.Length; i++)
-                keys[i] = PackScore(scores[i], i, direction);
+                keys[i] = SortingHelpers.PackScore(scores[i], i, direction);
 
             Sort.Run(keys);
 
@@ -162,22 +161,6 @@ unsafe sealed partial class SortingMatch<TInner>
                 if (exposeScores)
                     match._scoresResults.AddUnsafe(scores[index]);
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long PackScore(float score, int position, int direction)
-        {
-            int key;
-            if (score > 0)
-                key = BitConverter.SingleToInt32Bits(score);
-            else if (float.IsNaN(score))
-                key = int.MinValue;
-            else if (score == 0)
-                key = 0;
-            else
-                key = BitConverter.SingleToInt32Bits(score) ^ int.MaxValue;
-
-            return ((long)(key ^ direction) << 32) | (uint)position;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -232,11 +232,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
                 n++;
             }
             else // current > target: target is absent from the term set; skip past every match below current.
-            {
-                m++;
-                while (m < matchesLen && matches[m] < current)
-                    m++;
-            }
+                m = Sorting.GallopLowerBound(matches, m + 1, matchesLen, current);
         }
 
         matchIdx = m;

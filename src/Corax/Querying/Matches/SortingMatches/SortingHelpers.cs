@@ -15,7 +15,7 @@ internal static class SortingHelpers
 
     /// <summary>Drains match into an allocator-backed buffer; the caller is responsible for disposing the scope once done.</summary>
     public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope DrainMatch<TInner>(
-        ref TInner inner, ByteStringContext allocator, out Span<long> results)
+        ref TInner inner, ByteStringContext allocator, out Span<long> results, out bool sortedById)
         where TInner : IQueryMatch
     {
         var count = inner.Count;
@@ -34,10 +34,28 @@ internal static class SortingHelpers
             buffer = new Span<long>(bs.Ptr, bs.Length / sizeof(long));
         }
 
-        int unique = Sorting.SortAndRemoveDuplicates(buffer[..filled]);
-        results = buffer[..unique];
-        
+        sortedById = inner is not (VectorSearchMatch { ReturnsResultsByDistance: true } or MultiVectorSearchMatch { ReturnsResultsByDistance: true });
+        if (sortedById)
+            filled = Sorting.SortAndRemoveDuplicates(buffer[..filled]);
+        results = buffer[..filled];
+
         return scope;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long PackScore(float score, int position, int direction)
+    {
+        int key;
+        if (score > 0)
+            key = BitConverter.SingleToInt32Bits(score);
+        else if (float.IsNaN(score))
+            key = int.MinValue;
+        else if (score == 0)
+            key = 0;
+        else
+            key = BitConverter.SingleToInt32Bits(score) ^ int.MaxValue;
+
+        return ((long)(key ^ direction) << 32) | (uint)position;
     }
     
     /// <summary>

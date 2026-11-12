@@ -55,6 +55,11 @@ public static class QueryPrimitives
         OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
     }
 
+    public static void CtxSaveScoringGroup(Matches.CompiledQueryMatch ctx, int bitmapSlot, int groupIndex)
+    {
+        ctx.ScoringGroups[groupIndex] = ctx.Bitmaps[bitmapSlot].Clone();
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillFromTreeScan(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
@@ -697,7 +702,7 @@ public static class QueryPrimitives
         try
         {
             int read;
-            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (read = provider.FillPostingListIds(plIds)) > 0)
+            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (read = provider.FillPostingListIds(plIds, termLengths: Span<int>.Empty)) > 0)
             {
                 token.ThrowIfCancellationRequested();
                 for (int b = 0; b < buckets.Length; b++)

@@ -295,23 +295,6 @@ public unsafe partial class Hnsw
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void DistancesToScores(Span<float> distances)
-        {
-            switch (Options.SimilarityMethod)
-            {
-                case SimilarityMethod.CosineSimilaritySingles:
-                case SimilarityMethod.CosineSimilarityI8:
-                    DistanceToScoreCosine(distances);
-                    break;
-                case SimilarityMethod.HammingDistance:
-                    DistanceToScoreHamming(distances, Options.VectorSizeBytes);
-                    break;
-                default:
-                    throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");
-            }
-        }
-
         public void FlushOptions()
         {
             using (_tree.DirectAdd(OptionsSlice, sizeof(Options), out var dst))

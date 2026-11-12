@@ -11,8 +11,9 @@ namespace Corax.Querying.Matches.TermsProviders
         private int _termIndex = -1;
         private readonly FieldMetadata _field = field;
 
-        public int FillPostingListIds(Span<long> postingListIds)
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths)
         {
+            Debug.Assert(termLengths.IsEmpty, "IN does not report term lengths.");
             int count = 0;
 
             while (count < postingListIds.Length && _termIndex + 1 < terms.Count)

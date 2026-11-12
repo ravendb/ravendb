@@ -81,6 +81,8 @@ internal static partial class QueryPlanBuilder
         {
             var item = HandleVector(builderParams, vec);
             item.IsNegated = vec.IsNegated;
+            if (vec.Clause.HasBoost && vec.IsNegated == false && vec.BoostFactor is not 0)
+                item.Boosting = vec.BoostFactor;
             items.Add(item);
         }
         return items;

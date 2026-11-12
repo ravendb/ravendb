@@ -9,7 +9,7 @@ namespace Corax.Querying.Matches.Meta
     {
         public static readonly EmptyTermsProvider Instance = new();
 
-        public int FillPostingListIds(Span<long> postingListIds) => 0;
+        public int FillPostingListIds(Span<long> postingListIds, Span<int> termLengths) => 0;
 
         public void Reset() { }
 
