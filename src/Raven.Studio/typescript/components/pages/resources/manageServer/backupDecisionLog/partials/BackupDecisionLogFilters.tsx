@@ -149,52 +149,15 @@ export default function BackupDecisionLogFilters({
                             Filter
                         </Dropdown.Toggle>
                         <Dropdown.Menu className="p-2" style={{ minWidth: 280 }}>
-                            {category === null ? (
-                                <>
-                                    {categories.map((x) => (
-                                        <Dropdown.Item as="button" key={x} onClick={() => setCategory(x)}>
-                                            {categoryLabels[x]}
-                                        </Dropdown.Item>
-                                    ))}
-                                    <Dropdown.Divider />
-                                    <Dropdown.Item as="button" onClick={() => onChange(emptyBackupDecisionFilters)}>
-                                        Clear
-                                    </Dropdown.Item>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="hstack justify-content-between mb-2">
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="p-0"
-                                            aria-label="Back"
-                                            onClick={() => setCategory(null)}
-                                        >
-                                            <Icon icon="arrow-left" />
-                                            {categoryLabels[category]}
-                                        </Button>
-                                        {getChipValue(category, filters, tasks) !== null && (
-                                            <Button
-                                                variant="link"
-                                                size="sm"
-                                                className="p-0"
-                                                aria-label={`Clear ${categoryLabels[category]} filter`}
-                                                onClick={clearOpenCategory}
-                                            >
-                                                Clear
-                                            </Button>
-                                        )}
-                                    </div>
-                                    <FilterCategoryMenu
-                                        category={category}
-                                        filters={filters}
-                                        onChange={onChange}
-                                        tasks={tasks}
-                                        databaseNames={databaseNames}
-                                    />
-                                </>
-                            )}
+                            <FilterMenuContent
+                                category={category}
+                                onCategoryChange={setCategory}
+                                onCategoryClear={clearOpenCategory}
+                                filters={filters}
+                                onChange={onChange}
+                                tasks={tasks}
+                                databaseNames={databaseNames}
+                            />
                         </Dropdown.Menu>
                     </Dropdown>
                 }
@@ -236,6 +199,61 @@ interface FilterCategoryMenuProps {
     onChange: (filters: BackupDecisionFilters) => void;
     tasks: BackupDecisionLogTask[];
     databaseNames: string[];
+}
+
+interface FilterMenuContentProps extends Omit<FilterCategoryMenuProps, "category"> {
+    category: FilterCategory | null;
+    onCategoryChange: (category: FilterCategory | null) => void;
+    onCategoryClear: () => void;
+}
+
+function FilterMenuContent({ category, onCategoryChange, onCategoryClear, ...menuProps }: FilterMenuContentProps) {
+    const { filters, onChange, tasks } = menuProps;
+
+    if (category === null) {
+        return (
+            <>
+                {categories.map((x) => (
+                    <Dropdown.Item as="button" key={x} onClick={() => onCategoryChange(x)}>
+                        {categoryLabels[x]}
+                    </Dropdown.Item>
+                ))}
+                <Dropdown.Divider />
+                <Dropdown.Item as="button" onClick={() => onChange(emptyBackupDecisionFilters)}>
+                    Clear
+                </Dropdown.Item>
+            </>
+        );
+    }
+
+    return (
+        <>
+            <div className="hstack justify-content-between mb-2">
+                <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0"
+                    aria-label="Back"
+                    onClick={() => onCategoryChange(null)}
+                >
+                    <Icon icon="arrow-left" />
+                    {categoryLabels[category]}
+                </Button>
+                {getChipValue(category, filters, tasks) !== null && (
+                    <Button
+                        variant="link"
+                        size="sm"
+                        className="p-0"
+                        aria-label={`Clear ${categoryLabels[category]} filter`}
+                        onClick={onCategoryClear}
+                    >
+                        Clear
+                    </Button>
+                )}
+            </div>
+            <FilterCategoryMenu category={category} {...menuProps} />
+        </>
+    );
 }
 
 function FilterCategoryMenu({ category, filters, onChange, tasks, databaseNames }: FilterCategoryMenuProps) {

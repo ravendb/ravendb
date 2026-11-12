@@ -1,62 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useServices } from "components/hooks/useServices";
+import { BackupDecisionFilters } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
+import { toDecisionLogQuery } from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogUtils";
 import {
-    BackupDecisionFilters,
-    BackupDecisionLogDetails,
-} from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogTypes";
-import {
-    mergeDecisionLogEntries,
-    toDecisionLogQuery,
-} from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogUtils";
-
-const take = 512;
+    backupDecisionLogInitialState,
+    backupDecisionLogReducer,
+    backupDecisionLogTake,
+} from "components/pages/resources/manageServer/backupDecisionLog/backupDecisionLogReducer";
 
 export function useBackupDecisionLog(filters: BackupDecisionFilters) {
     const { manageServerService } = useServices();
-    const query = toDecisionLogQuery(filters, take);
-
-    const [details, setDetails] = useState<BackupDecisionLogDetails>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isError, setIsError] = useState(false);
+    const query = toDecisionLogQuery(filters, backupDecisionLogTake);
+    const [state, dispatch] = useReducer(backupDecisionLogReducer, backupDecisionLogInitialState);
     const [connectionId, setConnectionId] = useState(0);
 
     useEffect(() => {
-        let isActive = true;
-        setIsLoading(true);
-        setIsError(false);
+        dispatch({ type: "Connecting" });
 
         const client = manageServerService.watchBackupDecisionLog(
             query,
-            ({ Type, ...message }) => {
-                if (!isActive) {
-                    return;
-                }
-                setIsError(false);
-                if (Type === "Snapshot") {
-                    setDetails(message);
-                    setIsLoading(false);
-                    return;
-                }
-                setDetails((previous) => ({
-                    ...message,
-                    Databases: previous.Databases,
-                    Tasks: previous.Tasks,
-                    Entries: mergeDecisionLogEntries(previous.Entries, message.Entries, take),
-                }));
-            },
-            () => isActive && setIsError(true)
+            ({ Type, ...details }) =>
+                dispatch(Type === "Snapshot" ? { type: "SnapshotLoaded", details } : { type: "UpdateLoaded", details }),
+            () => dispatch({ type: "ConnectionFailed" })
         );
 
         return () => {
-            isActive = false;
             client?.dispose();
         };
     }, [manageServerService, query, connectionId]);
 
     return {
-        details: isLoading ? null : details,
-        lastDetails: details,
-        isError: isLoading && isError,
+        details: state.status === "success" ? state.details : null,
+        lastDetails: state.details,
+        isError: state.status === "error",
         reconnect: () => setConnectionId((x) => x + 1),
     };
 }

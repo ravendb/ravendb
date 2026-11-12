@@ -53,7 +53,7 @@ function getHeldBackCaption({ HeldBack, ServerBlock }: BackupDecisionLogSummary)
     return "Nothing is stopping backups";
 }
 
-const getOutcomeCaption = (latest: BackupDecisionOutcome | null) =>
+const getOutcomeCaption = (latest?: BackupDecisionOutcome) =>
     latest ? `Latest: task '${latest.TaskName}', ${formatTime(latest.Time)}` : "";
 
 export default function BackupDecisionLogStatusCards({ summary, runnerStartTime }: BackupDecisionLogStatusCardsProps) {

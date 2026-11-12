@@ -204,12 +204,8 @@ export default class ManageServerService {
         return new getClusterDomainsCommand().execute();
     }
 
-    watchBackupDecisionLog(
-        query: string,
-        onMessage: (message: BackupDecisionLogMessage) => void,
-        onError: () => void
-    ): { dispose: () => void } {
-        return new backupDecisionLogWebSocketClient(query, onMessage, onError);
+    watchBackupDecisionLog(...args: ConstructorParameters<typeof backupDecisionLogWebSocketClient>) {
+        return new backupDecisionLogWebSocketClient(...args);
     }
 
     async uploadDebugPackageForAnalysis(...args: ConstructorParameters<typeof uploadDebugPackageForAnalysisCommand>) {
