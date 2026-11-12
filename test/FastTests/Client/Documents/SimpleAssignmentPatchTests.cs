@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
@@ -47,6 +48,9 @@ namespace FastTests.Client.Documents
             yield return ["this['Name'] = args.v;", new Dictionary<string, object> { ["v"] = "changed" }];
             yield return ["this[\"Name\"] = args.v;", new Dictionary<string, object> { ["v"] = "changed" }];
             yield return ["this[args.f] = args.v;", new Dictionary<string, object> { ["f"] = "Age", ["v"] = 42L }];
+            yield return ["this.Name = $v; this.Age += $n;", new Dictionary<string, object> { ["v"] = "changed", ["n"] = 2L }]; // '$v' is 'args.v'
+            yield return ["this[$f] = $v;", new Dictionary<string, object> { ["f"] = "Age", ["v"] = 42L }];
+            yield return ["this.Name = $missing;", new Dictionary<string, object>()];
             yield return ["this.Name = args.n; this.Age = args.a; this.Score = args.s; this.Active = args.b; this.Note = args.z;",
                 new Dictionary<string, object> { ["n"] = "x", ["a"] = 7L, ["s"] = 1.5, ["b"] = false, ["z"] = null }];
             yield return ["this.Note = args.z; this.Extra = args.e; this.Age = args.a; this.Name = args.n;", // not in the order of the document
@@ -342,6 +346,10 @@ namespace FastTests.Client.Documents
         [RavenTheory(RavenTestCategory.Patching)]
         [InlineData("this.Name = args.v; this.Age += 1;", true)]
         [InlineData("this[args.f] = args.v;", true)]
+        [InlineData("this.Name = $v; this.Age += $n;", true)]
+        [InlineData("this[$f] = $v;", true)]
+        [InlineData("var $i = this; $i.Name = $v;", true)]
+        [InlineData("var $i = this; this.Name = $i;", false)] // the alias is the document, not an argument
         [InlineData("this.Name = args.v; this.Name += args.w;", false)] // a field updated twice
         [InlineData("this.Name = args.v; this['Name'] = args.w;", false)]
         [InlineData("this[args.f] = args.v; this.Age += 1;", false)] // the field from the arguments may be Age
@@ -414,6 +422,7 @@ namespace FastTests.Client.Documents
         [InlineData("this.Age++;", true)]
         [InlineData("this.Active = false; this.Note = null;", true)]
         [InlineData("this.Age += args.v;", false)] // reads an argument
+        [InlineData("this.Age += $v;", false)] // without arguments the script engine reads '$v' as null
         public void ARequestWithoutValuesTakesTheFastPathWhenTheScriptReadsNoArgument(string script, bool applied)
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -470,6 +479,8 @@ namespace FastTests.Client.Documents
         [InlineData("from Items as i update { i.Name = 'changed'; i.Age += 1; }")]
         [InlineData("from Items where Age >= 0 update { this.Name = 'changed'; this.Age += 1; }")]
         [InlineData("from Items as i where i.Age >= 0 update { i.Name = 'changed'; i.Age += 1; }")]
+        [InlineData("from Items update { this.Name = $v; this.Age += $n; }")] // the query parameters are the arguments
+        [InlineData("from Items as i update { i.Name = $v; i.Age += $n; }")]
         public async Task ASimplePatchByQueryBuildsNoScriptEngine(string query)
         {
             using (var store = GetDocumentStore())
@@ -481,7 +492,11 @@ namespace FastTests.Client.Documents
                     session.SaveChanges();
                 }
 
-                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(query));
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
+                {
+                    Query = query,
+                    QueryParameters = new Parameters { ["v"] = "changed", ["n"] = 1 }
+                }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                 using (var session = store.OpenSession())
