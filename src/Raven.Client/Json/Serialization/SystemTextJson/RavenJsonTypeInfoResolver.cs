@@ -883,22 +883,32 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (attribute == null || IsNullValueIgnored(attribute) == false)
                     continue;
 
-                Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
-                property.ShouldSerialize = shouldSerialize == null
-                    ? static (_, value) => value != null
-                    : (target, value) => value != null && shouldSerialize(target, value);
-
-                Action<object, object> set = property.Set;
-                if (set != null)
-                {
-                    JsonConverter converter = property.CustomConverter;
-                    property.Set = (target, value) =>
-                    {
-                        if (value != null || HasCapturedJson(converter))
-                            set(target, value);
-                    };
-                }
+                IgnoreValues(property, static value => value == null, ignoreOnSet: true);
             }
+        }
+
+        private static void IgnoreValues(JsonPropertyInfo property, Func<object, bool> isIgnored, bool ignoreOnSet)
+        {
+            AndShouldSerialize(property, (_, value) => isIgnored(value) == false);
+
+            Action<object, object> set = property.Set;
+            if (set == null || ignoreOnSet == false)
+                return;
+
+            JsonConverter converter = property.CustomConverter;
+            property.Set = (target, value) =>
+            {
+                if (isIgnored(value) == false || HasCapturedJson(converter))
+                    set(target, value);
+            };
+        }
+
+        private static void AndShouldSerialize(JsonPropertyInfo property, Func<object, object, bool> predicate)
+        {
+            Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
+            property.ShouldSerialize = shouldSerialize == null
+                ? predicate
+                : (target, value) => predicate(target, value) && shouldSerialize(target, value);
         }
 
         internal static void ClearSerializing()
@@ -933,21 +943,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     ? defaultValueAttribute.Value
                     : property.PropertyType.IsValueType ? Activator.CreateInstance(property.PropertyType) : null;
 
-                Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
-                property.ShouldSerialize = shouldSerialize == null
-                    ? (_, value) => IsNewtonsoftDefaultValue(value, defaultValue) == false
-                    : (target, value) => IsNewtonsoftDefaultValue(value, defaultValue) == false && shouldSerialize(target, value);
-
-                Action<object, object> set = property.Set;
-                if (set != null && (handling & NewtonsoftDefaultValueHandlingPopulate) == 0)
-                {
-                    JsonConverter converter = property.CustomConverter;
-                    property.Set = (target, value) =>
-                    {
-                        if (IsNewtonsoftDefaultValue(value, defaultValue) == false || HasCapturedJson(converter))
-                            set(target, value);
-                    };
-                }
+                IgnoreValues(property, value => IsNewtonsoftDefaultValue(value, defaultValue), ignoreOnSet: (handling & NewtonsoftDefaultValueHandlingPopulate) == 0);
             }
         }
 
@@ -1954,10 +1950,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 if (isIdentityProperty)
                 {
-                    Func<object, object, bool> shouldSerialize = property.ShouldSerialize;
-                    property.ShouldSerialize = shouldSerialize == null
-                        ? ShouldSerializeIdentityProperty
-                        : (target, value) => ShouldSerializeIdentityProperty(target, value) && shouldSerialize(target, value);
+                    AndShouldSerialize(property, ShouldSerializeIdentityProperty);
                     break;
                 }
             }
