@@ -3,8 +3,10 @@ import {
     OngoingTaskAbstractReplicationNodeInfoDetails,
     OngoingTaskExternalReplicationInfo,
     OngoingTaskInfo,
+    OngoingTaskNodeInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
+    OngoingTaskSharedInfo,
 } from "components/models/tasks";
 import {
     ClickableProgress,
@@ -13,7 +15,7 @@ import {
     LocationDistribution,
 } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
@@ -135,22 +137,40 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
     );
 }
 
+export function getVisibleNodes<TNodeInfo extends OngoingTaskNodeInfo>(
+    task: OngoingTaskInfo<OngoingTaskSharedInfo, TNodeInfo>
+): TNodeInfo[] {
+    return task.nodesInfo.filter(
+        (nodeInfo) =>
+            nodeInfo.details && task.responsibleLocations.some((l) => databaseLocationComparator(l, nodeInfo.location))
+    );
+}
+
+function useCloseOwnedSheetOnUnmount(isSheetOwner: boolean, closeSheet: () => void) {
+    const isSheetOwnerRef = useRef(isSheetOwner);
+    const closeSheetRef = useRef(closeSheet);
+    isSheetOwnerRef.current = isSheetOwner;
+    closeSheetRef.current = closeSheet;
+
+    useEffect(
+        () => () => {
+            if (isSheetOwnerRef.current) {
+                closeSheetRef.current();
+            }
+        },
+        []
+    );
+}
+
 export function ExternalReplicationTaskDistribution(props: ExternalReplicationTaskDistributionProps) {
     const { task } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
     const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
     const ownerId = useId();
-    const { activeSheetOwnerId } = useViewSheet();
+    const { activeSheetOwnerId, close } = useViewSheet();
+    useCloseOwnedSheetOnUnmount(activeSheetOwnerId === ownerId, close);
 
-    const visibleNodes = useMemo(
-        () =>
-            task.nodesInfo.filter(
-                (nodeInfo) =>
-                    nodeInfo.details &&
-                    task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
-            ),
-        [task]
-    );
+    const visibleNodes = useMemo(() => getVisibleNodes(task), [task]);
 
     const items = visibleNodes.map((nodeInfo, index) => {
         const key = taskNodeInfoKey(task, nodeInfo);

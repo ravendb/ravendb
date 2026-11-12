@@ -1,4 +1,6 @@
+import { RefObject, useEffect, useRef } from "react";
 import Button from "react-bootstrap/Button";
+import { useResizeObserver } from "hooks/useResizeObserver";
 import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
@@ -34,6 +36,22 @@ interface OngoingTasksHeaderProps {
     isAiOnly?: boolean;
 }
 
+function useStickyHeaderHeightVariable(stickyHeaderRef: RefObject<HTMLDivElement>) {
+    const { height } = useResizeObserver({ ref: stickyHeaderRef, box: "border-box" });
+
+    useEffect(() => {
+        const page = stickyHeaderRef.current?.parentElement;
+        if (!page || height == null) {
+            return;
+        }
+
+        page.style.setProperty("--sticky-header-height", `${height}px`);
+        return () => {
+            page.style.removeProperty("--sticky-header-height");
+        };
+    }, [height]);
+}
+
 export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
     const { forCurrentDatabase } = useAppUrls();
     const {
@@ -63,9 +81,12 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
             .filter((x) => selectedTaskIds.includes(x.shared.taskId))
             .map((x) => x.shared);
 
+    const stickyHeaderRef = useRef<HTMLDivElement>(null);
+    useStickyHeaderHeightVariable(stickyHeaderRef);
+
     return (
         <>
-            <StickyHeader>
+            <StickyHeader ref={stickyHeaderRef}>
                 <div className="hstack gap-3 flex-wrap">
                     {hasDatabaseWriteAccess && (
                         <>

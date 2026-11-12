@@ -4,13 +4,13 @@
 .replication-hub-sinks-header {
     position: sticky;
     top: calc(var(--sticky-header-height, 0px) - 1px);
-    z-index: 2;
+    z-index: 1;
     margin-top: -(sizes.$gutter-xxs);
     padding: sizes.$gutter-xxs 0 sizes.$gutter-xs;
     background-color: colors.$panel-bg-1-var;
 
     @media (max-height: 800px) {
-        position: relative;
+        position: static;
     }
 
     .collapsing & {
@@ -41,8 +41,6 @@
 }
 
 .replication-hub-sinks-chips {
-    position: relative;
-    z-index: 1;
     margin-bottom: sizes.$gutter-xs;
 
     .sinks-results-count {
@@ -54,6 +52,10 @@
             color: colors.$text-emphasis-var;
         }
     }
+}
+
+.replication-hub-sinks.skip-expand-animation .collapsing {
+    transition: none;
 }
 
 .replication-hub-sinks > .rich-panel-item {
@@ -75,6 +77,7 @@
     .sinks-sort-selects {
         display: flex;
         gap: sizes.$gutter-xxs;
+        font-size: sizes.$font-size-root;
 
         .sinks-sort-field-select {
             min-width: 280px;

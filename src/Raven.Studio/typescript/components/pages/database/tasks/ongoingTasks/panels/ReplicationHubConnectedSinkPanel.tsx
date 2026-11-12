@@ -12,17 +12,12 @@ import {
 import { DestinationUrlItem, OngoingTaskResponsibleNode } from "../../shared/shared";
 import {
     ExternalReplicationTaskDistribution,
+    getVisibleNodes,
     ReplicationTaskSummaryProgress,
 } from "../partials/ExternalReplicationTaskDistribution";
-import {
-    getSinkConnectionStatus,
-    getSinkError,
-    getVisibleNodes,
-    sinkConnectionStatusLabels,
-} from "../partials/useReplicationHubSinks";
+import { getSinkConnectionStatus, getSinkError, sinkConnectionStatusLabels } from "../partials/useReplicationHubSinks";
 import { ErrorModal } from "../partials/ErrorModal";
 import { Icon } from "components/common/Icon";
-import { withPreventDefault } from "components/utils/common";
 import useBoolean from "components/hooks/useBoolean";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
@@ -94,15 +89,15 @@ function SinkErrorItem({ error }: { error: string }) {
 
     return (
         <RichPanelDetailItem>
-            <a
-                href="#"
-                onClick={withPreventDefault(toggleErrorModal)}
-                className="d-flex gap-1 align-items-center"
+            <Button
+                variant="link"
+                onClick={toggleErrorModal}
+                className="d-flex gap-1 align-items-center p-0"
                 title="Show error details"
             >
                 <Icon icon="warning" color="danger" margin="m-0" />
                 <span className="text-danger">Error</span>
-            </a>
+            </Button>
             {isErrorModalOpen && <ErrorModal toggleErrorModal={toggleErrorModal} error={error} />}
         </RichPanelDetailItem>
     );
