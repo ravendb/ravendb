@@ -31,12 +31,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             if (writer is SystemTextJsonBlittableWriter stjWriter)
             {
-                using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
-                using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
-                {
-                    SerializeValue(utf8Writer, value, objectType);
-                }
-                WriteJsonToBlittableWriter(writer, bufferWriter.WrittenSpan);
+                using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, stjWriter.Context);
+                WriteJsonToBlittableWriter(writer, buffer.WrittenSpan);
             }
             else
             {
@@ -64,51 +60,54 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
+        internal ContextMemoryBufferWriter SerializeToBuffer(object value, Type objectType, JsonOperationContext context)
         {
-            using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
+            var buffer = new ContextMemoryBufferWriter(context);
+            try
             {
-                SerializeValue(utf8Writer, value, objectType);
-            }
+                using (var writer = new Utf8JsonWriter((IBufferWriter<byte>)buffer, SystemTextJsonSerializationConventions.WriterOptions))
+                    SerializeValue(writer, value, objectType);
 
-            return ParseBufferToBlittable(bufferWriter, context);
+                return buffer;
+            }
+            catch
+            {
+                buffer.Dispose();
+                throw;
+            }
         }
 
-        internal unsafe BlittableJsonReaderObject SerializeToBlittableWithMetadata(object value, Type objectType,
-            IMetadataDictionary metadata, JsonOperationContext context)
+        internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
         {
-            using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
-            {
-                SerializeValue(utf8Writer, value, objectType);
-            }
-
-            if (metadata != null && metadata.Count > 0)
-            {
-                using (Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType))
-                {
-                    SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
-                }
-
-                bufferWriter.WriteByte((byte)'}');
-            }
-
-            return ParseBufferToBlittable(bufferWriter, context);
+            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
+            return ParseBufferToBlittable(buffer, context);
         }
 
-        internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, DocumentInfo documentInfo, JsonOperationContext context)
+        internal BlittableJsonReaderObject SerializeToBlittableWithMetadata(object value, Type objectType, IMetadataDictionary metadata, JsonOperationContext context)
         {
-            using var bufferWriter = new ContextMemoryBufferWriter(context);
-            using (var utf8Writer = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.WriterOptions))
-            {
-                SerializeValue(utf8Writer, value, objectType);
-            }
+            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
+            AppendMetadata(buffer, objectType, metadata);
+            return ParseBufferToBlittable(buffer, context);
+        }
 
+        internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, DocumentInfo documentInfo, JsonOperationContext context)
+        {
+            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
             if (documentInfo != null)
-                AppendMetadata(bufferWriter, objectType, documentInfo);
+                AppendMetadata(buffer, objectType, documentInfo);
 
-            return ParseBufferToBlittable(bufferWriter, context);
+            return ParseBufferToBlittable(buffer, context);
+        }
+
+        internal static void AppendMetadata(ContextMemoryBufferWriter buffer, Type objectType, IMetadataDictionary metadata)
+        {
+            if (metadata == null || metadata.Count == 0)
+                return;
+
+            using (Utf8JsonWriter metadataWriter = OpenMetadata(buffer, objectType))
+                SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
+
+            buffer.WriteByte((byte)'}');
         }
 
         private static void AppendMetadata(ContextMemoryBufferWriter bufferWriter, Type objectType, DocumentInfo documentInfo)

@@ -85,16 +85,34 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private GenerateEntityIdOnTheClient _identity;
 
         [ThreadStatic]
-        internal static object RootEntity;
+        private static object _rootEntity;
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
 
         [ThreadStatic]
-        internal static object RootDocument;
+        private static object _rootDocument;
 
         [ThreadStatic]
         private static HashSet<object> _serializing;
+
+        internal static RootScope EnterRoot(object entity, bool removeIdentityProperty, bool hasIdentityProperty)
+        {
+            _rootEntity = removeIdentityProperty && hasIdentityProperty ? entity : null;
+            _rootDocument = removeIdentityProperty ? entity : null;
+            RemovedIdentityProperty = false;
+            return default;
+        }
+
+        internal readonly struct RootScope : IDisposable
+        {
+            public void Dispose()
+            {
+                _rootEntity = null;
+                _rootDocument = null;
+                ClearSerializing();
+            }
+        }
 
         public RavenJsonTypeInfoResolver(SystemTextJsonSerializationConventions conventions, TypeNameHandling typeNameHandling)
         {
@@ -1154,7 +1172,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static object WithoutReservedKeys(object target, object extensionData, HashSet<string> mappedNames, string identityPropertyName)
         {
-            bool isRoot = ReferenceEquals(target, RootDocument);
+            bool isRoot = ReferenceEquals(target, _rootDocument);
 
             bool IsKept(string key) =>
                 key != Constants.Documents.Metadata.Key &&
@@ -1934,7 +1952,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (containingObject == null)
                 return true;
 
-            object rootEntity = RootEntity;
+            object rootEntity = _rootEntity;
             if (rootEntity == null)
                 return true;
 
