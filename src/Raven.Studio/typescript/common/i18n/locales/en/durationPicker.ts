@@ -3,6 +3,10 @@ export default {
     hours: "Hours",
     minutes: "Minutes",
     seconds: "Seconds",
-    nonNegativeNumberRequired: "Please enter a non-negative number",
-    wholeNumberRequired: "Please enter a whole number",
+    daysSymbol: "d",
+    hoursSymbol: "h",
+    minutesSymbol: "m",
+    secondsSymbol: "s",
+    formatExample: "e.g. 1d 4h 5m",
+    pickerLabel: "Choose duration",
 } as const;

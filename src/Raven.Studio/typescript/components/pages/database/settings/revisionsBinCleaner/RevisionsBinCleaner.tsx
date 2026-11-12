@@ -160,7 +160,7 @@ export default function RevisionsBinCleaner() {
                                             }
                                         >
                                             <div>
-                                                <div className="w-fit-content mw-100 mb-3">
+                                                <div className="mb-3">
                                                     <FormDurationPickerWithDefault
                                                         control={control}
                                                         name="minimumEntriesAgeToKeep"

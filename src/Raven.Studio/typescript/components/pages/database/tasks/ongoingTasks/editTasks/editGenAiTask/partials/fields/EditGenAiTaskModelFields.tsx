@@ -187,7 +187,7 @@ function TracingFields() {
                         </PopoverWithHoverWrapper>
                     </FormSwitch>
                     {formValues.isSetTracingExpiration && (
-                        <FormDurationPicker control={control} name="tracingExpirationInSeconds" showDays isFlexGrow />
+                        <FormDurationPicker control={control} name="tracingExpirationInSeconds" showDays />
                     )}
                 </FormGroup>
             )}

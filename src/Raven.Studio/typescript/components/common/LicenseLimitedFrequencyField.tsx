@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { Control, FieldPath, FieldValues, useController } from "react-hook-form";
 import appUrl from "common/appUrl";
-import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
+import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationDropdownPicker";
 import FieldLabel from "components/common/FieldLabel";
 import { ControlledDurationPicker } from "components/common/Form";
 import { Icon } from "components/common/Icon";
@@ -40,17 +40,15 @@ export default function LicenseLimitedFrequencyField<
             <FieldLabel id={labelId} className="d-block">
                 {label}
             </FieldLabel>
-            <div className="d-inline-block mw-100">
-                <ControlledDurationPicker
-                    field={field}
-                    fieldState={fieldState}
-                    isSubmitting={formState.isSubmitting}
-                    disabled={disabled || formState.isSubmitting}
-                    aria-labelledby={labelId}
-                    placeholder={ZERO_DURATION_PLACEHOLDER}
-                    showSeconds
-                />
-            </div>
+            <ControlledDurationPicker
+                field={field}
+                fieldState={fieldState}
+                isSubmitting={formState.isSubmitting}
+                disabled={disabled || formState.isSubmitting}
+                aria-labelledby={labelId}
+                placeholder={ZERO_DURATION_PLACEHOLDER}
+                showSeconds
+            />
             <div
                 className={classNames("d-flex flex-wrap align-items-center column-gap-1 mt-1 small", {
                     "item-disabled pe-none": disabled,

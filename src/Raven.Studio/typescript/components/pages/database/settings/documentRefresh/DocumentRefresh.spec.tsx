@@ -1,6 +1,5 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
-import { within } from "@testing-library/dom";
 import { rtlRender } from "test/rtlTestUtils";
 import appUrl from "common/appUrl";
 import * as stories from "./DocumentRefresh.stories";
@@ -19,15 +18,14 @@ describe("DocumentRefresh", () => {
     it("can disable and set to null refresh frequency after disabling 'Enable Document Refresh'", async () => {
         const { screen, fireClick } = rtlRender(<DefaultDocumentRefresh />);
 
-        const durationPicker = await screen.findByRole("group", { name: "Refresh frequency" });
-        const hoursInput = within(durationPicker).getByRole("spinbutton", { name: "Hours" });
-        expect(hoursInput).toBeEnabled();
-        expect(hoursInput).toHaveValue(35);
+        const refreshFrequency = await screen.findByRole("textbox", { name: "Refresh frequency" });
+        expect(refreshFrequency).toBeEnabled();
+        expect(refreshFrequency).toHaveValue("35h 59m 59s");
 
         await fireClick(screen.getByRole("checkbox", { name: "Enable Document Refresh" }));
 
-        expect(hoursInput).toBeDisabled();
-        expect(hoursInput).toHaveValue(null);
+        expect(refreshFrequency).toBeDisabled();
+        expect(refreshFrequency).toHaveValue("");
     });
 
     it("pre-fills the optimal batch size and suggests it again after a reset", async () => {
@@ -71,29 +69,16 @@ describe("DocumentRefresh", () => {
             await screen.findByRole("button", { name: "Reset to default", description: "Refresh frequency" })
         );
 
-        const durationPicker = screen.getByRole("group", { name: "Refresh frequency" });
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveAttribute(
+        expect(screen.getByRole("textbox", { name: "Refresh frequency" })).toHaveAttribute(
             "placeholder",
-            "Default (0)"
-        );
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveAttribute(
-            "placeholder",
-            "Default (1)"
-        );
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveAttribute(
-            "placeholder",
-            "Default (0)"
+            "Default (1m)"
         );
     });
 
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        const durationPicker = await screen.findByRole("group", { name: "Refresh frequency" });
-
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Hours" })).toHaveValue(35);
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Minutes" })).toHaveValue(59);
-        expect(within(durationPicker).getByRole("spinbutton", { name: "Seconds" })).toHaveValue(59);
+        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toHaveValue("35h 59m 59s");
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "See full comparison" })).toHaveAttribute("href", appUrl.forAbout());
     });
@@ -101,7 +86,7 @@ describe("DocumentRefresh", () => {
     it("does not offer a reset to default on a limited license", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        expect(await screen.findByRole("group", { name: "Refresh frequency" })).toBeInTheDocument();
+        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reset to default" })).not.toBeInTheDocument();
     });
 
@@ -109,15 +94,13 @@ describe("DocumentRefresh", () => {
         const { screen, fireClick } = rtlRender(<LicenseRestricted />);
 
         const documentRefreshSwitch = await screen.findByRole("checkbox", { name: "Enable Document Refresh" });
-        const hoursInput = within(screen.getByRole("group", { name: "Refresh frequency" })).getByRole("spinbutton", {
-            name: "Hours",
-        });
+        const refreshFrequency = screen.getByRole("textbox", { name: "Refresh frequency" });
 
         await fireClick(documentRefreshSwitch);
-        expect(hoursInput).toHaveValue(null);
+        expect(refreshFrequency).toHaveValue("");
 
         await fireClick(documentRefreshSwitch);
-        expect(hoursInput).toHaveValue(36);
+        expect(refreshFrequency).toHaveValue("36h");
         expect(screen.getByText(/Minimum on your license/)).toHaveTextContent("Minimum on your license: 36 hours.");
         expect(screen.queryByText(licenseLimitWarning)).not.toBeInTheDocument();
     });

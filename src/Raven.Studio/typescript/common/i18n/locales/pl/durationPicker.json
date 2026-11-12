@@ -3,6 +3,10 @@
     "hours": "Godziny",
     "minutes": "Minuty",
     "seconds": "Sekundy",
-    "nonNegativeNumberRequired": "Wprowadź liczbę nieujemną",
-    "wholeNumberRequired": "Wprowadź liczbę całkowitą"
+    "daysSymbol": "d",
+    "hoursSymbol": "h",
+    "minutesSymbol": "min",
+    "secondsSymbol": "s",
+    "formatExample": "np. 1d 4h 5min",
+    "pickerLabel": "Wybierz czas trwania"
 }

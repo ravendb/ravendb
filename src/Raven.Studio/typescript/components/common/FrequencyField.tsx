@@ -46,16 +46,14 @@ export default function FrequencyField<TFieldValues extends FieldValues, TName e
     }
 
     return (
-        <div className="w-fit-content mw-100">
-            <FormDurationPickerWithDefault
-                control={control}
-                name={name}
-                label={label}
-                disabled={disabled}
-                defaultTotalSeconds={defaultFrequencyInSec}
-                showSeconds
-            />
-        </div>
+        <FormDurationPickerWithDefault
+            control={control}
+            name={name}
+            label={label}
+            disabled={disabled}
+            defaultTotalSeconds={defaultFrequencyInSec}
+            showSeconds
+        />
     );
 }
 
