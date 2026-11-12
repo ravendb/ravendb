@@ -426,17 +426,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (type.IsDefined(typeof(JsonConverterAttribute), inherit: true))
                 return;
 
-            object converter = GetNewtonsoftAttribute(type, NewtonsoftJsonConverterAttributeName);
-            if (converter == null)
-            {
-                foreach (Type @interface in type.GetInterfaces())
-                {
-                    converter = GetNewtonsoftAttribute(@interface, NewtonsoftJsonConverterAttributeName);
-                    if (converter != null)
-                        break;
-                }
-            }
-
+            object converter = FindOnTypeOrInterfaces(type, static t => GetNewtonsoftAttribute(t, NewtonsoftJsonConverterAttributeName));
             if (converter != null && IsTranslatedConverter(converter, type) == false)
                 ThrowNewtonsoftConverterNotSupported($"Type '{type.FullName}'");
         }
@@ -482,23 +472,25 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 ThrowNewtonsoftReferencesNotSupported($"Type '{type.FullName}'");
         }
 
-        private static object GetNewtonsoftContainerAttribute(Type type)
+        private static object GetNewtonsoftContainerAttribute(Type type) => FindOnTypeOrInterfaces(type, FindNewtonsoftContainerAttribute);
+
+        private static object FindOnTypeOrInterfaces(Type type, Func<Type, object> find)
         {
-            object container = FindNewtonsoftContainerAttribute(type);
-            if (container != null)
-                return container;
+            object attribute = find(type);
+            if (attribute != null)
+                return attribute;
 
             foreach (Type @interface in type.GetInterfaces())
             {
-                container = FindNewtonsoftContainerAttribute(@interface);
-                if (container != null)
-                    return container;
+                attribute = find(@interface);
+                if (attribute != null)
+                    return attribute;
             }
 
             return null;
         }
 
-        private static object FindNewtonsoftContainerAttribute(Type type)
+        internal static object FindNewtonsoftContainerAttribute(Type type)
         {
             foreach (object attribute in type.GetCustomAttributes(true))
             {
@@ -701,17 +693,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static int GetNewtonsoftMemberSerialization(Type type)
         {
-            object jsonObject = GetNewtonsoftAttribute(type, NewtonsoftJsonObjectAttributeName);
-            if (jsonObject == null)
-            {
-                foreach (Type @interface in type.GetInterfaces())
-                {
-                    jsonObject = GetNewtonsoftAttribute(@interface, NewtonsoftJsonObjectAttributeName);
-                    if (jsonObject != null)
-                        break;
-                }
-            }
-
+            object jsonObject = FindOnTypeOrInterfaces(type, static t => GetNewtonsoftAttribute(t, NewtonsoftJsonObjectAttributeName));
             if (jsonObject != null)
                 return Convert.ToInt32(jsonObject.GetType().GetProperty("MemberSerialization")?.GetValue(jsonObject));
 
