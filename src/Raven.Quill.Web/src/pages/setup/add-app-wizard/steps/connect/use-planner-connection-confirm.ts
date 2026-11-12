@@ -9,13 +9,13 @@ export function usePlannerConnectionConfirm(): WizardConfirmNext {
     const { control } = useFormContext<AppFormData>();
     const connection = useWatch({ control, name: "externalConnection" });
     const hasSession = useSetupWizardStore(selectHasSession);
-    const connectKey = useSetupWizardStore((state) => state.connectKey);
+    const plannerConnectKey = useSetupWizardStore((state) => state.plannerConnectKey);
 
     return {
-        isRequired: hasSession && connectKey !== null && computeConnectKey(connection) !== connectKey,
+        isRequired: hasSession && computeConnectKey(connection) !== plannerConnectKey,
         title: "Cancel the AI planner?",
         description:
-            "The plan was made for the previous connection. Continuing stops the planner and discards the plan, and you start over on the plan step.",
+            "The plan was made for the previous connection. Continuing stops the planner and discards the plan, and you start over on the plan step. This cannot be undone.",
         confirmLabel: "Cancel the planner",
     };
 }

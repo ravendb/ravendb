@@ -517,6 +517,32 @@ public class MigrationEndpointsTests(ITestOutputHelper output) : QuillTestBase(o
         Assert.Null(state.PlanSelectedTables);
     }
 
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Plan_discard_answers_204_and_the_draft_has_no_plan_left()
+    {
+        await using var host = await NewMigrationHostAsync(StubPlannerHandler.Replying());
+        await MigrationSamples.SeedDiscoveredSchemaAsync(host.Config, Slug, PlanId, selectedTables: [new SelectedSourceTable("orders", "public")]);
+
+        var resp = await host.Client.PostAsJsonAsync(QuillRoutes.MigrationPlanDiscard, new { slug = Slug });
+
+        Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
+
+        var draft = await host.SetupDraftAsync();
+        Assert.False(draft.HasPlan);
+        Assert.Empty(draft.PlanSelectedTables);
+        Assert.NotNull(draft.Discovery);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Plan_discard_for_an_app_the_wizard_never_saw_answers_204()
+    {
+        await using var host = await NewMigrationHostAsync(StubPlannerHandler.Replying());
+
+        var resp = await host.Client.PostAsJsonAsync(QuillRoutes.MigrationPlanDiscard, new { slug = Slug });
+
+        Assert.Equal(HttpStatusCode.NoContent, resp.StatusCode);
+    }
+
     private static Task<HttpResponseMessage> SaveAsync(QuillHost host) =>
         host.Client.PostAsJsonAsync(QuillRoutes.MigrationPlanSave, new
         {

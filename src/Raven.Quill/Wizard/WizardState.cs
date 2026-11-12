@@ -29,6 +29,8 @@ internal sealed class WizardState
     public CdcSinkConfiguration? LastMapConfiguration { get; set; }
     public DateTime? LastMapAt { get; set; }
 
+    public Dictionary<string, int>? LastMapPlanVersions { get; set; }
+
     public Dictionary<string, int>? AppliedPlanVersions { get; set; }
 
     public string? PlanId { get; set; }

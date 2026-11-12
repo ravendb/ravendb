@@ -49,32 +49,47 @@ public class WizardDraftEndpointTests(ITestOutputHelper output, QuillCollectionH
     public async Task Draft_of_a_created_app_says_so()
     {
         var slug = NewSlug();
-        await SeedWizardMapAsync(slug, appliedPlanVersions: new() { ["Orders"] = 3 });
+        await SeedWizardMapAsync(slug);
         await Host.ProvisionAsync(new ProvisionRequest("Created", slug));
 
-        var draft = await Host.SetupDraftAsync(slug);
-
-        Assert.True(draft.IsAppCreated);
-        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 3 }, draft.AppliedPlanVersions);
+        Assert.True((await Host.SetupDraftAsync(slug)).IsAppCreated);
     }
 
     [RavenFact(RavenTestCategory.Quill)]
-    public async Task Mapping_by_hand_forgets_the_applied_plan_versions()
+    public async Task A_plan_counts_as_applied_only_once_the_app_is_provisioned()
     {
         var slug = NewSlug();
-        await SeedWizardMapAsync(slug, appliedPlanVersions: new() { ["Orders"] = 3 });
+        await SeedWizardMapAsync(slug, lastMapPlanVersions: new() { ["Orders"] = 3 });
+
+        Assert.Null((await Host.SetupDraftAsync(slug)).AppliedPlanVersions);
+
+        await Host.ProvisionAsync(new ProvisionRequest("Created", slug));
+
+        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 3 }, (await Host.SetupDraftAsync(slug)).AppliedPlanVersions);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Mapping_by_hand_forgets_the_applied_plan_versions_once_the_app_is_provisioned()
+    {
+        var slug = NewSlug();
+        await SeedWizardMapAsync(slug, lastMapPlanVersions: new() { ["Orders"] = 3 });
+        await Host.ProvisionAsync(new ProvisionRequest("Created", slug));
 
         var sample = AiHelperSamples.BuildCdcConfig();
         await Host.SetupMapAsync(new MapRequest
         {
             Slug = slug,
-            Name = $"{slug}-cdc",
+            Name = sample.Name,
             ConnectionStringName = sample.ConnectionStringName,
             Tables = sample.Tables,
             Postgres = sample.Postgres,
             Disabled = true,
             SkipInitialLoad = true,
         });
+
+        Assert.Equal(new Dictionary<string, int> { ["Orders"] = 3 }, (await Host.SetupDraftAsync(slug)).AppliedPlanVersions);
+
+        await Host.ProvisionAsync(new ProvisionRequest("Created", slug, UpdateExisting: true));
 
         Assert.Null((await Host.SetupDraftAsync(slug)).AppliedPlanVersions);
     }
@@ -90,7 +105,7 @@ public class WizardDraftEndpointTests(ITestOutputHelper output, QuillCollectionH
 
     private static string NewSlug() => $"draft-{Guid.NewGuid():N}";
 
-    private async Task SeedWizardMapAsync(string slug, Dictionary<string, int>? appliedPlanVersions = null)
+    private async Task SeedWizardMapAsync(string slug, Dictionary<string, int>? lastMapPlanVersions = null)
     {
         var cdc = AiHelperSamples.BuildCdcConfig();
         cdc.Disabled = true;
@@ -103,7 +118,7 @@ public class WizardDraftEndpointTests(ITestOutputHelper output, QuillCollectionH
                 Provider = "Npgsql",
                 SourceConnectionString = "Host=localhost;Database=src",
                 LastMapConfiguration = cdc,
-                AppliedPlanVersions = appliedPlanVersions,
+                LastMapPlanVersions = lastMapPlanVersions,
             },
             WizardState.DocumentIdFor(slug));
         await session.SaveChangesAsync();

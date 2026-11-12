@@ -79,26 +79,41 @@ describe("resolveProposalTables", () => {
 });
 
 describe("resolveConfigTables", () => {
-    it("resolves every table a configuration reads, a table without a schema in the provider's default schema", () => {
+    const salesOrders = { sourceTableSchema: "sales", sourceTableName: "orders" };
+    const salesCustomers = { sourceTableSchema: "sales", sourceTableName: "customers" };
+
+    it("resolves every table a configuration reads, an embedded table without a schema in its parent's schema", () => {
         const config: CdcSinkTableConfig = {
             collectionName: "Orders",
             sourceTableSchema: "sales",
             sourceTableName: "ORDERS",
             embeddedTables: [
                 { sourceTableName: "customers", propertyName: "Customer" },
+                { sourceTableSchema: "public", sourceTableName: "customers", propertyName: "Buyer" },
                 { sourceTableSchema: "sales", sourceTableName: "no_such_table", propertyName: "Missing" },
             ],
         };
 
-        const salesOrders = { sourceTableSchema: "sales", sourceTableName: "orders" };
-        const salesCustomers = { sourceTableSchema: "sales", sourceTableName: "customers" };
-
         expect(resolveConfigTables(config, [salesOrders, salesCustomers, CUSTOMERS], "public")).toEqual({
             table: salesOrders,
             embeddedTables: [
+                { table: salesCustomers, embeddedTables: [] },
                 { table: CUSTOMERS, embeddedTables: [] },
                 { table: null, embeddedTables: [] },
             ],
+        });
+    });
+
+    it("resolves a root table without a schema in the provider's default schema, and its embedded tables with it", () => {
+        const config: CdcSinkTableConfig = {
+            collectionName: "Orders",
+            sourceTableName: "orders",
+            embeddedTables: [{ sourceTableName: "customers", propertyName: "Customer" }],
+        };
+
+        expect(resolveConfigTables(config, [salesOrders, salesCustomers, ORDERS, CUSTOMERS], "public")).toEqual({
+            table: ORDERS,
+            embeddedTables: [{ table: CUSTOMERS, embeddedTables: [] }],
         });
     });
 });

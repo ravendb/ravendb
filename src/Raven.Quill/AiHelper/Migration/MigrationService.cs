@@ -196,6 +196,23 @@ public sealed class MigrationService(
         return await ReadAsync<MigrationPlanSaveOutcome>("/assistant/migration/plan/save", new PlannerPlanRequest { PlanId = planId, Changes = request.Changes }, token);
     }
 
+    public async Task<Refusal?> PlanDiscardAsync(MigrationPlanDiscardRequest request, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(request.Slug))
+            return new Refusal("slug is required");
+
+        // patches, not a load and save: the wizard writes its other fields while the discard is on its way
+        using var session = store.OpenAsyncSession();
+        var id = WizardState.DocumentIdFor(request.Slug);
+        session.Advanced.Patch<WizardState, string?>(id, state => state.PlanId, null);
+        session.Advanced.Patch<WizardState, SelectedSourceTable[]?>(id, state => state.PlanSelectedTables, null);
+        session.Advanced.Patch<WizardState, Dictionary<string, int>?>(id, state => state.LastMapPlanVersions, null);
+        session.Advanced.Patch<WizardState, Dictionary<string, int>?>(id, state => state.AppliedPlanVersions, null);
+        await session.SaveChangesAsync(token);
+
+        return null;
+    }
+
     public async Task<(MigrationApplyResponse? Response, Refusal? Refusal)> ApplyAsync(MigrationApplyRequest request, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(request.Slug))
@@ -234,7 +251,7 @@ public sealed class MigrationService(
 
         state.LastMapConfiguration = configuration;
         state.LastMapAt = DateTime.UtcNow;
-        state.AppliedPlanVersions = plan.Plan.Entries
+        state.LastMapPlanVersions = plan.Plan.Entries
             .Where(pair => pair.Value.Status == PlanEntryStatus.Registered)
             .ToDictionary(pair => pair.Key, pair => pair.Value.Version);
         await session.SaveChangesAsync(token);

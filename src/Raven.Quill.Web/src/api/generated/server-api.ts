@@ -1049,6 +1049,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/setup/migration/plan/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Forgets the plan of an app, so a reloaded wizard starts the planner over instead of reopening it. The mapping the app runs on stays. 204 also when the app has no plan. */
+        post: operations["setup.migrationPlanDiscard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/setup/migration/apply": {
         parameters: {
             query?: never;
@@ -1058,7 +1075,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. */
+        /** @description Assembles the registered collections of the plan into a CDC configuration and hands it to the map step. The plan counts as applied to the app only once provision succeeds. */
         post: operations["setup.migrationApply"];
         delete?: never;
         options?: never;
@@ -1905,6 +1922,9 @@ export interface components {
             config?: null | components["schemas"]["CdcSinkTableConfig"];
             newName?: null | string;
             moveToArea?: null | string;
+        };
+        MigrationPlanDiscardRequest: {
+            slug: string;
         };
         MigrationPlanDocument: {
             id?: string;
@@ -4932,6 +4952,37 @@ export interface operations {
             };
         };
     };
+    "setup.migrationPlanDiscard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationPlanDiscardRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     "setup.migrationApply": {
         parameters: {
             query?: never;
@@ -5199,6 +5250,7 @@ export type MigrationFrameRemovedFrame = components["schemas"]["MigrationFrameRe
 export type MigrationFrameReplyFrame = components["schemas"]["MigrationFrameReplyFrame"];
 export type MigrationFrameTransientCollectionErrorFrame = components["schemas"]["MigrationFrameTransientCollectionErrorFrame"];
 export type MigrationPlanChange = components["schemas"]["MigrationPlanChange"];
+export type MigrationPlanDiscardRequest = components["schemas"]["MigrationPlanDiscardRequest"];
 export type MigrationPlanDocument = components["schemas"]["MigrationPlanDocument"];
 export type MigrationPlanGetRequest = components["schemas"]["MigrationPlanGetRequest"];
 export type MigrationPlanGetResponse = components["schemas"]["MigrationPlanGetResponse"];
@@ -5366,6 +5418,7 @@ export const API_ENDPOINTS = {
         migrationApply: "/setup/migration/apply",
         migrationAreaAsk: "/setup/migration/area/ask",
         migrationAreaStart: "/setup/migration/area/start",
+        migrationPlanDiscard: "/setup/migration/plan/discard",
         migrationPlanGet: "/setup/migration/plan/get",
         migrationPlanSave: "/setup/migration/plan/save",
         migrationProposalAsk: "/setup/migration/proposal/ask",
@@ -5481,6 +5534,7 @@ export function createServerApi(client: ApiClient) {
             migrationApply: (request: MigrationApplyRequest) => client.post<MigrationApplyResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationApply, request),
             migrationAreaAsk: (request: MigrationAreaAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaAsk, request, { responseType: "response" }),
             migrationAreaStart: (request: MigrationAreaStartRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationAreaStart, request, { responseType: "response" }),
+            migrationPlanDiscard: (request: MigrationPlanDiscardRequest) => client.post<void, ApiErrorResponse>(API_ENDPOINTS.setup.migrationPlanDiscard, request),
             migrationPlanGet: (request: MigrationPlanGetRequest) => client.post<MigrationPlanGetResponse, ApiErrorResponse>(API_ENDPOINTS.setup.migrationPlanGet, request),
             migrationPlanSave: (request: MigrationPlanSaveRequest) => client.post<MigrationPlanSaveOutcome, ApiErrorResponse | MigrationPlanSaveOutcome>(API_ENDPOINTS.setup.migrationPlanSave, request),
             migrationProposalAsk: (request: MigrationProposalAskRequest) => client.post<Response>(API_ENDPOINTS.setup.migrationProposalAsk, request, { responseType: "response" }),

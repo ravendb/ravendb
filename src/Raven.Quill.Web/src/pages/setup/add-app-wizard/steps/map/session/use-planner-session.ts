@@ -6,8 +6,7 @@ import { isApiError, type ApiError } from "@/api/http-client";
 import { toError } from "@/components/form/wizard/wizard-step-error";
 import { useSetupWizardStore } from "@/pages/setup/add-app-wizard/app-wizard-store";
 import { type AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { DEFAULT_PROVIDER, resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
-import { resolveDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
+import { resolveConnectionDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
 import { computeConnectKey } from "@/pages/setup/add-app-wizard/steps/connect/use-connect-source-step";
 import {
     buildPlanChanges,
@@ -75,13 +74,12 @@ export function createPlannerSession({ getConnection, getSelectedTables }: Plann
 
     const openSession = () => {
         const connection = getConnection();
-        const provider = connection.provider || DEFAULT_PROVIDER;
 
         getStore().openPlannerSession({
             slug: connection.slug,
             connectKey: computeConnectKey(connection),
             selectedTables: getSelectedTables(),
-            defaultSchema: resolveDefaultSchema(provider, resolveConnectionString(connection)),
+            defaultSchema: resolveConnectionDefaultSchema(connection),
         });
     };
 

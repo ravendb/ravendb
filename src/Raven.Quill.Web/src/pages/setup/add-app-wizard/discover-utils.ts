@@ -1,5 +1,11 @@
 import type { DiscoverColumnResponse, DiscoverResponse, DiscoverTableResponse } from "@/api/generated/server-api";
-import { parseConnectionString, type Provider } from "@/pages/setup/add-app-wizard/connection-string";
+import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
+import {
+    DEFAULT_PROVIDER,
+    parseConnectionString,
+    type Provider,
+    resolveConnectionString,
+} from "@/pages/setup/add-app-wizard/connection-string";
 
 /** How many source tables one app can process. Unlimited tables are planned. */
 export const MAX_SELECTED_TABLES = 10_000;
@@ -55,6 +61,10 @@ export function resolveDefaultSchema(provider: Provider, connectionString: strin
         case "MySqlConnectorFactory":
             return parseConnectionString(connectionString).values.database || "mysql";
     }
+}
+
+export function resolveConnectionDefaultSchema(connection: AppFormData["externalConnection"]): string {
+    return resolveDefaultSchema(connection.provider || DEFAULT_PROVIDER, resolveConnectionString(connection));
 }
 
 export type SourceTableRef = { sourceTableSchema?: string | null; sourceTableName: string };

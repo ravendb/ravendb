@@ -26,6 +26,8 @@ public sealed record MigrationStopRequest(string Slug, [property: JsonRequired] 
 
 public sealed record MigrationPlanGetRequest(string Slug);
 
+public sealed record MigrationPlanDiscardRequest(string Slug);
+
 public sealed record MigrationPlanGetResponse(MigrationPlanDocument Plan, MigrationProposal? Proposal);
 
 public sealed class MigrationPlanDocument

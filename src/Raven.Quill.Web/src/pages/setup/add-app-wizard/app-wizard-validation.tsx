@@ -36,7 +36,8 @@ const hasUniqueValues = (values: Array<string | null | undefined>) => {
     return new Set(normalized).size === normalized.length;
 };
 
-const getSourceTableKey = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) => {
+// The schema is compared as written: the tables schema has no connection to resolve a default schema from.
+const getRootTableKey = (table: { sourceTableSchema?: string | null; sourceTableName?: string | null }) => {
     const name = table.sourceTableName?.trim().toLowerCase();
 
     if (!name) {
@@ -195,7 +196,7 @@ export const tablesSchema = z
         const countByKey = new Map<string, number>();
 
         for (const table of tables) {
-            const key = getSourceTableKey(table);
+            const key = getRootTableKey(table);
 
             if (key) {
                 countByKey.set(key, (countByKey.get(key) ?? 0) + 1);
@@ -204,7 +205,7 @@ export const tablesSchema = z
 
         // A source table can be a root table only once; flag each duplicate on its own row.
         tables.forEach((table, index) => {
-            const key = getSourceTableKey(table);
+            const key = getRootTableKey(table);
 
             if (!key || (countByKey.get(key) ?? 0) < 2) {
                 return;

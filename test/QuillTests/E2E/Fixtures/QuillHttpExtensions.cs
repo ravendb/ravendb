@@ -134,6 +134,7 @@ internal static class QuillRoutes
     public const string MigrationAreaAsk = "/api/setup/migration/area/ask";
     public const string MigrationPlanGet = "/api/setup/migration/plan/get";
     public const string MigrationPlanSave = "/api/setup/migration/plan/save";
+    public const string MigrationPlanDiscard = "/api/setup/migration/plan/discard";
     public const string MigrationStop = "/api/setup/migration/stop";
     public const string MigrationApply = "/api/setup/migration/apply";
 

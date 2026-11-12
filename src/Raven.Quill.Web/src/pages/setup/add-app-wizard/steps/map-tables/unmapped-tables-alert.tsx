@@ -22,7 +22,7 @@ import {
     getSourceTableKey,
     scaffoldTables,
 } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-utils";
-import { getTableLabel } from "@/pages/setup/add-app-wizard/discover-utils";
+import { getTableLabel, resolveConnectionDefaultSchema } from "@/pages/setup/add-app-wizard/discover-utils";
 import { useApplyMapTables } from "@/pages/setup/add-app-wizard/steps/map-tables/use-apply-map-tables";
 
 type UnmappedTable = {
@@ -39,9 +39,10 @@ export function UnmappedTablesAlert() {
     const mappedTables = useWatch({ control, name: "mapTables.tables" }) ?? [];
     const discoverResult = useSetupWizardStore((state) => state.discoverResult);
 
-    const mappedKeys = collectMappedSourceTableKeys(mappedTables);
+    const defaultSchema = resolveConnectionDefaultSchema(getValues("externalConnection"));
+    const mappedKeys = collectMappedSourceTableKeys(mappedTables, defaultSchema);
     const unmappedTables: UnmappedTable[] = getValues("verifySchema.tables").flatMap((table) => {
-        const key = getSourceTableKey(table);
+        const key = getSourceTableKey(table, defaultSchema);
 
         return key !== null && !mappedKeys.has(key) ? [{ key, table }] : [];
     });
