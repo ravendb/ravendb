@@ -86,7 +86,6 @@ export function buildEditAppSeed(
     };
 }
 
-/** Whether the plan still holds the very collection versions the app's mapping was applied from. */
 export function isPlanAsApplied(draft: WizardDraftResponse, plan: MigrationPlanGetResponse): boolean {
     const appliedVersions = draft.appliedPlanVersions;
 

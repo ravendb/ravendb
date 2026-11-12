@@ -31,8 +31,6 @@ export const UNSPECIFIED_PROPERTY_CASE = "Unspecified";
 /** Quill ends a stream with this error frame after migrationStop. */
 export const STOPPED_TURN_ERROR = "The turn was stopped.";
 
-const INCOMPLETE_TURN_ERROR = "The planner ended its turn without finishing it.";
-
 let nextTurnId = 0;
 
 export function createTurnId(): string {
@@ -252,7 +250,11 @@ export function endReplyTurn(turns: PlannerTurn[], { error, isStopped }: Planner
             return turn;
         }
 
-        return isStopped ? { ...turn, status: "stopped" } : { ...turn, status: "failed", error: INCOMPLETE_TURN_ERROR };
+        if (isStopped) {
+            return { ...turn, status: "stopped" };
+        }
+
+        return { ...turn, status: "failed", error: "The planner ended its turn without finishing it." };
     });
 }
 

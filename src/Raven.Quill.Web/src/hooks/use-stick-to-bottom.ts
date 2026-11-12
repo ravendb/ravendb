@@ -1,6 +1,5 @@
 import { useEffect, useRef, type UIEvent } from "react";
 
-/** How far from the bottom still counts as following along, so a streaming answer keeps scrolling. */
 const STICK_TO_BOTTOM_THRESHOLD_PX = 48;
 
 /**

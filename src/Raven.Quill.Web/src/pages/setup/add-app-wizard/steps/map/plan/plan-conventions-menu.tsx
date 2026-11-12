@@ -32,8 +32,6 @@ const CASE_OPTIONS: CaseOption[] = [
     { value: "SnakeCase", label: "snake_case", example: "order_date" },
 ];
 
-const OPEN_NOTE = "You can change it until the first area starts building. After that it is locked for every area.";
-
 /** Every area builds with the conventions in force when it started, so they lock once the first area starts. */
 export function PlanConventionsMenu() {
     const session = usePlannerSession();
@@ -103,7 +101,8 @@ export function PlanConventionsMenu() {
                     ))}
                 </DropdownMenuRadioGroup>
                 <Text variant="caption" className="border-t px-2 pt-2 pb-1">
-                    {chosen ? "Chosen with your answers." : `${DEFAULT_CASE_OPTION.label} is the default.`} {OPEN_NOTE}
+                    {chosen ? "Chosen with your answers." : `${DEFAULT_CASE_OPTION.label} is the default.`} You can
+                    change it until the first area starts building. After that it is locked for every area.
                 </Text>
             </DropdownMenuContent>
         </DropdownMenu>

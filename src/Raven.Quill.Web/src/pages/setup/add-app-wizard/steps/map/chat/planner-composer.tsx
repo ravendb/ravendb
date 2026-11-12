@@ -48,7 +48,6 @@ export function PlannerComposer({ chatId, collections }: { chatId: PlannerChatId
     const addPlannerMention = useSetupWizardStore((state) => state.addPlannerMention);
     const removePlannerMention = useSetupWizardStore((state) => state.removePlannerMention);
     const [isMentionPickerOpen, setIsMentionPickerOpen] = useState(false);
-    // Where the typed MENTION_TRIGGER sits, so picking a collection takes it out of the text, and where the caret goes back to.
     const mentionTriggerIndexRef = useRef<number | null>(null);
     const caretAfterPickerRef = useRef<number | null>(null);
 

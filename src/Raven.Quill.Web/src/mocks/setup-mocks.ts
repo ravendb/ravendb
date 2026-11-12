@@ -16,7 +16,6 @@ export const setupMocks = {
         apiHttp.post("/api/setup/discover", ({ response }) => response(200).json(discovery)),
     draft: (draft: WizardDraftResponse) =>
         apiHttp.post("/api/setup/draft", ({ response }) => response(200).json(draft)),
-    /** Nothing is stored for the slug. */
     draftMissing: () =>
         apiHttp.post("/api/setup/draft", ({ response }) =>
             response(404).json({ error: "no wizard draft found", errors: null, code: null }),

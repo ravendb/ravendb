@@ -11,8 +11,8 @@ export type PlanChanges = {
 };
 
 /**
- * Turns the operator's edits into one plan/save batch. A collection is edited first, under the name the plan
- * has for it, then renamed: the rename finds the collection where the edit left it.
+ * A collection is edited first, under the name the plan has for it, then renamed: the rename finds the
+ * collection where the edit left it.
  */
 export function buildPlanChanges(edits: Record<string, PlannerEdit>): PlanChanges {
     const changes: MigrationPlanChange[] = [];
@@ -52,7 +52,6 @@ export function getSavedView(collection: string, edit: PlannerEdit): PlannerView
     return { area: edit.area, collection: getEditedName(collection, edit) };
 }
 
-/** Applies a change on top of a collection's pending edit, or drops the edit once nothing is left in it. */
 export function patchEdit(
     area: string,
     edit: PlannerEdit | null | undefined,
@@ -72,7 +71,6 @@ function getEditedName(collection: string, edit: PlannerEdit): string {
     return edit.config?.collectionName?.trim() || collection;
 }
 
-/** Sorts the issues of a refused save by collection, each path made relative to that collection's mapping. */
 export function groupSaveIssues(issues: ValidationIssue[], collections: string[]): Record<string, ValidationIssue[]> {
     const grouped: Record<string, ValidationIssue[]> = {};
 

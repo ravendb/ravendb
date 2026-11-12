@@ -247,10 +247,7 @@ export function scaffoldTables(
     });
 }
 
-/**
- * Scaffolds a root table for every selected table the mapping does not capture yet. Root tables outside
- * the selection stay: the editor flags them, and dropping one is the operator's call.
- */
+/** Root tables outside the selection stay: the editor flags them, and dropping one is the operator's call. */
 export function addUnmappedSelectedTables(
     tables: FormRootTable[],
     selectedTables: AppFormData["verifySchema"]["tables"],

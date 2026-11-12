@@ -41,10 +41,6 @@ const SQUARE_LABELS: Record<SquareKind, (count: number) => string> = {
     removed: (count) => `${count} removed`,
 };
 
-/**
- * One area of the plan. While it has collections left to build, its header folds them open; otherwise the
- * header opens the area itself, where its agent works. Once its agent started, Open always leads there too.
- */
 export function PlanAreaCard({ area, isFiltering }: { area: PlanArea; isFiltering: boolean }) {
     const actions = usePlannerActions();
     const buildBlockReason = useBuildBlockReason();

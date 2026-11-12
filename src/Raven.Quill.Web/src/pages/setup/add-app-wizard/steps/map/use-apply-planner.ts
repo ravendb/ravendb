@@ -52,7 +52,6 @@ export function useApplyPlanner() {
     };
 }
 
-/** Identifies what an apply hands over: the app, and the version of each registered collection. */
 export function computePlanKey(slug: string, entries: PlannerState["plannerEntries"]): string {
     const registered = Object.values(entries)
         .filter((entry) => entry.status === "Registered")

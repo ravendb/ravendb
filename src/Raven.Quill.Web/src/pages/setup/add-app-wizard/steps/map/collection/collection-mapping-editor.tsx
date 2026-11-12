@@ -46,7 +46,6 @@ export function CollectionMappingEditor({
     issues,
     isDisabled,
 }: {
-    /** Shown on the row of the Fields/JSON switch. */
     title: ReactNode;
     collection: PlanCollection;
     /** The mapping as the plan stores it; a form that matches it again is no edit. */

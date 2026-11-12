@@ -33,7 +33,6 @@ export type PlannerSessionInput = {
     defaultSchema: string;
 };
 
-/** A session the server already holds the plan of, opened again as it stands. */
 export type RestoredPlannerSession = { session: PlannerSessionInput; plan: MigrationPlanGetResponse };
 
 export type PlannerActions = {

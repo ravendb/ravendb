@@ -37,7 +37,6 @@ export function usePlannerActions() {
         openPlan: () => showPlannerView(PLAN_VIEW),
         openArea,
         openCollection,
-        /** A collection named in a chat opens on its page once mapped, or in its area until then. */
         openCollectionByName: (collection: string) => {
             const state = useSetupWizardStore.getState();
             const entry = state.plannerEntries[collection];

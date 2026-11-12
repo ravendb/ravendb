@@ -122,10 +122,6 @@ function ChatStatus({ chatId, collections }: { chatId: string | null; collection
     );
 }
 
-/**
- * The planner's questions take the composer's place until they are answered, or until the operator closes
- * them to write a message instead. New questions in a later reply show again.
- */
 function ChatBottom({ chatId, collections }: { chatId: string | null; collections: PlanCollection[] }) {
     const { composerRef } = usePlannerWorkspace();
     const questions = useSetupWizardStore((state) => getPendingQuestions(selectChat(state, chatId)));

@@ -198,7 +198,6 @@ export function toSearchKey(...names: string[]): string {
     return names.join("\n").toLowerCase();
 }
 
-/** Matches a search key holding the filter, ignoring case and surrounding spaces. A blank filter matches all. */
 export function createNameMatcher(filter: string): (searchKey: string) => boolean {
     const wanted = filter.trim().toLowerCase();
 
@@ -213,10 +212,7 @@ export function getMemberTables(collection: Pick<PlanCollection, "document" | "r
     return [collection.document.table, ...getEmbeddedTables(collection.document).map((embedded) => embedded.table)];
 }
 
-/**
- * Where a collection's documents come from: its table, the tables it embeds, and every collection it links to.
- * Only a built mapping names the property an embedded table lands under; the proposal has no names yet.
- */
+/** Only a built mapping names the property an embedded table lands under; the proposal has no names yet. */
 export function getCollectionSources(
     collection: Pick<PlanCollection, "document" | "rootTable" | "config">,
 ): CollectionSources {

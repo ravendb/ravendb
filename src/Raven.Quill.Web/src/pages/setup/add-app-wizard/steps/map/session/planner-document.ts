@@ -77,11 +77,6 @@ export function documentFromConfig(config: CdcSinkTableConfig, tableRef: ConfigT
     return document;
 }
 
-/**
- * The document a suggested collection would produce: the root table's columns, embedded tables under their
- * own names, and links under the column that holds the reference. Columns take the property names the
- * proposal gives them, or their source names. Columns a relation consumes are not repeated as properties.
- */
 export function documentFromProposal(
     proposed: ProposedCollection,
     index: DiscoverIndex,

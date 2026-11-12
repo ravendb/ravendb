@@ -17,17 +17,14 @@ export type DraftSeed = {
  * server keeps the old plan until a new proposal replaces it.
  */
 export function hasCurrentPlan(draft: WizardDraftResponse): boolean {
-    return (
-        draft.hasPlan &&
-        draft.discovery?.success === true &&
-        haveSameTables(draft.selectedTables, draft.planSelectedTables)
-    );
+    if (!draft.hasPlan || !draft.discovery?.success) {
+        return false;
+    }
+
+    return haveSameTables(draft.selectedTables, draft.planSelectedTables);
 }
 
-/**
- * Seeds a reloaded wizard from the draft the server stored for its slug. Work that never reached the
- * server, such as a mapping still in the editor or unsaved plan edits, starts over.
- */
+/** Work that never reached the server, such as a mapping still in the editor or unsaved plan edits, starts over. */
 export function buildDraftSeed(
     slug: string,
     draft: WizardDraftResponse,

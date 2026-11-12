@@ -362,7 +362,6 @@ export const largePlanBuildFrames: MigrationFrame[] = [
 
 export const LARGE_PLAN_AREAS = AREAS.map(([area]) => area);
 
-/** One area agent's first build: the area's collections, a few of them rejected. */
 export function largePlanAreaBuildFrames(area: string): MigrationFrame[] {
     const names = new Set(collections.filter((collection) => collection.area === area).map(({ name }) => name));
 

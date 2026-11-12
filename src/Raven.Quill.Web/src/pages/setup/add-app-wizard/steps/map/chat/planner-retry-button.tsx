@@ -7,7 +7,7 @@ import { isBuildTurn, selectChat } from "@/pages/setup/add-app-wizard/steps/map/
 import type { PlannerChatId } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 import { usePlannerSession } from "@/pages/setup/add-app-wizard/steps/map/session/use-planner-session";
 
-/** Runs the chat's failed turn again. A failed build that left nothing to build has nothing to run again. */
+/** A failed build that left nothing to build has nothing to run again. */
 export function PlannerRetryButton({ chatId, area }: { chatId: PlannerChatId; area: PlanArea | null }) {
     const session = usePlannerSession();
     const canSendMessage = useCanSendMessage();

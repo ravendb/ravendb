@@ -19,13 +19,8 @@ import {
 } from "@/pages/setup/add-app-wizard/steps/map/chat/planner-activity-parts";
 import type { PlannerActivity, PlannerReplyTurn } from "@/pages/setup/add-app-wizard/steps/map/session/planner-types";
 
-/** Past this many rows a finished turn's activity starts folded, even as the latest. */
 const MAX_UNFOLDED_ROWS = 8;
 
-/**
- * A turn's tool activity folded into one summary. While the turn runs it lists what happened so far; once
- * it is done it collapses behind its headline, open only for a short latest turn until the operator decides.
- */
 export function PlannerActivityCard({
     turn,
     progress,

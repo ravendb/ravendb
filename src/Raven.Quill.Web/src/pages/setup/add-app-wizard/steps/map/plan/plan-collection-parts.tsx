@@ -83,7 +83,6 @@ export function PlanWarning({ className, children }: { className?: string; child
     );
 }
 
-/** One line on a card: each kind of source shows its first, and the rest sit behind a count. */
 export function PlanCollectionSources({ collection, className }: { collection: PlanCollection; className?: string }) {
     const { table, embeds, links } = getCollectionSources(collection);
 
@@ -114,7 +113,6 @@ export function PlanCollectionSources({ collection, className }: { collection: P
     );
 }
 
-/** Every source on its own, where there is room for all of them. */
 export function PlanSourceList({ sources }: { sources: CollectionSource[] }) {
     return (
         <Text as="span" variant="caption" className="flex flex-wrap gap-x-4 gap-y-1">

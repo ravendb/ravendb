@@ -17,7 +17,6 @@ import type {
 import { apiHttp } from "@/mocks/api-http";
 import { discoveredTable } from "@/mocks/discovery-fixtures";
 
-/** The frames to stream, or how to pick them from the request, e.g. by the area it names. */
 type FrameScript = MigrationFrame[] | ((request: { area?: string; prompt?: string }) => MigrationFrame[]);
 
 type StreamOptions = {
@@ -40,7 +39,6 @@ export const migrationMocks = {
     stop: () => apiHttp.post("/api/setup/migration/stop", ({ response }) => response(204).empty()),
     planGet: (view: MigrationPlanGetResponse = samplePlanView) =>
         apiHttp.post("/api/setup/migration/plan/get", ({ response }) => response(200).json(view)),
-    /** No plan is stored for the slug yet. */
     planGetMissing: () =>
         apiHttp.post("/api/setup/migration/plan/get", ({ response }) =>
             response(400).json({
@@ -49,7 +47,6 @@ export const migrationMocks = {
                 code: null,
             }),
         ),
-    /** The AI service that keeps the plan cannot be reached. */
     planGetUnavailable: () =>
         apiHttp.post("/api/setup/migration/plan/get", ({ response }) =>
             response(502).json({ error: "The AI service could not be reached.", errors: null, code: null }),
@@ -57,12 +54,10 @@ export const migrationMocks = {
     planDiscard: () => apiHttp.post("/api/setup/migration/plan/discard", ({ response }) => response(204).empty()),
     planSave: (warnings: string[] = []) =>
         apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(200).json({ issues: [], warnings })),
-    /** The api's mapping validator refused the changes; nothing was saved. */
     planSaveRejected: (issues: ValidationIssue[], warnings: string[] = []) =>
         apiHttp.post("/api/setup/migration/plan/save", ({ response }) => response(422).json({ issues, warnings })),
     apply: (response: MigrationApplyResponse = sampleMigrationApply) =>
         apiHttp.post("/api/setup/migration/apply", ({ response: res }) => res(200).json(response)),
-    /** The assembled plan does not validate as a whole, which the server answers with 422 and the reasons. */
     applyRejected: (errors: string[]) =>
         apiHttp.post("/api/setup/migration/apply", ({ response }) => response(422).json({ errors })),
 };
@@ -390,7 +385,6 @@ const plannerProposal: MigrationProposal = {
     ],
 };
 
-/** The planner's first turn: it proposes, explains, and asks before registering anything. */
 export const plannerOpeningFrames: MigrationFrame[] = [
     { type: "proposal", proposal: plannerProposal },
     {
@@ -420,7 +414,6 @@ export const plannerOpeningFrames: MigrationFrame[] = [
     { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
 
-/** The answers to the opening questions, as the operator sent them. */
 export const plannerAnswers = [
     { question: "How should order lines refer to products?", answer: "Link to Products by id" },
     { question: "Which property casing should the documents use?", answer: "camelCase" },
@@ -441,7 +434,6 @@ export const plannerAnswersFrames: MigrationFrame[] = [
     { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
 
-/** The Customers area's agent builds its one collection. */
 export const plannerCustomersBuildFrames: MigrationFrame[] = [
     { type: "note", text: "Read the DDL of dbo.Customers and dbo.CustomerAddresses." },
     {
@@ -494,7 +486,6 @@ export const plannerBuildFrames: MigrationFrame[] = [
     { type: "done", conversationId: PLANNER_CONVERSATION_ID, planId: PLANNER_PLAN_ID },
 ];
 
-/** Each area's agent builds what the proposal gave that area. */
 export function plannerAreaBuildFrames(area: string | undefined): MigrationFrame[] {
     return area === "Customers area" ? plannerCustomersBuildFrames : plannerBuildFrames;
 }
