@@ -923,6 +923,15 @@ namespace Sparrow.Json
             return GetPropertyNameAsSpan(propertyId);
         }
 
+        internal ReadOnlySpan<byte> GetPropertyNameByIndexAsSpan(int index, out BlittableJsonToken token)
+        {
+            AssertContextNotDisposed();
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out _, out int propertyId);
+            token &= TypesMask;
+            return GetPropertyNameAsSpan(propertyId);
+        }
+
         internal int GetPropertyIndex(ReadOnlySpan<byte> name)
         {
             AssertContextNotDisposed();

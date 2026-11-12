@@ -131,6 +131,16 @@ namespace Sparrow.Json
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
 
+        internal BlittableJsonToken GetTokenByIndex(int index)
+        {
+            AssertContextNotDisposed();
+
+            if (index >= _count || index < 0)
+                throw new IndexOutOfRangeException($"Cannot access index {index} when our size is {_count}");
+
+            return (BlittableJsonToken)(*(_metadataPtr + index * (_currentOffsetSize + 1) + _currentOffsetSize)) & TypesMask;
+        }
+
         public int BinarySearch(string key, StringComparison comparison)
         {
             AssertContextNotDisposed();
