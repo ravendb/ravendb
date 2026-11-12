@@ -11,8 +11,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
     {
         public static readonly StringContractConverterFactory Instance = new();
 
-        private const string NewtonsoftJsonContainerAttributeName = "Newtonsoft.Json.JsonContainerAttribute";
-
         private static readonly ConcurrentDictionary<Type, System.ComponentModel.TypeConverter> _converters = new();
 
         public override bool CanConvert(Type typeToConvert)
@@ -42,7 +40,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 type == typeof(Guid) || type == typeof(Uri) || type == typeof(Version) || typeof(IEnumerable).IsAssignableFrom(type))
                 return false;
 
-            if (type.IsDefined(typeof(JsonConverterAttribute), inherit: true) || HasNewtonsoftContainerAttribute(type))
+            if (type.IsDefined(typeof(JsonConverterAttribute), inherit: true) || RavenJsonTypeInfoResolver.FindNewtonsoftContainerAttribute(type) != null)
                 return false;
 
             System.ComponentModel.TypeConverter converter = TypeDescriptor.GetConverter(type);
@@ -52,20 +50,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return false;
 
             return converter.CanConvertTo(typeof(string));
-        }
-
-        private static bool HasNewtonsoftContainerAttribute(Type type)
-        {
-            foreach (object attribute in type.GetCustomAttributes(true))
-            {
-                for (Type current = attribute.GetType(); current != null; current = current.BaseType)
-                {
-                    if (current.FullName == NewtonsoftJsonContainerAttributeName)
-                        return true;
-                }
-            }
-
-            return false;
         }
 
         private sealed class TypeDescriptorConverter<T> : JsonConverter<T>
