@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -83,6 +84,10 @@ namespace Raven.Client.Documents.Conventions
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
 
         private static readonly bool DefaultDisableTcpCompression = false;
+
+        private static readonly ConcurrentDictionary<string, Type> ResolvedClrTypes = new();
+
+        private static readonly Func<string, Type> GetTypeByName = Type.GetType;
 
         private static TypeCache<string> CachedDefaultTypeCollectionNames = new(128);
 
@@ -289,7 +294,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
             };
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
-            ResolveTypeFromClrTypeName = Type.GetType;
+            ResolveTypeFromClrTypeName = ResolveClrType;
 
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
@@ -1324,6 +1329,18 @@ namespace Raven.Client.Documents.Conventions
             _listOfRegisteredIdConventionsAsync.Insert(index, item);
 
             return this;
+        }
+
+        private static Type ResolveClrType(string typeName)
+        {
+            if (ResolvedClrTypes.TryGetValue(typeName, out Type type))
+                return type;
+
+            type = GetTypeByName(typeName);
+            if (type != null)
+                ResolvedClrTypes.TryAdd(typeName, type);
+
+            return type;
         }
 
         /// <summary>
