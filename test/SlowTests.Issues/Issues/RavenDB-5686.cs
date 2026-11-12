@@ -2,7 +2,6 @@ using FastTests;
 using Raven.Server.Utils.Metrics;
 using Xunit;
 using Tests.Infrastructure;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +16,7 @@ namespace SlowTests.Issues
         {
             var meter = new MeterValue("name", 1, 2.0, 3.0, 4.0, 15.0);
 
-            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = store.OpenSession())
                 {

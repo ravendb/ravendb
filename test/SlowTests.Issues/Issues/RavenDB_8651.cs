@@ -5,7 +5,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Tests.Infrastructure;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 
 namespace SlowTests.Issues
 {
@@ -18,7 +17,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Can_select_and_query_field_with_dot()
         {
-            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions() }))
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 var requestExecuter = store.GetRequestExecutor();
 

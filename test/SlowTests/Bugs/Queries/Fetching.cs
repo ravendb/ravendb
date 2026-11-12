@@ -2,7 +2,6 @@ using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Tests.Infrastructure;
 
@@ -18,7 +17,7 @@ namespace SlowTests.Bugs.Queries
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanFetchMultiplePropertiesFromCollection(Options options)
         {
-            options.ModifyDocumentStore = s => s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             using (var store = GetDocumentStore(options))
             {
