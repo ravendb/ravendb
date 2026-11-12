@@ -33,7 +33,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import ResetIndexesButton from "components/pages/database/indexes/list/partials/ResetIndexesButton";
 import { ExportIndexes } from "components/pages/database/indexes/list/migration/export/ExportIndexes";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";

@@ -11,7 +11,7 @@ import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import CustomPagination from "components/common/Pagination";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import Modal from "components/common/Modal";
 

@@ -11,7 +11,7 @@ import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
 import RichAlert from "components/common/RichAlert";
 import appUrl from "common/appUrl";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
 import useBoolean from "components/hooks/useBoolean";

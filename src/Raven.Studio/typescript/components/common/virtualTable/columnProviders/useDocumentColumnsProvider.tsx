@@ -2,6 +2,7 @@ import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
+import { DocumentPreviewSource } from "components/common/virtualTable/cells/CellWithDocumentPreview";
 import { columnCheckbox, columnPreview } from "components/common/virtualTable/utils/commonColumnDefs";
 import { columnDocumentFlags } from "components/common/virtualTable/utils/documentColumnDefs";
 import { useAppSelector } from "components/store";
@@ -11,6 +12,7 @@ import { ReactElement, useMemo } from "react";
 // TODO Add Time Series column
 
 type PreviewValueResolverProvider = (doc: document, propertyName: string) => (() => Promise<unknown>) | undefined;
+type DocumentPreviewSourceProvider = (doc: document) => DocumentPreviewSource;
 
 interface UseDocumentColumnsProviderProps {
     documents?: document[];
@@ -23,6 +25,7 @@ interface UseDocumentColumnsProviderProps {
     hasCheckbox?: boolean;
     hasHyperlinkForIds?: boolean;
     getPreviewValueResolver?: PreviewValueResolverProvider;
+    getDocumentPreviewSource?: DocumentPreviewSourceProvider;
 }
 
 interface DocumentColumns {
@@ -58,12 +61,16 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
         hasFlags = false,
         hasCheckbox = false,
         getPreviewValueResolver,
+        getDocumentPreviewSource,
     } = props;
 
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const databaseName = props.databaseName ?? activeDatabaseName;
 
-    const idCell = useMemo(() => createIdCell(databaseName, hasHyperlinkForIds), [databaseName, hasHyperlinkForIds]);
+    const idCell = useMemo(
+        () => createIdCell(databaseName, hasHyperlinkForIds, getDocumentPreviewSource),
+        [databaseName, hasHyperlinkForIds, getDocumentPreviewSource]
+    );
     const propertyCell = useMemo(
         () => createPropertyCell(databaseName, hasHyperlinkForIds, getPreviewValueResolver),
         [databaseName, hasHyperlinkForIds, getPreviewValueResolver]
@@ -80,7 +87,11 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
     );
 }
 
-function createIdCell(databaseName: string, hasHyperlinkForIds: boolean): DocumentCell {
+function createIdCell(
+    databaseName: string,
+    hasHyperlinkForIds: boolean,
+    getDocumentPreviewSource: DocumentPreviewSourceProvider | undefined
+): DocumentCell {
     return function IdCell({ getValue, row }) {
         return (
             <CellDocumentId
@@ -88,6 +99,7 @@ function createIdCell(databaseName: string, hasHyperlinkForIds: boolean): Docume
                 collection={row.original?.getCollection()}
                 databaseName={databaseName}
                 hasHyperlink={hasHyperlinkForIds}
+                previewSource={getDocumentPreviewSource?.(row.original)}
             />
         );
     };
