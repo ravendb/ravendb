@@ -11,7 +11,7 @@ import { Checkbox } from "components/common/Checkbox";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import IconName from "typings/server/icons";
 
-export interface FilterOption<T> {
+interface FilterOption<T> {
     value: T;
     label: string;
 }
@@ -396,14 +396,24 @@ interface MenuHeaderProps {
 }
 
 export function MenuHeader({ title, actionLabel, isActionVisible, onAction }: MenuHeaderProps) {
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    const runActionKeepingFocusInMenu = () => {
+        onAction();
+        const header = headerRef.current;
+        Array.from(header.parentElement.querySelectorAll<HTMLElement>("input, button"))
+            .find((x) => !header.contains(x))
+            ?.focus();
+    };
+
     return (
-        <div className="filter-menu-header">
+        <div ref={headerRef} className="filter-menu-header">
             <span>{title}</span>
             <Button
                 variant="link"
                 size="xs"
                 className={classNames("p-0", { invisible: !isActionVisible })}
-                onClick={onAction}
+                onClick={runActionKeepingFocusInMenu}
                 disabled={!isActionVisible}
             >
                 <Icon icon="reset" />

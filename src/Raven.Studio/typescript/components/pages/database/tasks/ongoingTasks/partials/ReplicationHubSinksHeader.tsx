@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -19,64 +19,16 @@ import "./ReplicationHubSinksHeader.scss";
 
 interface ReplicationHubSinksHeaderProps {
     sinksState: ReplicationHubSinksState;
+    onToggleAllExpanded: () => void;
 }
 
-const sinksExpandAnimationMs = 500;
-
-function findScrollContainer(element: HTMLElement): HTMLElement {
-    for (let current = element.parentElement; current; current = current.parentElement) {
-        const { overflowY } = getComputedStyle(current);
-        if ((overflowY === "auto" || overflowY === "scroll") && current.scrollHeight > current.clientHeight) {
-            return current;
-        }
-    }
-    return (document.scrollingElement as HTMLElement) ?? document.documentElement;
-}
-
-function keepTopVisibleSinkInPlace(header: HTMLElement, changeSinksLayout: () => void) {
-    const headerBottom = header.getBoundingClientRect().bottom;
-    const sinks = Array.from(header.parentElement.querySelectorAll<HTMLElement>(":scope > .rich-panel-item"));
-    const topVisibleSink =
-        sinks.find((x) => x.getBoundingClientRect().top >= headerBottom) ??
-        sinks.find((x) => x.getBoundingClientRect().bottom > headerBottom);
-    const initialTop = topVisibleSink?.getBoundingClientRect().top;
-
-    changeSinksLayout();
-
-    if (!topVisibleSink) {
-        return;
-    }
-
-    const scrollContainer = findScrollContainer(header);
-    const endTime = performance.now() + sinksExpandAnimationMs;
-
-    const restorePosition = () => {
-        scrollContainer.scrollTop += topVisibleSink.getBoundingClientRect().top - initialTop;
-        if (performance.now() < endTime) {
-            requestAnimationFrame(restorePosition);
-        }
-    };
-    requestAnimationFrame(restorePosition);
-}
-
-export function ReplicationHubSinksHeader({ sinksState }: ReplicationHubSinksHeaderProps) {
-    const {
-        filterCategories,
-        hasActiveFilters,
-        totalSinksCount,
-        visibleSinks,
-        areAllVisibleSinksExpanded,
-        toggleAllExpanded,
-    } = sinksState;
-
-    const headerRef = useRef<HTMLDivElement>(null);
+export function ReplicationHubSinksHeader({ sinksState, onToggleAllExpanded }: ReplicationHubSinksHeaderProps) {
+    const { filterCategories, hasActiveFilters, totalSinksCount, visibleSinks, areAllVisibleSinksExpanded } =
+        sinksState;
 
     return (
         <>
-            <div
-                ref={headerRef}
-                className="replication-hub-sinks-header d-flex align-items-center justify-content-between gap-2"
-            >
+            <div className="replication-hub-sinks-header d-flex align-items-center justify-content-between gap-2">
                 <div className="d-flex align-items-center gap-2">
                     <h4 className="mb-0">Replication sinks</h4>
                     <Badge pill bg="secondary">
@@ -88,7 +40,7 @@ export function ReplicationHubSinksHeader({ sinksState }: ReplicationHubSinksHea
                     <FilterMenu categories={filterCategories} title="Filter sinks" />
                     <Button
                         variant="secondary"
-                        onClick={() => keepTopVisibleSinkInPlace(headerRef.current, toggleAllExpanded)}
+                        onClick={onToggleAllExpanded}
                         title={areAllVisibleSinksExpanded ? "Collapse all sinks" : "Expand all sinks"}
                     >
                         <Icon icon={areAllVisibleSinksExpanded ? "fold" : "unfold"} margin="m-0" />
@@ -151,10 +103,10 @@ function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) 
                 title={`Sorted by ${fieldLabel}, ${directionLabel.toLowerCase()}`}
             >
                 <span className="sinks-sort-button-label">Sort by:</span>
-                <span className="sinks-sort-button-value">
-                    {isDirectionSpelledOut ? `${fieldLabel}, ${directionLabel.toLowerCase()}` : fieldLabel}
-                </span>
-                {!isDirectionSpelledOut && (
+                <span className="sinks-sort-button-value">{fieldLabel}</span>
+                {isDirectionSpelledOut ? (
+                    <span>, {directionLabel.toLowerCase()}</span>
+                ) : (
                     <Icon icon={sort.direction === "asc" ? "arrow-thin-top" : "arrow-thin-bottom"} margin="ms-1" />
                 )}
             </Dropdown.Toggle>

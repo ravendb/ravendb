@@ -146,6 +146,7 @@ describe("Replication Hub", function () {
         expect(sortToggle).toHaveAttribute("title", "Sorted by Replication status, problems first");
         expect(getSinkDatabases()[0]).toBe("Sink-SanFrancisco-Regional-Warehouse");
         expect(sortDropdown.getByRole("button", { name: "Reset" })).toBeDisabled();
+        expect(sortDropdown.getByLabelText("Sort by")).toHaveFocus();
 
         await fireClick(container.getByTitle("Expand all sinks"));
 
@@ -162,8 +163,11 @@ describe("Replication Hub", function () {
         await fireClick(await container.findByTitle(/Click for details/));
         await fireClick(container.getByTitle("Expand all sinks"));
 
-        expect(await container.findAllByText("up to date")).toHaveLength(16);
-        expect(container.getAllByText("?")).toHaveLength(14);
+        const getRunningProgressLabels = () => container.queryAllByText("Running", { selector: ".state-desc" });
+
+        expect(await container.findAllByText("up to date")).toHaveLength(20);
+        expect(getRunningProgressLabels()).toHaveLength(10);
+        expect(container.queryByText("?")).not.toBeInTheDocument();
 
         const filterToggle = container.getByTitle("Filter sinks");
         const filterDropdown = within(filterToggle.parentElement);
@@ -175,13 +179,13 @@ describe("Replication Hub", function () {
         }
         expect(filterDropdown.queryByLabelText("Success")).not.toBeInTheDocument();
 
-        await fireClick(filterDropdown.getByLabelText("Unknown"));
+        await fireClick(filterDropdown.getByLabelText("Running"));
 
-        expect(container.getAllByTitle(/^Collapse distribution details for /)).toHaveLength(7);
-        expect(container.getAllByText("?")).toHaveLength(14);
+        expect(container.getAllByTitle(/^Collapse distribution details for /)).toHaveLength(5);
+        expect(getRunningProgressLabels()).toHaveLength(10);
         expect(container.queryByText("up to date")).not.toBeInTheDocument();
         expect(container.getByTitle(/Change "Replication state" filter/)).toHaveTextContent(
-            /Replication state:\s*Unknown/
+            /Replication state:\s*Running/
         );
     });
 
@@ -370,6 +374,54 @@ describe("Replication Hub", function () {
         expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(15);
     });
 
+    it("keeps focus inside the filter menu after clearing filters", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+
+        const filterToggle = container.getByTitle("Filter sinks");
+        const filterDropdown = within(filterToggle.parentElement);
+        await fireClick(filterToggle);
+        await fireClick(await filterDropdown.findByRole("button", { name: /Has errors/ }));
+        await fireClick(filterDropdown.getByRole("button", { name: "Yes" }));
+        await fireClick(filterDropdown.getByTitle("Back to filters"));
+        await fireClick(filterDropdown.getByRole("button", { name: "Clear" }));
+
+        expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(15);
+        expect(filterDropdown.getByRole("button", { name: /Sink database name/ })).toHaveFocus();
+    });
+
+    it("closes the progress panel when its sink is filtered out", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+        await fireClick(container.getByTitle("Expand distribution details for Sink-Berlin"));
+
+        const berlinPanel = container
+            .getByTitle("Collapse distribution details for Sink-Berlin")
+            .closest<HTMLElement>(".rich-panel-item");
+        const progressButtons = await within(berlinPanel).findAllByRole("button");
+        await fireClick(progressButtons.find((x) => x.closest(".clickable-progress")));
+
+        expect(await screen.findByText("Replication process overview")).toBeInTheDocument();
+        expect(document.querySelector(".split-view-panel")).toBeInTheDocument();
+
+        const filterToggle = container.getByTitle("Filter sinks");
+        const filterDropdown = within(filterToggle.parentElement);
+        await fireClick(filterToggle);
+        await fireClick(await filterDropdown.findByRole("button", { name: /Sink database name/ }));
+        await user.type(filterDropdown.getByPlaceholderText("e.g. Orders"), "Paris");
+
+        expect(container.queryByText("Sink-Berlin")).not.toBeInTheDocument();
+        expect(document.querySelector(".split-view-panel")).not.toBeInTheDocument();
+    });
+
     it("closes only the open sort list on Escape", async () => {
         const Story = composeStory(stories.ManySinks, stories.default);
 
@@ -403,7 +455,7 @@ describe("Replication Hub", function () {
         const container = within(await screen.findByTestId(containerTestId));
 
         await fireClick(await container.findByTitle(/Click for details/));
-        await fireClick(container.getAllByTitle("Show error details")[0]);
+        await fireClick(container.getAllByRole("button", { name: "Error" })[0]);
 
         const errorDialog = await screen.findByRole("dialog");
         expect(errorDialog).toHaveTextContent("Unable to connect to the sink");

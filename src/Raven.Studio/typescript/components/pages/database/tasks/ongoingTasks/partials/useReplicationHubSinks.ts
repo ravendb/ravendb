@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { OngoingTaskReplicationHubInfo } from "components/models/tasks";
 import { SortDirection } from "components/models/common";
-import { databaseLocationComparator } from "components/utils/common";
 import IconName from "typings/server/icons";
 import {
     CheckboxListFilterCategory,
@@ -9,12 +8,16 @@ import {
     isFilterCategoryActive,
     SingleChoiceFilterCategory,
 } from "components/common/filterMenu/FilterMenu";
-import { getReplicationProgressState, ReplicationProgressState } from "./ExternalReplicationTaskDistribution";
+import {
+    getReplicationProgressState,
+    getVisibleNodes,
+    ReplicationProgressState,
+} from "./ExternalReplicationTaskDistribution";
 import OngoingTaskConnectionStatus = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
 
 export type SinkSortField = "databaseName" | "url" | "status" | "node";
 
-export interface SinkFilters {
+interface SinkFilters {
     databaseName: string;
     url: string;
     states: ReplicationProgressState[];
@@ -23,12 +26,12 @@ export interface SinkFilters {
     nodeTags: string[];
 }
 
-export interface SinkSort {
+interface SinkSort {
     field: SinkSortField;
     direction: SortDirection;
 }
 
-export interface SinkSortFieldInfo {
+interface SinkSortFieldInfo {
     field: SinkSortField;
     label: string;
     icon: IconName;
@@ -43,7 +46,7 @@ export const sinkSortFields: SinkSortFieldInfo[] = [
 
 const defaultSinkSort: SinkSort = { field: "status", direction: "asc" };
 
-export const sinkReplicationStateLabels: Record<ReplicationProgressState, string> = {
+const sinkReplicationStateLabels: Record<ReplicationProgressState, string> = {
     UpToDate: "Up to date",
     Running: "Running",
     Disabled: "Disabled",
@@ -69,13 +72,6 @@ const emptyFilters: SinkFilters = {
 
 export function getSinkKey(sink: OngoingTaskReplicationHubInfo): string {
     return `${sink.shared.destinationUrl ?? ""}/${sink.shared.destinationDatabase}`;
-}
-
-export function getVisibleNodes(sink: OngoingTaskReplicationHubInfo) {
-    return sink.nodesInfo.filter(
-        (nodeInfo) =>
-            nodeInfo.details && sink.responsibleLocations.some((l) => databaseLocationComparator(l, nodeInfo.location))
-    );
 }
 
 function toFilterOptions<T extends string>(labels: Record<T, string>) {
@@ -242,24 +238,18 @@ export function useReplicationHubSinks(connectedSinks: OngoingTaskReplicationHub
     const [sort, setSort] = useState<SinkSort>(defaultSinkSort);
     const [expandedSinkKeys, setExpandedSinkKeys] = useState<string[]>([]);
 
-    const nodeTags = useMemo(
-        () =>
-            Array.from(
-                new Set(connectedSinks.flatMap((sink) => getVisibleNodes(sink).map((x) => x.location.nodeTag)))
-            ).sort(),
-        [connectedSinks]
-    );
+    const nodeTags = Array.from(
+        new Set(connectedSinks.flatMap((sink) => getVisibleNodes(sink).map((x) => x.location.nodeTag)))
+    ).sort();
 
-    const visibleSinks = useMemo(() => {
-        const filtered = connectedSinks.filter((sink) => matchesFilters(sink, filters));
-        const directionMultiplier = sort.direction === "asc" ? 1 : -1;
-
-        return [...filtered].sort(
+    const directionMultiplier = sort.direction === "asc" ? 1 : -1;
+    const visibleSinks = connectedSinks
+        .filter((sink) => matchesFilters(sink, filters))
+        .sort(
             (a, b) =>
                 compareByField(a, b, sort.field) * directionMultiplier ||
                 compareText(a.shared.destinationDatabase, b.shared.destinationDatabase)
         );
-    }, [connectedSinks, filters, sort]);
 
     const isDefaultSort = sort.field === defaultSinkSort.field && sort.direction === defaultSinkSort.direction;
 

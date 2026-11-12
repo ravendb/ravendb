@@ -4,8 +4,10 @@ import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/O
 import React from "react";
 import {
     commonInit,
+    markReplicationProcessCompleted,
     mockExternalReplicationProgress,
 } from "components/pages/database/tasks/ongoingTasks/stories/common";
+import MockTasksService from "test/mocks/services/MockTasksService";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { userEvent, within } from "storybook/test";
@@ -62,7 +64,12 @@ export const Default: StoryObj<ReplicationHubProps> = {
             tasksService.withGetTasks(mockedValue);
         }
 
-        mockExternalReplicationProgress(tasksService, args.completed);
+        const sinksCount = args.sinksCount ?? 1;
+        if (sinksCount > 1) {
+            mockSinksProgress(tasksService, sinksCount, args.completed);
+        } else {
+            mockExternalReplicationProgress(tasksService, args.completed);
+        }
 
         return <OngoingTasksPage />;
     },
@@ -134,6 +141,29 @@ const sinkConnectionStatuses: OngoingTaskPullReplicationAsHub["TaskConnectionSta
     "Reconnect",
 ];
 
+function getSinkHandlerId(index: number) {
+    return `hub-handler-${index}`;
+}
+
+function isSinkStillReplicating(index: number) {
+    return index % 3 === 2;
+}
+
+function mockSinksProgress(tasksService: MockTasksService, sinksCount: number, completed: boolean) {
+    tasksService.withGetExternalReplicationProgress((dto) => {
+        const [hubProgress] = dto.Results;
+        const [processTemplate] = hubProgress.ProcessesProgress;
+
+        hubProgress.ProcessesProgress = Array.from({ length: sinksCount }, (_, index) => {
+            const progress = { ...processTemplate, HandlerId: getSinkHandlerId(index) };
+            if (completed && !isSinkStillReplicating(index)) {
+                markReplicationProcessCompleted(progress);
+            }
+            return progress;
+        });
+    });
+}
+
 function getConnectedSinks(
     template: OngoingTaskPullReplicationAsHub,
     count: number
@@ -146,7 +176,7 @@ function getConnectedSinks(
         const site = sinkSites[index % sinkSites.length];
         return {
             ...template,
-            HandlerId: index % 2 === 0 ? template.HandlerId : `hub-handler-${index}`,
+            HandlerId: getSinkHandlerId(index),
             DestinationDatabase: `Sink-${site}`,
             DestinationUrl: `http://${site.toLowerCase()}.example.com:8080`,
             TaskConnectionStatus: sinkConnectionStatuses[index % sinkConnectionStatuses.length],
