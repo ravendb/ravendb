@@ -370,5 +370,68 @@ namespace FastTests.Voron.Containers
             Assert.True(inPlace > 0, "expected some in place updates");
             Assert.True(notInPlace > 0, "expected some updates that don't fit");
         }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(3, 3, true)] // same number of pages
+        [InlineData(3, 1, false)] // fewer pages
+        [InlineData(2, 3, false)] // more pages
+        [InlineData(1, 0, false)] // same number of pages, but fits inside a container page
+        public void CanUpdateOverflowInPlaceOnlyWhenNumberOfPagesIsTheSame(int currentPages, int newPages, bool expectedInPlace)
+        {
+            static int MaxSizeFor(int pages) => pages == 0
+                ? Container.MaxSizeInsideContainerPage
+                : pages * Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
+
+            var currentData = new byte[MaxSizeFor(currentPages) - 1000];
+            currentData.AsSpan().Fill(1);
+            var newData = new byte[MaxSizeFor(newPages)];
+            newData.AsSpan().Fill(2);
+            long containerId, id;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
+                id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), currentData.Length, out var space);
+                currentData.CopyTo(space);
+                wtx.Commit();
+            }
+
+            var pageNum = id / Constants.Storage.PageSize;
+            using (var wtx = Env.WriteTransaction())
+            {
+                var inPlace = Container.TryUpdateInPlace(wtx.LowLevelTransaction, new ContainerId(containerId), new ContainerEntryId(id), newData.Length, out var space);
+                Assert.Equal(expectedInPlace, inPlace);
+                if (inPlace)
+                {
+                    Assert.Equal(newData.Length, space.Length);
+                    newData.CopyTo(space);
+                }
+                else
+                {
+                    Assert.False(wtx.LowLevelTransaction.IsDirty(pageNum));
+                }
+
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var llt = wtx.LowLevelTransaction;
+                Container.Get(llt, new ContainerEntryId(id), out var item);
+                Assert.Equal(expectedInPlace ? newData : currentData, item.ToSpan().ToArray());
+                Assert.Equal(currentPages, new Container(llt.GetPage(containerId)).Header.NumberOfOverflowPages);
+
+                Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                Assert.Equal(0, new Container(llt.GetPage(containerId)).Header.NumberOfOverflowPages);
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var owners = Env.GetPageOwners(wtx);
+                for (var released = pageNum; released < pageNum + currentPages; released++)
+                    Assert.Equal("Freed Page", owners[released]);
+            }
+        }
     }
 }
