@@ -366,11 +366,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private void AssertMemberTypeCanBeResolved(Type memberType)
         {
-            if (IsByRef(memberType) && _conventions.IgnoreByRefMembers == false)
-                ThrowByRefNotSupported();
-
-            if (memberType.IsPointer && _conventions.IgnoreUnsafeMembers == false)
-                ThrowPointersNotSupported();
+            if (memberType != typeof(IntPtr))
+                IsUnsupportedMemberType(memberType);
         }
 
         internal static bool OwnsUnknownProperties(JsonTypeInfo typeInfo)
@@ -405,8 +402,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyStringDictionaryComparers(typeInfo);
             KeepInitializedDictionaryComparers(typeInfo);
             ApplyTypeNameHandling(typeInfo);
-            ApplyPropertyRenames(typeInfo);
-            ApplyPropertyNameConverter(typeInfo);
+            ApplyPropertyNames(typeInfo);
             AddMetadataIdentityProperties(typeInfo, extensionData);
             SetupNonPublicConstructor(typeInfo);
             bool constructedWithParameters = typeInfo.CreateObject == null;
@@ -652,7 +648,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     if (propertyInfo.GetIndexParameters().Length > 0 || memberNames.Add(propertyInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterMember(propertyInfo, isRecord) || IsIgnoredBySystemTextJson(propertyInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, propertyInfo.Name))
+                    if (ShouldFilterMember(propertyInfo, isRecord) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, propertyInfo.Name))
                         continue;
 
                     typeInfo.Properties.Add(CreateJsonProperty(typeInfo, propertyInfo));
@@ -663,7 +659,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     if ((fieldInfo.IsPublic == false && fieldInfo.IsDefined(typeof(ForceJsonSerializationAttribute)) == false) || memberNames.Add(fieldInfo.Name) == false)
                         continue;
 
-                    if (ShouldFilterMember(fieldInfo, isRecord) || IsIgnoredBySystemTextJson(fieldInfo) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
+                    if (ShouldFilterMember(fieldInfo, isRecord) || IsHiddenBySystemTextJsonIgnoredMember(typeInfo.Type, type, fieldInfo.Name))
                         continue;
 
                     typeInfo.Properties.Add(CreateJsonProperty(typeInfo, fieldInfo));
@@ -1829,8 +1825,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return arguments[0] == typeof(string) ? typeof(Dictionary<,>).MakeGenericType(arguments) : null;
         }
 
-        private static void ApplyPropertyRenames(JsonTypeInfo typeInfo)
+        private void ApplyPropertyNames(JsonTypeInfo typeInfo)
         {
+            DocumentConventions conventions = _conventions.Conventions;
+            bool convertNames = conventions?.PropertyNameConverter != null;
+
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
@@ -1840,25 +1839,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 string name = JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member);
                 if (name != null)
                     property.Name = name;
-            }
-        }
-
-        private void ApplyPropertyNameConverter(JsonTypeInfo typeInfo)
-        {
-            DocumentConventions conventions = _conventions.Conventions;
-            if (conventions?.PropertyNameConverter == null)
-                return;
-
-            for (int i = 0; i < typeInfo.Properties.Count; i++)
-            {
-                JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.AttributeProvider is not MemberInfo member)
-                    continue;
-
-                if (JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member) != null)
-                    continue;
-
-                property.Name = conventions.GetConvertedPropertyNameFor(member);
+                else if (convertNames)
+                    property.Name = conventions.GetConvertedPropertyNameFor(member);
             }
         }
 
@@ -1866,7 +1848,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             for (int i = typeInfo.Properties.Count - 1; i >= 0; i--)
             {
-                if (typeInfo.Properties[i].AttributeProvider is MemberInfo member && (ShouldFilterMember(member, isRecord) || IsIgnoredBySystemTextJson(member)))
+                if (typeInfo.Properties[i].AttributeProvider is MemberInfo member && ShouldFilterMember(member, isRecord))
                     typeInfo.Properties.RemoveAt(i);
             }
         }
@@ -1881,7 +1863,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     return true;
             }
 
-            return IsUnsupportedMemberType(member.GetMemberType()) || HasCompilerGeneratedAttribute(member) || HasJsonIgnoreAttribute(member);
+            return IsUnsupportedMemberType(member.GetMemberType()) || HasCompilerGeneratedAttribute(member) || HasJsonIgnoreAttribute(member) || IsIgnoredBySystemTextJson(member);
         }
 
         private bool IsUnsupportedMemberType(Type memberType)
