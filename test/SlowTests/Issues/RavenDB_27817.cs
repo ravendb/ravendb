@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using FastTests;
 using Raven.Server.Documents;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -95,32 +96,18 @@ public class RavenDB_27817 : RavenTestBase
         using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out _, out Slice idSlice))
         {
             byte* ptr = idSlice.Content.Ptr;
-            byte* end = ptr + idSlice.Size;
+            var pos = 0;
 
-            var idSize = ReadVariableSizeInt(ref ptr);
-            Assert.Equal(expectedId, new ReadOnlySpan<byte>(ptr, idSize).ToArray());
-            ptr += idSize;
+            var idSize = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos);
+            Assert.Equal(expectedId, new ReadOnlySpan<byte>(ptr + pos, idSize).ToArray());
+            pos += idSize;
 
-            var escapePositions = new int[ReadVariableSizeInt(ref ptr)];
+            var escapePositions = new int[BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos)];
             for (var i = 0; i < escapePositions.Length; i++)
-                escapePositions[i] = ReadVariableSizeInt(ref ptr);
+                escapePositions[i] = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos);
 
             Assert.Equal(expectedEscapePositions, escapePositions);
-            Assert.True(ptr == end, "The storage key has trailing bytes");
+            Assert.True(pos == idSlice.Size, "The storage key has trailing bytes");
         }
-    }
-
-    private static unsafe int ReadVariableSizeInt(ref byte* ptr)
-    {
-        int value = 0, shift = 0;
-        byte b;
-        do
-        {
-            b = *ptr++;
-            value |= (b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-
-        return value;
     }
 }

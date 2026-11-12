@@ -369,6 +369,7 @@ namespace Raven.Server.Documents
                     if (lowerIdSize > MaxIdSize)
                         ThrowDocumentIdTooBig(str);
 
+                    // only expands control chars in the lowered id; its escape positions are discarded by the scan of the actual id below
                     if (controlCount > 0)
                         _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(lowerId, ref lowerIdSize, escapePositionsSize);
 
