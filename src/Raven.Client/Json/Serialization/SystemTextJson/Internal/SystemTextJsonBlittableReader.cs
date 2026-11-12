@@ -22,7 +22,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 using (var stream = new BufferWriterStream(_buffer))
                 using (var writer = new BlittableJsonTextWriter(source._context, stream) { EscapeNamedFloatingPointLiterals = true })
-                    writer.WriteObject(source);
+                    source.WriteJsonTo(writer);
             }
         }
 
