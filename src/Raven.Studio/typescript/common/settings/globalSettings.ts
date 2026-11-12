@@ -21,6 +21,7 @@ class globalSettings extends abstractSettings {
     menuWidth = new simpleStudioSetting<number | undefined>("local", 280, x => this.saveSetting(x));
     pinnedNotifications = new simpleStudioSetting<boolean | undefined>("local", false, x => this.saveSetting(x));
 
+    isRequireTypedConfirmationToDeleteFromGroup = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
     isRequireTypedConfirmationToDeleteDocuments = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
 
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));

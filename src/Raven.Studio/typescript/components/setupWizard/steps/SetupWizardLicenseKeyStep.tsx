@@ -1,4 +1,4 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { licenseKeySchema, LicenseTypeToGenerate, SetupWizardFormData } from "../setupWizardValidation";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
@@ -25,7 +25,6 @@ import useBoolean from "components/hooks/useBoolean";
 import { useAsyncCallback, UseAsyncReturn } from "react-async-hook";
 import { useEffect, useState } from "react";
 import { get } from "lodash";
-import { FieldPath } from "react-hook-form/dist/types/path";
 import { LazyLoad } from "components/common/LazyLoad";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { useEventsCollector } from "components/hooks/useEventsCollector";

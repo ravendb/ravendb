@@ -2211,7 +2211,7 @@ public class PrefixedSharding : ClusterTestBase
 
             var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
 
-            var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "* * * * *");
+            var config = Backup.CreateBackupConfiguration(backupPath);
             await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
 
             Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));

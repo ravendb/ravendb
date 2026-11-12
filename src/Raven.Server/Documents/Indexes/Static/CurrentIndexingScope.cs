@@ -40,6 +40,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public List<Slice> ReferencesToDelete;
 
+        // set by the first references worker of the batch that checks it, so the other reference workers reuse the result
+        public bool? MapReachedIndexCreationEtag;
+
         public MismatchedReferencesWarningHandler MismatchedReferencesWarningHandler;
 
         public readonly bool UseNormalizedIds;

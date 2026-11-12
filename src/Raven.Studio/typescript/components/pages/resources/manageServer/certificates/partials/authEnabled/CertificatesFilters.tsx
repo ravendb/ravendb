@@ -1,3 +1,4 @@
+import { ChangeEvent } from "react";
 import { Icon } from "components/common/Icon";
 import Select, {
     SelectOption,
@@ -44,7 +45,9 @@ export default function CertificatesFilters() {
                 <span className="small-label">Filter by name/thumbprint</span>
                 <div className="clearable-input">
                     <Form.Control
-                        onChange={(x) => nameOrThumbprintFilterInputHandleChange(x.target.value)}
+                        onChange={(x: ChangeEvent<HTMLInputElement>) =>
+                            nameOrThumbprintFilterInputHandleChange(x.target.value)
+                        }
                         value={nameOrThumbprintFilterInputValue}
                         placeholder="e.g. johndoe.certificate"
                         className="rounded-pill pe-4"

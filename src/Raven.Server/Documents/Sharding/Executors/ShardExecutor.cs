@@ -85,6 +85,15 @@ namespace Raven.Server.Documents.Sharding.Executors
 
         protected override Memory<int> GetAllPositions() => new Memory<int>(_fullRange);
 
+        protected override void ForgetAboutExecutors()
+        {
+            foreach (var executor in _requestExecutors.Values)
+            {
+                if (executor.IsValueCreated)
+                    executor.Value.ForgetAbout();
+            }
+        }
+
         protected override void OnCertificateChange(object sender, EventArgs e)
         {
             var oldRequestExecutors = _requestExecutors;

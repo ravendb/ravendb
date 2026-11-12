@@ -13,12 +13,17 @@ module.exports = {
     "testRegex": [ "(/__tests__/.*|(\\.|/)(spec))\\.[jt]sx?$" ],
     'transform': {
         '.*\.tsx?$': '@swc/jest',
+        "node_modules.+\\.js$": "@swc/jest",
         "^.+\\.html?$": "<rootDir>/typescript/test/htmlLoader.js"
     },
+    "transformIgnorePatterns": [
+        "/node_modules/(?!(storybook|@storybook)/)",
+    ],
     "setupFiles": [
         "./scripts/setup_jest.js",
     ],
     "setupFilesAfterEnv": [
+        "./scripts/setup_console_guard.ts",
         "./scripts/setup_runtime.ts",
         "jest-extended/all",
     ],

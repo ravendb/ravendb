@@ -197,7 +197,7 @@ interface DurandalRouteConfiguration {
     moduleId: Function;
 }
 
-declare module AceAjax {
+declare namespace AceAjax {
 
     // this is duplicate declaration to solve temporary issue with 2 builds systems: bower + webpack
     interface Annotation {

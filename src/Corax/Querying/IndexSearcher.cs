@@ -196,7 +196,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
     
-    public EntryTermsReader GetEntryTermsReader(long id, ref Page p)
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
     {
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
@@ -205,7 +205,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         InitializeSpecialTermsMarkers();
 
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, key);
     }
     
     internal void EncodeAndApplyAnalyzerForMultipleTerms(in FieldMetadata binding, ReadOnlySpan<char> term, ref ContextBoundNativeList<Slice> terms)
@@ -422,6 +422,25 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             covered += GetPostingList(nonExistingPostingListId)?.State.NumberOfEntries ?? 0;
 
         return covered >= NumberOfEntries;
+    }
+
+    /// <summary>
+    /// The number of terms a pass over the terms of the field visits, as <see cref="TextualAggregation"/> does: one per
+    /// distinct value, plus one for null when any entry holds a null. <see cref="GetTermAmountInField"/> adds the number
+    /// of entries holding a null instead.
+    /// </summary>
+    public long GetNumberOfDistinctTermsInField(in FieldMetadata field)
+    {
+        var fieldTree = _fieldsTree?.CompactTreeFor(field.FieldName);
+        if (fieldTree == null)
+            return 0;
+
+        var numberOfTerms = fieldTree.NumberOfEntries;
+
+        if (TryGetPostingListForNull(field, out var nullPostingListId) && GetPostingList(nullPostingListId)?.State.NumberOfEntries > 0)
+            numberOfTerms++;
+
+        return numberOfTerms;
     }
 
     public bool TryGetTermsOfField(in FieldMetadata field, out ExistsTermProvider<Lookup<CompactKeyLookup>.ForwardIterator> existsTermProvider)
