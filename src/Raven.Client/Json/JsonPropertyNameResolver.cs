@@ -39,7 +39,7 @@ namespace Raven.Client.Json
         private static string GetNewtonsoftJsonPropertyName(MemberInfo member)
         {
             object attribute = RavenJsonTypeInfoResolver.GetNewtonsoftAttribute(member, RavenJsonTypeInfoResolver.NewtonsoftJsonPropertyAttributeName);
-            return (string)attribute?.GetType().GetProperty("PropertyName")?.GetValue(attribute);
+            return attribute == null ? null : (string)RavenJsonTypeInfoResolver.GetNewtonsoftValue(attribute, "PropertyName");
         }
 
         internal static string GetDataContractMemberName(MemberInfo member)
