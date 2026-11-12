@@ -48,7 +48,8 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         public string Answer = "a short answer";
     }
 
-    // The injected tests never reach a provider, so any well-formed connection string will do.
+    // The injected tests never reach a provider, so any well-formed connection string will do. The injected
+    // responses are Chat Completions shaped, so the connection string uses that API.
     private const string FakeConnectionStringName = "ravendb-26944-connection";
 
     private static AiConnectionString FakeConnection() => new()
@@ -56,7 +57,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         Name = FakeConnectionStringName,
         Identifier = FakeConnectionStringName,
         ModelType = AiModelType.Chat,
-        OpenAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")
+        OpenAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o") { ApiMode = OpenAiApiMode.ChatCompletions }
     };
 
     #region streaming
@@ -281,7 +282,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             Name = FakeConnectionStringName,
             Identifier = FakeConnectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("fake-key", provider.Endpoint, "gpt-4o")
+            OpenAiSettings = new OpenAiSettings("fake-key", provider.Endpoint, "gpt-4o") { ApiMode = OpenAiApiMode.ChatCompletions }
         };
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(connection));
 

@@ -311,6 +311,90 @@ internal static class Wire
 }
 
 /// <summary>
+/// Builders for OpenAI Responses API (/responses) wire shapes. Text is JSON-escaped here, so callers pass plain strings.
+/// </summary>
+internal static class ResponsesWire
+{
+    public const int InputTokens = 7000;
+    public const int OutputTokens = 777;
+    public const int TotalTokens = 7800; // deliberately not input + output, so a test can tell the reported total from a computed one
+    public const int CachedTokens = 300;
+    public const int ReasoningTokens = 50;
+
+    private static readonly string Usage =
+        $"{{\"input_tokens\":{InputTokens},\"input_tokens_details\":{{\"cached_tokens\":{CachedTokens}}}," +
+        $"\"output_tokens\":{OutputTokens},\"output_tokens_details\":{{\"reasoning_tokens\":{ReasoningTokens}}},\"total_tokens\":{TotalTokens}}}";
+
+    /// <summary>A non-streaming response with the given output items.</summary>
+    public static string Response(string status, params string[] output) => Build(status, incompleteReason: null, error: null, output);
+
+    /// <summary>A non-streaming response with status "incomplete" and the given reason.</summary>
+    public static string IncompleteResponse(string reason, params string[] output) => Build("incomplete", reason, error: null, output);
+
+    /// <summary>A non-streaming response with status "failed".</summary>
+    public static string FailedResponse(string code, string message) => Build("failed", incompleteReason: null, Error(code, message), []);
+
+    private static string Build(string status, string incompleteReason, string error, string[] output)
+    {
+        var details = incompleteReason == null ? "null" : $"{{\"reason\":{JsonConvert.ToString(incompleteReason)}}}";
+        return $"{{\"id\":\"resp_mock\",\"object\":\"response\",\"model\":\"gpt-5.4\",\"status\":{JsonConvert.ToString(status)}," +
+               $"\"incomplete_details\":{details},\"error\":{error ?? "null"},\"output\":[{string.Join(",", output)}],\"usage\":{Usage}}}";
+    }
+
+    public static string Error(string code, string message) =>
+        $"{{\"code\":{JsonConvert.ToString(code)},\"message\":{JsonConvert.ToString(message)}}}";
+
+    public static string TextMessage(string text) =>
+        $"{{\"type\":\"message\",\"id\":\"msg_mock\",\"status\":\"completed\",\"role\":\"assistant\"," +
+        $"\"content\":[{{\"type\":\"output_text\",\"text\":{JsonConvert.ToString(text)},\"annotations\":[]}}]}}";
+
+    public static string RefusalMessage(string refusal) =>
+        $"{{\"type\":\"message\",\"id\":\"msg_mock\",\"status\":\"completed\",\"role\":\"assistant\"," +
+        $"\"content\":[{{\"type\":\"refusal\",\"refusal\":{JsonConvert.ToString(refusal)}}}]}}";
+
+    public static string Reasoning(string summary) =>
+        $"{{\"type\":\"reasoning\",\"id\":\"rs_mock\",\"summary\":[{{\"type\":\"summary_text\",\"text\":{JsonConvert.ToString(summary)}}}]}}";
+
+    public static string FunctionCall(string callId, string name, string arguments) =>
+        $"{{\"type\":\"function_call\",\"id\":\"fc_{callId}\",\"call_id\":{JsonConvert.ToString(callId)},\"name\":{JsonConvert.ToString(name)}," +
+        $"\"arguments\":{JsonConvert.ToString(arguments)},\"status\":\"completed\"}}";
+
+    /// <summary>A full SSE stream: each event as an "event:" line plus a "data:" line. Responses streams have no [DONE].</summary>
+    public static string Stream(params string[] events) =>
+        string.Concat(Array.ConvertAll(events, e => "event: " + JObject.Parse(e)["type"] + "\ndata: " + e + "\n\n"));
+
+    public static string TextDelta(string delta) =>
+        $"{{\"type\":\"response.output_text.delta\",\"item_id\":\"msg_mock\",\"output_index\":0,\"content_index\":0,\"delta\":{JsonConvert.ToString(delta)}}}";
+
+    public static string RefusalDelta(string delta) =>
+        $"{{\"type\":\"response.refusal.delta\",\"item_id\":\"msg_mock\",\"output_index\":0,\"content_index\":0,\"delta\":{JsonConvert.ToString(delta)}}}";
+
+    public static string FunctionCallAdded(string itemId, string callId, string name) =>
+        $"{{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{{\"type\":\"function_call\",\"id\":{JsonConvert.ToString(itemId)}," +
+        $"\"call_id\":{JsonConvert.ToString(callId)},\"name\":{JsonConvert.ToString(name)},\"arguments\":\"\",\"status\":\"in_progress\"}}}}";
+
+    public static string ArgumentsDelta(string itemId, string delta) =>
+        $"{{\"type\":\"response.function_call_arguments.delta\",\"item_id\":{JsonConvert.ToString(itemId)},\"output_index\":0,\"delta\":{JsonConvert.ToString(delta)}}}";
+
+    public static string FunctionCallDone(string itemId, string callId, string name, string arguments) =>
+        $"{{\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":{{\"type\":\"function_call\",\"id\":{JsonConvert.ToString(itemId)}," +
+        $"\"call_id\":{JsonConvert.ToString(callId)},\"name\":{JsonConvert.ToString(name)},\"arguments\":{JsonConvert.ToString(arguments)},\"status\":\"completed\"}}}}";
+
+    public static string Completed() =>
+        $"{{\"type\":\"response.completed\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"completed\",\"output\":[],\"usage\":{Usage}}}}}";
+
+    public static string Incomplete(string reason) =>
+        $"{{\"type\":\"response.incomplete\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"incomplete\"," +
+        $"\"incomplete_details\":{{\"reason\":{JsonConvert.ToString(reason)}}},\"output\":[],\"usage\":{Usage}}}}}";
+
+    public static string Failed(string code, string message) =>
+        $"{{\"type\":\"response.failed\",\"response\":{{\"id\":\"resp_mock\",\"status\":\"failed\",\"error\":{Error(code, message)},\"output\":[],\"usage\":{Usage}}}}}";
+
+    public static string StreamError(string code, string message) =>
+        $"{{\"type\":\"error\",\"code\":{JsonConvert.ToString(code)},\"message\":{JsonConvert.ToString(message)},\"param\":null}}";
+}
+
+/// <summary>
 /// A real <see cref="ConversationHandler"/> whose provider response is supplied in-process instead of over
 /// HTTP, for responses a real model cannot be asked to produce on demand. Unlike <see cref="MockLlm"/> this
 /// also serves the streaming send, so SSE shapes can be injected.

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using Raven.Client.Documents.Operations.AI;
@@ -60,43 +59,9 @@ internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvid
                version >= MinVersionRequiringReasoningDisabled;
     }
 
-    public override void AddHeaders(HttpRequestMessage request)
-    {
-        if (string.IsNullOrEmpty(_settings.OrganizationId) == false)
-            request.Headers.TryAddWithoutValidation(Wire.Headers.OpenAiOrganization, _settings.OrganizationId);
+    public override void AddHeaders(HttpRequestMessage request) => OpenAiShared.AddOpenAiHeaders(request, _settings);
 
-        if (string.IsNullOrEmpty(_settings.ProjectId) == false)
-            request.Headers.TryAddWithoutValidation(Wire.Headers.OpenAiProject, _settings.ProjectId);
-    }
-
-    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response)
-    {
-        var error = OpenAiErrorHolder.Deserializer(content).error;
-
-        var errorType = ErrorType.Unknown;
-        switch (response.StatusCode)
-        {
-            case HttpStatusCode.BadRequest:
-                if (error.code == "context_length_exceeded" && error.type == "invalid_request_error")
-                    errorType = ErrorType.TooManyTokens;
-                break;
-            case HttpStatusCode.TooManyRequests:
-                errorType = error.type switch
-                {
-                    "insufficient_quota" => ErrorType.InsufficientQuota,
-                    "requests" => ErrorType.TooManyRequests,
-                    "tokens" => ErrorType.TooManyTokens,
-                    _ => ErrorType.Other429
-                };
-                break;
-        }
-
-        return new AiError
-        {
-            ErrorType = errorType,
-            Message = error.message
-        };
-    }
+    public override AiError ParseError(BlittableJsonReaderObject content, HttpResponseMessage response) => OpenAiShared.ParseOpenAiError(content, response);
 
     public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
     {
@@ -129,35 +94,6 @@ internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvid
         if (string.IsNullOrWhiteSpace(reasoningEffort))
             return null;
 
-        return NormalizeReasoningEffort(reasoningEffort.Trim());
-    }
-
-#pragma warning disable CS0618 // configurations persisted by older clients hold the legacy enum shape
-    private static string NormalizeReasoningEffort(string value)
-    {
-        // ReasoningEffort is free-form, so "3" is a provider value - without this, Enum.TryParse
-        // below would read it as the number behind High
-        if (int.TryParse(value, out _))
-            return value;
-
-        if (Enum.TryParse(value, ignoreCase: false, out OpenAiReasoningEffort effort))
-            return effort.ToReasoningEffort();
-
-        return value;
-    }
-#pragma warning restore CS0618
-
-    private class OpenAiErrorHolder
-    {
-        public static readonly Func<BlittableJsonReaderObject, OpenAiErrorHolder> Deserializer = JsonDeserializationBase.GenerateJsonDeserializationRoutine<OpenAiErrorHolder>();
-
-        public OpenAiError error { get; set; }
-    }
-
-    private class OpenAiError
-    {
-        public string type { get; set; }
-        public string message { get; set; }
-        public string code { get; set; }
+        return OpenAiShared.NormalizeReasoningEffort(reasoningEffort.Trim());
     }
 }
