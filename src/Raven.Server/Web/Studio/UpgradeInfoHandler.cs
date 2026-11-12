@@ -38,8 +38,8 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             
             var pageNumber = (start / pageSize) + 1;
 
-            bool isDevBuild = ServerVersion.Build == ServerVersion.DevBuildNumber;
-            string licenseId = isDevBuild ? null : ServerStore.LicenseManager.LicenseStatus.Id.ToString();
+            var isDevBuild = ServerVersion.Build == ServerVersion.DevBuildNumber;
+            var licenseId = isDevBuild ? null : ServerStore.LicenseManager.LicenseStatus.Id.ToString();
 
             var request = new UpgradeInfoRequest()
             {
