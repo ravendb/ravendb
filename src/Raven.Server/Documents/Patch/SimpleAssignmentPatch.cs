@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Patch;
 /// A patch script made only of updates of top level fields, with values from the arguments or from literals:
 /// <c>this.F = v;</c> <c>this.F += v;</c> <c>this.F -= v;</c> <c>this.F++;</c> <c>this.F--;</c> <c>this.F = this.F + v;</c> <c>this.F = this.F - v;</c>
 /// where the field is <c>this.F</c>, <c>this['F']</c> or <c>this[args.f]</c>, and v is <c>args.x</c> or a literal (string, number, boolean, null).
+/// An undeclared <c>$x</c> is <c>args.x</c>, as in the script engine (<see cref="JintNullPropagationReferenceResolver"/>).
 /// The updates may be in a block, after <c>var a = this;</c> (patch by query sends its update body so), and then <c>a.F</c> is <c>this.F</c>.
 /// Such a script needs no JavaScript engine, so we can build the patched document outside the transaction merger.
 /// The result follows the script engine: JavaScript number arithmetic, and <see cref="JsBlittableBridge"/>'s rule for
@@ -254,17 +255,17 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             case AssignmentExpression assignment when TryParseTarget(assignment.Left, alias, out var target):
                 switch (assignment.Operator)
                 {
-                    case Operator.Assignment when TryParseOperand(assignment.Right, out var value):
+                    case Operator.Assignment when TryParseOperand(assignment.Right, alias, out var value):
                         update = new Update(target, UpdateKind.Assign, value);
                         return true;
                     case Operator.Assignment when assignment.Right is NonLogicalBinaryExpression { Operator: Operator.Addition or Operator.Subtraction } binary &&
-                                                  TryParseTarget(binary.Left, alias, out var self) && self == target && TryParseOperand(binary.Right, out var value):
+                                                  TryParseTarget(binary.Left, alias, out var self) && self == target && TryParseOperand(binary.Right, alias, out var value):
                         update = new Update(target, binary.Operator == Operator.Addition ? UpdateKind.Add : UpdateKind.Subtract, value);
                         return true;
-                    case Operator.AdditionAssignment when TryParseOperand(assignment.Right, out var value):
+                    case Operator.AdditionAssignment when TryParseOperand(assignment.Right, alias, out var value):
                         update = new Update(target, UpdateKind.Add, value);
                         return true;
-                    case Operator.SubtractionAssignment when TryParseOperand(assignment.Right, out var value):
+                    case Operator.SubtractionAssignment when TryParseOperand(assignment.Right, alias, out var value):
                         update = new Update(target, UpdateKind.Subtract, value);
                         return true;
                 }
@@ -292,6 +293,9 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
             case MemberExpression { Object: Identifier { Name: "args" }, Computed: false, Property: Identifier argument } when member.Computed:
                 target = new Target(null, argument.Name);
                 return true;
+            case Identifier { Name: var argument } when member.Computed && IsArgument(argument, alias):
+                target = new Target(null, argument.Substring(1));
+                return true;
             default:
                 return false;
         }
@@ -300,7 +304,10 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
     private static bool IsThis(Expression expression, string alias) =>
         expression is ThisExpression || alias != null && expression is Identifier { Name: var name } && name == alias;
 
-    private static bool TryParseOperand(Node node, out Operand operand)
+    // the alias is declared, so the script engine does not read it from the arguments
+    private static bool IsArgument(string name, string alias) => name.StartsWith('$') && name != alias;
+
+    private static bool TryParseOperand(Node node, string alias, out Operand operand)
     {
         switch (node)
         {
@@ -309,6 +316,9 @@ internal sealed class SimpleAssignmentPatch : ILowMemoryHandler
                 return true;
             case MemberExpression { Object: Identifier { Name: "args" }, Computed: true, Property: StringLiteral argument }:
                 operand = new Operand(argument.Value, null);
+                return true;
+            case Identifier { Name: var argument } when IsArgument(argument, alias):
+                operand = new Operand(argument.Substring(1), null);
                 return true;
             case NumericLiteral number:
                 operand = new Operand(null, number.Value);
