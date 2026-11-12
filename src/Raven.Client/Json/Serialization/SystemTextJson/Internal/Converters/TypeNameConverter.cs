@@ -689,7 +689,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static object ReadDictionary(ref Utf8JsonReader reader, Type dictionaryType, Type keyType, Type valueType, JsonSerializerOptions options)
         {
-            DictionaryShape shape = _dictionaryShapes.GetOrAdd(dictionaryType, t => new DictionaryShape(t, keyType, valueType));
+            if (_dictionaryShapes.TryGetValue(dictionaryType, out DictionaryShape shape) == false)
+                shape = _dictionaryShapes.GetOrAdd(dictionaryType, new DictionaryShape(dictionaryType, keyType, valueType));
+
             object dictionary = shape.Create();
             PropertyInfo indexer = shape.Indexer;
 
@@ -761,7 +763,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                 items.Add(itemReader.Read(ref reader, options));
 
-            return _collectionFactories.GetOrAdd(collectionType, t => CreateCollectionFactory(t, itemType))(items);
+            if (_collectionFactories.TryGetValue(collectionType, out Func<IList, object> factory) == false)
+                factory = _collectionFactories.GetOrAdd(collectionType, CreateCollectionFactory(collectionType, itemType));
+
+            return factory(items);
         }
 
         private static Func<IList, object> CreateCollectionFactory(Type collectionType, Type itemType)
