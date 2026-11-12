@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json.Serialization.Metadata;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
 using Raven.Client.Util;
@@ -11,6 +12,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal;
 
 internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJsonConverterBase
 {
+    private static readonly byte[] MetadataKey = Encoding.UTF8.GetBytes(Constants.Documents.Metadata.Key);
+
+    private static readonly byte[] TypePropertyName = Encoding.UTF8.GetBytes(TypeNameConverter.TypePropertyName);
+
     public Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
 
     protected BlittableJsonConverterWithMissingProperties(ISerializationConventions conventions) : base(conventions)
@@ -34,35 +39,56 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     private bool CaptureObject(object instance, Type type, BlittableJsonReaderObject json)
     {
-        JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(Conventions.Options, type);
-        if (typeInfo.Kind != JsonTypeInfoKind.Object)
+        MissingPropertiesShape shape = Conventions.GetMissingPropertiesShape(type);
+        if (shape.IsObject == false)
             return false;
 
-        bool ownsUnknownProperties = RavenJsonTypeInfoResolver.OwnsUnknownProperties(typeInfo);
-        Dictionary<string, JsonPropertyInfo> knownProperties = Conventions.GetJsonProperties(type);
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
         bool captured = false;
 
         for (int i = 0; i < json.Count; i++)
         {
-            json.GetPropertyByIndex(i, ref propertyDetails);
-            string propertyName = propertyDetails.Name;
-            if (propertyName == Constants.Documents.Metadata.Key || propertyName == TypeNameConverter.TypePropertyName)
+            ReadOnlySpan<byte> name = json.GetPropertyNameByIndexAsSpan(i, out BlittableJsonToken token);
+            if (name.SequenceEqual(MetadataKey) || name.SequenceEqual(TypePropertyName))
                 continue;
 
-            if (knownProperties.TryGetValue(propertyName, out JsonPropertyInfo property) == false)
+            if (shape.TryGetMember(name, out JsonPropertyInfo property, out bool canHoldMissingProperties))
             {
-                if (ownsUnknownProperties == false)
-                    captured |= RegisterMissingProperties(instance, propertyName, propertyDetails.Value);
+                if (canHoldMissingProperties == false || IsContainer(token) == false)
+                    continue;
 
-                continue;
+                json.GetPropertyByIndex(i, ref propertyDetails);
+            }
+            else
+            {
+                json.GetPropertyByIndex(i, ref propertyDetails);
+                string propertyName = propertyDetails.Name;
+                if (shape.Properties.TryGetValue(propertyName, out property) == false)
+                {
+                    if (shape.OwnsUnknownProperties == false)
+                        captured |= RegisterMissingProperties(instance, propertyName, propertyDetails.Value);
+
+                    continue;
+                }
+
+                if (MissingPropertiesShape.CanHoldMissingProperties(property) == false || IsContainer(token) == false)
+                    continue;
             }
 
-            if (CanHoldMissingProperties(property, propertyDetails.Value))
-                captured |= CaptureValue(property.Get(instance), propertyDetails.Value);
+            captured |= CaptureValue(property.Get(instance), propertyDetails.Value);
         }
 
         return captured;
+    }
+
+    private static bool IsContainer(BlittableJsonToken token)
+    {
+        return token is BlittableJsonToken.StartObject or BlittableJsonToken.StartArray or BlittableJsonToken.EmbeddedBlittable;
+    }
+
+    private static bool CanHoldMissingProperties(object value)
+    {
+        return value != null && value is not string && value.GetType().IsValueType == false;
     }
 
     private bool CaptureValue(object value, object json)
@@ -73,11 +99,23 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
         switch (json)
         {
             case BlittableJsonReaderObject jsonObject when value is IDictionary dictionary:
+                var entryDetails = new BlittableJsonReaderObject.PropertyDetails();
                 bool captured = false;
                 foreach (DictionaryEntry entry in dictionary)
                 {
-                    if (entry.Key is string key && jsonObject.TryGetMember(key, out object entryJson))
-                        captured |= CaptureValue(entry.Value, entryJson);
+                    if (entry.Key is not string key || CanHoldMissingProperties(entry.Value) == false)
+                        continue;
+
+                    int index = jsonObject.GetPropertyIndex(key);
+                    if (index == -1)
+                        continue;
+
+                    jsonObject.GetPropertyNameByIndexAsSpan(index, out BlittableJsonToken token);
+                    if (IsContainer(token) == false)
+                        continue;
+
+                    jsonObject.GetPropertyByIndex(index, ref entryDetails);
+                    captured |= CaptureValue(entry.Value, entryDetails.Value);
                 }
 
                 return captured;
@@ -101,7 +139,10 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
             if (index >= json.Length)
                 break;
 
-            captured |= CaptureValue(item, json[index++]);
+            if (CanHoldMissingProperties(item) && IsContainer(json.GetTokenByIndex(index)))
+                captured |= CaptureValue(item, json[index]);
+
+            index++;
         }
 
         return captured;

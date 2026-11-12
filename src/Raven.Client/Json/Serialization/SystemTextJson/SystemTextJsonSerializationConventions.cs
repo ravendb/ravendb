@@ -29,6 +29,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private readonly BlittableJsonConverter _defaultConverter;
         private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
+        private readonly ConcurrentDictionary<Type, MissingPropertiesShape> _missingPropertiesShapes = new();
         private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _ignoreByRefMembers;
@@ -190,6 +191,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 return properties;
             });
+        }
+
+        internal MissingPropertiesShape GetMissingPropertiesShape(Type type)
+        {
+            return _missingPropertiesShapes.TryGetValue(type, out MissingPropertiesShape shape)
+                ? shape
+                : _missingPropertiesShapes.GetOrAdd(type, t => new MissingPropertiesShape(RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t), GetJsonProperties(t)));
         }
 
         private JsonSerializerOptions CreateJsonSerializerOptions(TypeNameHandling typeNameHandling)
