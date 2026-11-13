@@ -18,7 +18,9 @@
         "lint-fix": "oxlint typescript --fix",
         "typecheck": "tsc --noEmit",
         "typecheck-watch": "tsc --noEmit --watch",
-        "storybook": "npm run restore && storybook dev -p 6006",
+        "storybook": "npm run restore && storybook dev -p 6006 --exact-port",
+        "storybook-screenshot": "node scripts/story_screenshot.mjs",
+        "storybook-tools": "storybook tools -p 6006",
         "build-storybook": "storybook build",
         "test-storybook": "test-storybook"
     },
@@ -27,6 +29,7 @@
         "@juggle/resize-observer": "^3.4.0",
         "@storybook/addon-a11y": "^10.6.3",
         "@storybook/addon-designs": "^12.0.0",
+        "@storybook/addon-mcp": "^10.6.3",
         "@storybook/addon-webpack5-compiler-swc": "^4.0.3",
         "@storybook/react-webpack5": "^10.6.3",
         "@storybook/test-runner": "^0.26.0",

@@ -66,7 +66,7 @@ function AllSpinnerColors(props: AllSpinnerColorsProps) {
     return (
         <div className="hstack gap-3">
             {colors.map((color) => (
-                <div className="d-flex flex-column align-items-center">
+                <div key={color} className="d-flex flex-column align-items-center">
                     {color}
                     <Spinner variant={color} size={size}></Spinner>
                 </div>
