@@ -55,7 +55,10 @@ export const storageTermHelp = {
     journalWriteLatency:
         "Moving average of the journal write time of every storage environment whose data file is on this disk: the server, each database, its shared index journal and indexes writing their own journal. Users wait for these writes. Journals moved to another disk (e.g. a symlink) still count for the disk of their data file.",
     syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above its threshold the disk switches to paced mode.",
-    queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above its threshold the disk switches to paced mode.",
+    queueDepth:
+        "Average number of requests queued on the device (iostat aqu-sz). Above its threshold the disk switches to paced mode and read-ahead backs off.",
+    readAhead:
+        "While more than 10% of memory is free, the server reads data file segments ahead (warm-up), so later reads come from memory. It only uses spare disk capacity: its budget halves every second the queue depth is above the paced threshold. Stops when free memory drops below 5%.",
     diskStats:
         "Requests the OS sends to this disk per second and their average size (the same counters as the IO Stats dashboard widget). Cloud disks limit both requests per second (IOPS) and bytes per second (throughput), reads and writes together. Small requests hit the IOPS limit first, large ones the throughput limit: compare with the limits of the volume.",
     pipelining: "Pipelining: a journal write is submitted while the previous one is still in flight. Used for small, latency bound writes.",
