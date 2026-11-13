@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -698,6 +699,58 @@ public class ChatCompletionClient : IDisposable
         }
 
         throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
+    }
+
+    // strict when every object reached through "type" object/array is closed and has all its properties in "required".
+    // It runs on the parsed schema we send, so a duplicate key counts with its last value.
+    internal static bool CanUseStrictTool(BlittableJsonReaderObject schema)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
+        schema.TryGetMember(Constants.JsonSchemaFields.Type, out var type);
+
+        switch (type?.ToString())
+        {
+            case Constants.JsonSchemaFields.TypeObject:
+                return IsStrictObject(schema);
+
+            case Constants.JsonSchemaFields.TypeArray:
+                schema.TryGetMember(Constants.JsonSchemaFields.Items, out var items);
+                return items is not BlittableJsonReaderObject itemsSchema || CanUseStrictTool(itemsSchema);
+
+            default:
+                return true;
+        }
+    }
+
+    private static bool IsStrictObject(BlittableJsonReaderObject schema)
+    {
+        // a missing "additionalProperties" means open, same as true
+        schema.TryGetMember(Constants.JsonSchemaFields.AdditionalProperties, out var additionalProperties);
+        if (additionalProperties is not false)
+            return false;
+
+        if (schema.TryGet(Constants.JsonSchemaFields.Properties, out BlittableJsonReaderObject properties) == false)
+            return true;
+
+        var required = new HashSet<string>();
+        if (schema.TryGet(Constants.JsonSchemaFields.Required, out BlittableJsonReaderArray requiredNames))
+        {
+            foreach (var name in requiredNames)
+                required.Add(name.ToString());
+        }
+
+        foreach (var name in properties.GetPropertyNames())
+        {
+            // an optional property can't be strict
+            if (required.Contains(name) == false)
+                return false;
+
+            if (properties[name] is BlittableJsonReaderObject property && CanUseStrictTool(property) == false)
+                return false;
+        }
+
+        return true;
     }
 
     internal static string GetSchemaFromSampleObject(string sampleObject)

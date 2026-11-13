@@ -65,16 +65,18 @@ namespace SlowTests.Server.Documents.AI
             return ((JArray)JObject.Parse(payload)["messages"]).Cast<JObject>().ToList();
         }
 
+        // same rule as OpenAI (ChatCompletionClient.CanUseStrictTool), and the schema goes out as written
         [RavenTheory(RavenTestCategory.Ai)]
-        [InlineData(@"{""type"":""object"",""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}")]           // root missing additionalProperties
-        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""city"":{""type"":""string""}}}")] // already closed
-        public async Task AnthropicTool_ValidObjectRoot_IsClosedAndStrict(string parametersSchema)
+        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}", true)]
+        [InlineData(@"{""type"":""object"",""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}", false)] // root missing additionalProperties
+        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""city"":{""type"":""string""}}}", false)] // city is optional
+        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""filter"":{""type"":""object"",""additionalProperties"":true}},""required"":[""filter""]}", false)]
+        public async Task AnthropicTool_IsStrictOnlyWhenTheSchemaFollowsTheStrictRules(string parametersSchema, bool strict)
         {
             var tool = await AnthropicTool(parametersSchema);
 
-            Assert.True((bool)tool["strict"]);
-            Assert.False((bool)tool["input_schema"]["additionalProperties"]);
-            Assert.True(JToken.DeepEquals(JObject.Parse(parametersSchema)["properties"], tool["input_schema"]["properties"]));
+            Assert.Equal(strict, tool["strict"] != null && (bool)tool["strict"]);
+            Assert.True(JToken.DeepEquals(JObject.Parse(parametersSchema), tool["input_schema"]));
         }
 
         private static async Task<JObject> AnthropicTool(string parametersSchema)
