@@ -412,6 +412,9 @@ namespace Sparrow.Server.Compression
             return ref Unsafe.As<byte, Interval3Gram>(ref ptr);
         }
 
+        // Interval i spans [StartKey(i), StartKey(i + 1) - 1]; the last interval is open-ended up to 0xFFFFFF.
+        private static ReadOnlySpan<byte> LastIntervalUpperBound => [0xFF, 0xFF, 0xFF];
+
         private void BuildDictionary(in FastList<SymbolCode> symbolCodeList)
         {
             ref var state = ref _state;
@@ -456,26 +459,19 @@ namespace Sparrow.Server.Compression
                         entry.KeyBuffer[j] = 0;
                 }
 
+                int prefixLength;
                 if (i < dictSize - 1)
                 {
-                    entry.PrefixLength = 0;
-
-                    // We want a local copy of it. 
-                    var nextSymbol = symbolCodeList[i + 1];
-                    int nextSymbolLength = nextSymbol.Length;
-
-                    nextSymbol.StartKey[nextSymbolLength - 1] -= 1;
-                    int j = 0;
-                    while (j < symbolLength && j < nextSymbolLength && symbol.StartKey[j] == nextSymbol.StartKey[j])
-                    {
-                        entry.PrefixLength++;
-                        j++;
-                    }
+                    SymbolCode upperBound = symbolCodeList[i + 1];
+                    upperBound.StartKey[upperBound.Length - 1] -= 1;
+                    prefixLength = symbol.StartKey.CommonPrefixLength(upperBound.StartKey);
                 }
                 else
                 {
-                    entry.PrefixLength = (byte)symbolLength;
+                    prefixLength = symbol.StartKey.CommonPrefixLength(LastIntervalUpperBound);
                 }
+
+                entry.PrefixLength = (byte)prefixLength;
 
                 entry.Code = symbolCodeList[i].Code;
 
