@@ -37,6 +37,22 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         return uriBuilder.Uri;
     }
 
+    internal override OpenAiApiMode GetApiMode()
+    {
+        if (ApiMode.HasValue)
+            return ApiMode.Value;
+
+        if (string.IsNullOrEmpty(Endpoint))
+            return OpenAiApiMode.Responses;
+
+        // OpenAI's own API has /responses. Any other endpoint is a server that may not, and connection strings
+        // pointing at one used Chat Completions before ApiMode existed.
+        if (Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals(OpenAiBaseUri.Host, StringComparison.OrdinalIgnoreCase))
+            return OpenAiApiMode.Responses;
+
+        return OpenAiApiMode.ChatCompletions;
+    }
+
     /// <summary>
     /// The value to use for the <c>OpenAI-Organization</c> request header. Users who belong to multiple organizations
     /// can set this value to specify which organization is used for an API request. Usage from these API requests will
@@ -53,23 +69,6 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// the default project will be accessed.
     /// </summary>
     public string ProjectId { get; set; }
-
-    /// <summary>
-    /// The <c>reasoning_effort</c> to send to the provider, controlling the reasoning depth
-    /// of supported models (such as the GPT-5 family). Lower values reduce internal reasoning,
-    /// which may improve latency and reduce variability in responses.
-    ///
-    /// Typical values are <c>none</c>, <c>minimal</c>, <c>low</c>, <c>medium</c>, <c>high</c>,
-    /// <c>xhigh</c> and <c>max</c>. Model families accept different subsets, for example
-    /// <c>minimal</c> is rejected by <c>gpt-5.1</c> and later, which take <c>none</c> instead.
-    /// When not set the field is omitted and the model applies its own default.
-    ///
-    /// Sent as supplied apart from trimming, and not validated by RavenDB, so new provider values
-    /// can be used without waiting for a RavenDB release. Providers match it exactly: OpenAI accepts
-    /// lowercase values only. Legacy <see cref="OpenAiReasoningEffort"/> member names persisted by
-    /// older clients (e.g. <c>High</c>) are normalized to the provider form by the server.
-    /// </summary>
-    public string ReasoningEffort { get; set; }
 
     /// <summary>
     /// Optional seed used to make the model's sampling more reproducible across requests.
@@ -105,9 +104,6 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
             json[nameof(ProjectId)] = ProjectId;
 
-        if (string.IsNullOrWhiteSpace(ReasoningEffort) == false)
-            json[nameof(ReasoningEffort)] = ReasoningEffort;
-
         if (Seed.HasValue)
             json[nameof(Seed)] = Seed.Value;
 
@@ -116,8 +112,20 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
 }
 
 /// <summary>
+/// The OpenAI API used for chat requests, see <see cref="OpenAiBaseSettings.ApiMode"/>.
+/// </summary>
+public enum OpenAiApiMode
+{
+    /// <summary>The <c>/responses</c> API.</summary>
+    Responses,
+
+    /// <summary>The <c>/chat/completions</c> API.</summary>
+    ChatCompletions
+}
+
+/// <summary>
 /// Specifies the reasoning effort level used by supported models.
-/// Kept for migration only; use the string-based <see cref="OpenAiSettings.ReasoningEffort"/> instead.
+/// Kept for migration only; use the string-based <see cref="OpenAiBaseSettings.ReasoningEffort"/> instead.
 /// </summary>
 [Obsolete("Use the string-based OpenAiSettings.ReasoningEffort instead, e.g. OpenAiReasoningEffort.High.ToReasoningEffort().")]
 public enum OpenAiReasoningEffort

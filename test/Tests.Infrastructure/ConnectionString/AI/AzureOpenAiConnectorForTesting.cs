@@ -32,7 +32,7 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
 public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiAzureOpenAiConnectorForTesting>
 {
     // Azure picks the model by the chat deployment env var, this only goes into the request body
-    private const string Model = "gpt-5.6-luna";
+    private const string Model = "gpt-6-luna";
 
     public GenAiAzureOpenAiConnectorForTesting()
     {

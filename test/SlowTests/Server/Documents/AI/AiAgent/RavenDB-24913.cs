@@ -133,7 +133,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolQuery
                 {
                     Name = "GetUserDetails",
-                    Description = "Gets the current user details",
+                    Description = "Gets the current user's first name and last name",
                     ParametersSampleObject = "{}",
                     Query = "from Users where Username = $username select FirstName, LastName",
                     Options = toolQueryOptions

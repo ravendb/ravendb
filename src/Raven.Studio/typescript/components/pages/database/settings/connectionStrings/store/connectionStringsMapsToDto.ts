@@ -276,6 +276,9 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.azureOpenAiSettings.enablePromptCache,
                       Temperature: mapTemperatureToDto(connection),
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.azureOpenAiSettings.reasoningEffort : null,
+                      ApiMode: connection.azureOpenAiSettings.apiMode,
                   }
                 : null,
         GoogleSettings:
@@ -288,6 +291,8 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Endpoint: connection.googleSettings.endpoint,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.googleSettings.enablePromptCache,
+                      // not supported for Google: the server rejects any value
+                      ReasoningEffort: null,
                   }
                 : null,
         HuggingFaceSettings:
@@ -305,10 +310,13 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Model: connection.ollamaSettings.model,
                       Uri: connection.ollamaSettings.uri,
                       Endpoint: connection.ollamaSettings.uri,
-                      ApiKey: null,
+                      ApiKey: connection.ollamaSettings.apiKey,
                       Think: connection.modelType === "Chat" ? connection.ollamaSettings.think : null,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       Temperature: mapTemperatureToDto(connection),
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.ollamaSettings.reasoningEffort : null,
+                      ApiMode: connection.ollamaSettings.apiMode,
                   }
                 : null,
         EmbeddedSettings:
@@ -331,6 +339,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.openAiSettings.enablePromptCache,
                       Temperature: mapTemperatureToDto(connection),
+                      ApiMode: connection.openAiSettings.apiMode,
                   }
                 : null,
         MistralAiSettings:
