@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,7 +11,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70920; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70921; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -26,6 +26,7 @@ namespace Sparrow.Server.Platform
             var cfg = new rvn_configuration
             {
                 io_ring_queue_size = PalConfiguration.IoRingQueueSize,
+                io_ring_max_files = PalConfiguration.IoRingFileTableSize,
                 low_priority_io = PalConfiguration.LowPriorityIo,
                 pal_version = -1, // loaded by the call
                 version = RvnConfigurationVersion.Current,
@@ -360,6 +361,10 @@ namespace Sparrow.Server.Platform
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern WriterFunc rvn_get_writer(void* handle);
 
+        /// <summary>For tests: the write ring's registrations fail once <paramref name="max"/> additional files are registered; a negative value removes the limit.</summary>
+        [DllImport(LIBRVNPAL)]
+        public static extern Int32 rvn_io_ring_limit_files_for_testing(Int32 max);
+
         [DllImport(LIBRVNPAL, SetLastError = true)]
         public static extern PalFlags.FailCodes rvn_pager_get_file_handle(
             void* handle,
@@ -614,6 +619,8 @@ namespace Sparrow.Server.Platform
 
             public delegate* unmanaged[Cdecl]<Int64, char*, void> memoryLockCallback;
             public delegate* unmanaged[Cdecl]<Int64, char*, int> recoveryMemoryLockFailureCallback;
+
+            public Int32 io_ring_max_files;
         };
         
         [DllImport(LIBRVNPAL, SetLastError = true)]

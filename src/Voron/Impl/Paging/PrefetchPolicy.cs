@@ -3,7 +3,6 @@ using System.Threading;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
-using Voron.Impl.Journal;
 
 namespace Voron.Impl.Paging;
 
@@ -33,11 +32,7 @@ public sealed class PrefetchPolicy : IDisposable
             return;
 
         // free memory reads as zero until the server's low-memory monitor runs: no warm-up without it
-        _timer = new Timer(_ =>
-        {
-            Tick(LowMemoryNotification.Instance.LastMemoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes));
-            DeviceWriteBudget.Tick();
-        }, null, 0, TickMs);
+        _timer = new Timer(_ => Tick(LowMemoryNotification.Instance.LastMemoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes)), null, 0, TickMs);
     }
 
     /// <summary>1 to 255 during a warm-up, 0 when memory is full.</summary>

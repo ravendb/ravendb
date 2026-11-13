@@ -212,7 +212,7 @@ namespace Raven.Server
 
             CpuUsageCalculator.Init();
 
-            DiskStatsGetter = DiskUtils.GetOsDiskUsageCalculator(Configuration.Monitoring.MinDiskStatsInterval.AsTimeSpan);
+            DiskStatsGetter = new SampledDiskStatsGetter();
 
             MetricCacher.Initialize();
 

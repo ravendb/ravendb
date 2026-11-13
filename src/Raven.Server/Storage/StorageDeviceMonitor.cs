@@ -18,7 +18,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Meters;
-using Sparrow.Server.Utils.DiskStatsGetter;
 using Voron;
 using Voron.Impl.Journal;
 
@@ -306,8 +305,6 @@ namespace Raven.Server.Storage
         public ICollection<DeviceTracker> Trackers => _trackers.Values;
 
         public DeviceTracker GetTracker(DeviceWriteBudget device) => device != null && _trackers.TryGetValue(device, out DeviceTracker tracker) ? tracker : null;
-
-        public DiskStatsResult GetDiskStats(string mountPoint) => mountPoint == null ? null : _serverStore.Server.DiskStatsGetter?.Get(mountPoint);
 
         public readonly record struct DeviceDrives(string MountPoint, string JournalMountPoint);
 

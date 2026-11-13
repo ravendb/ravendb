@@ -80,6 +80,9 @@ struct handle_global_state
 
     struct dirty_bitmap *dirty_bitmap;
 
+    // slot in the write ring's file table, -1 when the file does not use the ring
+    int32_t io_ring_file;
+
     // the prefetch ring the file is registered with, and its ticket there (NULL / -1 = not registered)
     void *prefetch_ring;
     int64_t prefetch_ticket;
@@ -95,6 +98,12 @@ struct handle
     uint64_t allocation_size;
     int file_fd;
 };
+
+PRIVATE int32_t
+rvn_io_ring_register_file(struct handle_global_state *global_state, int fd, int32_t *detailed_error_code);
+
+PRIVATE void
+rvn_io_ring_unregister_file(struct handle_global_state *global_state);
 
 #if !defined(__APPLE__)
 PRIVATE int

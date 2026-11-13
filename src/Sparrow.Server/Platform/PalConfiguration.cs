@@ -22,7 +22,10 @@ public static class PalConfiguration
         return (int)Math.Min((ulong)limit.Current, MaxRegisteredFiles);
     }
 
+    public static int IoRingFileTableSize => Math.Min(IoRingMaxFiles ?? int.MaxValue, FilesTheProcessCanOpen());
+
     public static int IoRingQueueSize = 32;
+    public static int? IoRingMaxFiles; // null: FilesTheProcessCanOpen
     public static bool LowPriorityIo = false;
     public static Pal.RvnWriteMode WriteMode = Pal.RvnWriteMode.Auto;
     public static int PrefetchRingEntries = 256;

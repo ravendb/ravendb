@@ -26,6 +26,7 @@
 #include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_posix.h"
+#include "slots.h"
 
 typedef enum workitem_type
 {
@@ -38,7 +39,7 @@ typedef enum workitem_type
 
 struct submittion
 {
-    int filefd;
+    int32_t file; /* a slot in the ring's file table */
     int notifyfd;
     int32_t count;
     int32_t result;
@@ -79,9 +80,14 @@ struct worker
     int32_t inflight; // SQEs taken minus CQEs seen, worker thread only
     pthread_t thread;
     struct workitem *_Atomic head;
+
+    // guards slots, files_limit, and the ring's file table while a file is registered or unregistered
+    pthread_mutex_t files_lock;
+    struct rvn_slots slots;
+    int32_t files_limit; // tests: registrations fail once this many files are held, -1 for none
 };
 
-struct worker g_worker = {.eventfd = -1, .ring = {.ring_fd = -1}};
+struct worker g_worker = {.eventfd = -1, .ring = {.ring_fd = -1}, .files_lock = PTHREAD_MUTEX_INITIALIZER, .files_limit = -1};
 
 // marks the fsync half of a dir sync (fsync hard-linked to close): it records its error, only the close completes the item
 #define NON_FINAL_STAGE_TAG ((uintptr_t)1) // low bit of user_data, workitems are pointer aligned
@@ -244,10 +250,12 @@ void *do_ring_work(void *arg)
                     break;
                 }
                 case workitem_fsync:
-                    io_uring_prep_fsync(sqe, work->submittion->filefd, IORING_FSYNC_DATASYNC);
+                    io_uring_prep_fsync(sqe, work->submittion->file, IORING_FSYNC_DATASYNC);
+                    sqe->flags |= IOSQE_FIXED_FILE;
                     break;
                 case workitem_write:
-                    io_uring_prep_writev(sqe, work->submittion->filefd, work->op.write.iovecs, work->op.write.iovecs_count, work->op.write.offset);
+                    io_uring_prep_writev(sqe, work->submittion->file, work->op.write.iovecs, work->op.write.iovecs_count, work->op.write.offset);
+                    sqe->flags |= IOSQE_FIXED_FILE;
                     break;
                 default:
                     break;
@@ -375,7 +383,9 @@ void *do_ring_work(void *arg)
 error:
     g_worker.result = rc;
     atomic_store(&g_worker.errored, true);
+    pthread_mutex_lock(&g_worker.files_lock); // a register / unregister that saw a live ring finishes before we close it
     close_ring_with_error(ring, rc);
+    pthread_mutex_unlock(&g_worker.files_lock);
     // Submitters that raced the error may still queue work and write to the eventfd, so we
     // keep both the eventfd and this thread alive and fail all such work from now on.
     while (true)
@@ -457,7 +467,7 @@ rvn_sync_pager(void *handle,
                int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
-    if (!io_ring_setup_successful())
+    if (handle_ptr->global_state->io_ring_file == -1 || !io_ring_setup_successful())
     {
         if (fdatasync(handle_ptr->file_fd) != 0)
         {
@@ -475,7 +485,7 @@ rvn_sync_pager(void *handle,
     }
     int eventfd = handle_ptr->global_state->fsync_dir_arena.eventfd;
     struct submittion submittion = {
-        .filefd = handle_ptr->file_fd,
+        .file = handle_ptr->global_state->io_ring_file,
         .notifyfd = eventfd,
         .count = 1,
         .result = 0,
@@ -521,6 +531,12 @@ int32_t rvn_write_io_ring(
         return FAIL_IO_RING_SUBMIT;
     }
 
+    if (handle_ptr->global_state->io_ring_file == -1)
+    {
+        *detailed_error_code = EBADF; // a read-only file, or one written through a writable map
+        return FAIL_IO_RING_WRITE;
+    }
+
     int rc_lock = pthread_mutex_lock(&handle_ptr->global_state->writes_arena.lock);
     if (rc_lock != 0)
     {
@@ -545,7 +561,7 @@ int32_t rvn_write_io_ring(
         handle_ptr->global_state->writes_arena.arena_size = size;
     }
     struct submittion submittion = {
-        .filefd = handle_ptr->file_fd,
+        .file = handle_ptr->global_state->io_ring_file,
         .notifyfd = handle_ptr->global_state->writes_arena.eventfd,
         .count = 0, // we merge work items for vector writes, so we update this below
         .result = 0,
@@ -671,13 +687,27 @@ rvn_io_ring_init(int32_t *detailed_error_code)
 
     struct io_uring_params params = {.flags = 0};
 
-    int rc = io_uring_queue_init_params(g_cfg.io_ring_queue_size, &g_worker.ring, &params);
+    int rc = rvn_slots_init(&g_worker.slots, g_cfg.io_ring_max_files, detailed_error_code);
+    if (rc != SUCCESS)
+        goto error;
+
+    rc = io_uring_queue_init_params(g_cfg.io_ring_queue_size, &g_worker.ring, &params);
     if (rc)
     {
+        g_worker.ring.ring_fd = -1; // liburing zeroes the ring before the setup fails
         *detailed_error_code = -rc;
         rc = FAIL_CREATE_IO_RING;
         goto error;
     }
+    unsigned registered = (unsigned)g_cfg.io_ring_max_files;
+    rc = _io_uring_register_files_empty(&g_worker.ring, &registered);
+    if (rc < 0)
+    {
+        *detailed_error_code = -rc;
+        rc = FAIL_IO_RING_REGISTER_FILE;
+        goto error;
+    }
+    g_worker.slots.capacity = (int32_t)registered; // may be less than expected, see: _io_uring_register_files_empty()
     g_worker.eventfd = eventfd(0, EFD_CLOEXEC);
     if (g_worker.eventfd == -1)
     {
@@ -702,14 +732,18 @@ rvn_io_ring_init(int32_t *detailed_error_code)
     }
     return SUCCESS;
 error:
-    io_uring_queue_exit(&g_worker.ring);
+    if (g_worker.ring.ring_fd != -1)
+        io_uring_queue_exit(&g_worker.ring);
     if (g_worker.eventfd != -1)
         close(g_worker.eventfd);
+    rvn_slots_free(&g_worker.slots);
     g_worker = (struct worker){
         .eventfd = -1,
         .errored = true,
         .result = rc,
         .ring = {.ring_fd = -1},
+        .files_lock = PTHREAD_MUTEX_INITIALIZER,
+        .files_limit = -1,
     };
     return rc;
 }
@@ -717,6 +751,70 @@ error:
 int io_ring_setup_successful()
 {
     return g_worker.ring.ring_fd != -1; // set once at init, a dead ring keeps it and fails every request instead
+}
+
+PRIVATE int32_t
+rvn_io_ring_register_file(struct handle_global_state *global_state, int fd, int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+    int lock_rc = pthread_mutex_lock(&g_worker.files_lock);
+    if (lock_rc != 0)
+    {
+        *detailed_error_code = lock_rc;
+        return FAIL_MUTEX_LOCK;
+    }
+    if (g_worker.ring.ring_fd == -1 || atomic_load(&g_worker.errored)) // a dead ring keeps its ring_fd
+    {
+        *detailed_error_code = g_worker.result;
+        rc = FAIL_IO_RING_SUBMIT;
+        goto exit;
+    }
+    int32_t slot = g_worker.files_limit != -1 && g_worker.slots.count >= g_worker.files_limit ? -1 : rvn_slots_take(&g_worker.slots);
+    if (slot == -1)
+    {
+        *detailed_error_code = EMFILE;
+        rc = FAIL_IO_RING_FILES_EXHAUSTED;
+        goto exit;
+    }
+    int update_rc = io_uring_register_files_update(&g_worker.ring, (unsigned)slot, &fd, 1);
+    if (update_rc < 0)
+    {
+        rvn_slots_release(&g_worker.slots, slot);
+        *detailed_error_code = -update_rc;
+        rc = FAIL_IO_RING_REGISTER_FILE;
+        goto exit;
+    }
+    global_state->io_ring_file = slot;
+exit:
+    pthread_mutex_unlock(&g_worker.files_lock);
+    return rc;
+}
+
+EXPORT int32_t
+rvn_io_ring_limit_files_for_testing(int32_t max)
+{
+    pthread_mutex_lock(&g_worker.files_lock);
+    g_worker.files_limit = max < 0 ? -1 : g_worker.slots.count + max;
+    pthread_mutex_unlock(&g_worker.files_lock);
+    return SUCCESS;
+}
+
+/* Called once the last handle of the file is closed: no write or fsync of the file can be queued */
+PRIVATE void
+rvn_io_ring_unregister_file(struct handle_global_state *global_state)
+{
+    int32_t slot = global_state->io_ring_file;
+    if (slot == -1)
+        return;
+    global_state->io_ring_file = -1;
+    pthread_mutex_lock(&g_worker.files_lock);
+    if (g_worker.ring.ring_fd != -1 && !atomic_load(&g_worker.errored))
+    {
+        int none = -1;
+        (void)io_uring_register_files_update(&g_worker.ring, (unsigned)slot, &none, 1);
+    }
+    rvn_slots_release(&g_worker.slots, slot);
+    pthread_mutex_unlock(&g_worker.files_lock);
 }
 
 PRIVATE int32_t
@@ -767,6 +865,7 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
     // We still can do that in a batched manner, though...
 
     struct submittion submittion = {
+        .file = -1,
         .notifyfd = eventfd,
         .count = count,
         .result = 0,

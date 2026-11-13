@@ -7,7 +7,6 @@ using Sparrow.Platform;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
-using Sparrow.Server.Utils.DiskStatsGetter;
 
 namespace Sparrow.Server.Utils
 {
@@ -254,17 +253,6 @@ namespace Sparrow.Server.Utils
             }
 
             return realPath;
-        }
-
-        internal static IDiskStatsGetter GetOsDiskUsageCalculator(TimeSpan minInterval)
-        {
-#pragma warning disable CA1416
-            return PlatformDetails.RunningOnLinux
-                ? new LinuxDiskStatsGetter(minInterval)
-                : PlatformDetails.RunningOnWindows
-                    ? new WindowsDiskStatsGetter(minInterval)
-                    : new NotImplementedDiskStatsGetter();
-#pragma warning restore CA1416
         }
 
         private const uint FILE_READ_EA = 0x0008;
