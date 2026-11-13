@@ -119,6 +119,15 @@ describe("AboutPage", function () {
 
             expect(await screen.findByText(selectors.versions.close)).toBeInTheDocument();
             expect(await screen.findByText(selectors.versions.updateInstructions)).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Next page" })).toBeEnabled();
+            expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+            expect(screen.queryByText(/6\.0\.7/)).not.toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: "Next page" }));
+
+            expect(await screen.findByText(/6\.0\.7/)).toBeInTheDocument();
+            expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Last page" })).not.toBeInTheDocument();
         });
 
         it("using latest version", async function () {

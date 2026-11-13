@@ -9,7 +9,7 @@ import { LoadError } from "components/common/LoadError";
 import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import CustomPagination from "components/common/Pagination";
+import { PageNavigation } from "components/common/PaginationBar";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -199,22 +199,21 @@ function ModalWrapper(
             </Modal.Header>
             <Modal.Body className="vstack gap-4 position-relative">{children}</Modal.Body>
             <Modal.Footer>
+                {mode === "whatsNew" && page && (
+                    <PageNavigation page={page} totalPages={totalPages} onPageChange={onPageChange} isSimple />
+                )}
+                <FlexGrow />
                 <Button variant="outline-secondary" onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
-
                 {mode === "whatsNew" && (
-                    <React.Fragment key="footer-part">
-                        <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
-                        <FlexGrow />
-                        <Button
-                            variant="outline-primary"
-                            className="rounded-pill px-3"
-                            href={aboutPageUrls.updateInstructions}
-                        >
-                            Update instructions <Icon icon="newtab" margin="m-0" />
-                        </Button>
-                    </React.Fragment>
+                    <Button
+                        variant="outline-primary"
+                        className="rounded-pill px-3"
+                        href={aboutPageUrls.updateInstructions}
+                    >
+                        Update instructions <Icon icon="newtab" margin="m-0" />
+                    </Button>
                 )}
             </Modal.Footer>
         </Modal>
