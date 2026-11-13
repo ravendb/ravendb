@@ -646,7 +646,6 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
         scanInflation?.Observe(match.EntriesStreamed, (long)match._rawStreamScanEstimate);
 
 
-        [SkipLocalsInit]
         SortedIndexReader<TDirection> GetReader(long min, long max, object h)
         {
             if (typeof(TDirection) == typeof(Lookup<CompactTree.CompactKeyLookup>.ForwardIterator) ||
@@ -655,17 +654,10 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
                 var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(match));
                 var it = termsTree.IterateValues<TDirection>();
                 it.Reset();
-                if (h is string strVal)
+                if (h is Slice analyzed)
                 {
                     var compactKey = llt.AcquireCompactKey();
-                    int byteCount = System.Text.Encoding.UTF8.GetMaxByteCount(strVal.Length);
-                    Span<byte> stackBuf = byteCount switch
-                    {
-                        <= Utf8StackAllocThreshold => stackalloc byte[Utf8StackAllocThreshold],
-                        _ => GrowUtf8Buffer(byteCount)
-                    };
-                    int written = System.Text.Encoding.UTF8.GetBytes(strVal, stackBuf);
-                    compactKey.Set(stackBuf[..written]);
+                    compactKey.Set(analyzed.AsReadOnlySpan());
                     compactKey.ChangeDictionary(termsTree.DictionaryId);
                     it.Seek(new CompactTree.CompactKeyLookup(compactKey));
                 }
