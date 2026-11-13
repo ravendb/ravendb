@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.TransactionMerger.Commands;
 
@@ -28,8 +29,14 @@ public abstract class MergedTransactionCommand<TOperationContext, TTransaction> 
     {
         recordingState?.TryRecord(context, this);
 
-        return ExecuteCmd(context);
+        // the command may be executed again with a different context, so it must not dispose what it doesn't own through this one
+        using (JsonOperationContext.RestrictDisposalTo(context, DisposalGuardDescription))
+        {
+            return ExecuteCmd(context);
+        }
     }
+
+    private const string DisposalGuardDescription = "the command is being executed by the transaction merger";
 
     public abstract IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context);
 

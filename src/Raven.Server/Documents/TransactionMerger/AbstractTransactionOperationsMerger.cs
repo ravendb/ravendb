@@ -60,6 +60,23 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private bool _initialized;
 
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action<MergedTransactionCommand<TOperationContext, TTransaction>> AfterExecutingCommandInMergedTransaction;
+
+            internal bool RerunSingleCommandIndependentlyOnFailure;
+        }
+
         protected AbstractTransactionOperationsMerger(
             [NotNull] string resourceName,
             [NotNull] RavenConfiguration configuration,
@@ -462,7 +479,9 @@ namespace Raven.Server.Documents.TransactionMerger
 
         private void NotifyTransactionFailureAndRerunIndependently(List<MergedTransactionCommand<TOperationContext, TTransaction>> pendingOps, Exception e)
         {
-            if (pendingOps.Count == 1 && pendingOps[0].RetryOnError == false)
+
+
+            if (pendingOps.Count == 1 && pendingOps[0].RetryOnError == false && ForTestingPurposes?.RerunSingleCommandIndependentlyOnFailure != true)
             {
                 pendingOps[0].Exception = e;
                 NotifyOnThreadPool(pendingOps);
@@ -715,6 +734,9 @@ namespace Raven.Server.Documents.TransactionMerger
 
                 meter.IncrementCounter(1);
                 meter.IncrementCommands(op.Execute(context, _recording.State));
+
+                ForTestingPurposes?.AfterExecutingCommandInMergedTransaction?.Invoke(op);
+
                 if (op.UpdateAccessTime)
                     UpdateLastAccessTime(_time.GetUtcNow());
 
