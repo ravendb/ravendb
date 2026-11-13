@@ -46,6 +46,7 @@ public class StreamTarget : AbstractTarget
         using (var context = GetContext())
         {
             Layout.Render(logEvent, context.Buffer);
+            context.Buffer.Append(Environment.NewLine);
             CopyToStream(context.Buffer, context.Stream, Encoding.UTF8, context.TransformBuffer);
 
             var toWrite = new ReadOnlySpan<byte>(context.Stream.GetBuffer(), 0, (int)context.Stream.Length);
