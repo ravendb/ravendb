@@ -21,12 +21,6 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
     [RavenAction("/studio/upgrade-info", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetUpgradeInfo()
     {
-        if (ServerVersion.Build < 60_000)
-        {
-            NoContentStatus();
-            return;
-        }
-
         var start = GetStart();
         var pageSize = GetPageSize();
 
@@ -44,7 +38,8 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
             
             var pageNumber = (start / pageSize) + 1;
 
-            var licenseId = ServerStore.LicenseManager.LicenseStatus.Id.ToString();
+            var isDevBuild = ServerVersion.Build == ServerVersion.DevBuildNumber;
+            var licenseId = isDevBuild ? null : ServerStore.LicenseManager.LicenseStatus.Id.ToString();
 
             var request = new UpgradeInfoRequest()
             {
@@ -65,6 +60,12 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
 
                 if (upgradeInfoResponse.IsSuccessStatusCode == false)
                 {
+                    if (isDevBuild)
+                    {
+                        NoContentStatus();
+                        return;
+                    }
+
                     HttpContext.Response.StatusCode = (int)upgradeInfoResponse.StatusCode;
                     return;
                 }

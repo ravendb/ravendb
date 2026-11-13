@@ -9,6 +9,9 @@ import { LoadError } from "components/common/LoadError";
 import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { RichAlert } from "components/common/RichAlert";
+import { EmptySet } from "components/common/EmptySet";
 import CustomPagination from "components/common/Pagination";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
@@ -24,6 +27,8 @@ export function ChangeLogModal(props: ChangelogModalProps) {
     const { mode, onClose } = props;
     const { licenseService } = useServices();
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isDevBuild = useAppSelector(clusterSelectors.isDevBuild);
+    const showUpgradeCompatibility = !isCloud && !isDevBuild;
 
     const [page, setPage] = useState(1);
 
@@ -56,15 +61,26 @@ export function ChangeLogModal(props: ChangelogModalProps) {
         );
     }
 
-    if (!asyncGetChangeLog.result) {
-        console.error("Change log isn't available in the Developer build.");
-        return null;
-    }
-
     const versionsList =
         mode === "whatsNew"
-            ? asyncGetChangeLog.result.BuildCompatibilitiesForLatestMajorMinor
-            : asyncGetChangeLog.result.BuildCompatibilitiesForUserMajorMinor;
+            ? asyncGetChangeLog.result?.BuildCompatibilitiesForLatestMajorMinor
+            : asyncGetChangeLog.result?.BuildCompatibilitiesForUserMajorMinor;
+
+    if (!versionsList?.length) {
+        const hasNoStableReleaseYet = isDevBuild && asyncGetChangeLog.result != null;
+
+        return (
+            <ModalWrapper onClose={onClose} mode={mode}>
+                <div className="well rounded-3 p-4">
+                    <EmptySet>
+                        {hasNoStableReleaseYet
+                            ? "No changelog yet. It appears once this version has a stable release."
+                            : "No changelog available"}
+                    </EmptySet>
+                </div>
+            </ModalWrapper>
+        );
+    }
 
     const totalResults =
         mode === "whatsNew"
@@ -79,6 +95,12 @@ export function ChangeLogModal(props: ChangelogModalProps) {
             totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
             onPageChange={setPage}
         >
+            {isDevBuild && (
+                <RichAlert variant="info">
+                    Nightly and development builds don&apos;t have their own changelog. Here are the latest stable
+                    releases instead.
+                </RichAlert>
+            )}
             <div className="changelog-modal">
                 {versionsList.map((build, index) => {
                     const downgradeTooltipId = `canDowngradeTooltip-${index}`;
@@ -101,7 +123,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                     {genUtils.formatUtcDateAsLocal(build.ReleasedAt, genUtils.basicDateFormat)}{" "}
                                 </h3>
                                 <div className="flex-horizontal">
-                                    {!isCloud && (
+                                    {showUpgradeCompatibility && (
                                         <React.Fragment key="upgrade-downgrade-info">
                                             <OverlayTrigger
                                                 overlay={

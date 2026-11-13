@@ -202,6 +202,15 @@ export class LicenseStubs {
         };
     }
 
+    static changeLogWithoutStableRelease(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
+        return {
+            BuildCompatibilitiesForLatestMajorMinor: [LicenseStubs.buildCompatibilityInfo("6.0.100")],
+            BuildCompatibilitiesForUserMajorMinor: [],
+            TotalBuildsForLatestMajorMinor: 1,
+            TotalBuildsForUserMajorMinor: 0,
+        };
+    }
+
     private static buildCompatibilityInfo(fullVersion = "6.0.100", canChange: boolean = true): BuildCompatibilityInfo {
         return {
             CanDowngradeFollowingUpgrade: canChange,
@@ -253,6 +262,16 @@ export class LicenseStubs {
             BuildType: "Stable",
             PublishedAt: "2024-01-19T12:58:07.0000000Z",
             UpdateSeverity: "TODO",
+        };
+    }
+
+    static latestVersionNotChecked(): Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo {
+        return {
+            Version: null,
+            BuildNumber: null,
+            BuildType: null,
+            PublishedAt: null,
+            UpdateSeverity: null,
         };
     }
 

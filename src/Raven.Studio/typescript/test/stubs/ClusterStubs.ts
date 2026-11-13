@@ -13,6 +13,14 @@ export class ClusterStubs {
             FullVersion: "6.0.4",
         };
     }
+    static devServerVersion(): serverBuildVersionDto {
+        return {
+            BuildVersion: 72,
+            ProductVersion: "7.2",
+            CommitHash: "7872148",
+            FullVersion: "7.2.8-nightly-20261103-0651",
+        };
+    }
     static singleNodeTopology(): clusterTopology {
         const dto = {
             NodeTag: "A",

@@ -25,9 +25,10 @@ export function VersionsSummary(props: VersionsSummaryProps) {
     const serverVersion = useAppSelector(clusterSelectors.serverVersion);
     const serverFullVersion = serverVersion?.FullVersion ?? "n/a";
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isDevBuild = useAppSelector(clusterSelectors.isDevBuild);
     const { asyncLatestVersion } = props;
 
-    const showLatestVersionInfo = !isCloud && !!asyncLatestVersion.result;
+    const showLatestVersionInfo = !isCloud && !isDevBuild && !!asyncLatestVersion.result;
 
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
