@@ -20,8 +20,8 @@ export const storageStatusColor: Record<StorageDeviceStatus, "success" | "warnin
 
 export const storageStatusHelp: Record<StorageDeviceStatus, string> = {
     Ok: "The disk keeps up with the writes.",
-    Busy: "Congested in the last 10 seconds: writes were paced, or journal writes were slower than the congestion threshold.",
-    Saturated: "The disk was congested for long enough to slow down writes and indexing. Clears after an hour back to normal.",
+    Busy: "The disk was overloaded in the last 10 seconds: syncs were paced, or journal writes took longer than the limit.",
+    Saturated: "The disk has been overloaded long enough to slow down writes and indexing. It clears after an hour without overload.",
 };
 
 export const syncReasonLabel: Record<SyncReason, string> = {
@@ -35,33 +35,37 @@ export const syncReasonLabel: Record<SyncReason, string> = {
 
 export const syncReasonHelp: Record<SyncReason, string> = {
     None: "",
-    Explicit: "Requested by the server (index, backup, admin action).",
-    Idle: "No writes for a few seconds, the pending data was synced.",
-    JournalCount: "Too many journals were waiting for the sync before they could be reused.",
-    SoftThreshold: "Unsynced data passed Storage.MaxUnsyncedSizeBeforeSyncInMb.",
-    Mandatory: "Unsynced data passed Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb: the sync runs whatever the disk state.",
+    Explicit: "Requested by the server, for example for an index, a backup or an admin action.",
+    Idle: "No writes for a few seconds, so the server synced the pending changes.",
+    JournalCount: "Many journal files were waiting for this sync before they could be reused.",
+    SoftThreshold: "The data waiting to be synced passed the soft limit (Storage.MaxUnsyncedSizeBeforeSyncInMb).",
+    Mandatory: "The data waiting to be synced passed the hard limit (Storage.MaxUnsyncedSizeBeforeMandatorySyncInMb), so the sync ran even though the disk was busy.",
 };
 
 export const deviceClassHelp: Record<DeviceClass, string> = {
-    Unknown: "Not classified: no journal writes yet, or writes too small to tell a slow disk from a fast one (small writes are quick on any disk). Auto journal compression uses LZ4.",
-    Fast: "Fast disk (NVMe-like): limits so high they are not hit. Auto journal compression uses LZ4, only transactions of at least 512 KB are compressed, and new journals are pre-zeroed in the background.",
-    Budgeted: "Bandwidth / IOPS limited disk (e.g. gp3): Auto journal compression uses Zstd, because bytes are what the disk limits.",
+    Unknown: "Not known yet: there were no journal writes, or they were too small to tell a slow disk from a fast one. Journal compression set to Auto uses LZ4.",
+    Fast: "A fast disk, for example local NVMe. Journal compression set to Auto uses LZ4 and compresses only transactions of 512 KB or more. New journal files are prepared in the background.",
+    Budgeted: "A disk with a limit on requests or bytes per second, for example AWS gp3. Journal compression set to Auto uses Zstd, so fewer bytes are written.",
 };
 
 export const storageTermHelp = {
-    drain: "Paced (drain in the server log): the disk is congested. Flushes stop pushing data to the disk in the background, and each data file sync writes its data in blocks first, then fsyncs. Syncs take longer so that journal writes, which users wait for, get through.",
-    trickle: "Normal (trickle in the server log): the disk keeps up. On Linux each flush pushes its data to the disk in the background, so a sync mostly just fsyncs.",
-    drainShare: "Share of the last hour the disk was in paced mode.",
+    drain: "Paced: the disk is overloaded, so data file syncs write their data in blocks and let journal writes go first. Users wait for journal writes, so they get the disk first and syncs take longer. The server log calls this drain.",
+    trickle: "Normal: the disk keeps up. On Linux, changes are written to disk in the background as they come, so a sync has little left to do. The server log calls this trickle.",
+    drainShare: "How much of the last hour the disk spent in paced mode.",
     journalWriteLatency:
-        "Moving average of the journal write time of every storage environment whose data file is on this disk: the server, each database, its shared index journal and indexes writing their own journal. Users wait for these writes. Journals moved to another disk (e.g. a symlink) still count for the disk of their data file.",
-    syncCost: "Average time of a data file sync on this disk, including the paced writeback. Above its threshold the disk switches to paced mode.",
-    queueDepth: "Average number of requests queued on the device (iostat aqu-sz). Above its threshold the disk switches to paced mode.",
+        "Average time of a journal write on this disk. Users wait for these writes when they save data. It covers the server and every database and index whose data file is on this disk.",
+    syncCost:
+        "Average time of a data file sync on this disk. A sync makes the changes in a data file safe on disk. Above the limit, the disk switches to paced mode.",
+    queueDepth:
+        "How many requests wait at the disk on average. Above the limit, the disk switches to paced mode and read-ahead slows down.",
+    readAhead:
+        "While more than 10% of memory is free, the server reads data files into memory ahead of time, so later reads are faster. It uses only spare disk capacity: its budget halves every second the disk queue is above the limit. It stops when free memory drops below 5%.",
     diskStats:
-        "Requests the OS sends to this disk per second and their average size (the same counters as the IO Stats dashboard widget). Cloud disks limit both requests per second (IOPS) and bytes per second (throughput), reads and writes together. Small requests hit the IOPS limit first, large ones the throughput limit: compare with the limits of the volume.",
-    pipelining: "Pipelining: a journal write is submitted while the previous one is still in flight. Used for small, latency bound writes.",
-    consolidation: "Batch consolidation: the transaction merger holds a batch open a bit longer so one larger journal write replaces several small ones.",
-    flusherYields: "How often the flusher postponed flushing this environment to leave the disk to journal writes.",
-    sharedJournal: "Index environments of a database write through one shared journal, hard-linked into each index.",
+        "Requests sent to this disk per second and their average size, as the operating system counts them. Cloud disks limit both requests per second (IOPS) and bytes per second (throughput). Many small requests hit the IOPS limit first, large ones the throughput limit. Compare with the limits of your volume.",
+    pipelining: "Pipelined: the next journal write starts before the previous one finishes. Used when writes are small and the disk is slow to answer.",
+    consolidation: "Consolidating: the server waits a moment to combine several small journal writes into one larger write.",
+    flusherYields: "How many times the server postponed writing to this data file, to leave the disk free for journal writes.",
+    sharedJournal: "The indexes of a database write to one shared journal instead of one journal each.",
 };
 
 // the sync cost average expires after a minute without a data file sync, so 0 means no recent sync, not a fast one
@@ -75,14 +79,14 @@ export const writeModeLabel: Record<WriteMode, string> = {
 };
 
 export const writeModeHelp: Record<WriteMode, string> = {
-    Auto: "Auto: I/O ring when it can be set up at startup, otherwise vectored file I/O on Linux and file I/O on Windows.",
-    IoRing: "I/O ring (io_uring on Linux, IoRing on Windows): data file writes are queued and submitted in batches.",
-    VectoredFileIo: "Vectored file I/O (pwritev): one system call writes several page ranges.",
-    FileIo: "File I/O: one write call per page range.",
+    Auto: "Auto: I/O ring if it can be set up at startup, otherwise vectored file I/O on Linux and file I/O on Windows.",
+    IoRing: "I/O ring (io_uring on Linux, IoRing on Windows): data file writes are queued and sent to the disk in batches.",
+    VectoredFileIo: "Vectored file I/O: one call writes several page ranges at once.",
+    FileIo: "File I/O: one call per page range.",
 };
 
 export const writeModeTermHelp =
-    "How this server writes its data files when flushing. Decided once at startup for the whole server (Storage.WriteMode). Journal writes are not affected.";
+    "How this server writes its data files. Chosen once at startup for the whole server (Storage.WriteMode). Journal writes are not affected.";
 
 export const journalCompressionLabel: Record<Voron.JournalCompressionAlgorithm, string> = {
     Auto: "Auto",
@@ -92,7 +96,7 @@ export const journalCompressionLabel: Record<Voron.JournalCompressionAlgorithm, 
 
 export const ioStatsHelp = {
     journalCompression:
-        "Algorithm of the latest compressed journal write in the data shown. With Auto, Zstd is used on bandwidth / IOPS limited (Budgeted) disks and LZ4 on the others.",
+        "How the latest compressed journal write in this view was compressed. With Auto, Zstd is used on disks with a limit on requests or bytes per second (Budgeted) and LZ4 on the others.",
 };
 
 export const meterTypeLabel: Record<Sparrow.Server.Meters.IoMetrics.MeterType, string> = {

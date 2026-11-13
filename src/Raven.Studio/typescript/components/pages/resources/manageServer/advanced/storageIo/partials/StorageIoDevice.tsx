@@ -54,7 +54,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                     </Metric>
                     <Metric label="Data file syncs" help={storageTermHelp.syncCost}>
                         {formatSyncCost(device.SyncCostInMs)}
-                        <Sub>writes get paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
+                        <Sub>paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
                     </Metric>
                     <Metric label="Queue depth" help={storageTermHelp.queueDepth}>
                         {device.QueueDepth == null ? (
@@ -65,6 +65,18 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                         <Sub>
                             paced above {thresholds.QueueDepthEnterDrain}, normal below {thresholds.QueueDepthExitDrain}
                         </Sub>
+                    </Metric>
+                    <Metric label="Read-ahead" help={storageTermHelp.readAhead}>
+                        {!device.ReadAheadWarmUp ? (
+                            <span className="text-muted">off, memory is full</span>
+                        ) : device.QueueDepth == null ? (
+                            "not limited"
+                        ) : (
+                            `up to ${formatBytes(device.ReadAheadBudgetInBytesPerSec)}/s`
+                        )}
+                        {device.ReadAheadWarmUp && device.QueueDepth != null && (
+                            <Sub>halves while the queue is above {thresholds.QueueDepthEnterDrain}</Sub>
+                        )}
                     </Metric>
                     <Metric label="Disk requests" help={storageTermHelp.diskStats}>
                         {device.DiskStats == null ? (

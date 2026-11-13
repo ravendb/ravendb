@@ -8,6 +8,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Server.Utils.DiskStatsGetter;
 using Voron;
 using Voron.Impl.Journal;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Storage
 {
@@ -89,8 +90,13 @@ namespace Raven.Server.Storage
         // null when no journal write was recorded since the server started
         public double? SecondsSinceLastJournalWrite { get; set; }
 
-        // null when the platform gives no queue depth signal (Windows, containers without sysfs)
+        // null when the platform gives no queue depth signal (containers without sysfs, macOS)
         public double? QueueDepth { get; set; }
+
+        // segment read-ahead while memory is free; its budget halves every second the queue depth is above the paced threshold
+        public bool ReadAheadWarmUp { get; set; }
+
+        public long ReadAheadBudgetInBytesPerSec { get; set; }
 
         public double SyncCostInMs { get; set; }
 
@@ -133,6 +139,8 @@ namespace Raven.Server.Storage
                 JournalWriteSizeInBytes = device.JournalWriteSizeInBytes,
                 SecondsSinceLastJournalWrite = sinceLastWrite == TimeSpan.MaxValue ? null : sinceLastWrite.TotalSeconds,
                 QueueDepth = device.QueueDepth,
+                ReadAheadWarmUp = PrefetchPolicy.Global.Generation != 0,
+                ReadAheadBudgetInBytesPerSec = device.ReadAheadBytesPerInterval,
                 SyncCostInMs = device.SyncCost.TotalMilliseconds,
                 DiskStats = diskStats == null ? null : new StorageDiskStatsInfo
                 {

@@ -124,7 +124,7 @@ class storageCongestionDetails extends abstractPerformanceHintDetails {
 
         items.push(
             { name: "Journal writes now", value: storageIoFormat.formatMs(details.JournalWriteLatencyInMs) },
-            { name: "Data syncs", value: storageIoFormat.formatSyncCost(details.SyncCostInMs) },
+            { name: "Data file syncs", value: storageIoFormat.formatSyncCost(details.SyncCostInMs) },
             { name: "Mount point", value: details.MountPoint ?? "-" }
         );
 

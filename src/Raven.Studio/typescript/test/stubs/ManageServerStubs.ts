@@ -920,6 +920,8 @@ export class ManageServerStubs {
                     SecondsSinceLastJournalWrite: 0.2,
                     QueueDepth: 13.1,
                     SyncCostInMs: 1164,
+                    ReadAheadWarmUp: true,
+                    ReadAheadBudgetInBytesPerSec: 4 * 1024 * 1024,
                     DiskStats: {
                         ReadsPerSec: 240,
                         WritesPerSec: 2950,
