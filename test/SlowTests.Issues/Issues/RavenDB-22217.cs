@@ -1,7 +1,7 @@
-﻿using System;
+using System;
+using Sparrow.Server;
 using System.Threading.Tasks;
 using FastTests;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -22,14 +22,14 @@ public class RavenDB_22217 : RavenTestBase
 
         using (var store = GetDocumentStore())
         {
-            var mreBeforeAcknowledgeSubscriptionBatch = new AsyncManualResetEvent(false);
-            var mreBeforeExecutingDatabaseRecordChange = new AsyncManualResetEvent(false);
+            var mreBeforeAcknowledgeSubscriptionBatch = new AsyncManualResetEvent();
+            var mreBeforeExecutingDatabaseRecordChange = new AsyncManualResetEvent();
 
             var testingStuff = Server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly();
             testingStuff.DelayNotifyFeaturesAboutStateChange = () =>
             {
                 mreBeforeAcknowledgeSubscriptionBatch.Set();
-                mreBeforeExecutingDatabaseRecordChange.Wait();
+                mreBeforeExecutingDatabaseRecordChange.WaitAsync().Wait();
             };
 
             var subscriptionCreationParams = new SubscriptionCreationOptions

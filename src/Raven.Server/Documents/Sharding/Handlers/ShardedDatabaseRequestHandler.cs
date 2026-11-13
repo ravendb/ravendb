@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
@@ -82,8 +82,6 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             RelativeShardUrl = BaseShardUrl + request.QueryString;
             Method = new HttpMethod(request.Method);
-
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
         }
 
 

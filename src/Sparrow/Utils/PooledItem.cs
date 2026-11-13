@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Sparrow.Threading;
 
 namespace Sparrow.Utils
@@ -6,7 +6,11 @@ namespace Sparrow.Utils
     public abstract class PooledItem : IDisposable
     {
         public MultipleUseFlag InUse = new MultipleUseFlag();
-        public DateTime InPoolSince;
+
+        /// <summary>
+        /// <see cref="Clock.Milliseconds"/> when the item was returned to its pool.
+        /// </summary>
+        public long InPoolSinceMilliseconds;
 
         public abstract void Dispose();
     }

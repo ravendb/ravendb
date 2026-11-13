@@ -63,6 +63,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
+using Sparrow.Server.Threading;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data.Tables;
@@ -108,8 +109,8 @@ namespace Raven.Server.Documents
         /// </summary>
         private Task _indexStoreTask;
 
-        private long _usages;
-        private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
+        // PERF: every request enters and leaves the database, a single shared counter would bounce between all the cores
+        private readonly InFlightGuard<PerCoreSlots> _usages = new();
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
         private DateTime _nextIoMetricsCleanupTime;
         private long _lastTopologyIndex = -1;
@@ -145,7 +146,6 @@ namespace Raven.Server.Documents
             _serverStore = serverStore;
             _addToInitLog = addToInitLog;
             StartTime = Time.GetUtcNow();
-            LastAccessTime = Time.GetUtcNow();
             Configuration = configuration;
             _nextIoMetricsCleanupTime = DateTime.UtcNow.Add(Configuration.Storage.IoMetricsCleanupInterval.AsTimeSpan);
             Scripts = new ScriptRunnerCache(this, Configuration);
@@ -153,6 +153,9 @@ namespace Raven.Server.Documents
             Is32Bits = PlatformDetails.Is32Bits || Configuration.Storage.ForceUsing32BitsPager;
 
             _databaseShutdown = CancellationTokenSource.CreateLinkedTokenSource(serverStore.ServerShutdown);
+            _databaseShutdownForRequests = new CancellationTokenSource[Environment.ProcessorCount];
+            for (var i = 0; i < _databaseShutdownForRequests.Length; i++)
+                _databaseShutdownForRequests[i] = CancellationTokenSource.CreateLinkedTokenSource(_databaseShutdown.Token);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
@@ -285,7 +288,29 @@ namespace Raven.Server.Documents
 
         public DateTime LastIdleTime => new DateTime(_lastIdleTicks);
 
-        public DateTime LastAccessTime;
+        // PERF: every request for the database marks the access, so each core keeps its own (in Clock.Milliseconds) and we
+        // use the latest one, instead of all the cores writing to the same cache line
+        private readonly PerCoreValue<PerCoreMax> _lastAccess = new(Clock.Milliseconds);
+
+        public void UpdateLastAccessTime() => _lastAccess.Apply(Clock.Milliseconds);
+
+        /// <summary>
+        /// The last time the database was used, for unloading idle databases.
+        /// </summary>
+        public DateTime LastAccessTime
+        {
+            get
+            {
+                long lastAccess = _lastAccess.Value;
+                if (lastAccess == long.MinValue)
+                    return DateTime.MinValue;
+
+                long millisecondsAgo = Clock.Milliseconds - lastAccess;
+                var now = DateTime.UtcNow;
+                return millisecondsAgo >= (now - DateTime.MinValue).TotalMilliseconds ? DateTime.MinValue : now.AddMilliseconds(-millisecondsAgo);
+            }
+            set => _lastAccess.Reset(value == DateTime.MinValue ? long.MinValue : Clock.Milliseconds - (long)(DateTime.UtcNow - value).TotalMilliseconds);
+        }
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -308,6 +333,11 @@ namespace Raven.Server.Documents
         public QueryRunner QueryRunner { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;
+
+        // PERF: Requests link to a per core, linked to the database shutdown token. Avoids lock contention on registration
+        private readonly CancellationTokenSource[] _databaseShutdownForRequests;
+
+        public CancellationToken DatabaseShutdownForRequest => _databaseShutdownForRequests[Thread.GetCurrentProcessorId() % _databaseShutdownForRequests.Length].Token;
 
         public AsyncManualResetEvent DatabaseShutdownCompleted { get; } = new();
 
@@ -940,35 +970,27 @@ namespace Raven.Server.Documents
             }
         }
 
-        public struct DatabaseUsage : IDisposable
+        public readonly struct DatabaseUsage : IDisposable
         {
-            private readonly DocumentDatabase _parent;
-            private readonly bool _skipUsagesCount;
+            private readonly InFlightGuard<PerCoreSlots>.Scope _usage;
 
             public DatabaseUsage(DocumentDatabase parent, bool skipUsagesCount)
             {
-                _parent = parent;
-                _skipUsagesCount = skipUsagesCount;
+                _usage = default;
 
-                if (_skipUsagesCount == false)
-                    Interlocked.Increment(ref _parent._usages);
+                if (skipUsagesCount == false && parent._usages.TryEnter(out _usage) == false)
+                    parent.ThrowDatabaseShutdown();
 
-                if (_parent.IsShutdownRequested())
+                if (parent.IsShutdownRequested())
                 {
                     Dispose();
-                    _parent.ThrowDatabaseShutdown();
+                    parent.ThrowDatabaseShutdown();
                 }
             }
 
             public void Dispose()
             {
-                if (_skipUsagesCount)
-                    return;
-
-                var currentUsagesCount = Interlocked.Decrement(ref _parent._usages);
-
-                if (_parent._databaseShutdown.IsCancellationRequested && currentUsagesCount == 0)
-                    _parent._waitForUsagesOnDisposal.Set();
+                _usage.Dispose();
             }
         }
 
@@ -992,6 +1014,7 @@ namespace Raven.Server.Documents
             DisposeProgress("Starting dispose");
 
             _databaseShutdown.SafeCancel(_logger, $"{nameof(DocumentDatabase)}: {Name}");
+            _usages.TryClose();
 
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
@@ -1029,14 +1052,7 @@ namespace Raven.Server.Documents
                 // we'll wait for 1 minute to drain all the requests
                 // from the database
                 var sp = Stopwatch.StartNew();
-                while (sp.ElapsedMilliseconds < 60 * 1000)
-                {
-                    if (Interlocked.Read(ref _usages) == 0)
-                        break;
-
-                    if (_waitForUsagesOnDisposal.Wait(1000))
-                        _waitForUsagesOnDisposal.Reset();
-                }
+                _usages.WaitForDrain(TimeSpan.FromMinutes(1));
 
                 DisposeProgress($"Drained all requests. Took: {sp.Elapsed}");
             }
@@ -1220,6 +1236,9 @@ namespace Raven.Server.Documents
             DisposeProgress("Disposing _databaseShutdown");
             exceptionAggregator.Execute(() =>
             {
+                foreach (var cts in _databaseShutdownForRequests)
+                    cts.Dispose();
+
                 _databaseShutdown.Dispose();
             });
             DisposeProgress("Disposed _databaseShutdown");

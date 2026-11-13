@@ -1,3 +1,4 @@
+using Raven.Server.Utils.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,6 +30,7 @@ using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
+using Sparrow.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
@@ -70,8 +72,6 @@ internal abstract class
         // If provided, we don't scope it cause the caller owns it.
         TOperationContext context = GetContextScopedToRequest();
         
-        var sw = Stopwatch.StartNew();
-
         var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
 
         if (_method == HttpMethod.Get)
@@ -131,12 +131,12 @@ internal abstract class
 
         if (getDocumentsAsync.IsCompletedSuccessfully)
         {
-            HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize, sw);
+            HandleGetDocumentResult(getDocumentsAsync.Result, parameters, actionName, pageSize);
             return ValueTask.CompletedTask;
         }
             
         // Slow async path requires careful scope considerations that are delegated with RegisterForDisposal and GetOrLeaseScopedOperationContext
-        return HandleGetDocumentResultAsync(getDocumentsAsync, parameters, actionName, pageSize, sw);
+        return HandleGetDocumentResultAsync(getDocumentsAsync, parameters, actionName, pageSize);
             
         static string IdsToString(List<ReadOnlyMemory<char>> ids)
         {
@@ -158,14 +158,12 @@ internal abstract class
     }
 
     private async ValueTask HandleGetDocumentResultAsync(ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> responseWriteStats,
-        QueryStringParameters parameters, string actionName, int pageSize,
-        Stopwatch sw)
+        QueryStringParameters parameters, string actionName, int pageSize)
     {
-        HandleGetDocumentResult(await responseWriteStats, parameters, actionName, pageSize, sw);
+        HandleGetDocumentResult(await responseWriteStats, parameters, actionName, pageSize);
     }
     
-    private void HandleGetDocumentResult((long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats, QueryStringParameters parameters, string actionName, int pageSize,
-        Stopwatch sw)
+    private void HandleGetDocumentResult((long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats, QueryStringParameters parameters, string actionName, int pageSize)
     {
         if (responseWriteStats != NoResults)
         {
@@ -179,9 +177,16 @@ internal abstract class
                     details,
                     responseWriteStats.NumberOfResults,
                     pageSize,
-                    sw.ElapsedMilliseconds,
+                    GetElapsedMilliseconds(),
                     responseWriteStats.TotalDocumentsSizeInBytes);
             }
+        }
+
+        long GetElapsedMilliseconds()
+        {
+            // PERF: the router already read the clock when the request started, we read it again only for the rare hint
+            var start = RequestHandler.RequestStartNanoseconds;
+            return start == 0 ? 0 : (Clock.Nanoseconds - start) / Clock.NanosecondsInMillisecond;
         }
 
         static string CreatePerformanceHintDetails(QueryStringParameters parameters)

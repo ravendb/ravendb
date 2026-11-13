@@ -178,6 +178,8 @@ namespace Sparrow.Utils
                               * Note: Using a windowLog greater than ZSTD_WINDOWLOG_LIMIT_DEFAULT
                               *       requires explicitly allowing such size at streaming decompression stage. */
             ZSTD_c_dictIDFlag = 202, /* When applicable, dictionary's ID is written into frame header (default:1) */
+            ZSTD_c_srcSizeHint = 1004, /* (experimental, ZSTD_c_experimentalParam7) Expected size of the input, only used to pick the
+                              * compression parameters, so unlike a pledged size it doesn't have to be exact. 0 means unknown. */
             ZSTD_c_nbWorkers = 400,  /* Select how many threads will be spawned to compress in parallel.
                               * When nbWorkers >= 1, triggers asynchronous mode when invoking ZSTD_compressStream*().
                               * Only available when the library is compiled with ZSTD_MULTITHREAD, otherwise setting
@@ -226,6 +228,7 @@ namespace Sparrow.Utils
         {
             private readonly int _level;
             private readonly int _workers;
+            private readonly int _srcSizeHint;
             private readonly bool _pooled;
             private ContextPool.PooledContext _pooledCompression;
             private ContextPool.PooledContext _pooledDecompression;
@@ -237,10 +240,12 @@ namespace Sparrow.Utils
             /// <param name="level">Compression level, 0 means the zstd default (3).</param>
             /// <param name="workers">Worker threads for streaming compression. Ignored on 32 bits and when the native library is single threaded.</param>
             /// <param name="pooled">Take the native contexts from <see cref="ContextPool"/> and give them back on dispose. Use for short-lived owners.</param>
-            public CompressContext(int level, int workers = 0, bool pooled = false)
+            /// <param name="srcSizeHint">Expected size of the input when known, 0 otherwise. Doesn't have to be exact.</param>
+            public CompressContext(int level, int workers = 0, bool pooled = false, int srcSizeHint = 0)
             {
                 _level = level;
                 _workers = workers;
+                _srcSizeHint = srcSizeHint;
                 // multi-threaded contexts own worker threads, those aren't kept around idle
                 _pooled = pooled && workers == 0;
             }
@@ -273,6 +278,10 @@ namespace Sparrow.Utils
                     var rc = ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_compressionLevel, _level);
                     AssertZstdSuccess(rc);
                 }
+
+                // PERF: lets zstd size its parameters for the actual input, for small inputs that is both faster and compresses better
+                if (_srcSizeHint > 0)
+                    AssertZstdSuccess(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_srcSizeHint, _srcSizeHint));
 
                 // Voron writes the dictionary id next to each compressed value, no need to also have zstd write it into every frame
                 AssertZstdSuccess(ZSTD_CCtx_setParameter(cctx, ZSTD_cParameter.ZSTD_c_dictIDFlag, 0));
