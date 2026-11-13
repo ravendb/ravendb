@@ -51,6 +51,7 @@ namespace SlowTests.MailingList
         public void Physical_store_test(Options options)
         {
             List<Car> cars;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var documentStore = GetDocumentStore(options))
             {
                 documentStore.Initialize();

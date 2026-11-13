@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void CanUseAliasesOnFunctions()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var s = store.OpenSession())
                 {

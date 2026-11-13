@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void CanJoinArraysDuringQuery()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var s = store.OpenSession())
                 {

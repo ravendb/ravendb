@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Runtime.Serialization;
 using Raven.Client.Documents.Operations.ETL;
 using Sparrow.Json;
 
@@ -15,6 +15,7 @@ public abstract class AbstractAiIntegrationConfiguration : EtlConfiguration<AiCo
     /// or <see cref="AiConnectorType.None"/> if no provider is configured.
     /// </summary>
     [JsonDeserializationIgnore]
-    [JsonIgnore]
+    [IgnoreDataMember]
+    [System.Text.Json.Serialization.JsonIgnore]
     public AiConnectorType AiConnectorType => Connection?.GetActiveProvider() ?? AiConnectorType.None;
 }

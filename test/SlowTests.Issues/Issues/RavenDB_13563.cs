@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void ShouldGenerateSimpleLuceneBooleanQueriesWithoutManyBrackets()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = store.OpenSession())
                 {

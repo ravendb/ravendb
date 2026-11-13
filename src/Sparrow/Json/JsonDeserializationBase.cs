@@ -1085,7 +1085,7 @@ namespace Sparrow.Json
             throw new FormatException($"Could not convert {value.GetType().Name} ('{value}') to {typeof(Size).Name}");
         }
 
-        private static StringComparer GetStringComparer(StringComparison stringComparison)
+        internal static StringComparer GetStringComparer(StringComparison stringComparison)
         {
             switch (stringComparison)
             {

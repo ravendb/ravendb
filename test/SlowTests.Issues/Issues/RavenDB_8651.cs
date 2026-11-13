@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Can_select_and_query_field_with_dot()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 var requestExecuter = store.GetRequestExecutor();
 

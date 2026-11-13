@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void Can_Query_Using_an_Alias_on_Properties_of_Nested_Object_Array()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = store.OpenSession())
                 {

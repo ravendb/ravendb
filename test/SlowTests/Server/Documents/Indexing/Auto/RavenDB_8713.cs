@@ -18,6 +18,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveFields(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -50,6 +51,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         {
             options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
 
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -94,6 +96,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveGroupByFields(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
@@ -146,6 +149,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveFields_UsingSearch(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())

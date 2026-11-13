@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.SemanticKernel.Text;
-using Newtonsoft.Json.Linq;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.BulkInsert;
@@ -17,6 +16,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -993,7 +993,7 @@ Console.WriteLine(""Hello, World!"");";
                 var hashOfInput = EmbeddingsHelper.CalculateInputValueHash(dto.Name);
                 var embeddingsDocumentId = EmbeddingsHelper.GetEmbeddingCacheDocumentId(connectionStringIdentifier, hashOfInput, targetQuantization);
 
-                var embeddingCacheDocument = session.Load<object>(embeddingsDocumentId) as JObject;
+                var embeddingCacheDocument = session.Load<BlittableJsonReaderObject>(embeddingsDocumentId);
                 Assert.NotNull(embeddingCacheDocument);
 
                 var documentEmbeddingsId = EmbeddingsHelper.GetEmbeddingDocumentId(dto.Id);

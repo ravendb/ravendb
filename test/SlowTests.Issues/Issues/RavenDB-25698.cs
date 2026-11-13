@@ -18,7 +18,7 @@ public class RavenDB_25698(ITestOutputHelper output) : RavenTestBase(output)
     public async Task EmbeddingGenerationCreatesValueInEmbeddingCacheDocument()
     {
 
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
         
         var aiConnectionString = new AiConnectionString { Name = "aiconnection", EmbeddedSettings = new EmbeddedSettings() };
         aiConnectionString.Identifier = aiConnectionString.GenerateIdentifier();

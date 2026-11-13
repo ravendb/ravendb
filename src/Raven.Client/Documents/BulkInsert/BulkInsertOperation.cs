@@ -411,8 +411,15 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _writer.StreamWriter) == false)
                 {
-                    using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
-                        await json.WriteJsonToAsync(_writer.StreamWriter.BaseStream, _token).ConfigureAwait(false);
+                    bool written = entity is not BlittableJsonReaderObject &&
+                                   _conventions.Serialization is IEntityStreamWriter streamWriter &&
+                                   streamWriter.TryWriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer, _context);
+
+                    if (written == false)
+                    {
+                        using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
+                            await json.WriteJsonToAsync(_writer.StreamWriter.BaseStream, _token).ConfigureAwait(false);
+                    }
                 }
 
                 _writer.Write('}');

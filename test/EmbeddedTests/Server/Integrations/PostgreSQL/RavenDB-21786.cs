@@ -16,7 +16,7 @@ public class RavenDB_21786 : PostgreSqlIntegrationTestBase
         const string collectionName = "Members";
         const string query = $"from {collectionName}";
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(conventions: NewtonsoftJsonConventions()))
         {
             using (var session = store.OpenSession())
             {

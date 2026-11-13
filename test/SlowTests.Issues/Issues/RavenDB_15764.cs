@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public void CsharpRecordSerialization_ShouldWork()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = store.OpenSession())
                 {

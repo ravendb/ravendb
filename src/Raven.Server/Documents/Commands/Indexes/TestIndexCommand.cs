@@ -25,7 +25,7 @@ internal sealed class TestIndexCommand : RavenCommand<BlittableJsonReaderObject>
     {
         url = $"{node.Url}/databases/{node.Database}/indexes/test";
         
-        var parametersJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx);
+        var parametersJson = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(_parameters, ctx);
         
         return new HttpRequestMessage
         {

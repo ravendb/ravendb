@@ -30,6 +30,6 @@ internal sealed class GetDocumentSizeCommand : RavenCommand<DocumentSizeDetails>
         if (response == null)
             ThrowInvalidResponse();
 
-        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<DocumentSizeDetails>(response);
+        Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<DocumentSizeDetails>(response);
     }
 }

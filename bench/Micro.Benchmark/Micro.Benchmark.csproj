@@ -24,5 +24,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Client.Serialization.NewtonsoftJson\Raven.Client.Serialization.NewtonsoftJson.csproj" />
   </ItemGroup>
 </Project>

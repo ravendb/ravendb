@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
@@ -282,6 +283,9 @@ namespace FastTests
                             DisposeCertificate = false
                         }
                     };
+
+                    if (RavenTestHelper.EnvironmentVariables.RunTestsWithNewtonsoftJson)
+                        Options.UseNewtonsoftJson(store);
 
                     options.ModifyDocumentStore?.Invoke(store);
                     if (store.Urls.Length == 0)
@@ -1050,6 +1054,10 @@ namespace FastTests
                 _descriptionBuilder = new StringBuilder(options._descriptionBuilder.ToString());
                 _frozen = options._frozen;
             }
+
+            public static Options ForNewtonsoftJson() => new() { ModifyDocumentStore = UseNewtonsoftJson };
+
+            public static void UseNewtonsoftJson(DocumentStore store) => store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions();
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode, bool includeScoresAndDistances = false)
             {

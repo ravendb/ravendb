@@ -15,7 +15,10 @@ namespace SlowTests.SlowTests
         [RavenFact(RavenTestCategory.Querying)]
         public void CanIterateOverBlittableProperties()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = Options.UseNewtonsoftJson
+            }))
             {
                 using (var s = store.OpenSession())
                 {

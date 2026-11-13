@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders");
 
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders")
                     {
@@ -144,7 +144,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var ordersCollection = new RootCollection(schemaName, "order", "Orders")
                     {
@@ -206,7 +206,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order_item", "OrderItems");
 
@@ -257,7 +257,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
@@ -320,7 +320,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
@@ -392,7 +392,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders")
                     {
@@ -473,7 +473,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -553,7 +553,7 @@ namespace SlowTests.Server.Documents.Migration
 
                 ExecuteSqlQuery(provider, connectionString, query);
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
@@ -607,7 +607,7 @@ namespace SlowTests.Server.Documents.Migration
 
                 ExecuteSqlQuery(provider, connectionString, query);
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var orderItemCollection = new RootCollection(schemaName, "order_item", "OrderItems")
                     {
@@ -661,7 +661,7 @@ namespace SlowTests.Server.Documents.Migration
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -701,7 +701,7 @@ namespace SlowTests.Server.Documents.Migration
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -748,7 +748,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders")
                     {
@@ -814,7 +814,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders")
                     {
@@ -879,7 +879,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var collection = new RootCollection(schemaName, "order", "Orders")
                     {

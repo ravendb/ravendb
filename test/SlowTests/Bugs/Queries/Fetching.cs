@@ -17,6 +17,8 @@ namespace SlowTests.Bugs.Queries
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanFetchMultiplePropertiesFromCollection(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+
             using (var store = GetDocumentStore(options))
             {
                 using (var s = store.OpenSession())
