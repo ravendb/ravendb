@@ -199,17 +199,24 @@ public sealed class DeviceIoSampler
     {
         deviceId = 0;
         if (PlatformDetails.RunningOnLinux)
-        {
-            if (Syscall.stat(path, out var stat) != 0)
-                return false;
-            deviceId = (stat.st_mode & FilePermissions.S_IFMT) == FilePermissions.S_IFBLK ? stat.st_rdev : stat.st_dev;
-            return true;
-        }
+            return TryGetLinuxDeviceId(path, out deviceId);
 
         if (PlatformDetails.RunningOnWindows)
             return TryGetVolumeSerialNumber(path, out deviceId);
 
         return false;
+    }
+
+    // Mono.Unix types only here: compiling a method with a Stat local loads Mono.Posix.NETStandard, which is not deployed on
+    // every Windows runtime (no win-arm64 build), so a Windows caller must not reach it
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static bool TryGetLinuxDeviceId(string path, out ulong deviceId)
+    {
+        deviceId = 0;
+        if (Syscall.stat(path, out var stat) != 0)
+            return false;
+        deviceId = (stat.st_mode & FilePermissions.S_IFMT) == FilePermissions.S_IFBLK ? stat.st_rdev : stat.st_dev;
+        return true;
     }
 
     private static unsafe bool TryGetVolumeSerialNumber(string path, out ulong serialNumber)
