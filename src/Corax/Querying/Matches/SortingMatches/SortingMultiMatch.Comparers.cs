@@ -17,6 +17,7 @@ using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
 using Voron.Util;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -29,6 +30,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     {
         Slice GetSortFieldName(ref SortingMultiMatch<TInner> match);
         void Init(ref SortingMultiMatch<TInner> match, UnmanagedSpan<long> batchResults, int comparerId);
+
+        // The spatial comparer sorts through a heap of 'take' entries and allocates what it needs itself
+        static virtual bool UsesBatchBuffers => true;
 
         void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
             UnmanagedSpan<long> batchResults, Span<long> batchTermIds, UnmanagedSpan* batchTerms, OrderMetadata[] orderMetadata, TComparer2 comparer2,
@@ -51,6 +55,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         {
             this.cmp = cmp;
         }
+
+        public static bool UsesBatchBuffers => TInnerCmp.UsesBatchBuffers;
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match)
         {
@@ -541,10 +547,13 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
     private struct EntryComparerBySpatial : IEntryComparer, IComparer<UnmanagedSpan>
     {
         private SpatialDistanceReader _reader;
+        private CompactKey _key;
         private Dictionary<long, double> _distances;
         private int _comparerId;
         private UnmanagedSpan<long> _batchResults;
         private double _missingValueForInnerSorter;
+
+        public static bool UsesBatchBuffers => false;
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
@@ -557,6 +566,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             if (comparerId > 0)
             {
+                // a later clause is only called through Compare(int, int), SortBatch is not called and uses its own key
+                _key = _distances != null ? new CompactKey() : null;
                 _missingValueForInnerSorter = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
             }
         }
@@ -566,7 +577,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             if (_distances != null && _distances.TryGetValue(entryId, out var cached))
                 return cached;
 
-            var distance = _reader.TryGetDistance(entryId, out var result) == false
+            var distance = _reader.TryGetDistance(entryId, _key, out var result) == false
                 ? _missingValueForInnerSorter
                 : result.Distance;
 
@@ -590,17 +601,17 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             
-            var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
-            using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
+            using var _ = llt.Allocator.Allocate(heapSize, out Span<int> indexes);
+            using var __ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
-
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match.GetNullIsSmallestForClause(_comparerId));
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes, terms, descending, match.GetNullIsSmallestForClause(_comparerId));
             
 
 
+            using var keyScope = new CompactKeyCacheScope(llt);
             for (int i = 0; i < batchResults.Length; i++)
             {
-                if (_reader.TryGetDistance(batchResults[i], out var distance) == false)
+                if (_reader.TryGetDistance(batchResults[i], keyScope.Key, out var distance) == false)
                 {
                     var distanceForMissing = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
                     distance = new SpatialResult() { Distance = distanceForMissing, Latitude = Double.NaN, Longitude = Double.NaN };

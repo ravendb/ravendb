@@ -580,6 +580,7 @@ namespace Corax.Indexing
 
             _fieldsByRootPage ??= GetIndexedFieldByRootPage(_fieldsTree);
 
+            using var keyScope = new CompactKeyCacheScope(_transaction.LowLevelTransaction);
             foreach (var entryToDelete in _entriesToDelete)
             {
                 _termsPerEntryId.EnsureCapacityFor(_entriesAllocator, 1);
@@ -592,7 +593,7 @@ namespace Corax.Indexing
                 Container.Get(_transaction.LowLevelTransaction, entryTermsId, out var entryTerms);
                 var termsPerEntryIndex = InsertTermsPerEntry(documentToDelete);
                 RecordTermDeletionsForEntry(entryTerms, _transaction.LowLevelTransaction, _fieldsByRootPage, _nullTermsMarkers, _nonExistingTermsMarkers,
-                    _compactTreeDictionaryId, documentToDelete, termsPerEntryIndex);
+                    _compactTreeDictionaryId, documentToDelete, termsPerEntryIndex, keyScope.Key);
 
 
                 Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, entryTermsId);
@@ -602,9 +603,9 @@ namespace Corax.Indexing
         }
 
         private void RecordTermDeletionsForEntry(Container.Item entryTerms, LowLevelTransaction llt, Dictionary<long, IndexedField> fieldsByRootPage,
-            HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex)
+            HashSet<long> nullTermMarkers, HashSet<long> nonExistingTermMarkers, long dicId, DocumentEntryId entryToDelete, int termsPerEntryIndex, CompactKey key)
         {
-            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages);
+            var reader = new EntryTermsReader(llt, nullTermMarkers, nonExistingTermMarkers, entryTerms.Address, entryTerms.Length, dicId, _persistedVectorRootPages, key);
 
             reader.Reset();
             while (reader.MoveNextStoredField())

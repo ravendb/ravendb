@@ -13,6 +13,8 @@
 #include <assert.h>
 #include <time.h>
 #include <string.h>
+#include <limits.h>
+#include <libgen.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -85,6 +87,24 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
         }
     }
     return result; /* return EINTR */
+}
+
+/* dirname(3) on macOS returns a buffer shared by all threads. buffer must hold PATH_MAX bytes */
+PRIVATE char *
+_dirname_r(const char *path, char *buffer)
+{
+#if defined(__APPLE__)
+    return dirname_r(path, buffer);
+#else
+    size_t length = strlen(path);
+    if (length >= PATH_MAX)
+    {
+        errno = ENAMETOOLONG;
+        return NULL;
+    }
+    memcpy(buffer, path, length + 1);
+    return dirname(buffer); /* glibc changes only its argument */
+#endif
 }
 
 PRIVATE int32_t
