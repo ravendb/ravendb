@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Tombstones;
 using Raven.Server.Documents.Handlers.Processors;
@@ -14,5 +14,11 @@ internal abstract class AbstractAdminTombstoneHandlerProcessorForState<TRequestH
     {
     }
 
-    protected override RavenCommand<GetTombstonesStateCommand.Response> CreateCommandForNode(string nodeTag) => new GetTombstonesStateCommand(nodeTag);
+    protected override RavenCommand<GetTombstonesStateCommand.Response> CreateCommandForNode(string nodeTag)
+    {
+        bool exact = IsExact();
+        return new GetTombstonesStateCommand(nodeTag, exact);
+    }
+
+    protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -40,9 +40,9 @@ public sealed class KafkaEtl : QueueEtl<KafkaItem>
         return transactionalId.Replace("/", "_");
     }
 
-    public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext)
+    public override EtlProcessProgress GetProgress(DocumentsOperationContext documentsContext, bool exact)
     {
-        var result = base.GetProgress(documentsContext);
+        EtlProcessProgress result = base.GetProgress(documentsContext, exact);
         result.TransactionalId = TransactionalId;
         return result;
     }

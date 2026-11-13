@@ -7,6 +7,9 @@ import { NodeInfoFailure } from "components/pages/database/tasks/ongoingTasks/pa
 import { loadStatus } from "components/models/common";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import { CalculateExactProgressButton } from "components/pages/database/tasks/ongoingTasks/partials/CalculateExactProgressButton";
+import { EstimatedMarker } from "components/common/EstimatedMarker";
+import { useAsyncCallback } from "react-async-hook";
 
 interface ReplicationTaskProgressTooltipProps {
     target: HTMLElement;
@@ -16,6 +19,7 @@ interface ReplicationTaskProgressTooltipProps {
     sourceDatabaseChangeVector: string;
     lastAcceptedChangeVectorFromDestination: string;
     toggleErrorModal: () => void;
+    fetchExactProgress: () => Promise<OngoingTaskNodeReplicationProgressDetails[]>;
 }
 
 export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressTooltipProps) {
@@ -46,46 +50,71 @@ export function ReplicationTaskProgressTooltip(props: ReplicationTaskProgressToo
 
     return (
         <PopoverWithHover rounded="true" target={target} placement="top">
-            <div className="vstack gap-3 py-2">
-                <ChangeVectorDetails
-                    sourceDatabaseChangeVector={sourceDatabaseChangeVector}
-                    lastAcceptedChangeVectorFromDestination={lastAcceptedChangeVectorFromDestination}
-                />
-                {hasError && (
-                    <div className="text-center">
-                        <Button variant="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
-                            Open error in modal <Icon icon="newtab" margin="ms-1" />
-                        </Button>
-                    </div>
-                )}
-                {progress &&
-                    progress.map((singleProgress, index) => {
-                        return (
-                            <div key={"progress-" + index} className="vstack">
-                                <NamedProgress name="Replication">
-                                    <NamedProgressItem progress={singleProgress.documents}>documents</NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.documentTombstones}>
-                                        tombstones
-                                    </NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.revisions}>revisions</NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.attachments}>
-                                        attachments
-                                    </NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.counterGroups}>
-                                        counters
-                                    </NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.timeSeries}>
-                                        time-series
-                                    </NamedProgressItem>
-                                    <NamedProgressItem progress={singleProgress.timeSeriesDeletedRanges}>
-                                        time-series deleted ranges
-                                    </NamedProgressItem>
-                                </NamedProgress>
-                                {index !== progress.length - 1 && <hr className="mt-2 mb-0" />}
-                            </div>
-                        );
-                    })}
-            </div>
+            <ReplicationTaskProgressDetails {...props} />
         </PopoverWithHover>
+    );
+}
+
+// mounted only while the tooltip is open, so the exact progress is kept until it closes
+function ReplicationTaskProgressDetails(props: ReplicationTaskProgressTooltipProps) {
+    const {
+        hasError,
+        sourceDatabaseChangeVector,
+        lastAcceptedChangeVectorFromDestination,
+        toggleErrorModal,
+        fetchExactProgress,
+    } = props;
+
+    const asyncCalculateExact = useAsyncCallback(fetchExactProgress);
+    const progress = asyncCalculateExact.result ?? props.progress;
+
+    return (
+        <div className="vstack gap-3 py-2">
+            <ChangeVectorDetails
+                sourceDatabaseChangeVector={sourceDatabaseChangeVector}
+                lastAcceptedChangeVectorFromDestination={lastAcceptedChangeVectorFromDestination}
+            />
+            {hasError && (
+                <div className="text-center">
+                    <Button variant="danger" key="button" onClick={toggleErrorModal} className="rounded-pill">
+                        Open error in modal <Icon icon="newtab" margin="ms-1" />
+                    </Button>
+                </div>
+            )}
+            {progress &&
+                progress.map((singleProgress, index) => {
+                    const replicationName = singleProgress.estimated ? (
+                        <>
+                            Replication <EstimatedMarker />
+                        </>
+                    ) : (
+                        "Replication"
+                    );
+                    return (
+                        <div key={"progress-" + index} className="vstack">
+                            <NamedProgress name={replicationName}>
+                                <NamedProgressItem progress={singleProgress.documents}>documents</NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.documentTombstones}>
+                                    tombstones
+                                </NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.revisions}>revisions</NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.attachments}>attachments</NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.counterGroups}>counters</NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.timeSeries}>time-series</NamedProgressItem>
+                                <NamedProgressItem progress={singleProgress.timeSeriesDeletedRanges}>
+                                    time-series deleted ranges
+                                </NamedProgressItem>
+                            </NamedProgress>
+                            {index !== progress.length - 1 && <hr className="mt-2 mb-0" />}
+                        </div>
+                    );
+                })}
+            {progress?.some((x) => x.estimated) && (
+                <CalculateExactProgressButton
+                    isCalculating={asyncCalculateExact.loading}
+                    calculate={asyncCalculateExact.execute}
+                />
+            )}
+        </div>
     );
 }

@@ -10,6 +10,10 @@ import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationTaskProgressTooltip } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationTaskProgressTooltip";
 import { withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useServices } from "hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { mapInternalReplicationProgress } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface ItemWithTooltipProps {
     nodeInfo: Omit<OngoingInternalReplicationNodeInfo, "progress">;
@@ -38,6 +42,20 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     };
 
     const [node, setNode] = useState<HTMLDivElement>();
+
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const fetchExactProgress = async () => {
+        const { Results } = await tasksService.getInternalReplicationProgress(
+            databaseName,
+            nodeInfo.location,
+            true,
+            true
+        );
+        const destinationProgress = Results.find((x) => x.DestinationNodeTag === progress?.destinationNodeTag);
+        return destinationProgress ? [mapInternalReplicationProgress(destinationProgress)] : undefined;
+    };
 
     const hasError = nodeInfo.status === "failure";
     return (
@@ -73,6 +91,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         status={nodeInfo.status}
                         lastAcceptedChangeVectorFromDestination={progress?.lastAcceptedChangeVectorFromDestination}
                         sourceDatabaseChangeVector={progress?.sourceDatabaseChangeVector}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>

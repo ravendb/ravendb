@@ -14,6 +14,13 @@ import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationTaskProgressTooltip } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationTaskProgressTooltip";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useServices } from "hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import {
+    mapReplicationProgress,
+    matchProgresses,
+} from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface ExternalReplicationTaskDistributionProps {
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
@@ -48,6 +55,20 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const key = taskNodeInfoKey(task, nodeInfo);
     const hasError = !!nodeInfo.details?.error;
     const [node, setNode] = useState<HTMLDivElement>();
+
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const fetchExactProgress = async () => {
+        const { Results } = await tasksService.getReplicationProgress(
+            databaseName,
+            nodeInfo.location,
+            true,
+            task.shared.taskName,
+            true
+        );
+        return matchProgresses(task, nodeInfo, Results).map(mapReplicationProgress);
+    };
 
     return (
         <div ref={setNode}>
@@ -88,6 +109,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                             nodeInfo.details?.lastAcceptedChangeVectorFromDestination
                         }
                         sourceDatabaseChangeVector={nodeInfo.details?.sourceDatabaseChangeVector}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>
