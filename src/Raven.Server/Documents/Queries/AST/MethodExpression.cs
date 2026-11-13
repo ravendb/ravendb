@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries.AST
         public StringSegment Name;
         public StringSegment Alias;
         public List<QueryExpression> Arguments;
+        
+        public QueryMetadata MoreLikeThisExpression;
 
         public MethodExpression(StringSegment name, List<QueryExpression> arguments)
         {

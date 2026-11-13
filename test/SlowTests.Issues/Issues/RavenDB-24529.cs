@@ -71,23 +71,17 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(3, indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L).Fill(ids));
             Page p = default;
             Assert.True(indexSearcher.TryGetRootPageByFieldName(mapping.GetByFieldId(1).Metadata.FieldName, out var rootPageForInt));
-            using (indexSearcher.GetEntryTermsReader(doc1Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc2Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc3Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
         }
 
         using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
@@ -110,23 +104,17 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(2, indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L).Fill(ids));
             Page p = default;
             Assert.True(indexSearcher.TryGetRootPageByFieldName(mapping.GetByFieldId(1).Metadata.FieldName, out var rootPageForInt));
-            using (indexSearcher.GetEntryTermsReader(doc1Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.False(reader.HasNumeric);
-            }
+            var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.False(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc2Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc3Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
         }
     }
 
@@ -178,23 +166,17 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(2, indexSearcher.TermQuery(mapping.GetByFieldId(1).Metadata, 1L).Fill(ids));
             Page p = default;
             Assert.True(indexSearcher.TryGetRootPageByFieldName(mapping.GetByFieldId(1).Metadata.FieldName, out var rootPageForInt));
-            using (indexSearcher.GetEntryTermsReader(doc1Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.False(reader.HasNumeric);
-            }
+            var reader = indexSearcher.GetEntryTermsReader(doc1Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.False(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc2Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc3Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
         }
 
         using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
@@ -216,17 +198,13 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
             Page p = default;
             Assert.True(indexSearcher.TryGetRootPageByFieldName(mapping.GetByFieldId(1).Metadata.FieldName, out var rootPageForInt));
 
-            using (indexSearcher.GetEntryTermsReader(doc2Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            var reader = indexSearcher.GetEntryTermsReader(doc2Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
 
-            using (indexSearcher.GetEntryTermsReader(doc3Id, ref p, out var reader))
-            {
-                Assert.True(reader.FindNext(rootPageForInt));
-                Assert.True(reader.HasNumeric);
-            }
+            reader = indexSearcher.GetEntryTermsReader(doc3Id, ref p);
+            Assert.True(reader.FindNext(rootPageForInt));
+            Assert.True(reader.HasNumeric);
         }
     }
 
@@ -396,12 +374,10 @@ public class RavenDB_24529(ITestOutputHelper output) : StorageTest(output)
                 for (int idX = 0; idX < total; ++idX)
                 {
                     var currentDocument = ids[idX];
-                    using (indexSearcher.GetEntryTermsReader(currentDocument, ref p, out var reader))
-                    {
-                        Assert.True(reader.FindNext(rootPageForInt));
-                        var hasNumericalValue = intNumericalField.Contains(currentDocument);
-                        Assert.Equal(hasNumericalValue, reader.HasNumeric);
-                    }
+                    var reader = indexSearcher.GetEntryTermsReader(currentDocument, ref p);
+                    Assert.True(reader.FindNext(rootPageForInt));
+                    var hasNumericalValue = intNumericalField.Contains(currentDocument);
+                    Assert.Equal(hasNumericalValue, reader.HasNumeric);
                 }
             }
         }

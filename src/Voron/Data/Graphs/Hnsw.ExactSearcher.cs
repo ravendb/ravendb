@@ -121,7 +121,10 @@ public partial class Hnsw
             }
 
             public long CandidatesProcessed { get; set; }
-            
+
+            public long VectorComparisons => _vectorReadCounter;
+
+
             public bool ShouldContinueSearch(long filterDocsCount)
             {
                 return _pq is {Count: > 0};

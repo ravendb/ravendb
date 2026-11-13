@@ -5,7 +5,8 @@ namespace Voron.Data.Graphs;
 
 public interface IHnswSearcher : IDisposable
 {
-    // Advances the search until the next batch of candidates is ready, then yields control to the caller so it can drain them via TryGetCurrentCandidates. Batches contain only previously unseen nodes. Returns true while batches remain, false once the search is exhausted.
+    // Advances the search until the next batch of (previously unseen) candidates is ready for draining via
+    // TryGetCurrentCandidates. Returns true while batches remain, false once the search is exhausted.
     public bool MoveNextBatch();
 
     // Retrieve IDs of nodes from the current search batch.
@@ -17,6 +18,10 @@ public interface IHnswSearcher : IDisposable
 
     // Returns the number of nodes processed by the searcher as candidates. It does not count nodes only queued for consideration.
     public long CandidatesProcessed { get; }
+
+    // Number of vector distance computations (SimilarityCalc calls) performed. Excludes nodes skipped before the
+    // distance is taken (e.g. tombstones) and revisits served from the per-query distance cache.
+    public long VectorComparisons { get; }
 
     public bool ShouldContinueSearch(long filterDocsCount);
     

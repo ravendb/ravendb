@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             _queryInfo.SkippedResults = skippedResults;
         }
 
-        internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved()
+        internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved(bool hasVectorSearch)
         {
         }
 

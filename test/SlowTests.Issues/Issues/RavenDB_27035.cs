@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Json;
 using Tests.Infrastructure;
@@ -27,6 +29,18 @@ public class RavenDB_27035 : RavenTestBase
         public int Year { get; set; }
     }
 
+    private class Movies_ByTitle : AbstractIndexCreationTask<Movie>
+    {
+        public Movies_ByTitle()
+        {
+            Map = movies => from m in movies
+                            select new
+                            {
+                                m.Title
+                            };
+        }
+    }
+
     // the second field keeps a document without Title in the index, so Title lands in the non-existing posting list
     private class Movies_ByTitleAndYear : AbstractIndexCreationTask<Movie>
     {
@@ -37,18 +51,6 @@ public class RavenDB_27035 : RavenTestBase
                             {
                                 m.Title,
                                 m.Year
-                            };
-        }
-    }
-
-    private class Movies_ByTitle : AbstractIndexCreationTask<Movie>
-    {
-        public Movies_ByTitle()
-        {
-            Map = movies => from m in movies
-                            select new
-                            {
-                                m.Title
                             };
         }
     }
@@ -110,7 +112,7 @@ public class RavenDB_27035 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void StreamingOptimizationIsStillUsedWhenTheSortFieldIsHomogeneous(Options options)
+    public void DirectScanIsStillUsedWhenTheSortFieldIsHomogeneous(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -138,7 +140,7 @@ public class RavenDB_27035 : RavenTestBase
                 var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
 
                 // the numeric tree covers every entry, so the scan drives the query and the sort is elided
-                Assert.True(PlanContains(plan, "TermNumericRangeProvider"), PlanOperations(plan));
+                Assert.True(PlanContains(plan, "DirectScan"), PlanOperations(plan));
                 Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
             }
         }
@@ -146,7 +148,7 @@ public class RavenDB_27035 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void StreamingOptimizationIsStillUsedWhenTheSortFieldIsAllStrings(Options options)
+    public void DirectScanIsStillUsedWhenTheSortFieldIsAllStrings(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
@@ -173,34 +175,7 @@ public class RavenDB_27035 : RavenTestBase
 
                 var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
 
-                Assert.True(PlanContains(plan, "TermRangeProvider"), PlanOperations(plan));
-                Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
-            }
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void StreamingOptimizationIsStillUsedWhenTheOnlyGapsAreNullAndMissingValues(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            SetupNullAndMissingValues(store, extraStringTitle: false);
-
-            using (var session = store.OpenSession())
-            {
-                QueryTimings timings = null;
-
-                var results = session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleAndYear' order by Title as long include timings()")
-                    .Timings(out timings)
-                    .ToList();
-
-                Assert.Equal(4, results.Count);
-
-                var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
-
-                // nulls and missing values are merged back into the scan, so they do not disqualify it
-                Assert.True(PlanContains(plan, "TermNumericRangeProvider"), PlanOperations(plan));
+                Assert.True(PlanContains(plan, "DirectScan"), PlanOperations(plan));
                 Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
             }
         }
@@ -227,6 +202,23 @@ public class RavenDB_27035 : RavenTestBase
                 var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
 
                 Assert.True(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void NullAndMissingValuesAloneDoNotChangeTheResultSet(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            SetupNullAndMissingValues(store, extraStringTitle: false);
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleAndYear' order by Title as long").ToList();
+
+                Assert.Equal(4, results.Count);
             }
         }
     }
@@ -314,23 +306,6 @@ public class RavenDB_27035 : RavenTestBase
         }
     }
 
-    private static bool PlanContains(QueryInspectionNode node, string operation)
-    {
-        if (node.Operation != null && node.Operation.Contains(operation, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        if (node.Children == null)
-            return false;
-
-        foreach (var child in node.Children)
-        {
-            if (PlanContains(child, operation))
-                return true;
-        }
-
-        return false;
-    }
-
     // A list holding both a null and a number puts the same entry in the longs tree and in the null posting list. Summing
     // the two counted it twice, and the surplus hid the string-valued entry the scan then dropped.
     [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
@@ -394,6 +369,79 @@ public class RavenDB_27035 : RavenTestBase
         }
     }
 
+    // Without a Title-less entry the non-existing check doesn't turn the scan off. The null entry already has a row in the
+    // entries -> terms tree, so adding the null posting list again counted it twice and hid the empty list's entry.
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByShouldNotDropAnEntryThatProducedNoTermWhenEveryEntryHasTheField(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Movie { Id = "movies/1", Title = "Alpha" });
+                session.Store(new Movie { Id = "movies/2", Title = new object[] { } });
+                session.Store(new Movie { Id = "movies/3", Title = null });
+                session.SaveChanges();
+            }
+
+            store.ExecuteIndex(new Movies_ByTitle());
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitle' order by Title include timings()")
+                    .Timings(out var timings)
+                    .ToList();
+
+                var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+                Assert.True(results.Count == 3, $"got {results.Count}: {PlanOperations(plan)}");
+            }
+        }
+    }
+
+    // The strategy is picked once and cached with the plan, so a value of another type indexed after the first query
+    // must still turn the scan off for the next one.
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void OrderByAsLongKeepsAnEntryOfAnotherTypeIndexedAfterThePlanWasCached(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                for (var i = 1; i <= 3; i++)
+                    session.Store(new Movie { Id = $"movies/{i}", Title = (long)i });
+
+                session.SaveChanges();
+            }
+
+            store.ExecuteIndex(new Movies_ByTitle());
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+                Assert.Equal(3, session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitle' order by Title as long").ToList().Count);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Movie { Id = "movies/str", Title = "Alpha" });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store);
+
+            using (var session = store.OpenSession())
+            {
+                var results = session.Advanced.RawQuery<Movie>("from index 'Movies/ByTitle' order by Title as long include timings()")
+                    .Timings(out var timings)
+                    .ToList();
+
+                var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+                Assert.True(results.Count == 4, $"got {results.Count}: {PlanOperations(plan)}");
+            }
+        }
+    }
+
     private class Show
     {
         public string Id { get; set; }
@@ -401,6 +449,8 @@ public class RavenDB_27035 : RavenTestBase
         public object Title { get; set; }
 
         public object Extra { get; set; }
+
+        public string Lang { get; set; }
     }
 
     // Title is declared, so the order by carries a real field id, and CreateField writes a second term into it
@@ -528,6 +578,86 @@ public class RavenDB_27035 : RavenTestBase
         return session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray();
     }
 
+    // exists() doesn't drive a scan here, a range on the sort field does. The scan walks the field's tree, so it orders a
+    // document by the first of its terms it meets, while the bitmap pipeline sorts it by its smallest one.
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void WhereOnTheSortFieldKeepsTheOrderWhenCreateFieldWritesSeveralTerms(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Item { Id = "items/1", Tags = new[] { "a", "z" } });
+            session.Store(new Item { Id = "items/2", Tags = new[] { "m" } });
+            session.Store(new Show { Id = "shows/1", Title = 1L, Extra = 9L });
+            session.Store(new Show { Id = "shows/2", Title = 5L, Extra = 5L });
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Items_ByTag());
+        store.ExecuteIndex(new Shows_ByTitle());
+        Indexes.WaitForIndexing(store);
+
+        foreach (var rql in new[]
+                 {
+                     "from index 'Items/ByTag' where Tag >= 'a' order by Tag desc",
+                     "from index 'Items/ByTag' where Tag > 'a' order by Tag",
+                     "from index 'Shows/ByTitle' where Title >= 0 order by Title as long desc"
+                 })
+        {
+            var expected = BitmapPipelineIds(store, rql);
+            var actual = Ids(store, rql);
+            Assert.True(expected.SequenceEqual(actual), $"{rql}: expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}]");
+        }
+    }
+
+    private class Shows_ByLangAndTitle : AbstractIndexCreationTask<Show>
+    {
+        public Shows_ByLangAndTitle()
+        {
+            Map = shows => from s in shows
+                           select new
+                           {
+                               s.Lang,
+                               s.Title,
+                               _ = CreateField("Title", s.Extra)
+                           };
+
+            CompoundField("Lang", "Title");
+        }
+    }
+
+    // the compound key is built from the declared values only, so a range on its second field misses a document
+    // whose matching term came from CreateField
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single, SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void CompoundScanKeepsADocumentWhoseRangeTermCameFromCreateField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Show { Id = "shows/1", Lang = "en", Title = 1L, Extra = 9L });
+            session.Store(new Show { Id = "shows/2", Lang = "en", Title = 5L, Extra = 5L });
+            session.SaveChanges();
+        }
+
+        store.ExecuteIndex(new Shows_ByLangAndTitle());
+        Indexes.WaitForIndexing(store);
+
+        foreach (var rql in new[]
+                 {
+                     "from index 'Shows/ByLangAndTitle' where Lang = 'en' and Title >= 3 order by Title as long",
+                     "from index 'Shows/ByLangAndTitle' where Lang = 'en' and Title between 3 and 10 order by Title as long desc"
+                 })
+        {
+            var expected = BitmapPipelineIds(store, rql);
+            var actual = Ids(store, rql);
+            Assert.True(expected.SequenceEqual(actual), $"{rql}: expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}]");
+        }
+    }
+
     private class Movies_ByTitleWithDynamicField : AbstractIndexCreationTask<Movie>
     {
         public Movies_ByTitleWithDynamicField()
@@ -550,7 +680,7 @@ public class RavenDB_27035 : RavenTestBase
         using (var session = store.OpenSession())
         {
             for (var i = 0; i < 10; i++)
-                session.Store(new Movie { Id = $"movies/{i}", Title = (long)i, Year = 2000 + i });
+                session.Store(new Movie { Id = $"movies/{i}", Title = (long)(9 - i), Year = 2000 + i });
 
             session.SaveChanges();
         }
@@ -558,24 +688,72 @@ public class RavenDB_27035 : RavenTestBase
         store.ExecuteIndex(new Movies_ByTitleWithDynamicField());
         Indexes.WaitForIndexing(store);
 
+        const string rql = "from index 'Movies/ByTitleWithDynamicField' order by Title as long";
+
         using var session2 = store.OpenSession();
-
-        var scanned = session2.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleWithDynamicField' order by Title as long include timings()")
-            .Timings(out var scanTimings)
+        var scanned = session2.Advanced.RawQuery<Movie>(rql + " include timings()")
+            .Timings(out var timings)
             .ToList();
 
-        var scanPlan = Assert.IsType<QueryInspectionNode>(scanTimings.QueryPlan);
-        Assert.Equal(10, scanned.Count);
-        Assert.True(PlanContains(scanPlan, "TermNumericRangeProvider"), PlanOperations(scanPlan));
-        Assert.False(PlanContains(scanPlan, "SortingMatch"), PlanOperations(scanPlan));
+        var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+        Assert.True(PlanContains(plan, "DirectScan"), PlanOperations(plan));
+        Assert.False(PlanContains(plan, "SortingMatch"), PlanOperations(plan));
+        Assert.Equal(BitmapPipelineIds(store, rql), scanned.Select(x => x.Id).ToArray());
+    }
 
-        var streamed = session2.Advanced.RawQuery<Movie>("from index 'Movies/ByTitleWithDynamicField' where exists(Title) order by Title include timings()")
-            .Timings(out var streamTimings)
-            .ToList();
+    // the snapshot holds an index built by 7.2.6, before the marker was recorded per entry
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    public void AnIndexWrittenBeforeThePerEntryMarkerStillSortsItsDynamicFields()
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        using (var file = File.Create(Path.Combine(backupPath, "RavenDB_27565.ravendb-snapshot")))
+        using (var stream = typeof(RavenDB_27035).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_27565.RavenDB_27565.ravendb-snapshot"))
+        {
+            Assert.NotNull(stream);
+            stream.CopyTo(file);
+        }
 
-        var streamPlan = Assert.IsType<QueryInspectionNode>(streamTimings.QueryPlan);
-        Assert.Equal(10, streamed.Count);
-        Assert.False(PlanContains(streamPlan, "SortingMatch"), PlanOperations(streamPlan));
+        var databaseName = GetDatabaseName();
+        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName }))
+        {
+            const string rql = "from index 'Items/ByCategoryAndTag' order by Tag desc";
+
+            using var session = store.OpenSession(databaseName);
+            var results = session.Advanced.RawQuery<Item>(rql + " include timings()")
+                .Timings(out var timings)
+                .ToList();
+
+            var plan = Assert.IsType<QueryInspectionNode>(timings.QueryPlan);
+            Assert.False(PlanContains(plan, "DirectScan"), PlanOperations(plan));
+
+            using var bitmapSession = store.OpenSession(databaseName);
+            var expected = bitmapSession.Advanced.RawQuery<Item>(rql).AddParameter("rvn_corax_strategy", "BitmapPipeline").ToList().Select(x => x.Id).ToArray();
+            Assert.Equal(expected, results.Select(x => x.Id).ToArray());
+        }
+    }
+
+    private static string[] BitmapPipelineIds(IDocumentStore store, string rql)
+    {
+        using var session = store.OpenSession();
+        return session.Advanced.RawQuery<Item>(rql).AddParameter("rvn_corax_strategy", "BitmapPipeline").ToList().Select(x => x.Id).ToArray();
+    }
+
+    private static bool PlanContains(QueryInspectionNode node, string operation)
+    {
+        if (node.Operation != null && node.Operation.Contains(operation, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (node.Children == null)
+            return false;
+
+        foreach (var child in node.Children)
+        {
+            if (PlanContains(child, operation))
+                return true;
+        }
+
+        return false;
     }
 
     private static string PlanOperations(QueryInspectionNode node)

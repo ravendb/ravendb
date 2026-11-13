@@ -33,57 +33,54 @@ public partial class IndexSearcher
         if (typeof(TNumeric) == typeof(long))
         {
             numericalField = field.GetNumericFieldMetadata<long>(_transaction.Allocator);
-            _fieldsTree
-                ?.LookupFor<Int64LookupKey>(numericalField.FieldName)
-                ?.TryGetValue((long)(object)term, out containerId);
-
+            if (_fieldsTree != null && _fieldsTree.TryGetLookupFor<Int64LookupKey>(numericalField.FieldName, out var longLookup))
+                longLookup.TryGetValue((long)(object)term, out containerId);
         }
         else if (typeof(TNumeric) == typeof(double))
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
-             _fieldsTree
-                 ?.LookupFor<DoubleLookupKey>(numericalField.FieldName)
-                ?.TryGetValue((double)(object)term, out containerId);
+            if (_fieldsTree != null && _fieldsTree.TryGetLookupFor<DoubleLookupKey>(numericalField.FieldName, out var doubleLookup))
+                doubleLookup.TryGetValue((double)(object)term, out containerId);
         }
 
         return containerId;
     }
     
     //Numerical TermMatch.
-    public TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree terms = null)
+    public TermMatch TermQuery<TNumeric>(in FieldMetadata field, TNumeric term, CompactTree termsTree = null)
     {
         var containerId = GetContainerIdOfNumericalTerm(field, out var numericalField, term);
 
         return containerId == -1 
-            ? TermMatch.CreateEmpty(this, Allocator) 
+            ? TermMatch.CreateEmpty() 
             : TermQuery(numericalField, containerId, 1);
     }
     
-    public CompactTree GetTermsFor(Slice name) => _fieldsTree.CompactTreeFor(name); 
-    
-    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) =>_fieldsTree.LookupFor<Int64LookupKey>(name);
-    
-    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) =>_fieldsTree.LookupFor<DoubleLookupKey>(name);
+    public CompactTree GetTermsFor(Slice name) => _fieldsTree != null && _fieldsTree.TryGetCompactTreeFor(name, out var terms) ? terms : null;
 
-    public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree terms = null)
+    public Lookup<Int64LookupKey> GetLongTermsFor(Slice name) => _fieldsTree != null && _fieldsTree.TryGetLookupFor<Int64LookupKey>(name, out var longTerms) ? longTerms : null;
+
+    public Lookup<DoubleLookupKey> GetDoubleTermsFor(Slice name) => _fieldsTree != null && _fieldsTree.TryGetLookupFor<DoubleLookupKey>(name, out var doubleTerms) ? doubleTerms : null;
+
+    public TermMatch TermQuery(in FieldMetadata field, string term, CompactTree termsTree = null)
     {
-        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, terms)
+        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, termsTree)
             ? TermQuery(field, termId, termRatioToWholeCollection)
-            : TermMatch.CreateEmpty(this, Allocator);
+            : TermMatch.CreateEmpty();
     }
 
     //Should be already analyzed...
-    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree terms = null)
+    public TermMatch TermQuery(in FieldMetadata field, Slice term, CompactTree termsTree = null)
     {
-        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, terms)
+        return TryGetTermId(field, term, out var termId, out var termRatioToWholeCollection, termsTree)
             ? TermQuery(field, termId, termRatioToWholeCollection)
-            : TermMatch.CreateEmpty(this, Allocator);
+            : TermMatch.CreateEmpty();
     }
 
     public TermMatch TermQuery(in FieldMetadata field, CompactKey term, CompactTree tree)
     {
         if (TryGetTermId(field, term, tree, out var termId, out var termRatioToWholeCollection) == false)
-            return TermMatch.CreateEmpty(this, Allocator);
+            return TermMatch.CreateEmpty();
 
         var matches = TermQuery(field, termId, termRatioToWholeCollection);
 
@@ -93,18 +90,15 @@ public partial class IndexSearcher
         return matches;
     }
 
-    internal bool TryGetTermId(in FieldMetadata field, string term, out long termId, out double termRatioToWholeCollection, CompactTree terms = null)
+    internal bool TryGetTermId(in FieldMetadata field, string term, out long termId, out double termRatioToWholeCollection, CompactTree termsTree = null)
     {
         termId = -1;
         termRatioToWholeCollection = 1;
-        if (terms == null)
+        var terms = termsTree ?? GetTermsFor(field.FieldName);
+        if (terms == null && term != null)
         {
-            // If either the term or the fields tree does not exist the request will be empty.
-            if (_fieldsTree == null)
-                return false;
-
-            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out terms) == false)
-                return false;
+            // If either the term or the field does not exist the request will be empty.
+            return false;
         }
 
         if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
@@ -125,22 +119,23 @@ public partial class IndexSearcher
         return TryGetTermId(field, termKey, terms, out termId, out termRatioToWholeCollection);
     }
 
-    internal bool TryGetTermId(in FieldMetadata field, Slice term, out long termId, out double termRatioToWholeCollection, CompactTree terms = null)
+    internal bool TryGetTermId(in FieldMetadata field, Slice term, out long termId, out double termRatioToWholeCollection, CompactTree termsTree = null)
     {
         termId = -1;
         termRatioToWholeCollection = 1;
+        var terms = termsTree ?? GetTermsFor(field.FieldName);
         if (terms == null)
         {
-            // If either the term or the fields tree does not exist the request will be empty.
-            if (_fieldsTree == null)
-                return false;
-
-            if (_fieldsTree.TryGetCompactTreeFor(field.FieldName, out terms) == false)
-                return false;
+            // If either the term or the field does not exist the request will be empty.
+            return false;
         }
 
         if (term.Size == 0)
-            return TryGetTermId(field, (CompactKey)null, terms, out termId, out termRatioToWholeCollection);
+        {
+            // An empty term matches nothing (mirrors the analyzed-string overload); passing a null CompactKey
+            // into CompactTree.TryGetValue would throw.
+            return false;
+        }
 
         using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
         var termKey = termKeyScope.Key;
@@ -167,7 +162,9 @@ public partial class IndexSearcher
     internal double GetAverageTermLength(in FieldMetadata field, CompactTree tree)
     {
         var totalTerms = tree.NumberOfEntries;
-        var totalSum = _metadataTree.Read(field.TermLengthSumName)?.Reader.Read<long>() ?? totalTerms;
+        long totalSum = totalTerms;
+        if (_metadataTree.TryRead(field.TermLengthSumName, out var totalSumReader))
+            totalSum = totalSumReader.Read<long>();
 
         return totalTerms == 0 || totalSum == 0 ? 0 : totalSum / (double)totalTerms;
     }
@@ -185,7 +182,7 @@ public partial class IndexSearcher
         if ((containerId & (long)TermIdMask.PostingList) != 0)
         {
             var postingList = GetPostingList(containerId);
-            matches = TermMatch.YieldSet(this, Allocator, postingList, termRatioToWholeCollection, isBoosting, IsAccelerated);
+            matches = TermMatch.YieldSet(this, Allocator, postingList, termRatioToWholeCollection, isBoosting);
         }
         else if ((containerId & (long)TermIdMask.SmallPostingList) != 0)
         {
@@ -211,6 +208,61 @@ public partial class IndexSearcher
         return set;
     }
 
+    /// <summary>
+    /// Returns the raw posting list ID (with TermIdMask encoding) for a string term,
+    /// or -1 if the term does not exist in the index.
+    /// </summary>
+    public long GetTermPostingListId(in FieldMetadata field, string term)
+    {
+        var terms = GetTermsFor(field.FieldName);
+        if (terms == null)
+            return -1;
+
+        if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
+            return TryGetPostingListForNull(field, out var plId) ? plId : -1;
+
+        // A term the analyzer splits into != 1 token has no single posting list id.
+        if (TryAnalyzeSingleToken(field, term, out var termSlice) == false)
+            return -1;
+
+        if (termSlice.Size == 0)
+            return -1;
+
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
+        termKey.Set(termSlice.AsReadOnlySpan());
+        return terms.TryGetValue(termKey, out var value) ? value : -1;
+    }
+
+    /// <summary>
+    /// Returns the raw posting list ID (with TermIdMask encoding) for a numeric term,
+    /// or -1 if the term does not exist in the index. Mirrors the resolution path
+    /// taken by <see cref="TermQuery{TNumeric}"/>.
+    /// </summary>
+    public long GetTermPostingListId<TNumeric>(in FieldMetadata field, TNumeric term)
+    {
+        return GetContainerIdOfNumericalTerm(field, out _, term);
+    }
+
+    /// <summary>
+    /// Returns the raw posting list ID (with TermIdMask encoding) for a Slice term,
+    /// or -1 if the term does not exist in the index.
+    /// </summary>
+    public long GetTermPostingListId(in FieldMetadata field, Slice term)
+    {
+        var terms = GetTermsFor(field.FieldName);
+        if (terms == null)
+            return -1;
+
+        if (term.Size == 0)
+            return -1;
+
+        using var termKeyScope = new CompactKeyCacheScope(_fieldsTree.Llt);
+        var termKey = termKeyScope.Key;
+        termKey.Set(term.AsReadOnlySpan());
+        return terms.TryGetValue(termKey, out var value) ? value : -1;
+    }
+
     public long NumberOfDocumentsUnderSpecificTerm<TData>(in FieldMetadata binding, TData term)
     {
         if (typeof(TData) == typeof(long))
@@ -229,27 +281,22 @@ public partial class IndexSearcher
     
     private long NumberOfDocumentsUnderSpecificTerm(in FieldMetadata binding, string term)
     {
-        if (_fieldsTree == null)
-            return 0;
-
-        var exist = _fieldsTree.TryGetCompactTreeFor(binding.FieldName, out var terms);
-        if (exist == false && term != null)
+        var terms = GetTermsFor(binding.FieldName);
+        if (terms == null && term != null)
             return 0;
         
         if (term is null || ReferenceEquals(term, Constants.ProjectionNullValue))
         {
             var termMatch =  TryGetPostingListForNull(binding, out var postingListId) 
                 ? TermQuery(binding, postingListId, 1D) 
-                : TermMatch.CreateEmpty(this, Allocator);
+                : TermMatch.CreateEmpty();
             return termMatch.Count;
         }
         
-        var termSlice = term switch
-        {
-            Constants.EmptyString => Constants.EmptyStringSlice,
-            _ => EncodeAndApplyAnalyzer(binding, term)
-        };
-        
+        // A multi-token input (e.g. MoreLikeThis passing un-tokenized text) matches no single indexed term.
+        if (TryAnalyzeSingleToken(binding, term, out var termSlice) == false)
+            return 0;
+
         return NumberOfDocumentsUnderSpecificTerm((CompactTree)terms, (Slice)termSlice);
     }
 

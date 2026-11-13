@@ -7,9 +7,9 @@ using Sparrow;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
-public unsafe partial struct SortingMultiMatch<TInner>
+public unsafe sealed partial class SortingMultiMatch<TInner>
 {
-    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy(OrderMetadata[] orderMetadata)
+    private static delegate*<SortingMultiMatch<TInner>, Span<long>, int> SortBy(OrderMetadata[] orderMetadata)
     {
         return (orderMetadata[0].FieldType, orderMetadata[0].Ascending) switch
         {
@@ -29,7 +29,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
         };
     }
 
-    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1>(OrderMetadata[] orderMetadata)
+    private static delegate*<SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1>(OrderMetadata[] orderMetadata)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan>
     {
         if (orderMetadata.Length == 1)
@@ -55,7 +55,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
         };
     }
 
-    private static delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1, TComparer2>(OrderMetadata[] orderMetadata)
+    private static delegate*<SortingMultiMatch<TInner>, Span<long>, int> SortBy<TComparer1, TComparer2>(OrderMetadata[] orderMetadata)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan>
         where TComparer2 : struct, IEntryComparer, IComparer<int>, IComparer<UnmanagedSpan>
     {
@@ -83,7 +83,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
     
     private struct EntryComparerHelper
     {
-        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
+        public static Span<int> NumericSortBatch<TComparer1, TComparer2, TComparer3>(SortingMultiMatch<TInner> match, Span<long> batchTermIds, UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TComparer1 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
@@ -95,22 +95,22 @@ public unsafe partial struct SortingMultiMatch<TInner>
                 indexes[i] = i;
             }
 
-            IndirectSort(ref match, indexes, batchTerms, comparer1, comparer2, comparer3);
+            IndirectSort(match, indexes, batchTerms, comparer1, comparer2, comparer3);
             
             return indexes;
         }
 
-        public static void IndirectSort<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<int> indexes,
+        public static void IndirectSort<TComparer1, TComparer2, TComparer3>(SortingMultiMatch<TInner> match, Span<int> indexes,
             UnmanagedSpan* batchTerms, TComparer1 comparer1, TComparer2 comparer2, TComparer3 comparer3)
             where TComparer1 : struct, IComparer<UnmanagedSpan>, IEntryComparer
             where TComparer2 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
             where TComparer3 : struct, IComparer<UnmanagedSpan>, IComparer<int>, IEntryComparer
         {
             if (match._orderMetadata[0].Ascending)
-                indexes.Sort(new IndirectComparer<TComparer1, TComparer2, TComparer3>(ref match, batchTerms, comparer1,
+                indexes.Sort(new IndirectComparer<TComparer1, TComparer2, TComparer3>(match, batchTerms, comparer1,
                 comparer2, comparer3));
             else
-                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(ref match, batchTerms, new(comparer1), comparer2, comparer3));
+                indexes.Sort(new IndirectComparer<Descending<TComparer1>, TComparer2, TComparer3>(match, batchTerms, new(comparer1), comparer2, comparer3));
             
             // Support for including scores in the projection in case the score comparer is not first. 
             // We only have one chance to copy in the right order before pagination happens

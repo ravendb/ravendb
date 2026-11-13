@@ -3,10 +3,13 @@ using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
 using System.Text;
 using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
+using Sparrow.Server;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
@@ -30,7 +33,7 @@ public sealed unsafe class CompactKey : IDisposable
         // casting to uint here to avoid -1 from GetCurrentProcessorId (the modulus will handle high values anyway)
         var index = (uint)Thread.GetCurrentProcessorId() % perCore.Length;
         ArrayPool<T> arrayPool = perCore[index];
-        if (arrayPool != null)
+        if(arrayPool != null)
             return arrayPool;
         arrayPool = ArrayPool<T>.Create();
         return Interlocked.CompareExchange(ref perCore[index], arrayPool, null) ?? arrayPool;
@@ -41,12 +44,12 @@ public sealed unsafe class CompactKey : IDisposable
     private const int MappingTableSize = 64;
     private const int MappingTableMask = MappingTableSize - 1;
 
-    private long[] _keyMappingCache = new long[2 * MappingTableMask];
+    private long[] _keyMappingCache;
     private ref long KeyMappingCache(int i) => ref _keyMappingCache[i];
     private ref long KeyMappingCacheIndex(int i) => ref _keyMappingCache[MappingTableSize + i];
 
 
-    private byte[] _storage = new byte[2 * Constants.CompactTree.MaximumKeySize];
+    private byte[] _storage;
 
     // The storage data will be used in an arena fashion. If there is no enough, we just create a bigger one and
     // copy the content back. 
@@ -66,16 +69,18 @@ public sealed unsafe class CompactKey : IDisposable
 
     private const int Invalid = -1;
 
-
     public void Initialize(LowLevelTransaction tx)
     {
-        _owner = tx;
-        
-        Reuse();
-    }
+        // Idempotent: if this key was already initialized (buffers rented), re-arm via Rebind instead of
+        // renting fresh arrays — a second Initialize would otherwise overwrite and leak the existing buffers.
+        if (_storage is not null && _keyMappingCache is not null)
+        {
+            Rebind(tx);
+            return;
+        }
 
-    public void Reuse()
-    {
+        _owner = tx;
+
         Dictionary = Invalid;
         _currentKeyIdx = Invalid;
         _decodedKeyIdx = Invalid;
@@ -88,8 +93,41 @@ public sealed unsafe class CompactKey : IDisposable
         _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
     }
 
+    /// <summary>Re-arm an already-initialized key for a new transaction without renting fresh pool buffers:
+    /// <see cref="Set"/> restarts the arena per key, so storage/mapping buffers are reusable across
+    /// transactions and only the owner and arena cursors need resetting. Lets long-lived key caches (e.g.
+    /// the entry-scan loop) pay the pool rent once rather than per query.</summary>
+    public void Rebind(LowLevelTransaction tx)
+    {
+        // A pooled key keeps its rented buffers across Acquire/Release (only Unbind runs, never Reset), guards against misuse
+        if (_storage is null || _keyMappingCache is null)
+            throw new InvalidOperationException("Rebind on a CompactKey whose pooled buffers were released (Reset/Dispose); a disposed key must not be reused from the pool.");
+
+        _owner = tx;
+
+        Dictionary = Invalid;
+        _currentKeyIdx = Invalid;
+        _decodedKeyIdx = Invalid;
+        _lastKeyMappingItem = Invalid;
+
+        _currentIdx = 0;
+        MaxLength = 0;
+    }
+
+    /// <summary>Drop the transaction reference (from <see cref="Rebind"/>/<see cref="Initialize"/>) without
+    /// returning the rented buffers. A long-lived key cache calls this when a query finishes so the
+    /// <see cref="LowLevelTransaction"/> (and the pages/scratch it roots) can be collected while the thread
+    /// idles. Buffers stay rented; call <see cref="Rebind"/> before the next use.</summary>
+    public void Unbind()
+    {
+        _owner = null;
+    }
+
     public void Reset()
     {
+        if (_storage is null || _keyMappingCache is null)
+            throw new InvalidOperationException("The key has not been initialized before calling reset.");
+
         _owner = null;
 
         GetPoolFrom(SharedBytesPools).Return(_storage);
@@ -245,7 +283,7 @@ public sealed unsafe class CompactKey : IDisposable
 
         var storage = GetPoolFrom(SharedBytesPools).Rent(maxSize);
         _storage.AsSpan(0, _currentIdx).CopyTo(storage.AsSpan());
-
+        
         GetPoolFrom(SharedBytesPools).Return(_storage); // Return old to pool.
         _storage = storage; // Update the new references.
     }
@@ -266,12 +304,17 @@ public sealed unsafe class CompactKey : IDisposable
 
         Debug.Assert(_storage.Length >= maxLength);
 
-        // We write the size and the key. 
+        // We write the size and the key.
         Unsafe.WriteUnaligned<int>(ref _storage[0], key.Length);
 
-        // PERF: Between pinning the pointer and just execute the Unsafe.CopyBlock unintuitively it is faster to just copy. 
-        ref readonly byte kPtr = ref key[0];
-        Unsafe.CopyBlock(ref _storage[sizeof(int)],  in kPtr, (uint)key.Length);
+        // An empty key is a valid "before all keys" sentinel (e.g. open-ended range estimation): nothing to
+        // copy, and dereferencing key[0] on an empty span would throw. Set(int, ...) handles this the same way.
+        if (key.Length > 0)
+        {
+            // PERF: counterintuitively, plain Unsafe.CopyBlock here beats pinning the pointer first.
+            ref readonly byte kPtr = ref key[0];
+            Unsafe.CopyBlock(ref _storage[sizeof(int)],  in kPtr, (uint)key.Length);
+        }
 
         _currentIdx = key.Length + sizeof(int);
 
@@ -416,10 +459,10 @@ public sealed unsafe class CompactKey : IDisposable
         var result = Memory.CompareInline(ref MemoryMarshal.GetReference(encodedKey), ref nextEntryRef, Math.Min(encodedLength, nextEntryLength));
         return result == 0 ? encodedLength - nextEntryLength : result;
     }
-    
+
     public void Dispose()
     {
-        _owner = null;
+        Reset();
     }
 
     public int Compare(CompactKey value)

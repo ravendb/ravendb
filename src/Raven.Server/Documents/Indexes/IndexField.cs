@@ -47,6 +47,18 @@ namespace Raven.Server.Documents.Indexes
             Storage = FieldStorage.No;
         }
 
+     
+        public static FieldIndexing ResolveIndexing(IndexFieldOptions options, IndexFieldOptions allFields)
+        {
+            if (options?.Indexing != null) 
+                return options.Indexing.Value;
+
+            if (string.IsNullOrWhiteSpace(options?.Analyzer ?? allFields?.Analyzer) == false)
+                return FieldIndexing.Search;
+
+            return allFields?.Indexing ?? FieldIndexing.Default;
+        }
+
         public static IndexField Create(string name, IndexFieldOptions options, IndexFieldOptions allFields, int id = 0)
         {
             var field = new IndexField
@@ -56,12 +68,7 @@ namespace Raven.Server.Documents.Indexes
                 Id = id
             };
 
-            if (options.Indexing.HasValue)
-                field.Indexing = options.Indexing.Value;
-            else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
-                field.Indexing = FieldIndexing.Search;
-            else if (allFields?.Indexing != null)
-                field.Indexing = allFields.Indexing.Value;
+            field.Indexing = ResolveIndexing(options, allFields);
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;

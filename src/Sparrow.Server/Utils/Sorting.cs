@@ -73,31 +73,39 @@ namespace Sparrow.Server.Utils
                 return SortAndRemoveDuplicates(basePtr, values.Length);
         }
 
-        public static unsafe int SortAndRemoveDuplicates<T, W>(T* bufferBasePtr, W* itemsBasePtr, int count)
-            where T : unmanaged, IBinaryNumber<T>
-            where W : unmanaged
+        /// <summary>
+        /// First index in <c>[from, to)</c> of the ascending span <paramref name="sorted"/> whose element is
+        /// &gt;= <paramref name="target"/> (the lower bound), located by an exponential gallop from
+        /// <paramref name="from"/> followed by a binary search of the bracketed window — O(log d) in the gap d
+        /// from the cursor, versus O(log n) over the whole range. Returns <paramref name="to"/> when every
+        /// element in range is &lt; <paramref name="target"/>. Intended for forward-cursor merges of two
+        /// ascending sequences, where successive lookups start at/just after the previous position.
+        /// </summary>
+        public static int GallopLowerBound<T>(ReadOnlySpan<T> sorted, int from, int to, T target)
+            where T : unmanaged, INumber<T>
         {
-            new Span<T>(bufferBasePtr, count).Sort(new Span<W>(itemsBasePtr, count));
-
-            // We need to fill in the gaps left by removing deduplication process.
-            // If there are no duplicated the writes at the architecture level will execute
-            // way faster than if there are.
-
-            int index = 0;
-            int runningIndex = 0;
-
-            count--;
-            while (runningIndex < count)
+            int lo = from;
+            int probe = from;
+            int step = 1;
+            // Unsigned comparisons to guard the probe from possible overflows 
+            while ((uint)probe < (uint)to && sorted[probe] < target)
             {
-                index += (bufferBasePtr[runningIndex + 1] != bufferBasePtr[runningIndex]).ToInt32();
-
-                bufferBasePtr[index] = bufferBasePtr[runningIndex + 1];
-                itemsBasePtr[index] = itemsBasePtr[runningIndex + 1];
-
-                runningIndex++;
+                lo = probe + 1;
+                probe = lo + step;
+                step <<= 1;
             }
 
-            return index + 1;
+            int limit = (uint)probe < (uint)to ? probe : to;
+            while (lo < limit)
+            {
+                int mid = lo + ((limit - lo) >> 1);
+                if (sorted[mid] < target)
+                    lo = mid + 1;
+                else
+                    limit = mid;
+            }
+
+            return lo;
         }
 
         public static unsafe int SortAndRemoveDuplicates<T>(T* bufferBasePtr, int count)

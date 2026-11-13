@@ -5,70 +5,65 @@ using Raven.Client.Exceptions.Corax;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace SlowTests.Issues;
+
+public class RavenDB_27348(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public class RavenDB_27348 : RavenTestBase
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void MethodsCoraxDoesNotSupportMustThrowNotSupportedInCoraxException(Options options)
     {
-        public RavenDB_27348(ITestOutputHelper output) : base(output)
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenSession())
         {
+            session.Store(new Employee { Notes = "fluent french speaker", Age = 30 });
+            session.SaveChanges();
         }
 
-        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
-        public void MethodsCoraxDoesNotSupportMustThrowNotSupportedInCoraxException(Options options)
+        new Employees_ByNotesAndAge().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        var cases = new[]
         {
-            using var store = GetDocumentStore(options);
+            ("proximity(search(Notes, 'fluent french'), 0)", "proximity over search() method"),
+            ("fuzzy(Notes = 'french', 0.5)", "fuzzy() method"),
+            ("lucene(Notes, 'french')", "lucene() method"),
+            ("intersect(Notes = 'french', Age = 30)", "intersect queries"),
+        };
 
-            using (var session = store.OpenSession())
+        foreach (var (where, expected) in cases)
+        {
+            using var session = store.OpenSession();
+            var query = () => session.Advanced.RawQuery<Employee>($"from index 'Employees/ByNotesAndAge' where {where}").ToList();
+
+            if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
             {
-                session.Store(new Employee { Notes = "fluent french speaker", Age = 30 });
-                session.SaveChanges();
+                var e = Assert.Throws<NotSupportedInCoraxException>(query);
+                Assert.Contains(expected, e.Message);
             }
-
-            new Employees_ByNotesAndAge().Execute(store);
-            Indexes.WaitForIndexing(store);
-
-            var cases = new[]
+            else
             {
-                ("proximity(search(Notes, 'fluent french'), 0)", "proximity over search() method"),
-                ("fuzzy(Notes = 'french', 0.5)", "fuzzy() method"),
-                ("lucene(Notes, 'french')", "lucene() method"),
-                ("intersect(Notes = 'french', Age = 30)", "intersect queries"),
-            };
-
-            foreach (var (where, expected) in cases)
-            {
-                using var session = store.OpenSession();
-                var query = () => session.Advanced.RawQuery<Employee>($"from index 'Employees/ByNotesAndAge' where {where}").ToList();
-
-                if (options.SearchEngineMode == RavenSearchEngineMode.Corax)
-                {
-                    var e = Assert.Throws<NotSupportedInCoraxException>(query);
-                    Assert.Contains(expected, e.Message);
-                }
-                else
-                {
-                    Assert.Equal(1, query().Count);
-                }
+                Assert.Equal(1, query().Count);
             }
         }
+    }
 
-        private class Employee
+    private class Employee
+    {
+        public string Notes { get; set; }
+
+        public int Age { get; set; }
+    }
+
+    private class Employees_ByNotesAndAge : AbstractIndexCreationTask<Employee>
+    {
+        public Employees_ByNotesAndAge()
         {
-            public string Notes { get; set; }
+            Map = employees => from employee in employees
+                               select new { employee.Notes, employee.Age };
 
-            public int Age { get; set; }
-        }
-
-        private class Employees_ByNotesAndAge : AbstractIndexCreationTask<Employee>
-        {
-            public Employees_ByNotesAndAge()
-            {
-                Map = employees => from employee in employees
-                                   select new { employee.Notes, employee.Age };
-
-                Index(x => x.Notes, FieldIndexing.Search);
-            }
+            Index(x => x.Notes, FieldIndexing.Search);
         }
     }
 }

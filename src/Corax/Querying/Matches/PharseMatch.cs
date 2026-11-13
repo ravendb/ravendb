@@ -21,14 +21,16 @@ public struct PhraseMatch<TInner> : IQueryMatch
     
     
     private TInner _inner;
+    private readonly FieldMetadata _fieldMetadata;
     private readonly IndexSearcher _indexSearcher;
     private readonly ByteString _subsequence;
     private readonly long _vectorRootPage;
     private readonly long _rootPage;
 
 
-    public PhraseMatch(IndexSearcher indexSearcher, TInner inner, ByteString subsequence, long vectorRootPage, long rootPage)
+    public PhraseMatch(in FieldMetadata fieldMetadata, IndexSearcher indexSearcher, TInner inner, ByteString subsequence, long vectorRootPage, long rootPage)
     {
+        _fieldMetadata = fieldMetadata;
         _indexSearcher = indexSearcher;
         _inner = inner;
         _subsequence = subsequence;
@@ -41,16 +43,8 @@ public struct PhraseMatch<TInner> : IQueryMatch
     }
 
     public long Count => _inner.Count;
-    
-    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
 
-    public SkipSortingResult AttemptToSkipSorting()
-    {
-        //Filter only, not changing order.
-        return _inner.AttemptToSkipSorting();
-    }
 
-    public QueryCountConfidence Confidence => QueryCountConfidence.Normal;
     public bool IsBoosting => _inner.IsBoosting;
     public int Fill(Span<long> matches)
     {
@@ -59,12 +53,6 @@ public struct PhraseMatch<TInner> : IQueryMatch
         return ScanDocumentsTermsEntries(matches.Slice(0, results));
     }
 
-    public int AndWith(Span<long> buffer, int matches)
-    {
-        var results = _inner.AndWith(buffer, matches);
-        return ScanDocumentsTermsEntries(buffer.Slice(0, results));
-    }
-    
     private int ScanDocumentsTermsEntries(Span<long> matches)
     {
         int currentId = 0;
@@ -78,12 +66,10 @@ public struct PhraseMatch<TInner> : IQueryMatch
         Span<int> indexes = _memoryHandler is null 
           ? stackalloc int[128]
           : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
-
-        using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
-
+        
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
-            _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, out var entryTermsReader, existingKey);
+            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
             
@@ -152,8 +138,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
     internal string RenderOriginalSentence(long documentId)
     {
         var p = default(Page);
-        
-        using var _ = _indexSearcher.GetEntryTermsReader(documentId, ref p, out var entryTermsReader);
+        var entryTermsReader = _indexSearcher.GetEntryTermsReader(documentId, ref p);
         
         if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
             return "NO PHRASE QUERY";
@@ -196,13 +181,18 @@ public struct PhraseMatch<TInner> : IQueryMatch
         _inner.Score(matches, scores, boostFactor);
     }
 
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor)
+    {
+        _inner.ScoreSorted(matches, scores, boostFactor);
+    }
+
     public QueryInspectionNode Inspect()
     {
         return new QueryInspectionNode(nameof(PhraseMatch<TInner>),
             parameters: new Dictionary<string, string>()
             {
                 { nameof(IsBoosting), IsBoosting.ToString() },
-                { nameof(Count), $"{Count} [{Confidence}]" }
+                { nameof(Count), $"{Count}" }
             },
             children: [_inner.Inspect()]);
     }
