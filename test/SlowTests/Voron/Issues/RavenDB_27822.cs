@@ -58,7 +58,7 @@ public class RavenDB_27822 : RavenTestBase
         Assert.Equal(PalConfiguration.WriteMode, report.WriteMode.Effective);
 
         if (documents.DeviceId != null) // null when the platform cannot identify the device
-            Assert.Contains(report.Devices, x => x.DeviceId == documents.DeviceId);
+            Assert.Contains(report.Devices, x => x.DeviceId == documents.DeviceId && x.ReadAheadBudgetInBytesPerSec > 0);
     }
 
     [RavenFact(RavenTestCategory.Voron)]

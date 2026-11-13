@@ -66,6 +66,18 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                             paced above {thresholds.QueueDepthEnterDrain}, normal below {thresholds.QueueDepthExitDrain}
                         </Sub>
                     </Metric>
+                    <Metric label="Read-ahead" help={storageTermHelp.readAhead}>
+                        {!device.ReadAheadWarmUp ? (
+                            <span className="text-muted">off, memory is full</span>
+                        ) : device.QueueDepth == null ? (
+                            "not limited"
+                        ) : (
+                            `up to ${formatBytes(device.ReadAheadBudgetInBytesPerSec)}/s`
+                        )}
+                        {device.ReadAheadWarmUp && device.QueueDepth != null && (
+                            <Sub>halves while the queue is above {thresholds.QueueDepthEnterDrain}</Sub>
+                        )}
+                    </Metric>
                     <Metric label="Disk requests" help={storageTermHelp.diskStats}>
                         {device.DiskStats == null ? (
                             <span className="text-muted">no data yet</span>
