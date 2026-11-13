@@ -23,21 +23,33 @@ internal static partial class QueryPlanBuilder
     private const int MaxSortFields = 16;
 
     // Check we if we have a seek hint (where Age > $x order by Age) that we can use to speed up the query
-    private static void TrySetSortSeekHint(CompiledPlan plan, QueryExecution exec, CompiledQueryMatch match)
+    private static void TrySetSortSeekHint(CompiledPlan plan, QueryExecution exec, ResolutionContext walkerCtx, CompiledQueryMatch match)
     {
         var sortExec = exec.SortSeekClause;
         if (sortExec is null)
             return;
 
-        if (sortExec.PackedParamValue.IsNone)
+        var packed = sortExec.PackedParamValue;
+        if (packed.IsNone)
             return;
 
-        int paramIdx = plan.Template.SortSeekUseParam2 ? sortExec.PackedParamValue.Param2 : sortExec.PackedParamValue.Param1;
-        object seekValue = sortExec.PackedParamValue.ValueType switch
+        bool useParam2 = plan.Template.SortSeekUseParam2;
+        int paramIdx = sortExec.SentinelRewriteType switch
+        {
+            null => useParam2 ? packed.Param2 : packed.Param1,
+            // an open BETWEEN keeps its one bound in Param1, and it starts only the walk that it opens
+            ClauseType.LessThanOrEqual when useParam2 => packed.Param1,
+            ClauseType.GreaterThanOrEqual when useParam2 == false => packed.Param1,
+            _ => -1
+        };
+        if (paramIdx == -1)
+            return;
+
+        object seekValue = packed.ValueType switch
         {
             PackedParam.TypeLong => exec.LongValues[paramIdx],
             PackedParam.TypeDouble => exec.DoubleValues[paramIdx],
-            PackedParam.TypeString => exec.StringValues[paramIdx],
+            PackedParam.TypeString => exec.GetAnalyzedSlice(walkerCtx.IndexSearcher, ResolveFieldMetadata(sortExec.Clause, walkerCtx), paramIdx),
             _ => null
         };
 
