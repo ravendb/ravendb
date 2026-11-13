@@ -456,26 +456,15 @@ namespace Sparrow.Server.Compression
                         entry.KeyBuffer[j] = 0;
                 }
 
+                // Interval i spans [StartKey(i), StartKey(i + 1) - 1]; the last interval is open-ended up to 0xFFFFFF.
+                var upperBound = new SymbolCode([0xFF, 0xFF, 0xFF], default);
                 if (i < dictSize - 1)
                 {
-                    entry.PrefixLength = 0;
-
-                    // We want a local copy of it. 
-                    var nextSymbol = symbolCodeList[i + 1];
-                    int nextSymbolLength = nextSymbol.Length;
-
-                    nextSymbol.StartKey[nextSymbolLength - 1] -= 1;
-                    int j = 0;
-                    while (j < symbolLength && j < nextSymbolLength && symbol.StartKey[j] == nextSymbol.StartKey[j])
-                    {
-                        entry.PrefixLength++;
-                        j++;
-                    }
+                    upperBound = symbolCodeList[i + 1];
+                    upperBound.StartKey[upperBound.Length - 1] -= 1;
                 }
-                else
-                {
-                    entry.PrefixLength = (byte)symbolLength;
-                }
+
+                entry.PrefixLength = (byte)symbol.StartKey.CommonPrefixLength(upperBound.StartKey);
 
                 entry.Code = symbolCodeList[i].Code;
 

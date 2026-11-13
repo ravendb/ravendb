@@ -315,6 +315,9 @@ namespace FastTests.Sparrow
 
         [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
+        [InlineData(2979)]
+        [InlineData(57247)]
+        [InlineData(77252)]
         public void VerifyOrderPreservationAtRandomStreams(int randomSeed = 3117)
         {
             State state = new(64000);
