@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -9,10 +9,60 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
     public sealed class DynamicLambdaExpressionsRewriter : CSharpSyntaxRewriter
     {
-        public static readonly DynamicLambdaExpressionsRewriter Instance = new DynamicLambdaExpressionsRewriter();
+        private readonly HashSet<string> _rangeSourceParameters;
 
-        private DynamicLambdaExpressionsRewriter()
+        private readonly string _dynamicEnumerable;
+
+        private readonly bool _usesLinqEnumerable;
+        private readonly bool _usesLinqStringOrdering;
+
+        public DynamicLambdaExpressionsRewriter(HashSet<string> rangeSourceParameters, string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering)
         {
+            _rangeSourceParameters = rangeSourceParameters;
+            _dynamicEnumerable = dynamicEnumerable;
+            _usesLinqEnumerable = usesLinqEnumerable;
+            _usesLinqStringOrdering = usesLinqStringOrdering;
+        }
+
+        private bool RedirectsStringOrdering(InvocationExpressionSyntax invocation) => _usesLinqStringOrdering ||
+            invocation.Expression is MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax { Identifier.ValueText: "Enumerable" } };
+
+        public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
+        {
+            if (node.Expression is not MemberAccessExpressionSyntax member ||
+                member.Name is not IdentifierNameSyntax method ||
+                method.Identifier.ValueText is not ("OrderBy" or "OrderByDescending" or "ThenBy" or "ThenByDescending") ||
+                HasArrayOrderingSource(node, out bool stringArray) == false || stringArray == false || RedirectsStringOrdering(node) == false)
+                return base.VisitInvocationExpression(node);
+
+            var isDynamicSelector = UsesDefaultOrderingArguments(node) &&
+                                    node.ArgumentList.Arguments.Any(argument => argument.Expression is LambdaExpressionSyntax lambda && HasUntypedParameter(lambda));
+
+            var visited = (InvocationExpressionSyntax)base.VisitInvocationExpression(node)!;
+            var visitedMember = (MemberAccessExpressionSyntax)visited.Expression;
+            var arguments = visited.ArgumentList.Arguments;
+
+            if (member.Expression is not IdentifierNameSyntax { Identifier.ValueText: "Enumerable" })
+                arguments = arguments.Insert(index: 0, node: SyntaxFactory.Argument(visitedMember.Expression));
+
+            SimpleNameSyntax targetName = SyntaxFactory.IdentifierName(method.Identifier.ValueText + "WithDefaultComparer");
+
+            if (isDynamicSelector)
+            {
+                // Preserve string elements for typed ThenBy while keeping the released dynamic key access.
+                TypeSyntax[] typeArguments =
+                [
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)),
+                    SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.ObjectKeyword))
+                ];
+
+                targetName = SyntaxFactory
+                    .GenericName(method.Identifier.ValueText + "WithDefaultComparer")
+                    .WithTypeArgumentList(SyntaxFactory.TypeArgumentList(SyntaxFactory.SeparatedList(typeArguments)));
+            }
+
+            var target = SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expression: SyntaxFactory.ParseExpression(_dynamicEnumerable), targetName);
+            return visited.WithExpression(target).WithArgumentList(visited.ArgumentList.WithArguments(arguments));
         }
 
         public override SyntaxNode VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
@@ -73,14 +123,43 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
             switch (method)
             {
-                case "Select":
-                case "ToDictionary":
-                case "ToLookup":
-                case "GroupBy":
                 case "OrderBy":
                 case "OrderByDescending":
                 case "ThenBy":
                 case "ThenByDescending":
+                    if (HasArrayOrderingSource(invocation, out bool stringArray) == false || stringArray && RedirectsStringOrdering(invocation) == false)
+                        return Visit(ModifyLambdaForSelect(node, invocation));
+
+                    if (stringArray && UsesDefaultOrderingArguments(invocation) && HasUntypedParameter(node))
+                    {
+                        if (node.Body is ExpressionSyntax dynamicKey)
+                        {
+                            var body = PreserveClrNullOrderingKey(dynamicKey);
+                            node = node is SimpleLambdaExpressionSyntax simpleKey
+                                ? simpleKey.WithBody(body)
+                                : ((ParenthesizedLambdaExpressionSyntax)node).WithBody(body);
+                        }
+
+                        return Visit(node: SyntaxFactory.ParseExpression(text: $"(Func<dynamic, dynamic>)({node})"));
+                    }
+
+                    if (node.Body is ExpressionSyntax key)
+                    {
+                        var body = PreserveClrNullOrderingKey(key);
+                        node = node is SimpleLambdaExpressionSyntax simpleKey
+                            ? simpleKey.WithBody(body)
+                            : ((ParenthesizedLambdaExpressionSyntax)node).WithBody(body);
+                    }
+
+                    // Over a CLR array the lambda stays typed: a dynamic delegate would not bind value-type arrays and typed comparers.
+                    return node is SimpleLambdaExpressionSyntax simple
+                        ? base.VisitSimpleLambdaExpression(simple)
+                        : base.VisitParenthesizedLambdaExpression((ParenthesizedLambdaExpressionSyntax)node);
+
+                case "Select":
+                case "ToDictionary":
+                case "ToLookup":
+                case "GroupBy":
                 case "Recurse":
                     return Visit(ModifyLambdaForSelect(node, invocation));
                 case "SelectMany":
@@ -115,9 +194,122 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "TakeWhile":
                 case "SkipWhile":
                     return Visit(ModifyLambdaForTakeSkipWhile(node));
+                case "ChooseRangeSource":
+                    // The generated lambda wraps a call written in the index, whose lambdas are rewritten as usual.
+                    if (node is SimpleLambdaExpressionSyntax rangeSource &&
+                        _rangeSourceParameters.Contains(rangeSource.Parameter.Identifier.ValueText) &&
+                        GeneratedSourceSelector.IsRangeSourceChoice(invocation))
+                        return base.VisitSimpleLambdaExpression(rangeSource);
+                    break;
             }
 
             return node;
+        }
+
+        private static bool UsesDefaultOrderingArguments(InvocationExpressionSyntax invocation)
+        {
+            if (invocation.Expression is not MemberAccessExpressionSyntax member)
+                return false;
+
+            var isStaticEnumerable = member.Expression is IdentifierNameSyntax { Identifier.ValueText: "Enumerable" };
+            return invocation.ArgumentList.Arguments.Count == (isStaticEnumerable ? 2 : 1);
+        }
+
+        private static bool HasUntypedParameter(LambdaExpressionSyntax lambda)
+        {
+            var parameter = lambda switch
+            {
+                SimpleLambdaExpressionSyntax simple => simple.Parameter,
+                ParenthesizedLambdaExpressionSyntax { ReturnType: null, ParameterList.Parameters.Count: 1 } parenthesized => parenthesized.ParameterList.Parameters[0],
+                _ => null
+            };
+
+            return parameter is { Type: null, Modifiers.Count: 0 };
+        }
+
+        private static ExpressionSyntax PreserveClrNullOrderingKey(ExpressionSyntax expression)
+        {
+            // Parentheses keep a returned CLR null out of dynamic-null rewriting without changing key type inference.
+            return expression switch
+            {
+                LiteralExpressionSyntax literal when literal.IsKind(SyntaxKind.NullLiteralExpression) && NullRewriter.ShouldApply(literal) => SyntaxFactory.ParenthesizedExpression(literal),
+                ConditionalExpressionSyntax conditional => conditional
+                    .WithWhenTrue(PreserveClrNullOrderingKey(conditional.WhenTrue))
+                    .WithWhenFalse(PreserveClrNullOrderingKey(conditional.WhenFalse)),
+                ParenthesizedExpressionSyntax parenthesized => parenthesized.WithExpression(PreserveClrNullOrderingKey(parenthesized.Expression)),
+                _ => expression
+            };
+        }
+
+        private bool HasArrayOrderingSource(InvocationExpressionSyntax invocation, out bool stringArray)
+        {
+            stringArray = false;
+            if (invocation.Expression is not MemberAccessExpressionSyntax { Name: IdentifierNameSyntax } member)
+                return false;
+
+            var source = member.Expression;
+            if (source is IdentifierNameSyntax { Identifier.ValueText: "Enumerable" })
+            {
+                if (_usesLinqEnumerable == false || invocation.ArgumentList.Arguments.Count == 0)
+                    return false;
+
+                source = invocation.ArgumentList.Arguments[0].Expression;
+            }
+
+            while (source is ParenthesizedExpressionSyntax parenthesized)
+                source = parenthesized.Expression;
+
+            if (source is ArrayCreationExpressionSyntax { Type.ElementType: PredefinedTypeSyntax elementType })
+            {
+                stringArray = elementType.Keyword.IsKind(SyntaxKind.StringKeyword);
+                return elementType.Keyword.IsKind(SyntaxKind.ObjectKeyword) == false;
+            }
+
+            if (source is ImplicitArrayCreationExpressionSyntax array)
+            {
+                stringArray = true;
+                foreach (var expression in array.Initializer.Expressions)
+                {
+                    var value = expression;
+                    while (value is not LiteralExpressionSyntax)
+                    {
+                        if (value is ParenthesizedExpressionSyntax parenthesizedValue)
+                            value = parenthesizedValue.Expression;
+                        else if (value is PrefixUnaryExpressionSyntax unary && unary.Kind() is
+                                 SyntaxKind.UnaryPlusExpression or SyntaxKind.UnaryMinusExpression or SyntaxKind.BitwiseNotExpression or SyntaxKind.LogicalNotExpression)
+                            value = unary.Operand;
+                        else
+                            return false;
+                    }
+
+                    stringArray &= value.IsKind(SyntaxKind.StringLiteralExpression) || value.IsKind(SyntaxKind.NullLiteralExpression);
+                    if (value.IsKind(SyntaxKind.DefaultLiteralExpression))
+                        return false;
+                }
+
+                return true;
+            }
+
+            if (source is InvocationExpressionSyntax
+                {
+                    Expression: MemberAccessExpressionSyntax
+                    {
+                        Name.Identifier.ValueText:
+                        "OrderBy" or
+                        "OrderByDescending" or
+                        "ThenBy" or
+                        "ThenByDescending"
+                    }
+                } previous)
+            {
+                foreach (var argument in previous.ArgumentList.Arguments)
+                {
+                    if (argument.Expression is LambdaExpressionSyntax)
+                        return HasArrayOrderingSource(previous, out stringArray);
+                }
+            }
+
+            return false;
         }
 
         private static SyntaxNode ModifyLambdaForMinMax(LambdaExpressionSyntax node)
