@@ -99,7 +99,7 @@ internal static partial class QueryPlanBuilder
                 if (ctx.OrderByFields == null || ctx.Exec.VectorPostFilterProvidesScoreOrder) 
                     return (innerMatch, innerMatch);
                 if (innerMatch is CompiledQueryMatch seekMatch)
-                    TrySetSortSeekHint(ctx.Plan, ctx.Exec, seekMatch);
+                    TrySetSortSeekHint(ctx.Plan, ctx.Exec, walkerCtx, seekMatch);
                 return (ApplyForcedSort(OrderBy(ctx.BuilderParams, innerMatch, ctx.OrderByFields), forcedSort), innerMatch);
             }
         }
