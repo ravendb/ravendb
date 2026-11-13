@@ -121,7 +121,7 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
                     {selectedErrors.length === 1 ? "index" : "indexes"}:
                     <ul>
                         {selectedErrors.map((error) => (
-                            <li title={error} className="text-truncate">
+                            <li key={error} title={error} className="text-truncate">
                                 <b>{error}</b>
                             </li>
                         ))}

@@ -187,9 +187,13 @@ const taskNodeInfoKey = (
     switch (task.shared.taskType) {
         case "PullReplicationAsHub":
             // since one hub can handle multiple sinks, we can't use (shard, nodeTag) for unique key
-            // instead we use handlerId (which is random guid)
-            return nodeInfo.details.handlerId;
+            // instead we use handlerId (which is random guid). A node that failed to load the task has no handlerId.
+            return nodeInfo.details.handlerId ?? getLocationKey(nodeInfo);
         default:
-            return nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;
+            return getLocationKey(nodeInfo);
     }
 };
+
+const getLocationKey = (
+    nodeInfo: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>
+) => nodeInfo.location.shardNumber + "__" + nodeInfo.location.nodeTag;
