@@ -54,7 +54,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                     </Metric>
                     <Metric label="Data file syncs" help={storageTermHelp.syncCost}>
                         {formatSyncCost(device.SyncCostInMs)}
-                        <Sub>writes get paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
+                        <Sub>paced above {formatMs(thresholds.SyncCostDrainInMs)}</Sub>
                     </Metric>
                     <Metric label="Queue depth" help={storageTermHelp.queueDepth}>
                         {device.QueueDepth == null ? (
