@@ -481,7 +481,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         RemoveEntryFromPage(ref state, ref key, state.LastSearchPosition, isExplicitRemove, out _);
 
-        if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+        if (state.Header->IsLeaf)
         {
             _state.NumberOfEntries--;
         }
@@ -755,7 +755,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
     private void DecrementPageNumbers(ref CursorState state)
     {
-        if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+        if (state.Header->IsLeaf)
         {
             _state.LeafPages--;
         }
@@ -817,7 +817,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
             state.Header->Lower -= sizeof(short);
             state.Header->FreeSpace += (ushort)(sizeof(short) + len);
-            if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+            if (state.Header->IsLeaf)
                 _state.NumberOfEntries--; // we aren't counting branch entries
         }
 
@@ -915,7 +915,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         }
         
-        if (header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+        if (header->IsLeaf)
             _state.NumberOfEntries++; // we aren't counting branch entries
 
         Debug.Assert(header->FreeSpace >= requiredSize + sizeof(ushort));
@@ -950,7 +950,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         header->Upper = Constants.Storage.PageSize;
         header->FreeSpace = Constants.Storage.PageSize - PageHeader.SizeOf;
 
-        if (header->PageFlags.HasFlag(LookupPageFlags.Branch))
+        if (header->IsBranch)
         {
             _state.BranchPages++;
         }
@@ -1324,7 +1324,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             Debug.Assert(state.Header->IsBranch ^ state.Header->IsLeaf, "state.Header->IsBranch ^ state.Header->IsLeaf");
 
             results.Add(p);
-            if (state.Header->PageFlags.HasFlag(LookupPageFlags.Branch))
+            if (state.Header->IsBranch)
             {
                 for (int i = 0; i < state.Header->NumberOfEntries; i++)
                 {
