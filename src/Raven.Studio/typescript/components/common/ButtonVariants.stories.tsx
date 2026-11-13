@@ -105,7 +105,13 @@ function AllButtonColors(props: AllButtonColorsProps) {
     return (
         <div className="hstack gap-1">
             {colors.map((color) => (
-                <Button variant={outline ? `outline-${color}` : color} size={size} active={active} disabled={disabled}>
+                <Button
+                    key={color}
+                    variant={outline ? `outline-${color}` : color}
+                    size={size}
+                    active={active}
+                    disabled={disabled}
+                >
                     {color}
                 </Button>
             ))}
@@ -117,7 +123,7 @@ function AllButtonWithSpinnerColors({ size }: AllButtonColorsProps) {
     return (
         <div className="hstack gap-1">
             {colors.map((color) => (
-                <ButtonWithSpinner variant={color} size={size} isSpinning>
+                <ButtonWithSpinner key={color} variant={color} size={size} isSpinning>
                     {color}
                 </ButtonWithSpinner>
             ))}

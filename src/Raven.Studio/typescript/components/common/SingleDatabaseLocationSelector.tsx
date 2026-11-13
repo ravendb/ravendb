@@ -26,21 +26,19 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                             {locations.map((location, idx) => {
                                 const locationId = uniqId + idx;
                                 return (
-                                    <>
-                                        <NodeSetItem key={locationId}>
-                                            <FormLabel htmlFor={locationId}>
-                                                <Icon icon="node" color="node" title={"Node " + location.nodeTag} />
-                                                {location.nodeTag}
-                                                <div className="d-flex justify-content-center">
-                                                    <Radio
-                                                        id={locationId}
-                                                        selected={selectedLocation === location}
-                                                        toggleSelection={() => setSelectedLocation(location)}
-                                                    />
-                                                </div>
-                                            </FormLabel>
-                                        </NodeSetItem>
-                                    </>
+                                    <NodeSetItem key={locationId}>
+                                        <FormLabel htmlFor={locationId}>
+                                            <Icon icon="node" color="node" title={"Node " + location.nodeTag} />
+                                            {location.nodeTag}
+                                            <div className="d-flex justify-content-center">
+                                                <Radio
+                                                    id={locationId}
+                                                    selected={selectedLocation === location}
+                                                    toggleSelection={() => setSelectedLocation(location)}
+                                                />
+                                            </div>
+                                        </FormLabel>
+                                    </NodeSetItem>
                                 );
                             })}
                         </NodeSetList>
@@ -64,9 +62,8 @@ export function SingleDatabaseLocationSelector(props: SingleDatabaseLocationSele
                                             .map((location) => {
                                                 const shardId = nodeId + "-shard-" + location.shardNumber;
                                                 return (
-                                                    <NodeSetItem color="shard">
+                                                    <NodeSetItem key={shardId} color="shard">
                                                         <FormLabel
-                                                            key={shardId}
                                                             htmlFor={shardId}
                                                             title={"Shard " + location.shardNumber}
                                                         >

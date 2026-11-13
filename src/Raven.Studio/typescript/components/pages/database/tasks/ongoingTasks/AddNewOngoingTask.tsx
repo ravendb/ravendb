@@ -10,7 +10,7 @@ import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { AccessPopover } from "components/common/AccessPopover";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
@@ -21,7 +21,6 @@ import { Checkbox } from "components/common/Checkbox";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
 
 interface AddNewOngoingTaskQueryParams {
     noBack?: string;
@@ -325,13 +324,10 @@ function TaskItem({
     const isCompact = displayMode === "compact";
 
     return (
-        <ConditionalPopover
+        <AccessPopover
+            accessRequired={accessRequired}
             className="w-100 h-100"
             conditions={[
-                {
-                    isActive: !canHandleOperation,
-                    message: getDatabaseAccessRequiredMessage(accessRequired),
-                },
                 {
                     isActive: isShardingNotSupported,
                     message: "Sharding is not supported for this task",
@@ -370,6 +366,6 @@ function TaskItem({
                     />
                 )}
             </a>
-        </ConditionalPopover>
+        </AccessPopover>
     );
 }

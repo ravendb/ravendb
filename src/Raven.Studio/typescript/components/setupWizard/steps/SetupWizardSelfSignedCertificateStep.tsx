@@ -181,8 +181,8 @@ export function SetupWizardSelfSignedCertificateStep() {
                     <LazyLoad active={cnsDebounce.loading}>
                         <div className="vstack gap-1">
                             {cns.map((cn) => (
-                                <div className="panel-bg-2">
-                                    <Form.Control key={cn} type="text" value={cn} disabled readOnly />
+                                <div key={cn} className="panel-bg-2">
+                                    <Form.Control type="text" value={cn} disabled readOnly />
                                 </div>
                             ))}
                         </div>

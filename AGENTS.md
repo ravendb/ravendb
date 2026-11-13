@@ -5,7 +5,7 @@ This file is the canonical guidance for AI coding agents working in this reposit
 ## Agent Behavior Rules
 
 - Always run validation even for trivial doc/test changes.
-- Run a full build (`dotnet build RavenDB.sln`) at the end of a task to confirm nothing broke.
+- Run a full build (`dotnet build RavenDB.sln`) at the end of a task to confirm nothing broke. A change only in `src/Raven.Studio` does not need it; run the Studio validation instead.
 - If working on FastTests, prefer speed and isolate dependencies.
 - Continue tasks without stopping at checkpoints until completely finished.
 - Prefer scripts over manual searching/counting to track exact locations and progress — LLMs are unreliable at counting.
@@ -142,6 +142,8 @@ The Studio (`src/Raven.Studio`) is a **Knockout.js → React hybrid** managed by
 - **Legacy**: Knockout.js viewmodels in `typescript/viewmodels/`, paired with HTML views
 - **Modern**: React components in `typescript/components/` (pages, common, hooks)
 - New UI work should use React. Storybook is available (`npm run storybook`).
+
+All rules for Studio work live in **[`src/Raven.Studio/AGENTS.md`](src/Raven.Studio/AGENTS.md)**. Read it before changing anything in the Studio.
 
 ## Code Conventions
 

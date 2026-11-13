@@ -155,12 +155,12 @@ export default function KafkaConnectionString({
                 </FormLabel>
                 <div className="vstack gap-3">
                     {connectionOptionsFieldArray.fields.map((option, idx) => (
-                        <div>
+                        <div key={option.id}>
                             <div className="vstack mb-2 gap-1">
                                 <FormLabel className="mb-0 d-flex align-items-center gap-1">
                                     <span className="small-label mb-0">Connection Option #{idx + 1}</span>
                                 </FormLabel>
-                                <div key={option.id} className="d-flex gap-1 mb-2">
+                                <div className="d-flex gap-1 mb-2">
                                     <FormInput
                                         type="text"
                                         control={control}

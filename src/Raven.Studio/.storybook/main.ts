@@ -33,7 +33,18 @@ const config: StorybookConfig = {
         "../typescript/components/pages/**/*.stories.tsx",
         "../typescript/components/setupWizard/**/*.stories.tsx",
     ],
-    addons: ["@storybook/addon-a11y", "@storybook/addon-designs"],
+    addons: [
+        "@storybook/addon-a11y",
+        "@storybook/addon-designs",
+        {
+            name: "@storybook/addon-mcp",
+            options: {
+                // The docs toolset only knows the components that have stories and tells agents to treat anything
+                // else as nonexistent and never to read the source. Agents here read the source.
+                toolsets: { docs: false },
+            },
+        },
+    ],
     docs: {
         docsMode: false,
     },
