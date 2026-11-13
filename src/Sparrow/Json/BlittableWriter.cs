@@ -549,9 +549,9 @@ namespace Sparrow.Json
 
 #if NET7_0_OR_GREATER
 
-        public static byte[] ByteActionTable =>
+        private static ReadOnlySpan<byte> ByteActionTable =>
         [
-            // 0-31: Control characters (action = 2)
+            // 0-31: Control characters (action = 1)
             1, 1, 1, 1, 1, 1, 1, 1, // 0-7
             1, 1, 1, 1, 1, 1, 1, 1, // 8-15 (\b, \t, \n, _, \f, \r)
             1, 1, 1, 1, 1, 1, 1, 1, // 16-23
