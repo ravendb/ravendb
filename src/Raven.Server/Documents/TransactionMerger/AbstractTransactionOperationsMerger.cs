@@ -178,7 +178,10 @@ namespace Raven.Server.Documents.TransactionMerger
                             using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                             {
                                 generalMeter.IncrementCounter(1);
-                                _waitHandle.Wait(_shutdown);
+                                _waitHandle.Wait();
+
+                                if (_runTransactions == false)
+                                    return;
                             }
                             _waitHandle.Reset();
                         }
