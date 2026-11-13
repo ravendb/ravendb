@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -13,6 +14,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
         private readonly string _databaseName;
         private readonly long _taskId;
 
+        public bool Inserted { get; private set; }
+
         public UpdateLocalBackupStatusCommand(PeriodicBackupStatus backupStatus, string databaseName, long taskId)
         {
             _backupStatusAsJson = (backupStatus ?? throw new ArgumentNullException(nameof(backupStatus))).ToJson();
@@ -22,8 +25,15 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
 
         protected override long ExecuteCmd(ClusterOperationContext context)
         {
+            if (ClusterStateMachine.DatabaseExists(context, _databaseName) == false)
+            {
+                Inserted = false;
+                return 0;
+            }
+
             var statusBlittable = context.ReadObject(_backupStatusAsJson, $"backup-status-update-taskId-{_taskId}", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             BackupStatusStorage.Insert(context, statusBlittable, _databaseName, _taskId);
+            Inserted = true;
             return 1;
         }
 
