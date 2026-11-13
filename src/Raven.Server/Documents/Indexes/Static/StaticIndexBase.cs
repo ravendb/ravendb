@@ -481,12 +481,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
             }
 
-            var field = IndexField.Create(name, new IndexFieldOptions
-            {
-                Storage = options?.Storage,
-                TermVector = options?.TermVector,
-                Indexing = options?.Indexing,
-            }, allFields, Corax.Constants.IndexWriter.DynamicField);
+            var field = scope.GetOrCreateDynamicField(name, options?.Indexing, options?.Storage, options?.TermVector, allFields, Corax.Constants.IndexWriter.DynamicField);
 
             scope.DynamicFields ??= new Dictionary<string, IndexField>();
             if (scope.DynamicFields.TryGetValue(name, out var existing) == false)
@@ -523,7 +518,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.IndexDefinition is MapIndexDefinition mapIndexDefinition)
                 mapIndexDefinition.IndexDefinition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
 
-            var field = scope.GetOrCreateLuceneDynamicField(name, options.Indexing, options.Storage, options.TermVector, allFields);
+            var field = scope.GetOrCreateDynamicField(name, options.Indexing, options.Storage, options.TermVector, allFields);
 
             if (scope.DynamicFields == null)
                 scope.DynamicFields = new Dictionary<string, IndexField>();

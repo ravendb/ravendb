@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             var indexingScope = CurrentIndexingScope.Current;
             field = indexingScope != null
-                ? indexingScope.GetOrCreateLuceneDynamicField(fieldName, fieldIndexing, fieldStorage, termVector, _allFields)
+                ? indexingScope.GetOrCreateDynamicField(fieldName, fieldIndexing, fieldStorage, termVector, _allFields)
                 : IndexField.Create(fieldName,
                     new IndexFieldOptions()
                     {

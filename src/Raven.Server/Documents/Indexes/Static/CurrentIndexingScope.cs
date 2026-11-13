@@ -88,28 +88,30 @@ namespace Raven.Server.Documents.Indexes.Static
         /// </summary>
         public void ResetCreatedFieldPositions() => _createdFieldPosition = 0;
 
-        private Dictionary<(string Name, FieldIndexing? Indexing, FieldStorage? Storage, FieldTermVector? TermVector), IndexField> _luceneDynamicFields;
+        private Dictionary<(string Name, FieldIndexing? Indexing, FieldStorage? Storage, FieldTermVector? TermVector, int Id), IndexField> _dynamicFields;
 
         /// <summary>
-        /// Returns the index field of a dynamic field created (by CreateField) in a Lucene index. The same field (name and options) is usually created
-        /// for many values, so we create its index field (and the names of its additional Lucene fields) once per batch, not for every value.
+        /// Returns the index field of a dynamic field created (by CreateField). The same field (name and options) is usually created
+        /// for many values, so we create its index field (and, for Lucene, the names of its additional fields) once per batch, not for every value.
+        /// The returned field is shared, so it must not be modified.
         /// </summary>
         /// <param name="allFields">The options of all the fields of the index, the same for every call in this scope.</param>
-        public IndexField GetOrCreateLuceneDynamicField(string name, FieldIndexing? indexing, FieldStorage? storage, FieldTermVector? termVector, IndexFieldOptions allFields)
+        /// <param name="id">The id of the field: 0 for Lucene, <see cref="Corax.Constants.IndexWriter.DynamicField"/> for Corax.</param>
+        public IndexField GetOrCreateDynamicField(string name, FieldIndexing? indexing, FieldStorage? storage, FieldTermVector? termVector, IndexFieldOptions allFields, int id = 0)
         {
-            _luceneDynamicFields ??= new();
+            _dynamicFields ??= new();
 
-            var key = (name, indexing, storage, termVector);
-            if (_luceneDynamicFields.TryGetValue(key, out var field) == false)
+            var key = (name, indexing, storage, termVector, id);
+            if (_dynamicFields.TryGetValue(key, out var field) == false)
             {
                 field = IndexField.Create(name, new IndexFieldOptions
                 {
                     Indexing = indexing,
                     Storage = storage,
                     TermVector = termVector
-                }, allFields);
+                }, allFields, id);
 
-                _luceneDynamicFields[key] = field;
+                _dynamicFields[key] = field;
             }
 
             return field;
