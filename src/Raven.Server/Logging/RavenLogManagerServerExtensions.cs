@@ -311,9 +311,7 @@ internal static class RavenLogManagerServerExtensions
         LogManager.ThrowConfigExceptions = configuration.Logs.ThrowConfigExceptions;
 
         ConsoleRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#if !RVN
-        PipeRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#endif
+
         if (TryConfigureLoggingFromFile(configuration))
             return;
 
