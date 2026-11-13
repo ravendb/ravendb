@@ -103,7 +103,7 @@ class ioStats extends historyAwareNodeStats<IoStatsPayload> {
         const lines: [string, string][] = [
             ["Writes paced in the last hour", storageIoFormat.formatPercent(status.DrainShareOfLastHour)],
             ["Journal writes", storageIoFormat.formatMs(status.JournalWriteLatencyInMs)],
-            ["Data syncs", storageIoFormat.formatSyncCost(status.SyncCostInMs)],
+            ["Data file syncs", storageIoFormat.formatSyncCost(status.SyncCostInMs)],
             ["Mount point", status.MountPoint],
         ];
 
