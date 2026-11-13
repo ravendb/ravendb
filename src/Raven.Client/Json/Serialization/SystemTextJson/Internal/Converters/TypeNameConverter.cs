@@ -202,6 +202,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private abstract class DictionaryEntries
         {
             public abstract bool TryWrite(Utf8JsonWriter writer, object dictionary, in ItemWriter values, JsonSerializerOptions options);
+
+            public abstract bool TryRead(ref Utf8JsonReader reader, object dictionary, in ItemReader values, PropertyInfo indexer, JsonSerializerOptions options);
         }
 
         private sealed class DictionaryEntries<TKey, TValue> : DictionaryEntries
@@ -211,6 +213,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (dictionary is not IEnumerable<KeyValuePair<TKey, TValue>> pairs)
                     return false;
 
+                bool typed = values.TryGetConverter(out JsonConverter<TValue> converter);
+
                 foreach (KeyValuePair<TKey, TValue> pair in pairs)
                 {
                     if (typeof(TKey) == typeof(string))
@@ -218,7 +222,51 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     else
                         WriteKey(writer, pair.Key, typeof(TKey), options);
 
-                    values.Write(writer, pair.Value, options);
+                    if (typed == false)
+                        values.Write(writer, pair.Value, options);
+                    else if (pair.Value is null)
+                        writer.WriteNullValue();
+                    else
+                        converter.Write(writer, pair.Value, options);
+                }
+
+                return true;
+            }
+
+            public override bool TryRead(ref Utf8JsonReader reader, object dictionary, in ItemReader values, PropertyInfo indexer, JsonSerializerOptions options)
+            {
+                if (typeof(TKey) != typeof(string) || dictionary is not IDictionary<TKey, TValue> target || values.TryGetConverter(out JsonConverter<TValue> converter) == false)
+                    return false;
+
+                bool leading = true;
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    bool isTypeName = leading && reader.ValueTextEquals(TypePropertyName);
+                    leading = false;
+
+                    string key = isTypeName ? null : reader.GetString();
+                    reader.Read();
+
+                    if (isTypeName)
+                        continue;
+
+                    switch (reader.TokenType)
+                    {
+                        case JsonTokenType.Null:
+                        case JsonTokenType.StartArray:
+                        case JsonTokenType.StartObject:
+                            object value = values.Read(ref reader, options);
+                            if (value is TValue item)
+                                target[(TKey)(object)key] = item;
+                            else if (dictionary is IDictionary nonGeneric)
+                                nonGeneric[key] = value;
+                            else
+                                indexer.SetValue(dictionary, value, [key]);
+                            break;
+                        default:
+                            target[(TKey)(object)key] = converter.Read(ref reader, typeof(TValue), options);
+                            break;
+                    }
                 }
 
                 return true;
@@ -259,6 +307,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             private readonly JsonTypeInfo _typeInfo;
 
+            private readonly bool _exact;
+
             private readonly bool _alwaysWriteObjectTypeName;
 
             public ItemWriter(Type itemType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
@@ -267,10 +317,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 _runtimeType = Nullable.GetUnderlyingType(itemType) ?? itemType;
                 _alwaysWriteObjectTypeName = alwaysWriteObjectTypeName;
 
-                bool exact = _runtimeType.IsSealed || _runtimeType.IsValueType;
-                bool direct = exact ? IsWrittenAsIs(_runtimeType, options) : alwaysWriteObjectTypeName == false && TypeShape.Of(itemType).IsPlainObject;
+                _exact = _runtimeType.IsSealed || _runtimeType.IsValueType;
+                bool direct = _exact ? IsWrittenAsIs(_runtimeType, options) : alwaysWriteObjectTypeName == false && TypeShape.Of(itemType).IsPlainObject;
                 _typed = direct ? GetTypedValue(itemType) : null;
                 _typeInfo = direct ? GetTypeInfo(itemType, options) : null;
+            }
+
+            public bool TryGetConverter<T>(out JsonConverter<T> converter)
+            {
+                converter = _typed != null && _exact ? _typeInfo.Converter as JsonConverter<T> : null;
+                return converter != null;
             }
 
             public void Write(Utf8JsonWriter writer, object item, JsonSerializerOptions options)
@@ -300,6 +356,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 _typed = GetTypedValue(itemType);
                 _typeInfo = GetTypeInfo(itemType, options);
                 _isPlainObject = TypeShape.Of(itemType).IsPlainObject;
+            }
+
+            public bool TryGetConverter<T>(out JsonConverter<T> converter)
+            {
+                converter = _typeInfo.Converter as JsonConverter<T>;
+                return converter != null;
             }
 
             public object Read(ref Utf8JsonReader reader, JsonSerializerOptions options)
@@ -416,8 +478,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 writer.WriteString(TypePropertyName, GetTypeName(runtimeType));
 
             var values = new ItemWriter(valueType, alwaysWriteObjectTypeName, options);
-            DictionaryEntries entries = _dictionaryEntries.GetOrAdd((keyType, valueType), static key => (DictionaryEntries)Activator.CreateInstance(typeof(DictionaryEntries<,>).MakeGenericType(key.KeyType, key.ValueType)));
-            if (entries.TryWrite(writer, dictionary, values, options) == false)
+            if (GetDictionaryEntries(keyType, valueType).TryWrite(writer, dictionary, values, options) == false)
             {
                 foreach (DictionaryEntry entry in dictionary)
                 {
@@ -427,6 +488,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             }
 
             writer.WriteEndObject();
+        }
+
+        private static DictionaryEntries GetDictionaryEntries(Type keyType, Type valueType)
+        {
+            (Type, Type) key = (keyType, valueType);
+            return _dictionaryEntries.TryGetValue(key, out DictionaryEntries entries)
+                ? entries
+                : _dictionaryEntries.GetOrAdd(key, static k => (DictionaryEntries)Activator.CreateInstance(typeof(DictionaryEntries<,>).MakeGenericType(k.KeyType, k.ValueType)));
         }
 
         private static void WriteKey(Utf8JsonWriter writer, object key, Type keyType, JsonSerializerOptions options)
@@ -696,6 +765,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             PropertyInfo indexer = shape.Indexer;
 
             var values = new ItemReader(valueType, options);
+            if (GetDictionaryEntries(keyType, valueType).TryRead(ref reader, dictionary, values, indexer, options))
+                return shape.Finish == null ? dictionary : shape.Finish(dictionary);
+
             bool leading = true;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
