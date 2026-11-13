@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditTimeSeriesConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public TimeSeriesConfiguration Configuration { get; private set; }
 
         public EditTimeSeriesConfigurationCommand()

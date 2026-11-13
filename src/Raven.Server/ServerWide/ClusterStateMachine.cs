@@ -842,7 +842,7 @@ namespace Raven.Server.ServerWide
                     if (databases.Add(database))
                     {
                         actions.Add(() =>
-                        Changes.OnDatabaseChanges(database, index, nameof(T), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
+                        Changes.OnDatabaseChanges(database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
                     }
                 }
 
@@ -1648,6 +1648,9 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
+                    databaseRecord.ClusterState ??= new DatabaseRecordClusterState();
+                    databaseRecord.ClusterState.Stamp(remove.GetChangedSections(), index);
+
                     var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
 
                     UpdateValue(index, items, lowerKey, key, updated);
@@ -1804,6 +1807,11 @@ namespace Raven.Server.ServerWide
             Exception exception = null;
             try
             {
+                // the cluster state is managed by the server, we never trust the one that came with the record (e.g. from a backup of another cluster)
+                // and since the whole record is replaced, we consider all its sections as changed
+                addDatabaseCommand.Record.ClusterState = new DatabaseRecordClusterState();
+                addDatabaseCommand.Record.ClusterState.Stamp(DatabaseRecordSections.All, index);
+
                 Debug.Assert(addDatabaseCommand.Record.ValidateTopologyNodes(), "Attempt to add database with no nodes");
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
@@ -2772,6 +2780,11 @@ namespace Raven.Server.ServerWide
 
                     updateCommand.Initialize(serverStore, context);
 
+#if DEBUG
+                    // we serialize the same instance, since deserialization isn't deterministic for some fields (e.g. SchemaDefinition.LastModifiedTime)
+                    using var recordBeforeUpdate = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
+#endif
+
                     try
                     {
                         updateCommand.UpdateDatabaseRecord(databaseRecord, index);
@@ -2782,6 +2795,10 @@ namespace Raven.Server.ServerWide
                         // and is consistent across the cluster.
                         throw new RachisApplyException("Failed to update database record.", e);
                     }
+
+                    var changedSections = updateCommand.GetChangedSections();
+                    databaseRecord.ClusterState ??= new DatabaseRecordClusterState();
+                    databaseRecord.ClusterState.Stamp(changedSections, index);
 
                     updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
@@ -2795,6 +2812,9 @@ namespace Raven.Server.ServerWide
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
+#if DEBUG
+                    AssertChangedSections(type, changedSections, recordBeforeUpdate, updatedDatabaseBlittable);
+#endif
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
@@ -2809,6 +2829,32 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
             }
         }
+
+#if DEBUG
+        private static void AssertChangedSections(string type, DatabaseRecordSections changedSections, BlittableJsonReaderObject before, BlittableJsonReaderObject after)
+        {
+            if (changedSections == DatabaseRecordSections.All)
+                return;
+
+            var fields = new HashSet<string>(before.GetPropertyNames());
+            fields.UnionWith(after.GetPropertyNames());
+
+            foreach (var field in fields)
+            {
+                before.TryGetMember(field, out var beforeValue);
+                after.TryGetMember(field, out var afterValue);
+
+                if (Equals(beforeValue, afterValue))
+                    continue;
+
+                if (DatabaseRecordSectionsExtensions.SectionByField.TryGetValue(field, out var section) == false)
+                    section = DatabaseRecordSections.All;
+
+                Debug.Assert(changedSections.Contain(section),
+                    $"Command '{type}' modified '{field}' of the database record which belongs to '{section}', but it declares only '{changedSections}' in {nameof(UpdateDatabaseCommand.GetChangedSections)}");
+            }
+        }
+#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void LogCommand(string type, long index, Exception exception, CommandBase commandBase = null)

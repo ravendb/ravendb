@@ -16,6 +16,8 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 {
     public abstract class RemoveConnectionStringCommand<T> : UpdateDatabaseCommand where T : ConnectionString
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.ConnectionStrings;
+
         public string ConnectionStringName { get; protected set; }
 
         protected RemoveConnectionStringCommand()

@@ -67,6 +67,12 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
 
+        // only the configuration and topology, the sections of the features (e.g. the index definitions and their history) are left empty
+        public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecordForEveryChange =
+            GeneratePartialJsonDeserializationRoutine<DatabaseRecord>(DatabaseRecordSectionsExtensions.IsHandledOnEveryChange);
+
+        public static readonly Func<BlittableJsonReaderObject, DatabaseRecordClusterState> DatabaseRecordClusterState = GenerateJsonDeserializationRoutine<DatabaseRecordClusterState>();
+
         public static readonly Func<BlittableJsonReaderObject, DatabaseTopology> DatabaseTopology = GenerateJsonDeserializationRoutine<DatabaseTopology>();
 
         public static readonly Func<BlittableJsonReaderObject, ShardBucketRange> ShardRangeAssignment = GenerateJsonDeserializationRoutine<ShardBucketRange>();

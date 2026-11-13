@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class UpdatePullReplicationAsHubCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Replication;
+
         public PullReplicationDefinition Definition;
 
         public UpdatePullReplicationAsHubCommand() { }

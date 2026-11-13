@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class SetIndexStateCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public string IndexName;
 
         public IndexState State;

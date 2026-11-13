@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
 {
     public sealed class PutAnalyzersCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Analyzers;
+
         public List<AnalyzerDefinition> Analyzers = new List<AnalyzerDefinition>();
 
         public PutAnalyzersCommand()

@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class PromoteDatabaseNodeCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public string NodeTag;
         public int? ShardNumber;
 

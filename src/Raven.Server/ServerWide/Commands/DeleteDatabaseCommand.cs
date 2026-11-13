@@ -12,6 +12,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public string[] ClusterNodes;
         public bool HardDelete;
         public string[] FromNodes;

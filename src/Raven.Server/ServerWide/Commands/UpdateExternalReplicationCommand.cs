@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class UpdateExternalReplicationCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Replication;
+
         public ExternalReplication Watcher;
 
         public UpdateExternalReplicationCommand()

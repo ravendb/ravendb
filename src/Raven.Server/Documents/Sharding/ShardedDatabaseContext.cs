@@ -59,6 +59,14 @@ namespace Raven.Server.Documents.Sharding
         private readonly DatabasesLandlord.StateChange _orchestratorStateChange;
         private readonly DatabasesLandlord.StateChange _urlUpdateStateChange;
 
+        // the features are notified about a database record change only if one of the sections they depend on was changed
+        private readonly DatabaseRecordChangeConsumer _indexesRecordConsumer = new(nameof(Indexes),
+            DatabaseRecordSections.Indexes | DatabaseRecordSections.Sorters | DatabaseRecordSections.Analyzers);
+        private readonly DatabaseRecordChangeConsumer _subscriptionsRecordConsumer = new(nameof(SubscriptionsStorage),
+            DatabaseRecordSections.Topology);
+
+        private long _lastSubscriptionsValueChangeIndex;
+
         public SchemaValidatorCache SchemaValidatorCache { get; private set; }
 
         public ShardedDatabaseContext(ServerStore serverStore, DatabaseRecord record)
@@ -133,11 +141,23 @@ namespace Raven.Server.Documents.Sharding
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context) => ServerStore.ContextPool.AllocateOperationContext(out context);
 
-        public async ValueTask UpdateDatabaseRecordAsync(DatabaseRecord record, long index, string type, ClusterDatabaseChangeType changeType)
+        public async ValueTask UpdateDatabaseRecordAsync(long index, string type, ClusterDatabaseChangeType changeType, object changeState)
         {
             try
             {
-                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _orchestratorStateChange, type, changeType);
+                if (changeType == ClusterDatabaseChangeType.ValueChanged)
+                {
+                    // value changes aren't reflected in the database record, only the subscriptions might need to be updated
+                    if (DatabaseValueChangeConsumersExtensions.ForType(type).Contain(DatabaseValueChangeConsumers.Subscriptions))
+                        await UpdateSubscriptionsOnValueChangeAsync(index);
+                }
+                else
+                {
+                    // pending cluster transactions don't change the parts of the record that are handled by the orchestrator features
+                    var forced = changeType != ClusterDatabaseChangeType.PendingClusterTransactions && DatabasesLandlord.ShouldForceFeaturesNotification(type, changeState);
+                    await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(index, _orchestratorStateChange, type, changeType, forced);
+                }
+
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
             catch (Exception e)
@@ -147,7 +167,29 @@ namespace Raven.Server.Documents.Sharding
             }
         }
 
-        private Task OnDatabaseRecordChange(DatabaseRecord record, long index)
+        private async ValueTask UpdateSubscriptionsOnValueChangeAsync(long index)
+        {
+            // the subscriptions storage reads the current state, so it has already seen all the changes up to the index it handled
+            if (Volatile.Read(ref _lastSubscriptionsValueChangeIndex) > index)
+                return;
+
+            await _orchestratorStateChange.Locker.WaitAsync(_databaseShutdown.Token);
+            try
+            {
+                if (_lastSubscriptionsValueChangeIndex > index)
+                    return;
+
+                SubscriptionsStorage.Update();
+                Volatile.Write(ref _lastSubscriptionsValueChangeIndex, index);
+                ForTestingPurposes?.OnValueChangeHandled?.Invoke(nameof(SubscriptionsStorage), index);
+            }
+            finally
+            {
+                _orchestratorStateChange.Locker.Release();
+            }
+        }
+
+        private Task OnDatabaseRecordChange(DatabaseRecord record, long index, bool forced)
         {
             UpdateConfiguration(record.Settings);
 
@@ -183,14 +225,31 @@ namespace Raven.Server.Documents.Sharding
 
             UpdateSchemaValidationCache(record.SchemaValidation);
 
-            Indexes.Update(record, index);
+            if (_indexesRecordConsumer.ShouldProcess(record, forced, out var version))
+            {
+                Indexes.Update(record, index, out var anyErrors);
 
-            SubscriptionsStorage.Update();
+                // the changes that failed (e.g. an analyzer that couldn't be compiled) are applied again on the next record change
+                if (anyErrors == false)
+                    MarkHandled(_indexesRecordConsumer, version);
+            }
+
+            if (_subscriptionsRecordConsumer.ShouldProcess(record, forced, out version))
+            {
+                SubscriptionsStorage.Update();
+                MarkHandled(_subscriptionsRecordConsumer, version);
+            }
 
             SupportedFeature = new SupportedFeature(record);
             Interlocked.Exchange(ref _record, record);
 
             return Task.CompletedTask;
+
+            void MarkHandled(DatabaseRecordChangeConsumer consumer, long v)
+            {
+                consumer.MarkProcessed(v);
+                ForTestingPurposes?.OnDatabaseRecordChangeHandled?.Invoke(consumer.Name, index);
+            }
         }
 
         private bool CheckForTopologyChangesAndRaiseNotification(DatabaseTopology topology, DatabaseTopology oldTopology)
@@ -210,7 +269,7 @@ namespace Raven.Server.Documents.Sharding
             return false;
         }
 
-        private Task OnUrlChange(DatabaseRecord record, long index)
+        private Task OnUrlChange(DatabaseRecord record, long index, bool forced)
         {
             // we explicitly do not dispose the old executors here to avoid possible memory invalidation and since this is expected to be rare.
             // So we rely on the GC to dispose them via the finalizer

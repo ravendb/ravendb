@@ -5,6 +5,8 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
 {
     public sealed class DeleteAnalyzerCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Analyzers;
+
         public string AnalyzerName;
 
         public DeleteAnalyzerCommand()

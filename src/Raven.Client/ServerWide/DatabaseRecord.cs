@@ -165,6 +165,11 @@ namespace Raven.Client.ServerWide
 
         public HashSet<string> UnusedDatabaseIds = [];
 
+        /// <summary>
+        /// Managed by the server, used to detect which sections of the record were changed.
+        /// </summary>
+        public DatabaseRecordClusterState ClusterState;
+
         [JsonIgnore]
         public bool IsSharded => Sharding?.Shards?.Count > 0;
 

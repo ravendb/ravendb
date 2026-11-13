@@ -10,6 +10,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class PutIndexesCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public List<IndexDefinition> Static = new List<IndexDefinition>();
 
         public List<AutoIndexDefinition> Auto = new List<AutoIndexDefinition>();

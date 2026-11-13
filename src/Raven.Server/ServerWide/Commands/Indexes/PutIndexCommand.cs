@@ -13,6 +13,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class PutIndexCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public IndexDefinition Definition;
 
         public IndexDeploymentMode? DefaultDeploymentMode;

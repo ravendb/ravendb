@@ -15,6 +15,8 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 {
     public sealed class UpdatePeriodicBackupCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.PeriodicBackups;
+
         public PeriodicBackupConfiguration Configuration;
         private bool _shouldRemoveBackupStatus;
 

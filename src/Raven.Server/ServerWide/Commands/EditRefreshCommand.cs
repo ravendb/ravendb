@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditRefreshCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public RefreshConfiguration Configuration;
         public void UpdateDatabaseRecord(DatabaseRecord databaseRecord)
         {

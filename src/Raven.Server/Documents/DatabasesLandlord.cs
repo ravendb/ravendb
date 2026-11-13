@@ -172,7 +172,7 @@ namespace Raven.Server.Documents
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
                                 var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index, type, changeType);
+                                await databaseContext.UpdateDatabaseRecordAsync(index, type, changeType, changeState);
                             }
                             else
                             {
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents
             switch (changeType)
             {
                 case ClusterDatabaseChangeType.RecordChanged:
-                    await database.StateChangedAsync(index, type, changeType);
+                    await database.StateChangedAsync(index, type, changeType, changeState);
                     if (type == ClusterStateMachine.SnapshotInstalled)
                     {
                         database.NotifyOnPendingClusterTransaction();
@@ -1623,10 +1623,46 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state, string type,
+        public static ValueTask NotifyFeaturesAboutStateChangeAsync(DatabaseRecord record, long index, StateChange state, string type,
             DatabasesLandlord.ClusterDatabaseChangeType? changeType = null)
         {
-            if (CanSkipDatabaseRecordChange())
+            return NotifyFeaturesAboutStateChangeAsync(_ => record, index, state, type, changeType, forced: false);
+        }
+
+        /// <summary>
+        /// The record is read under the lock, so the features are never notified about a record that is older than the one they have already handled.
+        /// A forced notification is never skipped and makes all the features handle the record, regardless of the sections that were changed.
+        /// </summary>
+        public static ValueTask NotifyFeaturesAboutStateChangeAsync(long index, StateChange state, string type, DatabasesLandlord.ClusterDatabaseChangeType? changeType, bool forced)
+        {
+            return NotifyFeaturesAboutStateChangeAsync(ReadDatabaseRecord, index, state, type, changeType, forced);
+
+            static DatabaseRecord ReadDatabaseRecord(StateChange s)
+            {
+                using (s.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    return s.ServerStore.Cluster.ReadDatabase(context, s.Name);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Features are notified only about the sections of the record that were changed (by comparing <see cref="DatabaseRecord.ClusterState"/>),
+        /// changes that are not reflected there (e.g. server-wide tasks, snapshot installation, passive state) must force the notification.
+        /// </summary>
+        public static bool ShouldForceFeaturesNotification(string type, object changeState)
+        {
+            return changeState is not UpdateDatabaseCommand && type != nameof(AddDatabaseCommand);
+        }
+
+        /// <summary>
+        /// The record is read by <paramref name="getRecord"/> under the lock, see <see cref="NotifyFeaturesAboutStateChangeAsync(long, StateChange, string, ClusterDatabaseChangeType?, bool)"/>.
+        /// </summary>
+        public static async ValueTask NotifyFeaturesAboutStateChangeAsync(Func<StateChange, DatabaseRecord> getRecord, long index, StateChange state, string type,
+            DatabasesLandlord.ClusterDatabaseChangeType? changeType, bool forced)
+        {
+            if (forced == false && CanSkipDatabaseRecordChange())
                 return;
 
             var taken = false;
@@ -1638,7 +1674,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipDatabaseRecordChange())
+                    if (forced == false && CanSkipDatabaseRecordChange())
                         return;
 
                     state.Token.ThrowIfCancellationRequested();
@@ -1647,6 +1683,10 @@ namespace Raven.Server.Documents
                         continue;
 
                     sp = Stopwatch.StartNew();
+
+                    var record = getRecord(state);
+                    if (record == null)
+                        return;
 
                     Debug.Assert(string.Equals(state.Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{state.Name} != {record.DatabaseName}");
@@ -1663,8 +1703,10 @@ namespace Raven.Server.Documents
 
                     try
                     {
-                        await state.OnChange(record, index);
-                        state.LastIndexChange = index;
+                        await state.OnChange(record, index, forced);
+
+                        // a forced notification might be older than the last one we handled
+                        state.LastIndexChange = Math.Max(state.LastIndexChange, index);
 
                         if (state.Logger.IsDebugEnabled)
                             state.Logger.Debug($"Finish to process record {index} for {record.DatabaseName}.");
@@ -1720,7 +1762,7 @@ namespace Raven.Server.Documents
                 {
                     // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
                     if (state.Logger.IsDebugEnabled)
-                        state.Logger.Debug($"Skipping record {index} (current {state.LastIndexChange}) for {record.DatabaseName} because it was already precessed.");
+                        state.Logger.Debug($"Skipping record {index} (current {state.LastIndexChange}) for {state.Name} because it was already precessed.");
                     return true;
                 }
 
@@ -1735,11 +1777,11 @@ namespace Raven.Server.Documents
             public readonly string Name;
             public readonly CancellationToken Token;
             public readonly RavenLogger Logger;
-            public readonly Func<DatabaseRecord, long, Task> OnChange;
+            public readonly Func<DatabaseRecord, long, bool, Task> OnChange;
 
             public long LastIndexChange;
 
-            public StateChange(ServerStore serverStore, string name, RavenLogger logger, Func<DatabaseRecord, long, Task> onChange, long lastIndexChange, CancellationToken token)
+            public StateChange(ServerStore serverStore, string name, RavenLogger logger, Func<DatabaseRecord, long, bool, Task> onChange, long lastIndexChange, CancellationToken token)
             {
                 ServerStore = serverStore;
                 Name = name;
