@@ -24,6 +24,9 @@ public partial class IndexWriter
         private readonly List<DocumentEntryId> _additionsForTerm, _removalsForTerm;
         private readonly HashSet<DocumentEntryId> _entriesAlreadyAdded;
         private ContainerEntryId _termContainerId;
+        private const int BulkSetBatchSize = 1024;
+        private ContextBoundNativeList<long> _bulkOldValues;
+        private ContextBoundNativeList<int> _bulkOffsets;
         
         public EntriesToTermsTracker(IndexWriter writer)
         {
@@ -35,6 +38,8 @@ public partial class IndexWriter
             _additionsForTerm = new();
             _removalsForTerm = new();
             _entriesAlreadyAdded = new();
+            _bulkOldValues = new ContextBoundNativeList<long>(writer._entriesAllocator);
+            _bulkOffsets = new ContextBoundNativeList<int>(writer._entriesAllocator);
         }
 
         /// <summary>
@@ -68,6 +73,8 @@ public partial class IndexWriter
             _entriesForTermsRemovalsBuffer.Clear();
             _entriesForTermsAdditionsBufferEntryId.Clear();
             _entriesForTermsAdditionsBufferTermId.Clear();
+            _bulkOldValues.Clear();
+            _bulkOffsets.Clear();
         }
 
         /// <summary>
@@ -132,16 +139,37 @@ public partial class IndexWriter
                 var entriesTerms = _entriesForTermsAdditionsBufferTermId.ToSpan();
                 entriesIds.Sort(entriesTerms);
                 entriesToTermsTree.InitializeCursorState();
-                for (int idX = 0; idX < _entriesForTermsAdditionsBufferEntryId.Count; ++idX)
+                BulkSet(entriesToTermsTree, entriesIds, entriesTerms);
+            }
+        }
+
+        private void BulkSet(Lookup<Int64LookupKey> tree, Span<DocumentEntryId> entriesIds, Span<ContainerEntryId> entriesTerms)
+        {
+            int batchSize = Math.Min(entriesIds.Length, BulkSetBatchSize);
+            _bulkOffsets.ResetAndEnsureCapacity(batchSize);
+            _bulkOffsets.Count = batchSize;
+            _bulkOldValues.ResetAndEnsureCapacity(batchSize);
+            _bulkOldValues.Count = batchSize;
+
+            var keys = MemoryMarshal.Cast<DocumentEntryId, Int64LookupKey>(entriesIds);
+            var oldValues = _bulkOldValues.ToSpan();
+            var offsets = _bulkOffsets.ToSpan();
+            int idX = 0;
+            while (idX < keys.Length)
+            {
+                var treeChanged = tree.CheckTreeStructureChanges();
+                int adjustment = 0;
+                int length = Math.Min(keys.Length - idX, batchSize);
+                int read = tree.BulkUpdateStart(keys.Slice(idX, length), oldValues[..length], offsets[..length], out long pageNum);
+                for (int i = 0; i < read; i++, idX++)
                 {
-                    Int64LookupKey key = (long)entriesIds[idX];
-                    entriesToTermsTree.TryGetNextValue(ref key, out _);
-                    entriesToTermsTree.AddOrSetAfterGetNext(ref key, (long)entriesTerms[idX]);
+                    if (treeChanged.Changed)
+                        break;
+                    tree.BulkUpdateSet(ref keys[idX], (long)entriesTerms[idX], pageNum, offsets[i], ref adjustment);
                 }
             }
         }
         
-
         public void Dispose()
         {
             _entriesForTermsRemovalsBuffer.Dispose();
@@ -150,11 +178,16 @@ public partial class IndexWriter
             _entriesForTermsAdditionsBufferEntryId = default;
             _entriesForTermsAdditionsBufferTermId = default;
             _entriesForTermsRemovalsBuffer = default;
+            _bulkOldValues.Dispose();
+            _bulkOffsets.Dispose();
         }
 
         public void Reset()
         {
             _entriesForTermsRemovalsBuffer = new(_writer._entriesAllocator);
+            _bulkOldValues = new ContextBoundNativeList<long>(_writer._entriesAllocator);
+            _bulkOffsets = new ContextBoundNativeList<int>(_writer._entriesAllocator);
+            
             _entriesForTermsAdditionsBufferEntryId = new();
             _entriesForTermsAdditionsBufferTermId = new();
             _removalsForTerm.Clear();

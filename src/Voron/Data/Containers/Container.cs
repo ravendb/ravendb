@@ -304,8 +304,13 @@ namespace Voron.Data.Containers
                         break;
                 }
             }
-
             
+            public int Offset
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => _compactBackingStore >> OffsetShift & OffsetMask;
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining|MethodImplOptions.AggressiveOptimization)]
             public void Clear(byte* pagePointer)
             {
@@ -719,9 +724,7 @@ namespace Voron.Data.Containers
                     continue;
                 byte* p = _page.Pointer;
                 int entrySize = tmpOffset.Get(ref p);
-                tmpHeader.FloorOfData -= (ushort)ComputeRequiredSize(entrySize);
-                tmpHeader.FloorOfData &= ContainerPageHeader.Ensure4BytesAlignmentMask; // ensure that this is aligned of 4 bytes boundary
-                int entryOffset = tmpHeader.FloorOfData;
+                int entryOffset = ReserveDataSpace(ref tmpHeader, entrySize);
                 tmpOffset.SetSize(entrySize, tmpPtr, ref entryOffset);
                 Memory.Copy(tmpPtr + entryOffset, p, entrySize);
             }
@@ -832,20 +835,33 @@ namespace Voron.Data.Containers
             var reqSize = ComputeRequiredSize(size);
             Debug.Assert(HasEnoughSpaceFor(reqSize));
 
-            Header.FloorOfData -= (ushort)reqSize;
-            Header.FloorOfData &= ContainerPageHeader.Ensure4BytesAlignmentMask;
+            int entryOffset = ReserveDataSpace(ref Header, size);
             if (pos == Header.NumberOfOffsets)
             {
                 Header.NumberOfOffsets++;
             }
-            int entryStartOffset = Header.FloorOfData;
-            ref ItemMetadata item = ref MetadataFor(pos);
-            Debug.Assert(item.IsFree);
-            item.SetSize(size, _page.Pointer, ref entryStartOffset);
-            allocatedSpace = _page.AsSpan(entryStartOffset, size);
+            Debug.Assert(MetadataFor(pos).IsFree);
+            allocatedSpace = StoreItem(pos, entryOffset, size);
 
             long id = Header.PageNumber * Constants.Storage.PageSize + IndexToOffset(pos);
             return new ContainerEntryId(id);
+        }
+
+        private static int ReserveDataSpace(ref ContainerPageHeader header, int size)
+        {
+            Debug.Assert((header.FloorOfData & 0b11) == 0, "the data of the items is always 4 bytes aligned");
+            header.FloorOfData -= (ushort)ComputeOwnedSize(size);
+            return header.FloorOfData;
+        }
+
+        /// <summary>
+        /// Stores the size of the item in its metadata (and the size prefix at entryOffset for big items) and returns the space for its data.
+        /// </summary>
+        private Span<byte> StoreItem(int pos, int entryOffset, int size)
+        {
+            ref ItemMetadata item = ref MetadataFor(pos);
+            item.SetSize(size, _page.Pointer, ref entryOffset);
+            return _page.AsSpan(entryOffset, size);
         }
 
         private static long IndexToOffset(int pos)
@@ -929,8 +945,7 @@ namespace Voron.Data.Containers
                 if (it.MoveNext(out var pageNum) == false)
                     break;
 
-                var page = llt.ModifyPage(pageNum);
-                maybe = new Container(page);
+                maybe = new Container(llt.GetPage(pageNum));
 
                 // During indexing, we are going to very quickly shift between different pages 
                 // with multiple page-level-metadata, we can't remove it from the free list too soon 
@@ -945,14 +960,15 @@ namespace Voron.Data.Containers
                 // would be reasonably used by following requests. 
                 if (!isBigEntry)
                 {
-                    RemoveFromFreeList(llt, rootContainer, maybe._page.PageNumber);
+                    RemoveFromFreeList(llt, rootContainer, pageNum);
                 }
 
                 if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider) == false)
                     continue;
 
+                maybe = new Container(llt.ModifyPage(pageNum));
                 // we register it as the next free page
-                rootContainer.UpdateNextFreePage(page.PageNumber);
+                rootContainer.UpdateNextFreePage(pageNum);
 
                 Debug.Assert(maybe.Header.PageLevelMetadata == pageLevelMetadata || pageLevelMetadata == -1);
                 return true;
@@ -996,6 +1012,7 @@ namespace Voron.Data.Containers
                 {
                     _hasPersistentIt = true;
                     _persistentEnum = _txState.GetFreePages(_llt).Iterate();
+                    _persistentEnum.Reset();
                 }
 
                 while (_persistentEnum.MoveNext(out Int64LookupKey key, out var pageLevelMetadata, out _))
@@ -1220,9 +1237,12 @@ namespace Voron.Data.Containers
         private static int ComputeRequiredSize(int size)
         {
             if (size < 30) return size;
-            var isLarge = size > 256;
+            var isLarge = size > byte.MaxValue;
             return size + 1 + isLarge.ToInt32();
         }
+
+        // the space the item uses (size prefix and 4 bytes alignment included), the free space after it may be bigger
+        private static int ComputeOwnedSize(int size) => (ComputeRequiredSize(size) + 3) & ContainerPageHeader.Ensure4BytesAlignmentMask;
 
         public static void Delete(LowLevelTransaction llt, ContainerId containerId, ContainerEntryId id)
         {
@@ -1283,11 +1303,16 @@ namespace Voron.Data.Containers
                 return;
             }
 
+            MaybeAddToFreeList(llt, rootContainer, container, averageSize);
+        }
+
+        private static void MaybeAddToFreeList(LowLevelTransaction llt, in Container rootContainer, in Container container, int averageSize)
+        {
             int containerSpaceUsed = container.SpaceUsed();
             if (containerSpaceUsed + (Constants.Storage.PageSize/4) <= Constants.Storage.PageSize && // has at least 25% free
                 containerSpaceUsed + averageSize * 2 <= Constants.Storage.PageSize) // has enough space to be on the free list? 
             {
-                AddToFreeList(llt, rootContainer, page.PageNumber, container.Header.PageLevelMetadata);
+                AddToFreeList(llt, rootContainer, container.Header.PageNumber, container.Header.PageLevelMetadata);
             }
         }
 
@@ -1331,6 +1356,109 @@ namespace Voron.Data.Containers
             return *(long*)pagePointer;
         }
         
+        public static bool TryUpdateInPlace(LowLevelTransaction llt, ContainerId containerId, ContainerEntryId id, int newSize, out Span<byte> space)
+        {
+            space = default;
+            if ((long)id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
+
+            var (pageNum, offset) = Math.DivRem((long)id, Constants.Storage.PageSize);
+            var page = llt.GetPage(pageNum);
+            Debug.Assert(newSize > 0);
+
+            if (page.IsOverflow)
+            {
+                if (newSize <= MaxSizeInsideContainerPage ||
+                    VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(newSize) != VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(page.OverflowSize))
+                    return false;
+
+                page = llt.ModifyPage(pageNum);
+                page.OverflowSize = newSize;
+                space = page.AsSpan(PageHeader.SizeOf, newSize);
+                return true;
+            }
+
+            var index = OffsetToIndex(offset);
+            var metadata = new Container(page).MetadataFor(index);
+            if (metadata.IsFree)
+                throw new VoronErrorException("Attempt to update a container item that was deleted! Item " + id + " on page " + pageNum);
+
+            byte* pagePointer = page.Pointer;
+            int currentSize = metadata.Get(ref pagePointer);
+            int ownedSpace = ComputeOwnedSize(currentSize);
+            int newOwnedSpace = ComputeOwnedSize(newSize);
+            if (newOwnedSpace > ownedSpace)
+                return TryGrowWithinPage(llt, pageNum, index, ownedSpace, newSize, out space);
+
+            page = llt.ModifyPage(pageNum);
+            var container = new Container(page);
+            space = container.StoreItem(index, container.MetadataFor(index).Offset, newSize);
+
+            if (newOwnedSpace < ownedSpace)
+            {
+                int totalSize = container.SpaceUsedInItems(page.Pointer, out int usedSegments);
+                MaybeAddToFreeList(llt, new Container(llt.GetPage((long)containerId)), container, totalSize / usedSegments);
+            }
+
+            return true;
+        }
+        
+        private static bool TryGrowWithinPage(LowLevelTransaction llt, long pageNum, int index, int ownedSpace, int newSize, out Span<byte> space)
+        {
+            space = default;
+            if (newSize > MaxSizeInsideContainerPage)
+                return false;
+
+            var container = new Container(llt.GetPage(pageNum));
+            int newOwnedSpace = ComputeOwnedSize(newSize);
+            int itemOffset = container.MetadataFor(index).Offset;
+            bool fitsInPlace = itemOffset + newOwnedSpace <= container.StartOfNextItem(itemOffset);
+            int lowestFloor = container.Header.CeilingOfOffsets + newOwnedSpace;
+            bool needsDefrag = fitsInPlace == false && container.Header.FloorOfData < lowestFloor;
+            if (needsDefrag && Constants.Storage.PageSize - (container.OwnedSpaceOfItems() - ownedSpace) < lowestFloor + ItemsToFitAfterDefrag * newOwnedSpace)
+                return false;
+
+            container = new Container(llt.ModifyPage(pageNum));
+            if (fitsInPlace)
+            {
+                space = container.StoreItem(index, itemOffset, newSize);
+                return true;
+            }
+
+            if (needsDefrag)
+            {
+                container.MetadataFor(index) = default;
+                container.Defrag(llt);
+                container.Header.NumberOfOffsets = (ushort)Math.Max(container.Header.NumberOfOffsets, index + 1);
+            }
+
+            space = container.StoreItem(index, ReserveDataSpace(ref container.Header, newSize), newSize);
+            return true;
+        }
+
+        private const int ItemsToFitAfterDefrag = 2;
+
+        // the space between the end of an item and the start of the next one is free, the data of the items doesn't overlap
+        private int StartOfNextItem(int offset)
+        {
+            int next = Constants.Storage.PageSize;
+            for (int i = 0; i < Header.NumberOfOffsets; i++)
+            {
+                int itemOffset = MetadataFor(i).Offset;
+                if (itemOffset > offset && itemOffset < next)
+                    next = itemOffset;
+            }
+            return next;
+        }
+
+        private int OwnedSpaceOfItems()
+        {
+            int size = 0;
+            for (int i = 0; i < Header.NumberOfOffsets; i++)
+                size += ComputeOwnedSize(MetadataFor(i).GetSize(_page.Pointer));
+            return size;
+        }
+
         public static Span<byte> GetMutable(LowLevelTransaction llt, ContainerEntryId id)
         {
             if ((long)id <= 0)
