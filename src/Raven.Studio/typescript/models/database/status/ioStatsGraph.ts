@@ -1796,8 +1796,8 @@ class ioStatsGraph {
                     if (element.Drain && element.WritebackSize != null) {
                         const size = generalUtils.formatBytesToSize(Number(element.WritebackSize));
                         const ranges = Number(element.WritebackRanges ?? 0).toLocaleString();
-                        const fsync = Number(element.Duration) - Number(element.WritebackDuration);
-                        html += line("Time", `${formatMs(element.WritebackDuration)} writing ${size} in blocks (${ranges} ranges), then ${formatMs(fsync)} fsync`);
+                        const waiting = Number(element.Duration) - Number(element.WritebackDuration);
+                        html += line("Time", `${formatMs(element.WritebackDuration)} writing ${size} in blocks (${ranges} ranges), then ${formatMs(waiting)} waiting for the disk`);
                     }
                 }
                 break;

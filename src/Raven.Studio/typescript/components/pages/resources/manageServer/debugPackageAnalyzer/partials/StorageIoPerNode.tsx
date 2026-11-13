@@ -237,7 +237,7 @@ function getDeviceColumns(
         {
             id: "journal",
             header: () => (
-                <span title="Typical (median) journal write latency of the last hour; the average for older packages">
+                <span title="Typical journal write time in the last hour. For packages from older versions, the average.">
                     Journal writes
                 </span>
             ),
@@ -253,7 +253,7 @@ function getDeviceColumns(
         },
         {
             id: "peak",
-            header: () => <span title="Peak of the last hour">Peak</span>,
+            header: () => <span title="Highest journal write time in the last hour">Peak</span>,
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.PeakJournalWriteLatencyInMs)} format={formatMs} />
             ),
@@ -268,7 +268,9 @@ function getDeviceColumns(
         {
             id: "syncs",
             header: () => (
-                <span title={`${storageTermHelp.syncCost} none: no sync in the last minute.`}>Data file syncs</span>
+                <span title={`${storageTermHelp.syncCost} "none" means no sync in the last minute.`}>
+                    Data file syncs
+                </span>
             ),
             cell: ({ row }) => (
                 <NumberRange
@@ -313,7 +315,7 @@ function getDatabaseColumns(
         {
             id: "journal",
             header: () => (
-                <span title="Average over the writes the package holds, in parentheses their number. io-metrics keeps only the latest writes of each file, so this is a sample, not a total.">
+                <span title="Average journal write time, and in parentheses how many writes it is based on. The package keeps only the latest writes of each file, so this is a sample, not a total.">
                     Journal writes
                 </span>
             ),
@@ -354,7 +356,7 @@ function getDatabaseColumns(
         {
             id: "mandatory",
             header: () => (
-                <span title="Syncs forced by the unsynced backlog passing the mandatory limit">Mandatory</span>
+                <span title="Share of syncs forced because too much data was waiting to be synced">Mandatory</span>
             ),
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.MandatorySyncShare)} format={formatPercent} />
@@ -363,7 +365,7 @@ function getDatabaseColumns(
         },
         {
             id: "paced",
-            header: () => <span title="Share of the data file syncs in the package that ran paced">Paced</span>,
+            header: () => <span title="Share of data file syncs that ran in paced mode">Paced</span>,
             cell: ({ row }) => (
                 <NumberRange values={row.original.values.map((d) => d.DrainSyncShare)} format={formatPercent} />
             ),
@@ -389,9 +391,7 @@ function getSharedJournalColumns(
         {
             id: "own",
             header: () => (
-                <span title="Indexes that left the shared journal (hard link limit) and write their own">
-                    Own journals
-                </span>
+                <span title="Indexes that stopped using the shared journal and write their own">Own journals</span>
             ),
             cell: ({ row }) => {
                 const fellBack = [
@@ -415,11 +415,7 @@ function getSharedJournalColumns(
         },
         {
             id: "durable",
-            header: () => (
-                <span title="Time from an index commit to its shared journal write being durable">
-                    Commit to durable
-                </span>
-            ),
+            header: () => <span title="Time from an index commit until it is safely on disk">Commit to durable</span>,
             cell: ({ row }) => (
                 <NumberRange
                     values={row.original.values.map((s) => s.CommitToDurableInMs)}
@@ -481,9 +477,7 @@ function PacedCell({ devices }: { devices: StorageIoDeviceAnalysis[] }) {
         return <NumberRange values={devices.map((d) => d.DrainShareOfLastHour)} format={formatPercent} />;
     }
     return devices.some((d) => d.LikelyDraining) ? (
-        <span title="Older package, derived from io-metrics: data file syncs average above the drain threshold">
-            likely
-        </span>
+        <span title="Estimated from an older package: data file syncs took longer than the paced limit">likely</span>
     ) : (
         "no"
     );
