@@ -923,6 +923,26 @@ namespace Sparrow.Json
             return GetPropertyNameAsSpan(propertyId);
         }
 
+        internal bool HasPropertyNameInDocument(ReadOnlySpan<byte> name)
+        {
+            AssertContextNotDisposed();
+
+            int end = _size - 2;
+            ReadVariableSizeIntInReverse(_mem, end, out byte offset);
+            end -= offset;
+            ReadVariableSizeIntInReverse(_mem, end, out offset);
+            end -= offset;
+
+            int count = (int)((_mem + end - _propNames) / _propNamesDataOffsetSize);
+            for (int propertyId = 0; propertyId < count; propertyId++)
+            {
+                if (GetPropertyNameAsSpan(propertyId).SequenceEqual(name))
+                    return true;
+            }
+
+            return false;
+        }
+
         internal ReadOnlySpan<byte> GetPropertyNameByIndexAsSpan(int index, out BlittableJsonToken token)
         {
             AssertContextNotDisposed();
