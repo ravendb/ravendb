@@ -389,13 +389,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
             }
 
-            field = IndexField.Create(fieldName, 
-                new IndexFieldOptions()
-                {
-                    Indexing = fieldIndexing, 
-                    Storage = fieldStorage, 
-                    TermVector = termVector
-                }, _allFields);
+            var indexingScope = CurrentIndexingScope.Current;
+            field = indexingScope != null
+                ? indexingScope.GetOrCreateLuceneDynamicField(fieldName, fieldIndexing, fieldStorage, termVector, _allFields)
+                : IndexField.Create(fieldName,
+                    new IndexFieldOptions()
+                    {
+                        Indexing = fieldIndexing,
+                        Storage = fieldStorage,
+                        TermVector = termVector
+                    }, _allFields);
 
             if (_dynamicFieldsDynamicAnalyzer)
             {

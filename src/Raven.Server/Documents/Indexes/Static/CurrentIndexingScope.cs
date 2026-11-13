@@ -87,6 +87,33 @@ namespace Raven.Server.Documents.Indexes.Static
         /// </summary>
         public void ResetCreatedFieldPositions() => _createdFieldPosition = 0;
 
+        private Dictionary<(string Name, FieldIndexing? Indexing, FieldStorage? Storage, FieldTermVector? TermVector), IndexField> _luceneDynamicFields;
+
+        /// <summary>
+        /// Returns the index field of a dynamic field created (by CreateField) in a Lucene index. The same field (name and options) is usually created
+        /// for many values, so we create its index field (and the names of its additional Lucene fields) once per batch, not for every value.
+        /// </summary>
+        /// <param name="allFields">The options of all the fields of the index, the same for every call in this scope.</param>
+        public IndexField GetOrCreateLuceneDynamicField(string name, FieldIndexing? indexing, FieldStorage? storage, FieldTermVector? termVector, IndexFieldOptions allFields)
+        {
+            _luceneDynamicFields ??= new();
+
+            var key = (name, indexing, storage, termVector);
+            if (_luceneDynamicFields.TryGetValue(key, out var field) == false)
+            {
+                field = IndexField.Create(name, new IndexFieldOptions
+                {
+                    Indexing = indexing,
+                    Storage = storage,
+                    TermVector = termVector
+                }, allFields);
+
+                _luceneDynamicFields[key] = field;
+            }
+
+            return field;
+        }
+
         static CurrentIndexingScope()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += () => Current = null;
