@@ -1,9 +1,14 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Popover, { PopoverProps } from "react-bootstrap/Popover";
 import Overlay, { OverlayProps } from "react-bootstrap/Overlay";
 import { Placement } from "react-bootstrap/types";
 import classNames from "classnames";
+import { overlayMotionClassName, withTopLeftPositioning } from "components/common/overlayMotion";
 import useUniqueId from "components/hooks/useUniqueId";
+
+const PopoverRepositionContext = createContext<() => void>(null);
+
+export const usePopoverReposition = () => useContext(PopoverRepositionContext);
 
 const tooltipContext = {
     currentTarget: null as HTMLDivElement,
@@ -16,6 +21,7 @@ export interface PopoverWithHoverProps extends PopoverProps {
     children: ReactNode | ReactNode[];
     placement?: Placement;
     overlayProps?: Omit<OverlayProps, "target" | "show" | "placement" | "children">;
+    prepare?: () => Promise<unknown>;
 }
 
 function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
@@ -28,7 +34,7 @@ function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
 }
 
 export function PopoverWithHover(props: PopoverWithHoverProps) {
-    const { target, children, placement, className, style: propsStyle, overlayProps, ...rest } = props;
+    const { target, children, placement, className, style: propsStyle, overlayProps, prepare, ...rest } = props;
 
     const div = target as HTMLDivElement;
     const [open, setOpen] = useState<boolean>(false);
@@ -79,13 +85,26 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     }, [scheduleHide]);
 
     useEffect(() => {
+        const show = () => {
+            setOpen(true);
+            setHasBeenOpened(true);
+        };
+
         const onEnter = () => {
             overElement.current = true;
             tooltipMutex(div, () => setOpen(false));
+            const preparation = prepare?.().catch(() => {});
             showHandle.current = setTimeout(() => {
-                setOpen(true);
-                setHasBeenOpened(true);
                 showHandle.current = null;
+                if (!preparation) {
+                    show();
+                    return;
+                }
+                preparation.then(() => {
+                    if (overElement.current) {
+                        show();
+                    }
+                });
             }, 180);
 
             maybeCancelHide();
@@ -106,25 +125,35 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
                 div.removeEventListener("mouseleave", onLeave);
             };
         }
-    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
+    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div, prepare]);
 
     if (!target || !hasBeenOpened) {
         return null;
     }
 
     return (
-        <Overlay target={target} show={open} placement={placement} {...overlayProps}>
-            {({ style: overlayStyle, ...props }) => (
+        <Overlay
+            target={target}
+            show={open}
+            placement={placement}
+            flip
+            {...overlayProps}
+            popperConfig={withTopLeftPositioning(overlayProps?.popperConfig)}
+        >
+            {({ style: overlayStyle, popper, ...props }) => (
                 <Popover
                     {...props}
                     {...rest}
+                    popper={popper}
                     style={{ ...overlayStyle, ...propsStyle }}
                     id={popoverId}
                     onMouseLeave={onPopoverLeave}
                     onMouseEnter={onPopoverEnter}
-                    className={classNames("bs5", className)}
+                    className={classNames("bs5", overlayMotionClassName, className)}
                 >
-                    {children}
+                    <PopoverRepositionContext.Provider value={popper?.scheduleUpdate}>
+                        {children}
+                    </PopoverRepositionContext.Provider>
                 </Popover>
             )}
         </Overlay>

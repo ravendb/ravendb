@@ -443,7 +443,7 @@ class captureStackTraces extends viewModelBase {
         buttonGroup
             .append("text")
             .attr("class", "icon-style copy")
-            .html(icomoonHelpers.getCodePointForCanvas("copy-to-clipboard"))
+            .html(icomoonHelpers.getCodePointForCanvas("copy"))
             .attr("text-anchor", "middle")
             .attr("x", -stackInfo.headerSize / 2)
             .attr("y", 0);

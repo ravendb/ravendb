@@ -44,7 +44,11 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         fetchCurrentEtag: async () =>
             (await databasesService.getDocumentsPreview(databaseName, 0, 0, collectionName ?? undefined)).resultEtag,
     });
-    const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
+    const {
+        getPropertyPreviewResolver,
+        getDocumentPreviewSource,
+        clearCache: clearFullDocumentCache,
+    } = useFullDocumentProvider(databaseName);
     const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -55,6 +59,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         collectionName,
         tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx),
         getPropertyPreviewResolver,
+        getDocumentPreviewSource,
     });
 
     const lazyRows = useLazyRows<document, pagedResultWithAvailableColumns<document>>({

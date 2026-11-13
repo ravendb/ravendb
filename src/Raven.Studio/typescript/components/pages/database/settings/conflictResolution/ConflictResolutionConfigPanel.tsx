@@ -30,7 +30,7 @@ import * as yup from "yup";
 import { FormAceEditor, FormLabel, FormSelectCreatable } from "components/common/Form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 
 interface ConflictResolutionConfigPanelProps {

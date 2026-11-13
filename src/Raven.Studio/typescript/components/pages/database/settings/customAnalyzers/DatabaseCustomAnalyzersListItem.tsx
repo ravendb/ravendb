@@ -32,7 +32,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { FormAceEditor, FormInput, FormLabel } from "components/common/Form";
 import fileImporter from "common/fileImporter";
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 
 interface DatabaseCustomAnalyzersListItemProps {

@@ -48,7 +48,7 @@ export function ReplicationCursorDetailItem({ label, cursor }: ReplicationCursor
                             title="Copy to clipboard"
                             aria-label={`Copy ${label} to clipboard`}
                         >
-                            <Icon icon="copy-to-clipboard" margin="m-0" />
+                            <Icon icon="copy" margin="m-0" />
                         </Button>
                     </>
                 }

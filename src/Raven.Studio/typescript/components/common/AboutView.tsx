@@ -8,7 +8,7 @@ import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
 import { uniqueId } from "lodash";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Popover from "react-bootstrap/Popover";
 import Accordion from "react-bootstrap/Accordion";
 import { useStudioTranslation } from "hooks/useStudioTranslation";

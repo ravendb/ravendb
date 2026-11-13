@@ -22,7 +22,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import moment from "moment";
 import genUtils = require("common/generalUtils");
 import Button from "react-bootstrap/Button";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { AiAssistantEulaModal } from "components/common/aiAssistant/AiAssistantEulaModal";

@@ -35,7 +35,7 @@ export function CellWithDescription<TData, TValue>({
                             <span className="small-label">Actions</span>
                             <div>
                                 <Button onClick={handleCopyToClipboard} variant="primary" title="Copy to clipboard">
-                                    <Icon icon="copy-to-clipboard" margin="m-0" />
+                                    <Icon icon="copy" margin="m-0" />
                                 </Button>
                             </div>
                         </>

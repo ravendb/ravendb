@@ -1,7 +1,7 @@
 ﻿import { DatabaseLocalInfo } from "components/models/databases";
 import genUtils from "common/generalUtils";
 import useUniqueId from "components/hooks/useUniqueId";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 
 export function SizeOnDisk(props: { info: DatabaseLocalInfo }) {

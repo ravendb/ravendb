@@ -75,6 +75,7 @@ import getRevisionsPreviewCommand from "commands/database/documents/getRevisions
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getDocumentRevisionsCountCommand = require("commands/database/documents/getDocumentRevisionsCountCommand");
 import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
 import getRemoteAttachmentsConfigurationCommand from "commands/database/settings/getRemoteAttachmentsConfigurationCommand";
 import saveRemoteAttachmentsConfigurationCommand from "commands/database/settings/saveRemoteAttachmentsConfigurationCommand";
@@ -364,6 +365,10 @@ export default class DatabasesService {
 
     async getDocumentWithMetadata(...args: ConstructorParameters<typeof getDocumentWithMetadataCommand>) {
         return new getDocumentWithMetadataCommand(...args).execute();
+    }
+
+    async getDocumentRevisionsCount(...args: ConstructorParameters<typeof getDocumentRevisionsCountCommand>) {
+        return new getDocumentRevisionsCountCommand(...args).execute();
     }
 
     async getDocumentsWithMetadata(...args: ConstructorParameters<typeof getDocumentsWithMetadataCommand>) {

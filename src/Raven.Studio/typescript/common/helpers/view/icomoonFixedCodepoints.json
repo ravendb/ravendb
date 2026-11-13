@@ -67,5 +67,6 @@
     "corax-sort-az": "f150",
     "corax-sort-za": "f151",
     "vector-search": "f154",
-    "close": "f162"
+    "close": "f162",
+    "copy": "f163"
 }
