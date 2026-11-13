@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
@@ -14,6 +15,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal abstract class BlittableJsonConverterBase : IBlittableJsonConverterBase
     {
+        private static readonly byte[] TypePropertyName = Encoding.UTF8.GetBytes(Constants.Json.Fields.Type);
+
         protected readonly SystemTextJsonSerializationConventions Conventions;
 
         protected BlittableJsonConverterBase(ISerializationConventions conventions)
@@ -201,7 +204,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (useResolver == false || hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
             {
                 var changes = removeIdentityProperty && BlittableJsonConverterHelper.TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
-                changes |= BlittableJsonConverterHelper.TrySimplifyJson(reader, type, ShouldSkipSimplification);
+                changes |= reader.HasPropertyNameInDocument(TypePropertyName) && BlittableJsonConverterHelper.TrySimplifyJson(reader, type, ShouldSkipSimplification);
 
                 if (changes)
                 {

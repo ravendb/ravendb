@@ -140,6 +140,40 @@ namespace FastTests.Client
             }
         }
 
+        private class WithIdAndTypedCollection
+        {
+            public string Id { get; set; }
+
+            public IEnumerable<object> Items { get; set; }
+        }
+
+        private class WithTypedCollection
+        {
+            public IEnumerable<object> Items { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SystemTextJsonDefaultConverterSimplifiesTypedCollectionsOfEntitiesWithIdentity()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new WithTypedCollection { Items = new object[] { 1, "two" } }, context))
+                {
+                    var items = Assert.IsType<BlittableJsonReaderObject>(json[nameof(WithTypedCollection.Items)]);
+                    Assert.True(items.TryGet(Raven.Client.Constants.Json.Fields.Type, out string _));
+                }
+
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new WithIdAndTypedCollection { Id = "items/1", Items = new object[] { 1, "two" } }, context))
+                {
+                    var items = Assert.IsType<BlittableJsonReaderArray>(json[nameof(WithIdAndTypedCollection.Items)]);
+                    Assert.Equal(2, items.Length);
+                    Assert.Equal("items/1", json[nameof(WithIdAndTypedCollection.Id)].ToString());
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(BlittableJsonDocumentBuilder.UsageMode.None)]
         [InlineData(BlittableJsonDocumentBuilder.UsageMode.CompressStrings)]
