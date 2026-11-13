@@ -57,13 +57,13 @@ export default function StudioGlobalConfiguration() {
             environment: settings.environment.getValue(),
             replicationFactor: settings.replicationFactor.getValue(),
             isCollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue(),
-            isSendUsageStats: settings.sendUsageStats.getValue(),
+            isSendUsageStats: settings.sendUsageStats.getValue() ?? false,
             tableFont: settings.tableFont.getValue(),
             monospaceFont: settings.monospaceFont.getValue(),
         };
     });
 
-    const { handleSubmit, control, formState, reset } = useForm<StudioGlobalConfigurationFormData>({
+    const { handleSubmit, control, formState, reset, getFieldState } = useForm<StudioGlobalConfigurationFormData>({
         resolver: studioGlobalConfigurationYupResolver,
         mode: "all",
         defaultValues: asyncGlobalSettings.execute,
@@ -93,7 +93,9 @@ export default function StudioGlobalConfiguration() {
             settings.environment.setValueLazy(formData.environment);
             settings.replicationFactor.setValueLazy(formData.replicationFactor);
             settings.collapseDocsWhenOpening.setValue(formData.isCollapseDocsWhenOpening);
-            settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
+            if (getFieldState("isSendUsageStats").isDirty) {
+                settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
+            }
             settings.tableFont.setValue(formData.tableFont);
             settings.monospaceFont.setValue(formData.monospaceFont);
 
