@@ -144,6 +144,55 @@ select new { l.Product, _ = CreateField(""Quantity"", l.Quantity) }"
             AssertQuantities(store, "Orders/DynamicFanOut", orders);
         }
 
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DynamicFieldsBoundWithLetAreIndexedInEveryOutputOfTheDocument(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            var orders = Store(store);
+
+            // the fields bound with `let` are created once per order and are part of every output (one per line),
+            // next to fields of the same name created for each output, so they must not be overwritten by them
+            // (the string fields are not analyzed, so they are indexed from a string, not from a reader)
+            PutIndex(store, new IndexDefinition
+            {
+                Name = "Orders/DynamicLet",
+                Maps =
+                {
+                    @"from o in docs.Orders
+let id = CreateField(""Tag"", Id(o), false, false)
+let count = CreateField(""Num"", o.Lines.Count)
+from l in o.Lines
+select new { l.Product, _ = new [] { id, CreateField(""Tag"", l.Product, false, false), count, CreateField(""Num"", l.Quantity) } }"
+                }
+            });
+
+            Indexes.WaitForIndexing(store);
+            RavenTestHelper.AssertNoIndexErrors(store);
+
+            var products = orders.SelectMany(x => x.Lines).Select(x => x.Product).Distinct().ToList();
+
+            foreach (var order in orders)
+            {
+                // every output (line) of the order has Tag = its id
+                foreach (var product in order.Lines.Select(x => x.Product).Distinct())
+                {
+                    AssertIds(new[] { order.Id }, Query(store, $"from index 'Orders/DynamicLet' where Tag = $v and Product = '{product}'", order.Id),
+                        $"Tag = {order.Id} and Product = {product}");
+                }
+            }
+
+            foreach (var count in orders.Select(x => x.Lines.Count).Distinct())
+            {
+                foreach (var product in products)
+                {
+                    var expected = orders.Where(o => o.Lines.Any(l => l.Product == product && (o.Lines.Count == count || l.Quantity == count))).Select(o => o.Id);
+                    AssertIds(expected, Query(store, $"from index 'Orders/DynamicLet' where Num = $v and Product = '{product}'", count),
+                        $"Num = {count} and Product = {product}");
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void AllValuesOfDynamicFieldsInJavaScriptIndexAreIndexed(Options options)
