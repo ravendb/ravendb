@@ -5,9 +5,10 @@ import Form from "react-bootstrap/Form";
 import { FormDurationPicker, FormInput, FormLabel, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import {
-    EditDocumentRevisionsCollectionConfig,
     documentRevisionsCollectionConfigYupResolver,
     documentRevisionsConfigYupResolver,
+    documentRevisionsConversationsConfigYupResolver,
+    EditDocumentRevisionsCollectionConfig,
 } from "components/pages/database/settings/documentRevisions/DocumentRevisionsValidation";
 import { useDirtyFlag } from "hooks/useDirtyFlag";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -51,6 +52,7 @@ export default function EditRevision(props: EditRevisionProps) {
     const { toggle, configType, taskType, config, onConfirm } = props;
 
     const isForNewCollection: boolean = configType === "collectionSpecific" && taskType === "new";
+    const isConversations: boolean = configType === "conversations";
 
     const revisionsToKeepLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionsToKeep"));
     const revisionsAgeInDaysLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfRevisionAgeToKeepInDays"));
@@ -67,9 +69,7 @@ export default function EditRevision(props: EditRevisionProps) {
         }));
 
     const { control, formState, setValue, handleSubmit, watch } = useForm<EditDocumentRevisionsCollectionConfig>({
-        resolver: isForNewCollection
-            ? documentRevisionsCollectionConfigYupResolver
-            : documentRevisionsConfigYupResolver,
+        resolver: getYupResolver(configType, isForNewCollection),
         mode: "all",
         defaultValues: getInitialValues(config, revisionsToKeepLimit),
     });
@@ -166,7 +166,9 @@ export default function EditRevision(props: EditRevisionProps) {
                                     name="minimumRevisionsToKeep"
                                     placeholder="Enter number of revisions to keep"
                                 />
-                                {isRevisionsToKeepLimitTooLowWarning && <LimitTooLowWarning limit={revisionsDelta} />}
+                                {!isConversations && isRevisionsToKeepLimitTooLowWarning && (
+                                    <LimitTooLowWarning limit={revisionsDelta} />
+                                )}
                             </InputGroup>
                             {!isDefaultConflicts &&
                             revisionsToKeepLimit > 0 &&
@@ -195,7 +197,7 @@ export default function EditRevision(props: EditRevisionProps) {
                                     Your license allows max {revisionsAgeInDaysLimit} days retention time
                                 </RichAlert>
                             ) : null}
-                            {isRevisionsToKeepByAgeLimitWarning && (
+                            {!isConversations && isRevisionsToKeepByAgeLimitWarning && (
                                 <LimitTooLowWarning
                                     limit={generalUtils.formatTimeSpan(revisionsByAgeDelta * 1000, true)}
                                 />
@@ -219,15 +221,25 @@ export default function EditRevision(props: EditRevisionProps) {
                             )}
                         </>
                     )}
-                    {isRevisionsToKeepLimitNotSetWarning && <LimitNotSetWarning />}
+                    {!isConversations && isRevisionsToKeepLimitNotSetWarning && <LimitNotSetWarning />}
                     <RichAlert variant="primary" title="Summary" className="mt-2">
                         <ul className="m-0 ps-2 vstack gap-1">
-                            <li>
-                                A revision will be created anytime a document is created
-                                {formValues.isPurgeOnDeleteEnabled ? " or modified." : ", modified, or deleted."}
-                            </li>
+                            {isConversations ? (
+                                <li>
+                                    Snapshot revisions are only created explicitly via the snapshot API, not
+                                    automatically on document save.
+                                </li>
+                            ) : (
+                                <li>
+                                    A revision will be created anytime a document is created
+                                    {formValues.isPurgeOnDeleteEnabled ? " or modified." : ", modified, or deleted."}
+                                </li>
+                            )}
                             {formValues.isPurgeOnDeleteEnabled ? (
-                                <li>When a document is deleted all its revisions will be removed.</li>
+                                <li>
+                                    When a {isConversations ? "conversation " : ""}document is deleted all its revisions
+                                    will be removed.
+                                </li>
                             ) : (
                                 <li>
                                     Revisions of a deleted document can be accessed in the{" "}
@@ -326,6 +338,17 @@ function LimitNotSetWarning() {
     );
 }
 
+function getYupResolver(configType: EditRevisionConfigType, isForNewCollection: boolean) {
+    if (isForNewCollection) {
+        return documentRevisionsCollectionConfigYupResolver;
+    }
+    if (configType === "conversations") {
+        return documentRevisionsConversationsConfigYupResolver;
+    }
+
+    return documentRevisionsConfigYupResolver;
+}
+
 function getSubmitIcon(taskType: EditRevisionTaskType): IconName {
     switch (taskType) {
         case "new":
@@ -349,6 +372,9 @@ function getTitle(taskType: EditRevisionTaskType, configType: EditRevisionConfig
             break;
         case "defaultConflicts":
             suffix = "default conflicts revisions configuration";
+            break;
+        case "conversations":
+            suffix = "AI conversations revision configuration";
             break;
         default:
             assertUnreachable(configType);
@@ -398,6 +424,7 @@ function mapToDocumentRevisionsConfig(
     configType: EditRevisionConfigType
 ): DocumentRevisionsConfig {
     let name: DocumentRevisionsConfigName = null;
+    let disabled: boolean = formData.disabled;
 
     switch (configType) {
         case "collectionSpecific":
@@ -409,13 +436,17 @@ function mapToDocumentRevisionsConfig(
         case "defaultConflicts":
             name = documentRevisionsConfigNames.defaultConflicts;
             break;
+        case "conversations":
+            name = documentRevisionsConfigNames.conversations;
+            disabled = true;
+            break;
         default:
             assertUnreachable(configType);
     }
 
     return {
         Name: name,
-        Disabled: formData.disabled,
+        Disabled: disabled,
         MaximumRevisionsToDeleteUponDocumentUpdate: formData.isMaximumRevisionsToDeleteUponDocumentUpdateEnabled
             ? formData.maximumRevisionsToDeleteUponDocumentUpdate
             : null,
