@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +19,8 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
     private readonly CloudUploadStatus _cloudUploadStatus;
     private readonly Action<string> _onProgress;
     private readonly IDisposable _backupStatusIDisposable;
+    private static readonly TimeSpan WaitingReportInterval = TimeSpan.FromSeconds(10);
+    private readonly Stopwatch _sinceWaitingReported = new();
 
     private long _position;
     private MemoryStream _writeStream = new();
@@ -80,7 +83,7 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         if (_uploadTask is { IsCompletedSuccessfully: false })
         {
-            _onProgress.Invoke("Waiting for previous upload task to finish");
+            ReportWaitingForPreviousPart();
             AsyncHelpers.RunSync(() => _uploadTask);
         }
 
@@ -98,11 +101,21 @@ public abstract class DirectUploadStream<T> : Stream where T : IDirectUploader
 
         if (_uploadTask is { IsCompletedSuccessfully: false })
         {
-            _onProgress.Invoke("Waiting for previous upload task to finish");
+            ReportWaitingForPreviousPart();
             await _uploadTask;
         }
 
         StartUploadTask();
+    }
+
+    private void ReportWaitingForPreviousPart()
+    {
+        // when the network is slower than the backup this happens for every part, and every message is kept in the backup result
+        if (_sinceWaitingReported.IsRunning && _sinceWaitingReported.Elapsed < WaitingReportInterval)
+            return;
+
+        _onProgress.Invoke("Waiting for previous upload task to finish");
+        _sinceWaitingReported.Restart();
     }
 
     private void StartUploadTask()

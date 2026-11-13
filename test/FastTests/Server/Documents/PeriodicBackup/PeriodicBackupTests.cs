@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Tests.Infrastructure;
 using Xunit;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
+using ClientBackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace FastTests.Server.Documents.PeriodicBackup
 {
@@ -103,6 +104,87 @@ namespace FastTests.Server.Documents.PeriodicBackup
             var destinations = configuration.GetFullBackupDestinations();
 
             Assert.True(allDestinations.SequenceEqual(destinations));
+        }
+
+        // a one time backup used to accept an invalid direct upload configuration and to fail only once the backup was running
+        [RavenTheory(RavenTestCategory.BackupExportImport, LicenseRequired = true)]
+        [InlineData(true, "two-destinations")]
+        [InlineData(true, "local-folder")]
+        [InlineData(true, "unsupported-destination")]
+        [InlineData(false, "two-destinations")]
+        [InlineData(false, "local-folder")]
+        [InlineData(false, "unsupported-destination")]
+        public void Invalid_direct_upload_configuration_is_rejected_when_the_backup_is_requested(bool oneTimeBackup, string scenario)
+        {
+            using (var store = GetDocumentStore())
+            {
+                Exception e;
+                string expectedError;
+
+                if (oneTimeBackup)
+                {
+                    var configuration = ConfigureInvalidDirectUpload(new ClientBackupConfiguration(), scenario, out expectedError);
+                    e = Assert.ThrowsAny<Exception>(() => store.Maintenance.Send(new BackupOperation(configuration)));
+                }
+                else
+                {
+                    var configuration = ConfigureInvalidDirectUpload(new PeriodicBackupConfiguration { FullBackupFrequency = "0 0 1 1 *" }, scenario, out expectedError);
+                    e = Assert.ThrowsAny<Exception>(() => store.Maintenance.Send(new UpdatePeriodicBackupOperation(configuration)));
+                }
+
+                Assert.Contains(expectedError, e.ToString());
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport, LicenseRequired = true)]
+        public void Valid_one_time_direct_upload_configuration_is_accepted_when_the_backup_is_requested()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new ClientBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    BackupUploadMode = BackupUploadMode.DirectUpload,
+                    // invalid credentials, so the backup fails as soon as the upload starts, without going to the network
+                    GoogleCloudSettings = new GoogleCloudSettings { BucketName = "bucket", GoogleCredentialsJson = "not a credentials json" }
+                };
+
+                var operation = store.Maintenance.Send(new BackupOperation(configuration));
+
+                var e = Assert.ThrowsAny<Exception>(() => operation.WaitForCompletion(TimeSpan.FromMinutes(1)));
+                Assert.Contains("Wrong format for Google Credentials", e.ToString());
+            }
+        }
+
+        private T ConfigureInvalidDirectUpload<T>(T configuration, string scenario, out string expectedError) where T : ClientBackupConfiguration
+        {
+            configuration.BackupType = BackupType.Backup;
+            configuration.BackupUploadMode = BackupUploadMode.DirectUpload;
+
+            switch (scenario)
+            {
+                case "two-destinations":
+                    configuration.S3Settings = new S3Settings { BucketName = "bucket", AwsRegionName = "us-east-1", AwsAccessKey = "key", AwsSecretKey = "secret" };
+                    configuration.GoogleCloudSettings = new GoogleCloudSettings { BucketName = "bucket", GoogleCredentialsJson = "{}" };
+                    expectedError = "Cannot use direct upload when we configure more than one destination";
+                    break;
+
+                case "local-folder":
+                    configuration.LocalSettings = new LocalSettings { FolderPath = NewDataPath(suffix: "BackupFolder") };
+                    configuration.S3Settings = new S3Settings { BucketName = "bucket", AwsRegionName = "us-east-1", AwsAccessKey = "key", AwsSecretKey = "secret" };
+                    expectedError = "Trying to use direct upload when we configure a backup to a local folder";
+                    break;
+
+                case "unsupported-destination":
+                    configuration.FtpSettings = new FtpSettings { Url = "ftp://localhost:21" };
+                    expectedError = "No supported backup destination for direct upload was set";
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
+            }
+
+            return configuration;
         }
     }
 }
