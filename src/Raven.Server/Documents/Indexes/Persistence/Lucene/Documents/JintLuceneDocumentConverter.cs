@@ -426,7 +426,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             scope.DynamicFields[field.Name] = field;
             scope.CreateFieldConverter ??= new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
-            using (scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount))
+            // every created field of a document needs its own field instances, the position lets the converter reuse them in the next documents
+            using (scope.CreateFieldConverter.NestedField(scope.NextCreatedFieldPosition()))
             {
                 scope.IncrementDynamicFields();
                 var result = new List<AbstractField>();

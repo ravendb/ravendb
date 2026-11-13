@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Logging;
@@ -146,32 +147,40 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             EnsureValidStats(stats);
 
-            bool shouldSkip;
-            IDisposable setDocument;
-            using (Stats.ConvertStats.Start())
-                setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, this, out shouldSkip);
-
-            using (setDocument)
+            try
             {
-                if (shouldSkip)
-                    return;
+                bool shouldSkip;
+                IDisposable setDocument;
+                using (Stats.ConvertStats.Start())
+                    setDocument = _converter.SetDocument(key, sourceDocumentId, document, indexContext, this, out shouldSkip);
 
-                using (Stats.AddStats.Start())
-                    _writer.AddDocument(_converter.Document, _analyzer, _state);
-
-                if (_hasSuggestions)
+                using (setDocument)
                 {
-                    using (Stats.SuggestionStats.Start())
+                    if (shouldSkip)
+                        return;
+
+                    using (Stats.AddStats.Start())
+                        _writer.AddDocument(_converter.Document, _analyzer, _state);
+
+                    if (_hasSuggestions)
                     {
-                        foreach (var item in _suggestionsWriters)
+                        using (Stats.SuggestionStats.Start())
                         {
-                            var writer = item.Value;
-                            writer.AddDocument(_converter.Document, _analyzer, _state);
+                            foreach (var item in _suggestionsWriters)
+                            {
+                                var writer = item.Value;
+                                writer.AddDocument(_converter.Document, _analyzer, _state);
+                            }
                         }
                     }
-                }
 
-                stats.RecordIndexingOutput();
+                    stats.RecordIndexingOutput();
+                }
+            }
+            finally
+            {
+                // the document was written (or dropped), the fields created for it by CreateField can be reused by the next documents
+                CurrentIndexingScope.Current?.ResetCreatedFieldPositions();
             }
         }
 

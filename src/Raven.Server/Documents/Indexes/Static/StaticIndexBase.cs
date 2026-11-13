@@ -538,7 +538,8 @@ namespace Raven.Server.Documents.Indexes.Static
             if (scope.CreateFieldConverter == null)
                 scope.CreateFieldConverter = new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
-            using var i = scope.CreateFieldConverter.NestedField(scope.CreatedFieldsCount);
+            // every created field of a document needs its own field instances, the position lets the converter reuse them in the next documents
+            using var i = scope.CreateFieldConverter.NestedField(scope.NextCreatedFieldPosition());
             scope.IncrementDynamicFields();
             var result = new List<AbstractField>();
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, scope?.Source, out _);

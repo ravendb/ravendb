@@ -72,6 +72,21 @@ namespace Raven.Server.Documents.Indexes.Static
         private int _createdFieldsCount;
         public int CreatedFieldsCount => _createdFieldsCount;
 
+        private int _createdFieldPosition;
+
+        /// <summary>
+        /// Position of a dynamic field created (by CreateField) for the Lucene document that is currently being built.
+        /// The Lucene converter caches field instances by this position, so every created field of a document gets its own instances,
+        /// and the next documents reuse them after <see cref="ResetCreatedFieldPositions"/> is called once the document is written.
+        /// Without a reset, positions keep growing, so field instances are never reused (and never overwritten before they are written).
+        /// </summary>
+        public int NextCreatedFieldPosition() => ++_createdFieldPosition;
+
+        /// <summary>
+        /// Must be called only after the Lucene document was written, when no field created for it is used anymore.
+        /// </summary>
+        public void ResetCreatedFieldPositions() => _createdFieldPosition = 0;
+
         static CurrentIndexingScope()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += () => Current = null;
