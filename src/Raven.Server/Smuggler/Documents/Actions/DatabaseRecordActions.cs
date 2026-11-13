@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -79,8 +79,8 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                     else
                     {
                         if (collectionConfiguration.Equals(collection.Value) == false)
-                            result.AddWarning($"Conflict solver configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
-                                              "Configuring this conflict solver from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                            result.AddWarning($"Conflict solver configuration of collection '{collection.Key}' already exists on the destination database record and differs from the imported one. " +
+                                              "The imported configuration replaced it.");
                     }
                 }
             }
@@ -107,9 +107,9 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                     }
                     else
                     {
-                        if (collectionConfiguration.Equals(collection.Value) == false)
-                            result.AddWarning($"Schema validation configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
-                                              "Configuring this schema validation from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                        if (collectionConfiguration.IsSameAs(collection.Value) == false)
+                            result.AddWarning($"Schema validation configuration of collection '{collection.Key}' already exists on the destination database record and differs from the imported one. " +
+                                              "The imported configuration replaced it.");
                     }
                 }
             }
@@ -310,8 +310,8 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                     else
                     {
                         if (collectionConfiguration.Equals(collection.Value) == false)
-                            result.AddWarning($"Time-series configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
-                                              "Configuring this time-series from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                            result.AddWarning($"Time-series configuration of collection '{collection.Key}' already exists on the destination database record and differs from the imported one. " +
+                                              "The imported configuration replaced it.");
                     }
                 }
             }
@@ -371,8 +371,8 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
                         else
                         {
                             if (collectionConfiguration.Equals(collection.Value) == false)
-                                result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exist on the destination Database Record. " +
-                                                  "Configuring this revisions from smuggler was skipped, even though the configuration differed from the configuration in the target database record");
+                                result.AddWarning($"Revisions configuration of collection '{collection.Key}' already exists on the destination database record and differs from the imported one. " +
+                                                  "The imported configuration replaced it.");
                         }
                     }
                 }
