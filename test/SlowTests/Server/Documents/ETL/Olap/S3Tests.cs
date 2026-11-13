@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1187,11 +1188,20 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                     // re enable task
 
+                    var database = await GetDocumentDatabaseInstanceFor(store);
+
+                    // the process of a disabled task isn't started, wait for it so the enabled process is only the new one
+                    Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().All(p => p.Configuration.Disabled), true));
+
                     configuration.Disabled = false;
                     update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
                     Assert.NotNull(update.RaftCommandIndex);
 
                     etlDone = Etl.WaitForEtlToComplete(store);
+
+                    // the enabled process waits for the next scheduled run
+                    Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().Any(p => p.Configuration.Disabled == false), true));
+                    database.EtlLoader.Processes.OfType<OlapEtl>().Single(p => p.Configuration.Disabled == false).ForTestingPurposesOnly().TriggerScheduledRun();
                     Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
                     using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
