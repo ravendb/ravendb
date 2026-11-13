@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -16,6 +17,8 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     private static readonly byte[] TypePropertyName = Encoding.UTF8.GetBytes(TypeNameConverter.TypePropertyName);
 
+    private static readonly byte[] ValuesPropertyName = Encoding.UTF8.GetBytes(TypeNameConverter.ValuesPropertyName);
+
     public Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
 
     protected BlittableJsonConverterWithMissingProperties(ISerializationConventions conventions) : base(conventions)
@@ -24,7 +27,7 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     protected void CaptureMissingProperties(object entity, Type entityType, BlittableJsonReaderObject json)
     {
-        if (CaptureObject(entity, entityType, json) && MissingProperties.ContainsKey(entity) == false)
+        if (CaptureObject(entity, entityType, json.AsView()) && MissingProperties.ContainsKey(entity) == false)
             MissingProperties[entity] = new Dictionary<object, object>();
     }
 
@@ -37,53 +40,77 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
             return context.ReadObject(document, "restore/missingProperties");
     }
 
-    private bool CaptureObject(object instance, Type type, BlittableJsonReaderObject json)
+    private bool CaptureObject(object instance, Type type, in BlittableJsonReaderObject.ObjectView json)
     {
         MissingPropertiesShape shape = Conventions.GetMissingPropertiesShape(type);
         if (shape.IsObject == false)
             return false;
 
-        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
         bool captured = false;
 
         for (int i = 0; i < json.Count; i++)
         {
-            ReadOnlySpan<byte> name = json.GetPropertyNameByIndexAsSpan(i, out BlittableJsonToken token);
+            ReadOnlySpan<byte> name = json.GetPropertyName(i, out BlittableJsonToken token, out int position);
             if (name.SequenceEqual(MetadataKey) || name.SequenceEqual(TypePropertyName))
                 continue;
 
-            if (shape.TryGetMember(name, out JsonPropertyInfo property, out bool canHoldMissingProperties))
+            if (shape.TryGetMember(name, out JsonPropertyInfo property, out bool canHoldMissingProperties) == false)
             {
-                if (canHoldMissingProperties == false || IsContainer(token) == false)
-                    continue;
-
-                json.GetPropertyByIndex(i, ref propertyDetails);
-            }
-            else
-            {
-                json.GetPropertyByIndex(i, ref propertyDetails);
-                string propertyName = propertyDetails.Name;
+                string propertyName = GetString(name);
                 if (shape.Properties.TryGetValue(propertyName, out property) == false)
                 {
                     if (shape.OwnsUnknownProperties == false)
-                        captured |= RegisterMissingProperties(instance, propertyName, propertyDetails.Value);
+                        captured |= RegisterMissingProperties(instance, propertyName, json.Owner.GetObject(token, position, out _));
 
                     continue;
                 }
 
-                if (MissingPropertiesShape.CanHoldMissingProperties(property) == false || IsContainer(token) == false)
-                    continue;
+                canHoldMissingProperties = MissingPropertiesShape.CanHoldMissingProperties(property);
             }
 
-            captured |= CaptureValue(property.Get(instance), propertyDetails.Value);
+            if (canHoldMissingProperties && IsContainer(token))
+                captured |= CaptureValue(property.Get(instance), json.Owner, token, position);
         }
 
         return captured;
     }
 
+    private static unsafe string GetString(ReadOnlySpan<byte> utf8)
+    {
+        if (utf8.IsEmpty)
+            return string.Empty;
+
+        fixed (byte* bytes = utf8)
+            return Encoding.UTF8.GetString(bytes, utf8.Length);
+    }
+
+    private static unsafe int GetPropertyIndex(in BlittableJsonReaderObject.ObjectView json, string name)
+    {
+        const int StackBufferSize = 256;
+
+        int maxSize = Encoding.UTF8.GetMaxByteCount(name.Length);
+        byte[] rented = maxSize > StackBufferSize ? ArrayPool<byte>.Shared.Rent(maxSize) : null;
+        Span<byte> buffer = rented ?? stackalloc byte[StackBufferSize];
+
+        try
+        {
+            int size;
+            fixed (char* chars = name)
+            fixed (byte* bytes = buffer)
+                size = Encoding.UTF8.GetBytes(chars, name.Length, bytes, buffer.Length);
+
+            return json.GetPropertyIndex(buffer.Slice(0, size));
+        }
+        finally
+        {
+            if (rented != null)
+                ArrayPool<byte>.Shared.Return(rented);
+        }
+    }
+
     private static bool IsContainer(BlittableJsonToken token)
     {
-        return token is BlittableJsonToken.StartObject or BlittableJsonToken.StartArray or BlittableJsonToken.EmbeddedBlittable;
+        return (token & BlittableJsonReaderBase.TypesMask) is BlittableJsonToken.StartObject or BlittableJsonToken.StartArray or BlittableJsonToken.EmbeddedBlittable;
     }
 
     private static bool CanHoldMissingProperties(object value)
@@ -91,58 +118,72 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
         return value != null && value is not string && value.GetType().IsValueType == false;
     }
 
-    private bool CaptureValue(object value, object json)
+    private bool CaptureValue(object value, BlittableJsonReaderObject owner, BlittableJsonToken token, int position)
     {
         if (value == null || value.GetType().IsValueType)
             return false;
 
-        switch (json)
+        BlittableJsonReaderObject.ObjectView json;
+        switch (token & BlittableJsonReaderBase.TypesMask)
         {
-            case BlittableJsonReaderObject jsonObject when value is IDictionary dictionary:
-                var entryDetails = new BlittableJsonReaderObject.PropertyDetails();
-                bool captured = false;
-                foreach (DictionaryEntry entry in dictionary)
-                {
-                    if (entry.Key is not string key || CanHoldMissingProperties(entry.Value) == false)
-                        continue;
-
-                    int index = jsonObject.GetPropertyIndex(key);
-                    if (index == -1)
-                        continue;
-
-                    jsonObject.GetPropertyNameByIndexAsSpan(index, out BlittableJsonToken token);
-                    if (IsContainer(token) == false)
-                        continue;
-
-                    jsonObject.GetPropertyByIndex(index, ref entryDetails);
-                    captured |= CaptureValue(entry.Value, entryDetails.Value);
-                }
-
-                return captured;
-            case BlittableJsonReaderObject jsonObject when value is IEnumerable items and not string:
-                return jsonObject.TryGet(TypeNameConverter.ValuesPropertyName, out BlittableJsonReaderArray values) && CaptureItems(items, values);
-            case BlittableJsonReaderObject jsonObject:
-                return CaptureObject(value, value.GetType(), jsonObject);
-            case BlittableJsonReaderArray jsonArray when value is IEnumerable items and not string:
-                return CaptureItems(items, jsonArray);
+            case BlittableJsonToken.StartArray:
+                return value is IEnumerable and not string && CaptureItems((IEnumerable)value, owner.GetArrayView(token, position));
+            case BlittableJsonToken.StartObject:
+                json = owner.GetObjectView(token, position);
+                break;
+            case BlittableJsonToken.EmbeddedBlittable:
+                json = ((BlittableJsonReaderObject)owner.GetObject(token, position, out _)).AsView();
+                break;
             default:
                 return false;
         }
+
+        if (value is IDictionary dictionary)
+        {
+            bool captured = false;
+            foreach (DictionaryEntry entry in dictionary)
+            {
+                if (entry.Key is not string key || CanHoldMissingProperties(entry.Value) == false)
+                    continue;
+
+                int index = GetPropertyIndex(json, key);
+                if (index == -1)
+                    continue;
+
+                json.GetPropertyName(index, out BlittableJsonToken entryToken, out int entryPosition);
+                if (IsContainer(entryToken))
+                    captured |= CaptureValue(entry.Value, json.Owner, entryToken, entryPosition);
+            }
+
+            return captured;
+        }
+
+        if (value is IEnumerable items and not string)
+        {
+            int index = json.GetPropertyIndex(ValuesPropertyName);
+            if (index == -1)
+                return false;
+
+            json.GetPropertyName(index, out BlittableJsonToken valuesToken, out int valuesPosition);
+            return (valuesToken & BlittableJsonReaderBase.TypesMask) == BlittableJsonToken.StartArray &&
+                   CaptureItems(items, json.Owner.GetArrayView(valuesToken, valuesPosition));
+        }
+
+        return CaptureObject(value, value.GetType(), json);
     }
 
-    private bool CaptureItems(IEnumerable items, BlittableJsonReaderArray json)
+    private bool CaptureItems(IEnumerable items, in BlittableJsonReaderObject.ArrayView json)
     {
         bool captured = false;
         int index = 0;
         foreach (object item in items)
         {
-            if (index >= json.Length)
+            if (index >= json.Count)
                 break;
 
-            if (CanHoldMissingProperties(item) && IsContainer(json.GetTokenByIndex(index)))
-                captured |= CaptureValue(item, json[index]);
-
-            index++;
+            BlittableJsonToken token = json.GetItem(index++, out int position);
+            if (CanHoldMissingProperties(item) && IsContainer(token))
+                captured |= CaptureValue(item, json.Owner, token, position);
         }
 
         return captured;
