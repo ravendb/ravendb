@@ -1949,6 +1949,122 @@ namespace FastTests.Client
             }
         }
 
+        private sealed class FullChild
+        {
+            public string Name { get; set; }
+
+            public string Extra { get; set; }
+        }
+
+        private sealed class FullParent
+        {
+            public string Name { get; set; }
+
+            public string Extra { get; set; }
+
+            public FullChild Child { get; set; }
+
+            public List<FullChild> Children { get; set; }
+
+            public Dictionary<string, FullChild> ChildrenByKey { get; set; }
+
+            public List<List<FullChild>> NestedChildren { get; set; }
+        }
+
+        private sealed class PartialChild
+        {
+            public string Name { get; set; }
+        }
+
+        private sealed class PartialParent
+        {
+            public string Name { get; set; }
+
+            public PartialChild Child { get; set; }
+
+            public List<PartialChild> Children { get; set; }
+
+            public Dictionary<string, PartialChild> ChildrenByKey { get; set; }
+
+            public List<List<PartialChild>> NestedChildren { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task PreserveDocumentPropertiesNotFoundOnModel_RoundTripsNestedObjects()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new FullParent
+                {
+                    Name = "parent",
+                    Extra = "parent extra",
+                    Child = new FullChild { Name = "child", Extra = "child extra" },
+                    Children =
+                    [
+                        new FullChild { Name = "first", Extra = "first extra" },
+                        new FullChild { Name = "second", Extra = "second extra" }
+                    ],
+                    ChildrenByKey = new Dictionary<string, FullChild>
+                    {
+                        ["key"] = new FullChild { Name = "keyed", Extra = "keyed extra" }
+                    },
+                    NestedChildren = [[new FullChild { Name = "nested", Extra = "nested extra" }]]
+                }, "parents/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var entity = await session.LoadAsync<PartialParent>("parents/1");
+                Assert.Equal("second", entity.Children[1].Name);
+
+                entity.Name = "renamed";
+                entity.Children[1].Name = "renamed second";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("parents/1");
+
+                Assert.True(raw.TryGet("Name", out string name));
+                Assert.Equal("renamed", name);
+                Assert.True(raw.TryGet("Extra", out string extra));
+                Assert.Equal("parent extra", extra);
+
+                Assert.True(raw.TryGet("Child", out BlittableJsonReaderObject child));
+                Assert.True(child.TryGet("Extra", out extra));
+                Assert.Equal("child extra", extra);
+
+                Assert.True(raw.TryGet("Children", out BlittableJsonReaderArray children));
+                var second = (BlittableJsonReaderObject)children[1];
+                Assert.True(second.TryGet("Name", out name));
+                Assert.Equal("renamed second", name);
+                Assert.True(second.TryGet("Extra", out extra));
+                Assert.Equal("second extra", extra);
+                Assert.True(((BlittableJsonReaderObject)children[0]).TryGet("Extra", out extra));
+                Assert.Equal("first extra", extra);
+
+                Assert.True(raw.TryGet("ChildrenByKey", out BlittableJsonReaderObject childrenByKey));
+                Assert.True(childrenByKey.TryGet("key", out BlittableJsonReaderObject keyed));
+                Assert.True(keyed.TryGet("Extra", out extra));
+                Assert.Equal("keyed extra", extra);
+
+                Assert.True(raw.TryGet("NestedChildren", out BlittableJsonReaderArray nestedChildren));
+                var nested = (BlittableJsonReaderObject)((BlittableJsonReaderArray)nestedChildren[0])[0];
+                Assert.True(nested.TryGet("Extra", out extra));
+                Assert.Equal("nested extra", extra);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

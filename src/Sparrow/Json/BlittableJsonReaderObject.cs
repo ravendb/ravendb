@@ -943,30 +943,25 @@ namespace Sparrow.Json
             return false;
         }
 
-        internal ReadOnlySpan<byte> GetPropertyNameByIndexAsSpan(int index, out BlittableJsonToken token)
-        {
-            AssertContextNotDisposed();
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            GetPropertyTypeAndPosition(index, metadataSize, out token, out _, out int propertyId);
-            token &= TypesMask;
-            return GetPropertyNameAsSpan(propertyId);
-        }
-
         internal int GetPropertyIndex(ReadOnlySpan<byte> name)
         {
             AssertContextNotDisposed();
-            if (_propCount == 0)
+            return GetPropertyIndex(name, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        private int GetPropertyIndex(ReadOnlySpan<byte> name, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize)
+        {
+            if (propCount == 0)
                 return -1;
 
-            int min = 0, max = _propCount - 1;
-            long metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            byte* metadataPtr = _metadataPtr;
+            int min = 0, max = propCount - 1;
+            long metadataSize = offsetSize + propertyIdSize + sizeof(byte);
 
             int mid = (min + max) / 2;
             do
             {
                 var propertyIntPtr = metadataPtr + mid * metadataSize;
-                var propertyId = ReadNumber(propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var propertyId = ReadNumber(propertyIntPtr + offsetSize, propertyIdSize);
 
                 // same ordering as LazyStringValue.Compare: memcmp on the common prefix, then by length
                 var cmpResult = name.SequenceCompareTo(GetPropertyNameAsSpan(propertyId));
@@ -981,6 +976,103 @@ namespace Sparrow.Json
             } while (min <= max);
 
             return -1;
+        }
+
+        internal readonly struct ObjectView
+        {
+            public readonly BlittableJsonReaderObject Owner;
+
+            public readonly int Count;
+
+            private readonly byte* _objStart;
+
+            private readonly byte* _metadataPtr;
+
+            private readonly long _offsetSize;
+
+            private readonly long _propertyIdSize;
+
+            public ObjectView(BlittableJsonReaderObject owner, byte* objStart, byte* metadataPtr, int count, long offsetSize, long propertyIdSize)
+            {
+                Owner = owner;
+                Count = count;
+                _objStart = objStart;
+                _metadataPtr = metadataPtr;
+                _offsetSize = offsetSize;
+                _propertyIdSize = propertyIdSize;
+            }
+
+            public ReadOnlySpan<byte> GetPropertyName(int index, out BlittableJsonToken token, out int position)
+            {
+                if (index < 0 || index >= Count)
+                    ThrowOutOfRangeException(index);
+
+                byte* property = _metadataPtr + index * (_offsetSize + _propertyIdSize + sizeof(byte));
+                position = (int)(_objStart - Owner._mem - Owner.ReadNumber(property, _offsetSize));
+                token = (BlittableJsonToken)(*(property + _offsetSize + _propertyIdSize));
+                return Owner.GetPropertyNameAsSpan(Owner.ReadNumber(property + _offsetSize, _propertyIdSize));
+            }
+
+            public int GetPropertyIndex(ReadOnlySpan<byte> name)
+            {
+                return Owner.GetPropertyIndex(name, _metadataPtr, Count, _offsetSize, _propertyIdSize);
+            }
+        }
+
+        internal readonly struct ArrayView
+        {
+            public readonly BlittableJsonReaderObject Owner;
+
+            public readonly int Count;
+
+            private readonly byte* _dataStart;
+
+            private readonly byte* _metadataPtr;
+
+            private readonly long _offsetSize;
+
+            public ArrayView(BlittableJsonReaderObject owner, byte* dataStart, byte* metadataPtr, int count, long offsetSize)
+            {
+                Owner = owner;
+                Count = count;
+                _dataStart = dataStart;
+                _metadataPtr = metadataPtr;
+                _offsetSize = offsetSize;
+            }
+
+            public BlittableJsonToken GetItem(int index, out int position)
+            {
+                if (index < 0 || index >= Count)
+                    ThrowOutOfRangeException(index);
+
+                byte* item = _metadataPtr + index * (_offsetSize + sizeof(byte));
+                position = (int)(_dataStart - Owner._mem - Owner.ReadNumber(item, _offsetSize));
+                return (BlittableJsonToken)(*(item + _offsetSize));
+            }
+        }
+
+        internal ObjectView AsView()
+        {
+            AssertContextNotDisposed();
+
+            if (_metadataPtr == null)
+                ThrowObjectDisposed();
+
+            return new ObjectView(this, _objStart, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        internal ObjectView GetObjectView(BlittableJsonToken token, int position)
+        {
+            byte* objStart = _mem + position;
+            int propCount = ReadVariableSizeInt(position, out int propCountOffset);
+            return new ObjectView(this, objStart, objStart + propCountOffset, propCount, ProcessTokenOffsetFlags(token), ProcessTokenPropertyFlags(token));
+        }
+
+        internal ArrayView GetArrayView(BlittableJsonToken token, int position)
+        {
+            byte* dataStart = _mem + position;
+            int count = ReadVariableSizeInt(position, out int countOffset);
+            return new ArrayView(this, dataStart, dataStart + countOffset, count, ProcessTokenOffsetFlags(token));
         }
 
         // materializes just the value - not the property name
