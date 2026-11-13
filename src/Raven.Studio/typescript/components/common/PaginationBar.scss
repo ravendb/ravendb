@@ -1,6 +1,6 @@
 @use "Content/scss/colors";
 
-.lazy-virtual-table-pagination {
+.pagination-bar {
     .vr {
         align-self: stretch;
         margin: 4px 0;
@@ -22,7 +22,9 @@
             padding: 4px;
         }
     }
+}
 
+.page-navigation {
     .page-button {
         color: colors.$text-muted-var;
         line-height: 1;
