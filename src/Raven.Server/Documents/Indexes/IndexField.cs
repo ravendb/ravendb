@@ -4,6 +4,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Indexes
@@ -151,6 +152,36 @@ namespace Raven.Server.Documents.Indexes
                 Spatial = Spatial,
                 Vector = Vector
             };
+        }
+
+        private LuceneFieldNames _luceneNames;
+
+        /// <summary>
+        /// Names of the additional Lucene fields created for this field (numeric ranges, time, array and complex object markers).
+        /// Cached so we don't allocate them for every indexed value.
+        /// </summary>
+        internal LuceneFieldNames LuceneNames => _luceneNames ??= new LuceneFieldNames(Name);
+
+        internal sealed class LuceneFieldNames
+        {
+            public readonly string RangeDouble;
+
+            public readonly string RangeLong;
+
+            public readonly string Time;
+
+            public readonly string IsArray;
+
+            public readonly string ConvertToJson;
+
+            public LuceneFieldNames(string name)
+            {
+                RangeDouble = name + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                RangeLong = name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                Time = name + Constants.Documents.Indexing.Fields.TimeFieldSuffix;
+                IsArray = name + LuceneDocumentConverterBase.IsArrayFieldSuffix;
+                ConvertToJson = name + LuceneDocumentConverterBase.ConvertToJsonSuffix;
+            }
         }
     }
 

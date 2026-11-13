@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
@@ -256,9 +257,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             if (isNewSection == false)
                 writer.Value.DeleteReduceResult(reduceKeyHash, stats);
 
-            foreach (var output in results)
+            try
             {
-                writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                foreach (var output in results)
+                {
+                    writer.Value.IndexDocument(reduceKeyHash, null, output, stats, indexContext);
+                }
+            }
+            finally
+            {
+                // all outputs of the reduce key were written, so the fields created for them by CreateField can be reused by the next reduce key
+                CurrentIndexingScope.Current?.ResetCreatedFieldPositions();
             }
         }
         

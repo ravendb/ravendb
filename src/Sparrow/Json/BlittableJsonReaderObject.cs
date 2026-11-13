@@ -19,6 +19,30 @@ namespace Sparrow.Json
         private static readonly object BoxedTrue = true;
         private static readonly object BoxedFalse = false;
 
+        // small integers (counts, quantities, flags) are very common, so we reuse their boxes instead of allocating one on every read
+        private const long MinCachedBoxedLong = -128;
+        private const long MaxCachedBoxedLong = 1023;
+        private static readonly object[] BoxedLongs = CreateBoxedLongs();
+
+        private static object[] CreateBoxedLongs()
+        {
+            var boxedLongs = new object[MaxCachedBoxedLong - MinCachedBoxedLong + 1];
+            for (var i = 0; i < boxedLongs.Length; i++)
+                boxedLongs[i] = MinCachedBoxedLong + i;
+
+            return boxedLongs;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static object BoxLong(long value)
+        {
+            var index = unchecked((ulong)(value - MinCachedBoxedLong));
+            if (index < (ulong)BoxedLongs.Length)
+                return BoxedLongs[index];
+
+            return value;
+        }
+
         private AllocatedMemoryData _allocatedMemory;
         private UnmanagedWriteBuffer _buffer;
         private byte* _metadataPtr;
@@ -990,7 +1014,7 @@ namespace Sparrow.Json
                     return ReadStringLazily(position);
 
                 case BlittableJsonToken.Integer:
-                    return ReadVariableSizeLong(position);
+                    return BoxLong(ReadVariableSizeLong(position));
 
                 case BlittableJsonToken.StartObject:
                     isBlittableJsonReader = true;

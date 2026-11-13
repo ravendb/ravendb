@@ -72,6 +72,51 @@ namespace Raven.Server.Documents.Indexes.Static
         private int _createdFieldsCount;
         public int CreatedFieldsCount => _createdFieldsCount;
 
+        private int _createdFieldPosition;
+
+        /// <summary>
+        /// Position of a dynamic field created (by CreateField) for the source document (or reduce key) that is currently being indexed.
+        /// The Lucene converter caches field instances by this position, so every created field of a source document gets its own instances,
+        /// also across its outputs (a field created once, e.g. bound with `let`, can be part of every output),
+        /// and the next source documents reuse them after <see cref="ResetCreatedFieldPositions"/> is called once all their outputs are written.
+        /// Without a reset, positions keep growing, so field instances are never reused (and never overwritten before they are written).
+        /// </summary>
+        public int NextCreatedFieldPosition() => ++_createdFieldPosition;
+
+        /// <summary>
+        /// Must be called only after all outputs of the source document (or reduce key) were written, when no field created for them is used anymore.
+        /// </summary>
+        public void ResetCreatedFieldPositions() => _createdFieldPosition = 0;
+
+        private Dictionary<(string Name, FieldIndexing? Indexing, FieldStorage? Storage, FieldTermVector? TermVector, int Id), IndexField> _dynamicFields;
+
+        /// <summary>
+        /// Returns the index field of a dynamic field created (by CreateField). The same field (name and options) is usually created
+        /// for many values, so we create its index field (and, for Lucene, the names of its additional fields) once per batch, not for every value.
+        /// The returned field is shared, so it must not be modified.
+        /// </summary>
+        /// <param name="allFields">The options of all the fields of the index, the same for every call in this scope.</param>
+        /// <param name="id">The id of the field: 0 for Lucene, <see cref="Corax.Constants.IndexWriter.DynamicField"/> for Corax.</param>
+        public IndexField GetOrCreateDynamicField(string name, FieldIndexing? indexing, FieldStorage? storage, FieldTermVector? termVector, IndexFieldOptions allFields, int id = 0)
+        {
+            _dynamicFields ??= new();
+
+            var key = (name, indexing, storage, termVector, id);
+            if (_dynamicFields.TryGetValue(key, out var field) == false)
+            {
+                field = IndexField.Create(name, new IndexFieldOptions
+                {
+                    Indexing = indexing,
+                    Storage = storage,
+                    TermVector = termVector
+                }, allFields, id);
+
+                _dynamicFields[key] = field;
+            }
+
+            return field;
+        }
+
         static CurrentIndexingScope()
         {
             ThreadLocalCleanup.ReleaseThreadLocalState += () => Current = null;
@@ -267,15 +312,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     return DynamicNullObject.Null;
                 }
 
-                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue collection))
                 {
-                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
+                    if (IsSameCollection(collection, collectionName) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
 
                         if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
-                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection?.ToString());
                         }
 
                         return DynamicNullObject.Null;
@@ -290,6 +335,23 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        private static unsafe bool IsSameCollection(LazyStringValue collection, string collectionName)
+        {
+            if (collection == null)
+                return false;
+
+            // collection names are short, so we compare them without materializing a string
+            const int maxSizeToDecodeOnStack = 256;
+            if (collection.Size <= maxSizeToDecodeOnStack)
+            {
+                Span<char> chars = stackalloc char[maxSizeToDecodeOnStack];
+                var length = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(collection.Buffer, collection.Size), chars);
+                return chars.Slice(0, length).Equals(collectionName.AsSpan(), StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(collection.ToString(), collectionName, StringComparison.OrdinalIgnoreCase);
         }
 
         public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)
