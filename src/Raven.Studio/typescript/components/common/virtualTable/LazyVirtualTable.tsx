@@ -1,7 +1,7 @@
 import "./VirtualTable.scss";
 import VirtualTableBodyWrapper from "./partials/VirtualTableBodyWrapper";
 import LazyVirtualTableRow from "./partials/LazyVirtualTableRow";
-import LazyVirtualTablePaginationBar from "./partials/LazyVirtualTablePaginationBar";
+import { PaginationBar } from "components/common/PaginationBar";
 import LazyVirtualTableDomLimitBanner from "./partials/LazyVirtualTableDomLimitBanner";
 import { LazyRows } from "./hooks/useLazyRows";
 import { useLazyTableViewport } from "./hooks/useLazyTableViewport";
@@ -100,7 +100,7 @@ export default function LazyVirtualTable<T>({
                     </tbody>
                 </VirtualTableBodyWrapper>
             </div>
-            {viewport.pagination && <LazyVirtualTablePaginationBar pagination={viewport.pagination} />}
+            {viewport.pagination && <PaginationBar pagination={viewport.pagination} className="pt-1" />}
         </div>
     );
 }
