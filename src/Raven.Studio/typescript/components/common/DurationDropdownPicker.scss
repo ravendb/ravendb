@@ -1,0 +1,105 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.duration-dropdown-picker {
+    position: relative;
+    min-width: 240px;
+
+    .form-control {
+        padding-left: 2rem;
+    }
+
+    &__icon {
+        position: absolute;
+        left: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 3;
+        pointer-events: none;
+        color: colors.$text-muted-var;
+    }
+
+    &__menu {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        width: max-content;
+        min-width: 240px;
+        z-index: 6;
+        overflow: hidden;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-sm;
+        background-color: colors.$panel-bg-1-var;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    &__columns {
+        display: flex;
+    }
+
+    &__column {
+        flex: 1 1 0;
+        min-width: 64px;
+
+        &:not(:last-child) {
+            border-right: 1px solid colors.$border-color-light-var;
+        }
+    }
+
+    &__column-label {
+        padding: 6px 4px 2px;
+        color: colors.$text-muted-var;
+        font-size: sizes.$font-size-sm;
+        text-align: center;
+    }
+
+    &__column &__list {
+        max-height: 160px;
+        margin: 0;
+        padding: 4px;
+        padding-inline-start: 4px;
+        padding-inline-end: 4px;
+        overflow-y: auto;
+        list-style: none;
+        text-align: center;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+
+        &::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+    }
+
+    &__list &__option {
+        display: block;
+        width: 100%;
+        margin: 0 auto;
+        padding: 4px 0;
+        border: 0;
+        border-radius: sizes.$border-radius-sm;
+        background-color: transparent;
+        color: colors.$text-color-var;
+        text-align: center;
+        cursor: pointer;
+
+        &:hover {
+            background-color: colors.$panel-bg-2-var;
+        }
+
+        &:focus-visible {
+            outline: 2px solid colors.$text-emphasis-var;
+            outline-offset: -2px;
+        }
+    }
+
+    &__list &__option--active {
+        background-color: var(--faded-primary);
+        color: colors.$primary-var;
+
+        &:hover {
+            background-color: colors.$primary-var;
+            color: colors.$white;
+        }
+    }
+}

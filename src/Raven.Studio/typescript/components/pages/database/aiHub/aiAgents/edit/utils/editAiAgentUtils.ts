@@ -54,9 +54,7 @@ function mapFromDto(
                 name: x.Name,
                 description: x.Description,
                 isAllowModelQueries: x.Options?.AllowModelQueries ?? null,
-                isAllowModelQueriesOverride: x.Options?.AllowModelQueries != null,
                 isAddToInitialContext: x.Options?.AddToInitialContext ?? null,
-                isAddToInitialContextOverride: x.Options?.AddToInitialContext != null,
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
@@ -128,8 +126,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
                 Options: {
-                    AddToInitialContext: x.isAddToInitialContextOverride ? x.isAddToInitialContext : null,
-                    AllowModelQueries: x.isAllowModelQueriesOverride ? x.isAllowModelQueries : null,
+                    AddToInitialContext: x.isAddToInitialContext,
+                    AllowModelQueries: x.isAllowModelQueries,
                 },
             })) ?? [],
         Actions:

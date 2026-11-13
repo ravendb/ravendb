@@ -1,0 +1,12 @@
+{
+    "days": "Dni",
+    "hours": "Godziny",
+    "minutes": "Minuty",
+    "seconds": "Sekundy",
+    "daysSymbol": "d",
+    "hoursSymbol": "h",
+    "minutesSymbol": "min",
+    "secondsSymbol": "s",
+    "formatExample": "np. 1d 4h 5min",
+    "pickerLabel": "Wybierz czas trwania"
+}

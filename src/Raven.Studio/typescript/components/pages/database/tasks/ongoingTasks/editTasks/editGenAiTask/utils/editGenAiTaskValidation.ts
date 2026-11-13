@@ -84,22 +84,8 @@ const editGenAiTaskSchema = yup.object({
                     }
                 ),
             description: yup.string().required(),
-            isAllowModelQueries: yup
-                .boolean()
-                .nullable()
-                .when("isAllowModelQueriesOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAllowModelQueriesOverride: yup.boolean(),
-            isAddToInitialContext: yup
-                .boolean()
-                .nullable()
-                .when("isAddToInitialContextOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAddToInitialContextOverride: yup.boolean(),
+            isAllowModelQueries: yup.boolean().nullable(),
+            isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup
@@ -124,7 +110,16 @@ const editGenAiTaskSchema = yup.object({
     ),
     isEnableTracing: yup.boolean(),
     isSetTracingExpiration: yup.boolean(),
-    tracingExpirationInSeconds: yup.number().nullable().positive().integer(),
+    tracingExpirationInSeconds: yup
+        .number()
+        .nullable()
+        .positive()
+        .integer()
+        .when(["isEnableTracing", "isSetTracingExpiration"], {
+            is: (isEnableTracing: boolean, isSetTracingExpiration: boolean) =>
+                isEnableTracing && isSetTracingExpiration,
+            then: (schema) => schema.required(),
+        }),
 
     // update step
     updateScript: yup.string().required(),

@@ -17,13 +17,19 @@ import { useEventsCollector } from "hooks/useEventsCollector";
 import { tryHandleSubmit } from "components/utils/common";
 import { AboutViewHeading } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormDurationPicker, FormGroup, FormInput, FormSwitch } from "components/common/Form";
+import { FormGroup, FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import { FormDurationPickerWithDefault } from "components/common/FieldWithDefault";
+import FrequencyField from "components/common/FrequencyField";
 import { RevisionsBinCleanerInfoHub } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerInfoHub";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import useRevisionsBinCleanerFormSideEffects from "components/pages/database/settings/revisionsBinCleaner/useRevisionsBinCleanerFormSideEffects";
-import { revisionsBinCleanerUtils } from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
+import { AccessPopover } from "components/common/AccessPopover";
+import {
+    DEFAULT_CLEANER_FREQUENCY_IN_SEC,
+    DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC,
+    revisionsBinCleanerUtils,
+} from "components/pages/database/settings/revisionsBinCleaner/RevisionsBinCleanerUtils";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Form from "react-bootstrap/Form";
@@ -37,7 +43,7 @@ export default function RevisionsBinCleaner() {
         revisionsBinCleanerUtils.mapToFormData(await databasesService.getRevisionsBinCleanerConfiguration(databaseName))
     );
 
-    const { handleSubmit, control, formState, reset, setValue, watch } = useForm<Partial<RevisionsBinCleanerFormData>>({
+    const { handleSubmit, control, formState, reset, setValue } = useForm<Partial<RevisionsBinCleanerFormData>>({
         resolver: revisionsBinCleanerYupResolver,
         mode: "all",
         defaultValues: asyncGetRevisionsBinCleanerConfiguration.execute,
@@ -48,7 +54,21 @@ export default function RevisionsBinCleaner() {
 
     const { reportEvent } = useEventsCollector();
 
-    useRevisionsBinCleanerFormSideEffects(watch, setValue);
+    const resetSettingsOnToggle = (isEnabled: boolean) => {
+        if (isEnabled) {
+            return;
+        }
+
+        setValue("isMinimumEntriesAgeToKeepEnabled", false, DIRTY_AND_VALIDATE);
+        setValue("minimumEntriesAgeToKeep", null, DIRTY_AND_VALIDATE);
+        setValue("cleanerFrequencyInSec", null, DIRTY_AND_VALIDATE);
+    };
+
+    const resetMinimumEntriesAgeToKeepOnToggle = (isEnabled: boolean) => {
+        if (!isEnabled) {
+            setValue("minimumEntriesAgeToKeep", null, DIRTY_AND_VALIDATE);
+        }
+    };
 
     const handleSave: SubmitHandler<RevisionsBinCleanerFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -85,18 +105,18 @@ export default function RevisionsBinCleaner() {
                     <Col>
                         <Form onSubmit={handleSubmit(handleSave)} autoComplete="off">
                             <AboutViewHeading title="Revisions Bin Cleaner" icon="revisions-bin" />
-                            {hasDatabaseAdminAccess && (
+                            <AccessPopover accessRequired="DatabaseAdmin">
                                 <ButtonWithSpinner
                                     type="submit"
                                     variant="primary"
                                     className="mb-3"
                                     icon="save"
-                                    disabled={!formState.isDirty}
+                                    disabled={!hasDatabaseAdminAccess || !formState.isDirty}
                                     isSpinning={formState.isSubmitting}
                                 >
                                     Save
                                 </ButtonWithSpinner>
-                            )}
+                            </AccessPopover>
                             <Col>
                                 <Card>
                                     <Card.Body>
@@ -105,6 +125,7 @@ export default function RevisionsBinCleaner() {
                                                 name="isRevisionsBinCleanerEnabled"
                                                 disabled={!hasDatabaseAdminAccess}
                                                 control={control}
+                                                afterChange={resetSettingsOnToggle}
                                             >
                                                 Enable Revisions Bin Cleaner
                                             </FormSwitch>
@@ -114,6 +135,7 @@ export default function RevisionsBinCleaner() {
                                                 name="isMinimumEntriesAgeToKeepEnabled"
                                                 control={control}
                                                 color="primary"
+                                                afterChange={resetMinimumEntriesAgeToKeepOnToggle}
                                                 disabled={
                                                     !hasDatabaseAdminAccess ||
                                                     formState.isSubmitting ||
@@ -138,53 +160,30 @@ export default function RevisionsBinCleaner() {
                                             }
                                         >
                                             <div>
-                                                <FormGroup data-testid="durationPicker">
-                                                    <FormDurationPicker
+                                                <div className="mb-3">
+                                                    <FormDurationPickerWithDefault
                                                         control={control}
+                                                        name="minimumEntriesAgeToKeep"
+                                                        label="Minimum entries age"
                                                         disabled={
                                                             !hasDatabaseAdminAccess ||
-                                                            formState.isSubmitting ||
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
-                                                        placeholder={{
-                                                            days: "Default (30)",
-                                                            hours: "Default (0)",
-                                                            minutes: "Default (0)",
-                                                        }}
-                                                        name="minimumEntriesAgeToKeep"
+                                                        defaultTotalSeconds={DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC}
                                                         showDays
                                                     />
-                                                </FormGroup>
+                                                </div>
                                             </div>
                                         </Collapse>
-                                        <FormGroup>
-                                            <FormSwitch
-                                                name="isCleanerFrequencyInSecEnabled"
-                                                control={control}
-                                                color="primary"
-                                                className="mb-3"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled
-                                                }
-                                            >
-                                                Set custom cleaner frequency
-                                            </FormSwitch>
-                                            <FormInput
-                                                name="cleanerFrequencyInSec"
-                                                control={control}
-                                                type="number"
-                                                disabled={
-                                                    !hasDatabaseAdminAccess ||
-                                                    formState.isSubmitting ||
-                                                    !formValues.isRevisionsBinCleanerEnabled ||
-                                                    !formValues.isCleanerFrequencyInSecEnabled
-                                                }
-                                                placeholder="Default (300)"
-                                                addon="seconds"
-                                            />
-                                        </FormGroup>
+                                        <FrequencyField
+                                            control={control}
+                                            name="cleanerFrequencyInSec"
+                                            label="Cleaner frequency"
+                                            disabled={
+                                                !hasDatabaseAdminAccess || !formValues.isRevisionsBinCleanerEnabled
+                                            }
+                                            defaultFrequencyInSec={DEFAULT_CLEANER_FREQUENCY_IN_SEC}
+                                        />
                                     </Card.Body>
                                 </Card>
                             </Col>

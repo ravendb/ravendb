@@ -1,0 +1,37 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/sizes";
+
+.field-with-default-label-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: sizes.$gutter-xxs;
+    min-height: 1.75rem;
+    margin-bottom: sizes.$gutter-xxxs;
+}
+
+.field-with-default-has-hint {
+    .input-group > .form-control,
+    .input-group > .input-group-text {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+
+.field-with-default-hint {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: sizes.$gutter-xxxs sizes.$gutter-xs;
+    border: bs5variables.$input-border-width solid bs5variables.$border-color-light-var;
+    border-top: 0;
+    border-radius: 0 0 bs5variables.$input-border-radius bs5variables.$input-border-radius;
+    background-color: var(--faded-primary);
+
+    .field-with-default-use-optimal {
+        font-size: inherit;
+        line-height: inherit;
+        font-weight: bs5variables.$font-weight-semibold;
+    }
+}

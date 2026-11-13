@@ -5,4 +5,5 @@ export default {
     refresh: "Refresh",
     loadFromFile: "Load from file",
     usefulLinks: "useful links",
+    defaultPlaceholder: "Default ({{value}})",
 } as const;

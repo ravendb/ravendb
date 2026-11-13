@@ -4,5 +4,6 @@
     "delete": "Usuń",
     "refresh": "Odśwież",
     "loadFromFile": "Wczytaj z pliku",
-    "usefulLinks": "przydatne linki"
+    "usefulLinks": "przydatne linki",
+    "defaultPlaceholder": "Domyślnie ({{value}})"
 }

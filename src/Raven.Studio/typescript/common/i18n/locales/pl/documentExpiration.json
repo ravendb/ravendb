@@ -1,0 +1,6 @@
+{
+    "limitWarning_one": "Twoja licencja nie pozwala na częstotliwość wygasania poniżej {{count}} godziny.",
+    "limitWarning_few": "Twoja licencja nie pozwala na częstotliwość wygasania poniżej {{count}} godzin.",
+    "limitWarning_many": "Twoja licencja nie pozwala na częstotliwość wygasania poniżej {{count}} godzin.",
+    "limitWarning_other": "Twoja licencja nie pozwala na częstotliwość wygasania poniżej {{count}} godziny."
+}

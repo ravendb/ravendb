@@ -4,26 +4,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 const schema = yup
     .object({
         isDocumentExpirationEnabled: yup.boolean(),
-        isDeleteFrequencyEnabled: yup.boolean(),
-        deleteFrequency: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("isDeleteFrequencyEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        isLimitMaxItemsToProcessEnabled: yup.boolean(),
-        maxItemsToProcess: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("isLimitMaxItemsToProcessEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
+        deleteFrequency: yup.number().nullable().positive().integer(),
+        maxItemsToProcess: yup.number().nullable().positive().integer(),
     })
     .required();
 

@@ -72,22 +72,8 @@ const editSchema = yup.object({
                 .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
                 .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
-            isAllowModelQueries: yup
-                .boolean()
-                .nullable()
-                .when("isAllowModelQueriesOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAllowModelQueriesOverride: yup.boolean(),
-            isAddToInitialContext: yup
-                .boolean()
-                .nullable()
-                .when("isAddToInitialContextOverride", {
-                    is: true,
-                    then: (schema) => schema.required(),
-                }),
-            isAddToInitialContextOverride: yup.boolean(),
+            isAllowModelQueries: yup.boolean().nullable(),
+            isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup
@@ -148,7 +134,16 @@ const editSchema = yup.object({
             // History
             isEnableHistory: yup.boolean(),
             isSetHistoryExpiration: yup.boolean(),
-            historyExpirationInSeconds: yup.number().nullable().positive().integer(),
+            historyExpirationInSeconds: yup
+                .number()
+                .nullable()
+                .positive()
+                .integer()
+                .when(["method", "isEnableHistory", "isSetHistoryExpiration"], {
+                    is: (method: AiAgentTrimmingMethod, isEnableHistory: boolean, isSetHistoryExpiration: boolean) =>
+                        method != null && isEnableHistory && isSetHistoryExpiration,
+                    then: (schema) => schema.required(),
+                }),
 
             // Truncate
             // messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
