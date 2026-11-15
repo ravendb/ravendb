@@ -15,20 +15,23 @@ using Xunit;
 
 namespace SlowTests.Core.Querying
 {
-    // A Lucene query without an order by used to walk every matching index entry just to report the total, even for
-    // a count-only query or the first page of a broad query. A match-all query and a single term query now take their
-    // total from the index statistics (the live document count of a segment, the term's document frequency of a
-    // segment without deletions) and walk only what the page needs. These tests pin the totals and the pages against
-    // the documents, on an index written in several batches, before and after deletes and updates leave deleted
-    // entries behind in the segments, and on every index shape whose query becomes such a term query.
-    public class CountingFromIndexStatistics : RavenTestBase
+    // A query without an order by used to read every matching index entry just to report the total, even for a
+    // count-only query or the first page of a broad query. When the query is a single term or has no where clause, the
+    // index already knows the total: Lucene takes it from the index statistics (the live document count of a segment,
+    // the term's document frequency of a segment without deletions) and walks only what the page needs, and Corax takes
+    // it from the term's posting list or the index's entry count. Composite queries only have an estimate (an AND reports
+    // its smaller side, an OR the sum of both), so they keep reading, and so do sorted and distinct queries. These tests
+    // pin the totals and the pages against the documents on both engines, on an index written in several batches,
+    // before and after deletes and updates, for the shapes that take the shortcut and for those that must not, and on
+    // every index shape whose query becomes a single term.
+    public class CountingFromIndexCounts : RavenTestBase
     {
-        public CountingFromIndexStatistics(ITestOutputHelper output) : base(output)
+        public CountingFromIndexCounts(ITestOutputHelper output) : base(output)
         {
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CountsAndPages_MatchTheDocuments_BeforeAndAfterDeletesAndUpdates(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -36,8 +39,8 @@ namespace SlowTests.Core.Querying
                 var orders = SeedOrders(store);
                 AssertCountsAndPages(store, orders);
 
-                // deletes and updates leave deleted entries in the Lucene segments until they are merged, which is
-                // when a term's document frequency stops being the number of live matches
+                // Lucene keeps deleted entries in its segments until they are merged, so a term's document frequency
+                // stops being the number of live matches; Corax removes them from the posting lists and the entry count
                 using (var session = store.OpenSession())
                 {
                     foreach (var order in orders.Where((_, i) => i % 10 == 0).ToList())
@@ -49,6 +52,7 @@ namespace SlowTests.Core.Querying
                     foreach (var order in orders.Where((_, i) => i % 7 == 0))
                     {
                         order.Company = order.Company == "A" ? "C" : "A";
+                        order.Amount += 1;
                         session.Store(order);
                     }
 
@@ -61,21 +65,30 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        public void CountsAndPages_NoMatches_NullAndEmptyValues(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountsAndPages_NoMatches_NullAndEmptyValues_EmptyIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
+                new Orders_ByCompany().Execute(store);
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(0, session.Query<Order, Orders_ByCompany>().Count());
+                    Assert.Equal(0, session.Query<Order, Orders_ByCompany>().Count(x => x.Company == "A"));
+                }
+
                 var orders = SeedOrders(store);
 
-                // a null and an empty string are indexed as marker terms, so their equality queries are term queries too
+                // a null and an empty string are indexed as terms of their own, so their equality queries are single terms too
                 using (var session = store.OpenSession())
                 {
                     for (var i = 0; i < 20; i++)
-                        session.Store(new Order { Id = $"orders/null/{i}", Company = null, Name = $"null-{i}" });
+                        session.Store(new Order { Id = $"orders/null/{i}", Company = null, Name = $"null {i}" });
 
                     for (var i = 0; i < 30; i++)
-                        session.Store(new Order { Id = $"orders/empty/{i}", Company = "", Name = $"empty-{i}" });
+                        session.Store(new Order { Id = $"orders/empty/{i}", Company = "", Name = $"empty {i}" });
 
                     session.SaveChanges();
                 }
@@ -97,7 +110,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CountsAndPages_OnAnAutoIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -119,7 +132,7 @@ namespace SlowTests.Core.Querying
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TotalWithoutResults_WhenStartIsPastZeroAndPageSizeIsZero(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -127,7 +140,7 @@ namespace SlowTests.Core.Querying
                 var orders = SeedOrders(store);
                 var companyA = orders.Where(x => x.Company == "A").Select(x => x.Id).ToHashSet();
 
-                // start without a page size is not a count query, the collector still has to walk the skipped hits
+                // start without a page size is not a count query, the skipped matches are still read
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<Order, Orders_ByCompany>()
@@ -152,35 +165,48 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        // A fanout index writes one entry per line, so a document can have several entries, or none. The total counts
+        // entries, both when it comes from the index's counts and when every entry is read. Each total that takes the
+        // shortcut is compared with the same query written so that it has to read every entry, before and after updates
+        // that grow, shrink and empty the fanout of a document.
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
-        public void CountsAndPages_OnAFanoutIndex(Options options)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountsAndPages_OnAFanoutIndex_BeforeAndAfterUpdatesThatChangeTheFanout(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 new Orders_ByLineProduct().Execute(store);
                 var orders = SeedOrders(store, createIndex: false);
-                var entries = orders.Sum(x => x.Lines.Count);
-                var withProductP2 = orders.Where(x => x.Lines.Any(l => l.Product == "p2")).Select(x => x.Id).ToHashSet();
+                AssertFanoutCountsAndPages(store, orders);
 
                 using (var session = store.OpenSession())
                 {
-                    // the total of a fanout index is the number of index entries, as it always was
-                    Assert.Equal(entries, session.Query<Order, Orders_ByLineProduct>().Count());
-                    Assert.Equal(orders.Count, session.Query<Order, Orders_ByLineProduct>().Count(x => x.Lines.Any(l => l.Product == "p0")));
-                    Assert.Equal(withProductP2.Count, session.Query<Order, Orders_ByLineProduct>().Count(x => x.Lines.Any(l => l.Product == "p2")));
+                    foreach (var order in orders.Where((_, i) => i % 9 == 0).ToList())
+                    {
+                        session.Delete(order.Id);
+                        orders.Remove(order);
+                    }
 
-                    // a page is cut by document, so the server walks past the page's entries to fill it
-                    AssertPage(session.Query<Order, Orders_ByLineProduct>().Take(10), orders.Select(x => x.Id).ToHashSet(), 10, entries);
-                    AssertPage(session.Query<Order, Orders_ByLineProduct>().Where(x => x.Lines.Any(l => l.Product == "p2")).Take(10), withProductP2, 10);
+                    foreach (var (order, i) in orders.Select((o, i) => (o, i)).Where(x => x.i % 4 == 0))
+                    {
+                        var lines = (i / 4) % 3 == 0 ? 6 : (i / 4) % 3 == 1 ? 1 : 0;
+                        order.Lines = Enumerable.Range(0, lines).Select(j => new OrderLine { Product = $"p{(i + j) % 4}" }).ToList();
+                        order.Company = order.Company == "A" ? "C" : "A";
+                        session.Store(order);
+                    }
+
+                    session.SaveChanges();
                 }
+
+                Indexes.WaitForIndexing(store);
+                AssertFanoutCountsAndPages(store, orders);
             }
         }
 
-        // A document can hold several values of one field, and the same value more than once. A term counts the documents
+        // An entry can hold several values of one field, and the same value more than once. A term counts the entries
         // that hold it, each once.
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CountsAndPages_OnAMultiValuedFieldWithRepeatedValues_BeforeAndAfterUpdates(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -205,10 +231,52 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        // A multi-map index writes entries from two collections into one index, and its totals count both.
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountsAndPages_OnAMultiMapIndex_BeforeAndAfterDeletesAndUpdates(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new OrdersAndInvoices_ByCompany().Execute(store);
+                var orders = SeedOrders(store, createIndex: false);
+                var invoices = Enumerable.Range(0, 500).Select(i => new Invoice { Id = $"invoices/{i}", Company = i % 7 == 0 ? "A" : "D" }).ToList();
+
+                using (var bulk = store.BulkInsert())
+                {
+                    foreach (var invoice in invoices)
+                        bulk.Store(invoice);
+                }
+
+                Indexes.WaitForIndexing(store);
+                AssertMultiMapCountsAndPages(store, orders, invoices);
+
+                using (var session = store.OpenSession())
+                {
+                    foreach (var order in orders.Where((_, i) => i % 6 == 0).ToList())
+                    {
+                        session.Delete(order.Id);
+                        orders.Remove(order);
+                    }
+
+                    foreach (var invoice in invoices.Where((_, i) => i % 5 == 0))
+                    {
+                        invoice.Company = invoice.Company == "A" ? "D" : "A";
+                        session.Store(invoice);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+                AssertMultiMapCountsAndPages(store, orders, invoices);
+            }
+        }
+
         // a single database only: the sharded orchestrator sums the totals of the shards, so a group that every
         // shard reduces counts once per shard there, with or without this change
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CountsAndPages_OnAMapReduceIndex(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -234,7 +302,26 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        // a single database only: a sharded database rejects intersect queries
+        // a single database only: a distinct count is not supported on a sharded database
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DistinctCount_StillReadsEveryEntry(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var orders = SeedOrders(store);
+
+                // a distinct count removes the duplicates it reads, so its total never comes from the index's counts
+                using (var session = store.OpenSession())
+                {
+                    Assert.Equal(3, session.Query<Order, Orders_ByCompany>().Select(x => x.Company).Distinct().Count());
+                    Assert.Equal(1, session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A").Select(x => x.Company).Distinct().Count());
+                    Assert.Equal(orders.Select(x => x.Amount).Distinct().Count(), session.Query<Order, Orders_ByCompany>().Select(x => x.Amount).Distinct().Count());
+                }
+            }
+        }
+
+        // Lucene only: Corax does not support intersect queries, and a sharded database rejects them
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void IntersectionQuery_WhoseFirstClauseIsASingleTerm(Options options)
@@ -276,6 +363,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        // Lucene only: the Corax index entries endpoint reports a partial total, which this change does not touch
         [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void IndexEntries_ReportTheTotalAndPage(Options options)
@@ -314,18 +402,25 @@ namespace SlowTests.Core.Querying
             var all = orders.Select(x => x.Id).ToHashSet();
             var companyA = orders.Where(x => x.Company == "A").Select(x => x.Id).ToHashSet();
             var companyAOrC = orders.Where(x => x.Company == "A" || x.Company == "C").Select(x => x.Id).ToHashSet();
+            var companyAAndAmount7 = orders.Where(x => x.Company == "A" && x.Amount == 7).Select(x => x.Id).ToHashSet();
+            var amount7 = orders.Where(x => x.Amount == 7).Select(x => x.Id).ToHashSet();
 
             using (var session = store.OpenSession())
             {
                 session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue; // paging through every match is many queries
 
-                // count-only queries: no where clause, a single term, and shapes that still have to walk
+                // count-only queries: no where clause, a string term and a numeric term (a range on Lucene, which walks)
                 Assert.Equal(orders.Count, session.Query<Order, Orders_ByCompany>().Count());
                 Assert.Equal(companyA.Count, session.Query<Order, Orders_ByCompany>().Count(x => x.Company == "A"));
+                Assert.Equal(amount7.Count, session.Query<Order, Orders_ByCompany>().Count(x => x.Amount == 7));
+
+                // composite shapes whose count is only an estimate, so they still read every entry
+                Assert.Equal(companyAAndAmount7.Count, session.Query<Order, Orders_ByCompany>().Count(x => x.Company == "A" && x.Amount == 7));
                 Assert.Equal(companyAOrC.Count, session.Query<Order, Orders_ByCompany>().Count(x => x.Company == "A" || x.Company == "C"));
                 Assert.Equal(orders.Count - companyA.Count, session.Query<Order, Orders_ByCompany>().Count(x => x.Company != "A"));
+                Assert.Equal(orders.Count(x => x.Amount > 7), session.Query<Order, Orders_ByCompany>().Count(x => x.Amount > 7));
 
-                // a single token on a full text search field is a term query as well
+                // a single token on a full text search field is a single term as well
                 Assert.Equal(orders.Count, session.Query<Order, Orders_ByCompany>().Search(x => x.Name, "order").Count());
 
                 // a page without an order by still reports the total of every match
@@ -334,6 +429,11 @@ namespace SlowTests.Core.Querying
                 AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A").Skip(5).Take(10), companyA, 10);
                 AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A").Skip(companyA.Count - 3).Take(10), companyA, 3);
                 AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A").Skip(companyA.Count + 5).Take(10), companyA, 0);
+                AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Amount == 7).Take(10), amount7, 10);
+                AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A" && x.Amount == 7).Take(10), companyAAndAmount7, Math.Min(10, companyAAndAmount7.Count));
+
+                // a sorted page takes the sorting path, which counts on its own
+                AssertPage(session.Query<Order, Orders_ByCompany>().Where(x => x.Company == "A").OrderBy(x => x.Name).Take(10), companyA, 10);
 
                 // a projection takes the same page
                 var projected = session.Query<Order, Orders_ByCompany>()
@@ -348,9 +448,36 @@ namespace SlowTests.Core.Querying
                 Assert.All(projected, name => Assert.Contains(name, orders.Where(x => x.Company == "A").Select(x => x.Name)));
 
                 // paging through every match without an order by visits each document exactly once, which holds only
-                // if every page is cut from the same walk order
+                // if every page is cut from the same order
                 AssertPagingVisitsEveryDocumentOnce(session, x => x.Company == "A", companyA, 7);
                 AssertPagingVisitsEveryDocumentOnce(session, null, all, 97);
+            }
+        }
+
+        private static void AssertFanoutCountsAndPages(IDocumentStore store, List<Order> orders)
+        {
+            var entries = orders.SelectMany(o => o.Lines.Select(l => (o.Id, l.Product))).ToList();
+            var all = orders.Where(x => x.Lines.Count > 0).Select(x => x.Id).ToHashSet();
+
+            using (var session = store.OpenSession())
+            {
+                // no where clause: the index's entry count, compared with an OR of every product, which has to read
+                var products = new[] { "p0", "p1", "p2", "p3" };
+                Assert.Equal(entries.Count, session.Query<Order, Orders_ByLineProduct>().Count());
+                Assert.Equal(entries.Count, session.Query<Order, Orders_ByLineProduct>()
+                    .Count(x => x.Lines.Any(l => l.Product == "p0" || l.Product == "p1" || l.Product == "p2" || l.Product == "p3")));
+
+                // a page is cut by document, while the total counts entries
+                AssertPage(session.Query<Order, Orders_ByLineProduct>().Take(10), all, 10, entries.Count);
+
+                foreach (var product in products.Append("no-such-product"))
+                {
+                    var documents = entries.Where(e => e.Product == product).Select(e => e.Id).ToHashSet();
+                    var entriesWithProduct = entries.Count(e => e.Product == product);
+
+                    Assert.Equal(entriesWithProduct, session.Query<Order, Orders_ByLineProduct>().Count(x => x.Lines.Any(l => l.Product == product)));
+                    AssertPage(session.Query<Order, Orders_ByLineProduct>().Where(x => x.Lines.Any(l => l.Product == product)).Take(10), documents, Math.Min(10, documents.Count), entriesWithProduct);
+                }
             }
         }
 
@@ -400,6 +527,31 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        private static void AssertMultiMapCountsAndPages(IDocumentStore store, List<Order> orders, List<Invoice> invoices)
+        {
+            var companies = orders.Select(x => (x.Id, x.Company)).Concat(invoices.Select(x => (x.Id, x.Company))).ToList();
+
+            using (var session = store.OpenSession())
+            {
+                Assert.Equal(companies.Count, session.Query<OrdersAndInvoices_ByCompany.Entry, OrdersAndInvoices_ByCompany>().Count());
+
+                foreach (var company in new[] { "A", "B", "C", "D", "no-such-company" })
+                {
+                    var expected = companies.Where(x => x.Company == company).Select(x => x.Id).ToHashSet();
+                    Assert.Equal(expected.Count, session.Query<OrdersAndInvoices_ByCompany.Entry, OrdersAndInvoices_ByCompany>().Count(x => x.Company == company));
+
+                    var page = session.Query<OrdersAndInvoices_ByCompany.Entry, OrdersAndInvoices_ByCompany>()
+                        .Statistics(out var stats)
+                        .Where(x => x.Company == company)
+                        .Take(10)
+                        .ToList();
+
+                    Assert.Equal(expected.Count, stats.TotalResults);
+                    Assert.Equal(Math.Min(10, expected.Count), page.Count);
+                }
+            }
+        }
+
         private static void AssertPage(IRavenQueryable<Order> query, HashSet<string> expected, int expectedCount, int? expectedTotal = null)
         {
             var results = query.Statistics(out var stats).ToList();
@@ -442,11 +594,13 @@ namespace SlowTests.Core.Querying
                     Id = $"orders/{i}",
                     Company = i % 11 == 0 ? "A" : i % 13 == 0 ? "C" : "B",
                     Name = $"order {i:D4}",
+                    Amount = i % 50,
                     Lines = Enumerable.Range(0, i % 3 + 1).Select(j => new OrderLine { Product = $"p{j}" }).ToList()
                 });
             }
 
-            // several batches with indexing in between, so the index has more than one segment
+            // several batches with indexing in between, so the index is written by more than one batch (and Lucene has
+            // more than one segment)
             foreach (var batch in orders.Chunk(1000))
             {
                 using (var bulk = store.BulkInsert())
@@ -466,12 +620,19 @@ namespace SlowTests.Core.Querying
             public string Id { get; set; }
             public string Company { get; set; }
             public string Name { get; set; }
+            public long Amount { get; set; }
             public List<OrderLine> Lines { get; set; }
         }
 
         private class OrderLine
         {
             public string Product { get; set; }
+        }
+
+        private class Invoice
+        {
+            public string Id { get; set; }
+            public string Company { get; set; }
         }
 
         private class Orders_ByCompany : AbstractIndexCreationTask<Order>
@@ -482,7 +643,8 @@ namespace SlowTests.Core.Querying
                                 select new
                                 {
                                     o.Company,
-                                    o.Name
+                                    o.Name,
+                                    o.Amount
                                 };
 
                 Index(x => x.Name, FieldIndexing.Search);
@@ -511,6 +673,20 @@ namespace SlowTests.Core.Querying
                                 {
                                     Products = o.Lines.Select(l => l.Product)
                                 };
+            }
+        }
+
+        private class OrdersAndInvoices_ByCompany : AbstractMultiMapIndexCreationTask<OrdersAndInvoices_ByCompany.Entry>
+        {
+            public class Entry
+            {
+                public string Company { get; set; }
+            }
+
+            public OrdersAndInvoices_ByCompany()
+            {
+                AddMap<Order>(orders => from o in orders select new Entry { Company = o.Company });
+                AddMap<Invoice>(invoices => from i in invoices select new Entry { Company = i.Company });
             }
         }
 
