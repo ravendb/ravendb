@@ -652,6 +652,9 @@ namespace Sparrow.Json
 
         public void Reset(UsageMode mode)
         {
+            // the previous document might not have been finalized (e.g. its writing failed)
+            ClearState();
+
             _mode = mode;
             _writer.ResetAndRenew();
         }

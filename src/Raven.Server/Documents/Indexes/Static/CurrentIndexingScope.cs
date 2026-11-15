@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -193,40 +194,21 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public sealed class MetadataFieldCache
+        // writer of the map results of map-reduce indexes, reused by all the map results of the batch,
+        // see MapReduceIndex.AnonymousObjectToBlittableMapResultsEnumerableWrapper
+        private BlittableJsonWriter _mapResultWriter;
+
+        /// <summary>
+        /// Returns the writer of the batch, ready for a new map result (anything left from the previous one is discarded)
+        /// </summary>
+        internal BlittableJsonWriter GetMapResultWriter()
         {
-            public readonly LazyStringValue Id;
-            public readonly LazyStringValue Key;
-            public readonly LazyStringValue Collection;
+            if (_mapResultWriter == null)
+                return _mapResultWriter = new BlittableJsonWriter(IndexContext);
 
-            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection)
-            {
-                Id = id;
-                Key = key;
-                Collection = collection;
-            }
+            _mapResultWriter.Renew();
+            return _mapResultWriter;
         }
-
-        private MetadataFieldCache _metadataFields;
-
-        public MetadataFieldCache MetadataFields
-        {
-            get
-            {
-                if (_metadataFields == null)
-                {
-                    var context = this.IndexContext;
-                    _metadataFields = new MetadataFieldCache(
-                        id: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id),
-                        key: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key),
-                        collection: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection)
-                    );
-                }
-
-                return _metadataFields;
-            }
-        }
-
 
         public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
         {
@@ -588,6 +570,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _javaScriptUtils?.Clear();
             _javaScriptUtils = null;
+            ((IDisposable)_mapResultWriter)?.Dispose();
+            _mapResultWriter = null;
             Current = null;
         }
 

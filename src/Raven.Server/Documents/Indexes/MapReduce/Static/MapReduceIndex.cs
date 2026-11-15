@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly object[] _orderedMultipleGroupByValues;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
-                private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
+                private readonly CurrentIndexingScope _indexingScope;
 
                 public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
@@ -613,7 +613,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     if (_orderedMultipleGroupByFieldPositions is {Count: > 0})
                         _orderedMultipleGroupByValues = new object[_orderedMultipleGroupByFieldPositions.Count];
 
-                    _metadataFields = CurrentIndexingScope.Current.MetadataFields;
+                    _indexingScope = CurrentIndexingScope.Current;
+                    Debug.Assert(ReferenceEquals(_indexingScope.IndexContext, _parent._indexContext), "the map results are written with the context of the indexing scope");
                 }
 
                 public bool MoveNext()
@@ -672,31 +673,28 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _parent._indexContext.CachedProperties.NewDocument();
 
-                        using (var writer = new BlittableJsonWriter(_parent._indexContext,
-                            idField: _metadataFields.Id,
-                            keyField: _metadataFields.Key,
-                            collectionField: _metadataFields.Collection))
+                        // the writer is reused by all the map results of the batch, CreateReader hands its buffer over to the map result
+                        var writer = _indexingScope.GetMapResultWriter();
+
+                        writer.WriteStartObject();
+
+                        while (_propertyQueue.TryDequeue(out var x))
                         {
-                            writer.WriteStartObject();
-
-                            while (_propertyQueue.TryDequeue(out var x))
-                            {
-                                writer.WritePropertyName(x.PropertyName);
-                                WriteValue(writer, x.PropertyValue);
-                            }
-
-                            writer.WriteEndObject();
-
-                            if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
-                                ThrowMissingGroupByFieldsInMapOutput(output, _groupByFields, _parent._compiledIndex);
-
-                            var reduceHashKey = _reduceKeyProcessor.Hash;
-
-                            writer.FinalizeDocument();
-
-                            Current.Data = writer.CreateReader();
-                            Current.ReduceKeyHash = reduceHashKey;
+                            writer.WritePropertyName(x.PropertyName);
+                            WriteValue(writer, x.PropertyValue);
                         }
+
+                        writer.WriteEndObject();
+
+                        if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
+                            ThrowMissingGroupByFieldsInMapOutput(output, _groupByFields, _parent._compiledIndex);
+
+                        var reduceHashKey = _reduceKeyProcessor.Hash;
+
+                        writer.FinalizeDocument();
+
+                        Current.Data = writer.CreateReader();
+                        Current.ReduceKeyHash = reduceHashKey;
                     }
 
                     return true;
