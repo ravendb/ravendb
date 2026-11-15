@@ -197,6 +197,34 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        // An entry can hold several values of one field, and the same value more than once. A term counts the entries
+        // that hold it, each once.
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountsAndPages_OnAMultiValuedFieldWithRepeatedValues_BeforeAndAfterUpdates(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new Orders_ByProducts().Execute(store);
+                var orders = SeedOrdersWithRepeatedProducts(store);
+                AssertMultiValuedCountsAndPages(store, orders);
+
+                using (var session = store.OpenSession())
+                {
+                    foreach (var (order, i) in orders.Select((o, i) => (o, i)).Where(x => x.i % 5 == 0))
+                    {
+                        order.Lines = Enumerable.Range(0, (i / 5) % 3 * 2).Select(_ => new OrderLine { Product = "p1" }).ToList();
+                        session.Store(order);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+                AssertMultiValuedCountsAndPages(store, orders);
+            }
+        }
+
         // A multi-map index writes entries from two collections into one index, and its totals count both.
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
@@ -370,6 +398,52 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        private List<Order> SeedOrdersWithRepeatedProducts(IDocumentStore store)
+        {
+            // up to four lines, two by two of the same product, and no lines at all on every fourth order
+            var orders = Enumerable.Range(0, 2000).Select(i => new Order
+            {
+                Id = $"orders/{i}",
+                Company = "B",
+                Name = $"order {i:D4}",
+                Lines = Enumerable.Range(0, i % 4).Select(j => new OrderLine { Product = $"p{(i + j / 2) % 3}" }).ToList()
+            }).ToList();
+
+            foreach (var batch in orders.Chunk(1000))
+            {
+                using (var bulk = store.BulkInsert())
+                {
+                    foreach (var order in batch)
+                        bulk.Store(order);
+                }
+
+                Indexes.WaitForIndexing(store);
+            }
+
+            return orders;
+        }
+
+        private static void AssertMultiValuedCountsAndPages(IDocumentStore store, List<Order> orders)
+        {
+            using (var session = store.OpenSession())
+            {
+                Assert.Equal(orders.Count, session.Query<Order, Orders_ByProducts>().Count());
+
+                foreach (var product in new[] { "p0", "p1", "p2", "no-such-product" })
+                {
+                    var withProduct = orders.Where(x => x.Lines.Any(l => l.Product == product)).Select(x => x.Id).ToHashSet();
+                    var query = $"from index 'Orders/ByProducts' where Products = '{product}'";
+
+                    Assert.Equal(withProduct.Count, session.Advanced.RawQuery<Order>(query).Count());
+
+                    var results = session.Advanced.RawQuery<Order>(query).Statistics(out var stats).Take(10).ToList();
+                    Assert.Equal(withProduct.Count, stats.TotalResults);
+                    Assert.Equal(Math.Min(10, withProduct.Count), results.Count);
+                    Assert.All(results, x => Assert.Contains(x.Id, withProduct));
+                }
+            }
+        }
+
         private static void AssertMultiMapCountsAndPages(IDocumentStore store, List<Order> orders, List<Invoice> invoices)
         {
             var companies = orders.Select(x => (x.Id, x.Company)).Concat(invoices.Select(x => (x.Id, x.Company))).ToList();
@@ -502,6 +576,18 @@ namespace SlowTests.Core.Querying
                                 select new
                                 {
                                     Lines_Product = line.Product
+                                };
+            }
+        }
+
+        private class Orders_ByProducts : AbstractIndexCreationTask<Order>
+        {
+            public Orders_ByProducts()
+            {
+                Map = orders => from o in orders
+                                select new
+                                {
+                                    Products = o.Lines.Select(l => l.Product)
                                 };
             }
         }
