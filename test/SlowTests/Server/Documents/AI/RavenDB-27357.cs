@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.AI
                 ModelType = AiModelType.Chat,
                 Name = "test-connection",
                 // the canned responses are Chat Completions shaped
-                OpenAiSettings = new OpenAiSettings(apiKey: "test-key", endpoint: null, model: "gpt-4.1") { ApiMode = OpenAiApiMode.ChatCompletions }
+                OpenAiSettings = new OpenAiSettings(apiKey: "test-key", endpoint: null, model: "gpt-4.1") { ChatApi = OpenAiChatApi.ChatCompletions }
             };
 
             Assert.True(AbstractChatCompletionProvider.TryGetParameters(connection, out var settings));

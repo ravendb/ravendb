@@ -111,9 +111,15 @@ internal static class OpenAiShared
         return string.Empty;
     }
 
+    // The configured reasoning effort as the provider expects it; null when not set, so the field is not sent.
 #pragma warning disable CS0618 // configurations persisted by older clients hold the legacy enum shape
-    public static string NormalizeReasoningEffort(string value)
+    public static string GetReasoningEffort(string configured)
     {
+        if (string.IsNullOrWhiteSpace(configured))
+            return null;
+
+        var value = configured.Trim();
+
         // ReasoningEffort is free-form, so "3" is a provider value - without this, Enum.TryParse
         // below would read it as the number behind High
         if (int.TryParse(value, out _))

@@ -72,6 +72,7 @@ internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvid
             writer.WritePropertyName(Wire.RequestFields.ReasoningEffort);
             writer.WriteString(reasoningEffort);
         }
+#pragma warning disable CS0618 // Seed is still sent on Chat Completions
         if (_settings.Seed.HasValue)
         {
             // Use a fixed seed to make sampling more reproducible across runs.
@@ -81,6 +82,7 @@ internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvid
             writer.WritePropertyName(Wire.RequestFields.Seed);
             writer.WriteInteger(_settings.Seed.Value);
         }
+#pragma warning restore CS0618
         base.HandleCompletionRequestPayload(writer);
     }
 
@@ -90,10 +92,6 @@ internal class OpenAiChatCompletionProvider : AbstractOpenAiChatCompletionProvid
         if (_disableReasoning)
             return Wire.RequestFields.ReasoningEffortNoneValue;
 
-        var reasoningEffort = _settings.ReasoningEffort;
-        if (string.IsNullOrWhiteSpace(reasoningEffort))
-            return null;
-
-        return OpenAiShared.NormalizeReasoningEffort(reasoningEffort.Trim());
+        return OpenAiShared.GetReasoningEffort(_settings.ReasoningEffort);
     }
 }

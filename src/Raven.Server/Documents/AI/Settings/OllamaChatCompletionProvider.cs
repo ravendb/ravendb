@@ -38,11 +38,12 @@ internal class OllamaChatCompletionProvider : AbstractOpenAiChatCompletionProvid
             writer.WriteBool(_settings.Think.Value);
         }
 
-        if (string.IsNullOrWhiteSpace(_settings.ReasoningEffort) == false)
+        var reasoningEffort = OpenAiShared.GetReasoningEffort(_settings.ReasoningEffort);
+        if (reasoningEffort != null)
         {
             writer.WriteComma();
             writer.WritePropertyName(Wire.RequestFields.ReasoningEffort);
-            writer.WriteString(OpenAiShared.NormalizeReasoningEffort(_settings.ReasoningEffort.Trim()));
+            writer.WriteString(reasoningEffort);
         }
     }
 }

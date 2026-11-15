@@ -144,9 +144,8 @@ internal abstract partial class AbstractOpenAiResponsesProvider
         if (state.StopReason == Wire.ReasonContentFilter)
             RefusedToAnswerException.Throw(OpenAiShared.ContentFilterRefusal, "[streaming]", state.StopReason, requestId);
 
-        // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
-        var truncated = state.StopReason == Wire.ReasonMaxOutputTokens;
-        if (truncated && (state.StructuredOutput || state.Calls.Count > 0 || state.RawText.Length == 0))
+        // a cut answer is not an answer, plain text included (same as Chat Completions and Anthropic)
+        if (state.StopReason == Wire.ReasonMaxOutputTokens)
             throw Truncated(requestId, content: null);
 
         if (state.Calls.Count > 0)

@@ -18,9 +18,9 @@ namespace Raven.Server.Documents.AI.Settings;
 // can move back to Chat Completions and replay the same conversation.
 internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCompletionProvider
 {
-    private readonly OpenAiBaseSettings _settings;
+    private readonly OpenAiChatApiSettings _settings;
 
-    protected AbstractOpenAiResponsesProvider(OpenAiBaseSettings settings)
+    protected AbstractOpenAiResponsesProvider(OpenAiChatApiSettings settings)
         : base(settings)
     {
         _settings = settings;
@@ -50,8 +50,9 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         if (_settings.Temperature.HasValue)
             body[Wire.Temperature] = _settings.Temperature.Value;
 
-        if (string.IsNullOrWhiteSpace(_settings.ReasoningEffort) == false)
-            body[Wire.Reasoning] = new DynamicJsonValue { [Wire.Effort] = OpenAiShared.NormalizeReasoningEffort(_settings.ReasoningEffort.Trim()) };
+        var reasoningEffort = OpenAiShared.GetReasoningEffort(_settings.ReasoningEffort);
+        if (reasoningEffort != null)
+            body[Wire.Reasoning] = new DynamicJsonValue { [Wire.Effort] = reasoningEffort };
     }
 
     public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
@@ -61,8 +62,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
             [Wire.Type] = Wire.TypeFunction,
             [Wire.Name] = name,
             [Wire.Description] = description,
-            [Wire.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema"),
-            [Wire.Strict] = true
+            [Wire.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
         };
     }
 
@@ -164,14 +164,14 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
     private static void AppendInstructions(StringBuilder instructions, BlittableJsonReaderObject message)
     {
         message.TryGet(Canonical.ResponseFields.Content, out object content);
-        var text = ContentAsText(content);
-        if (string.IsNullOrEmpty(text))
+        var text = ContentAsValue(content);
+        if (IsEmptyText(text))
             return;
 
         if (instructions.Length > 0)
             instructions.Append("\n\n");
 
-        instructions.Append(text);
+        instructions.Append(text.ToString()); // joined into one string, so the copy is needed here
     }
 
     private static DynamicJsonValue ToFunctionCallOutput(BlittableJsonReaderObject message)
@@ -183,7 +183,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         {
             [Wire.Type] = Wire.TypeFunctionCallOutput,
             [Wire.CallId] = callId,
-            [Wire.Output] = ContentAsText(content) ?? string.Empty
+            [Wire.Output] = ContentAsValue(content) ?? string.Empty
         };
     }
 
@@ -192,8 +192,8 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
     private static void AddAssistantItems(DynamicJsonArray input, BlittableJsonReaderObject message)
     {
         message.TryGet(Canonical.ResponseFields.Content, out object content);
-        var text = ContentAsText(content);
-        if (string.IsNullOrEmpty(text) == false)
+        var text = ContentAsValue(content);
+        if (IsEmptyText(text) == false)
         {
             input.Add(new DynamicJsonValue
             {
@@ -242,7 +242,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
             [Wire.Role] = role,
             [Wire.Content] = content is BlittableJsonReaderArray parts
                 ? ToInputParts(parts)
-                : ContentAsText(content) ?? string.Empty
+                : ContentAsValue(content) ?? string.Empty
         };
     }
 
@@ -294,14 +294,16 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         return result;
     }
 
-    // Stored content as the text the model gets: a structured answer (a JSON object) is sent as its JSON text,
-    // as Chat Completions does; text parts are joined.
-    private static string ContentAsText(object content)
+    // Stored content as the value the request gets: a stored string as is (the writer copies its bytes from the stored
+    // message), text parts joined, and anything else (a structured answer) as its JSON text, as Chat Completions does.
+    private static object ContentAsValue(object content)
     {
         switch (content)
         {
             case null:
-                return null;
+            case LazyStringValue:
+            case LazyCompressedStringValue:
+                return content;
 
             case BlittableJsonReaderArray parts:
                 var text = new StringBuilder();
@@ -314,6 +316,23 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
 
             default:
                 return content.ToString();
+        }
+    }
+
+    private static bool IsEmptyText(object text)
+    {
+        switch (text)
+        {
+            case null:
+                return true;
+            case LazyStringValue lazy:
+                return lazy.Length == 0;
+            case LazyCompressedStringValue compressed:
+                return compressed.UncompressedSize == 0;
+            case string s:
+                return s.Length == 0;
+            default:
+                return false;
         }
     }
 
@@ -405,8 +424,8 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         if (incompleteReason == Wire.ReasonContentFilter)
             RefusedToAnswerException.Throw(OpenAiShared.ContentFilterRefusal, content.ToString(), incompleteReason, requestId);
 
-        // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
-        if (incompleteReason == Wire.ReasonMaxOutputTokens && (toolCalls != null || structuredOutput || text.Length == 0))
+        // a cut answer is not an answer, plain text included (same as Chat Completions and Anthropic)
+        if (incompleteReason == Wire.ReasonMaxOutputTokens)
             throw Truncated(requestId, content);
 
         if (toolCalls != null)
@@ -542,7 +561,6 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         public const string TypeFunction = "function";
         public const string Description = "description";
         public const string Parameters = "parameters";
-        public const string Strict = "strict";
 
         // input and output items
         public const string Type = "type";
