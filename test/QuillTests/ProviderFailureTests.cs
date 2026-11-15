@@ -155,7 +155,7 @@ public class ProviderFailureTests(ITestOutputHelper output) : QuillTestBase(outp
         {
             Name = connectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model") { ApiMode = OpenAiApiMode.ChatCompletions }, // the mock serves only /chat/completions
+            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model") { ChatApi = OpenAiChatApi.ChatCompletions }, // the mock serves only /chat/completions
         });
 
         var scoped = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(connectionStringName);

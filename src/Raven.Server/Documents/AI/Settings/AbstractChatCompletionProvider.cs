@@ -62,19 +62,19 @@ internal abstract class AbstractChatCompletionProvider
         switch (connectorType)
         {
             case AiConnectorType.OpenAi:
-                if (connectionString.OpenAiSettings.GetApiMode() == OpenAiApiMode.ChatCompletions)
+                if (connectionString.OpenAiSettings.GetChatApi() == OpenAiChatApi.ChatCompletions)
                     provider = new OpenAiChatCompletionProvider(connectionString.OpenAiSettings);
                 else
                     provider = new OpenAiResponsesProvider(connectionString.OpenAiSettings);
                 return true;
             case AiConnectorType.AzureOpenAi:
-                if (connectionString.AzureOpenAiSettings.GetApiMode() == OpenAiApiMode.ChatCompletions)
+                if (connectionString.AzureOpenAiSettings.GetChatApi() == OpenAiChatApi.ChatCompletions)
                     provider = new AzureOpenAiChatCompletionProvider(connectionString.AzureOpenAiSettings);
                 else
                     provider = new AzureOpenAiResponsesProvider(connectionString.AzureOpenAiSettings);
                 return true;
             case AiConnectorType.Ollama:
-                if (connectionString.OllamaSettings.GetApiMode() == OpenAiApiMode.ChatCompletions)
+                if (connectionString.OllamaSettings.GetChatApi() == OpenAiChatApi.ChatCompletions)
                     provider = new OllamaChatCompletionProvider(connectionString.OllamaSettings);
                 else
                     provider = new OllamaResponsesProvider(connectionString.OllamaSettings);

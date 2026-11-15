@@ -38,7 +38,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
 
         config.Connection.OpenAiSettings.Model = model;
         config.Connection.OpenAiSettings.ReasoningEffort = "high";
-        config.Connection.OpenAiSettings.ApiMode = OpenAiApiMode.ChatCompletions; // the rule under test is the Chat Completions one
+        config.Connection.OpenAiSettings.ChatApi = OpenAiChatApi.ChatCompletions; // the rule under test is the Chat Completions one
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var agent = new AiAgentConfiguration("reasoning-effort-with-tools", config.ConnectionStringName, SystemPrompt) { SampleObject = SampleAnswer };
@@ -61,7 +61,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
 
         config.Connection.OpenAiSettings.Model = model;
         config.Connection.OpenAiSettings.ReasoningEffort = "high";
-        config.Connection.OpenAiSettings.ApiMode = OpenAiApiMode.ChatCompletions; // the rule under test is the Chat Completions one
+        config.Connection.OpenAiSettings.ChatApi = OpenAiChatApi.ChatCompletions; // the rule under test is the Chat Completions one
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var agent = new AiAgentConfiguration("reasoning-effort-no-tools", config.ConnectionStringName, SystemPrompt) { SampleObject = SampleAnswer };
@@ -84,7 +84,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
         // the last family that accepts tools together with reasoning, so the policy must not reach it
         config.Connection.OpenAiSettings.Model = model;
         config.Connection.OpenAiSettings.ReasoningEffort = "high";
-        config.Connection.OpenAiSettings.ApiMode = OpenAiApiMode.ChatCompletions; // the rule under test is the Chat Completions one
+        config.Connection.OpenAiSettings.ChatApi = OpenAiChatApi.ChatCompletions; // the rule under test is the Chat Completions one
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var agent = new AiAgentConfiguration("reasoning-effort-with-tools-unaffected", config.ConnectionStringName, SystemPrompt) { SampleObject = SampleAnswer };
@@ -207,7 +207,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Equal(stored, connectionString.OpenAiSettings.ReasoningEffort);
 
             // the rule under test is the Chat Completions one
-            connectionString.OpenAiSettings.ApiMode = OpenAiApiMode.ChatCompletions;
+            connectionString.OpenAiSettings.ChatApi = OpenAiChatApi.ChatCompletions;
 
             using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, connectionString);
 
@@ -269,7 +269,7 @@ public class RavenDB_27181(ITestOutputHelper output) : RavenTestBase(output)
     [InlineData("gpt-5-mini", null, null)]
     public async Task EffectiveReasoningEffortIsWrittenToThePayload(string model, string effort, string expected)
     {
-        var settings = new OpenAiSettings("api-key", Endpoint, model, reasoningEffort: effort) { ApiMode = OpenAiApiMode.ChatCompletions };
+        var settings = new OpenAiSettings("api-key", Endpoint, model, reasoningEffort: effort) { ChatApi = OpenAiChatApi.ChatCompletions };
         var connectionString = new AiConnectionString { Name = "test-connection", ModelType = AiModelType.Chat, OpenAiSettings = settings };
 
         using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(),

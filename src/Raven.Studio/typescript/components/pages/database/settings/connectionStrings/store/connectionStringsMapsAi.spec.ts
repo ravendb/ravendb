@@ -56,11 +56,11 @@ describe("AI connection string maps", () => {
                 OrganizationId: null,
                 ProjectId: null,
                 ReasoningEffort: "high",
-                ApiMode: "ChatCompletions",
+                ChatApi: "ChatCompletions",
             },
         });
 
-        expect(saveAfterLoad(dto).OpenAiSettings.ApiMode).toBe("ChatCompletions");
+        expect(saveAfterLoad(dto).OpenAiSettings.ChatApi).toBe("ChatCompletions");
     });
 
     it("keeps Azure OpenAI settings that have no Studio field", () => {
@@ -71,11 +71,11 @@ describe("AI connection string maps", () => {
                 Model: "gpt-5",
                 DeploymentName: "gpt-5",
                 ReasoningEffort: "low",
-                ApiMode: "Responses",
+                ChatApi: "Responses",
             },
         });
 
-        expect(saveAfterLoad(dto).AzureOpenAiSettings).toMatchObject({ ReasoningEffort: "low", ApiMode: "Responses" });
+        expect(saveAfterLoad(dto).AzureOpenAiSettings).toMatchObject({ ReasoningEffort: "low", ChatApi: "Responses" });
     });
 
     it("keeps Ollama settings that have no Studio field", () => {
@@ -86,14 +86,16 @@ describe("AI connection string maps", () => {
                 Uri: "http://localhost:11434",
                 Model: "llama3",
                 ReasoningEffort: "medium",
-                ApiMode: "Responses",
+                ChatApi: "Responses",
+                EnablePromptCache: false,
             },
         });
 
         expect(saveAfterLoad(dto).OllamaSettings).toMatchObject({
             ApiKey: "ollama-key",
             ReasoningEffort: "medium",
-            ApiMode: "Responses",
+            ChatApi: "Responses",
+            EnablePromptCache: false,
         });
     });
 });

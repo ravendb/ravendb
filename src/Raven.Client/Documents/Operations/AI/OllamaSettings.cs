@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// The configuration for the Ollama API client.
 /// </summary>
-public sealed class OllamaSettings : OpenAiBaseSettings
+public sealed class OllamaSettings : OpenAiChatApiSettings
 {
     /// <summary>
     /// Initializes a new instance of <see cref="OllamaSettings"/> with the specified URI and model.
@@ -24,8 +24,7 @@ public sealed class OllamaSettings : OpenAiBaseSettings
     }
 
     /// <summary>
-    /// The URI of the Ollama API. Same value as <see cref="OpenAiBaseSettings.Endpoint"/>, kept under this name
-    /// because it is the name Ollama connection strings are stored with: it is stored as <c>"Uri"</c>.
+    /// The URI of the Ollama API (the <see cref="OpenAiBaseSettings.Endpoint"/>); stored as <c>"Uri"</c>.
     /// </summary>
     public string Uri
     {
@@ -39,49 +38,22 @@ public sealed class OllamaSettings : OpenAiBaseSettings
     /// When false, thinking models skip the reasoning process and respond directly (fewer tokens, faster, may reduce quality for complex reasoning).
     /// When null, the parameter is not sent (backwards compatible).
     /// Disable thinking for speed/efficiency in simple tasks, enable for complex tasks requiring reasoning.
-    /// On Ollama's <c>/v1/chat/completions</c>, <c>think: false</c> may not stop reasoning; setting
-    /// <see cref="OpenAiBaseSettings.ReasoningEffort"/> to <c>none</c> does (observed on Ollama 0.40.16).
     /// </summary>
     public bool? Think { get; set; } = null;
 
-    /// <summary>
-    /// Optional. Local Ollama deployments usually have no API key. When set, it is sent as a Bearer token
-    /// on chat requests (for an Ollama behind an authenticating proxy); embeddings requests do not send it.
-    /// </summary>
-    public override string ApiKey
-    {
-        get => base.ApiKey;
-        set => base.ApiKey = value;
-    }
+    // existing Ollama connection strings keep Chat Completions
+    internal override OpenAiChatApi GetDefaultChatApi() => OpenAiChatApi.ChatCompletions;
 
-    /// <summary>
-    /// Not supported for Ollama: a value is a validation error.
-    /// </summary>
-    public override int? Dimensions
-    {
-        get => base.Dimensions;
-        set => base.Dimensions = value;
-    }
-
-    // Existing Ollama connection strings keep using Chat Completions unless ApiMode is set.
-    internal override OpenAiApiMode GetApiMode() => ApiMode ?? OpenAiApiMode.ChatCompletions;
-
-    // Ollama validates its own fields rather than the OpenAI-family rules, which require an API key.
-    // The rules and messages are the ones Ollama had before it joined OpenAiBaseSettings, plus Dimensions.
+    // No API key rule: local Ollama deployments usually have no key. When set, it is sent as a Bearer token on chat
+    // requests (for an Ollama behind an authenticating proxy); embeddings requests do not send it.
     public override void ValidateFields(List<string> errors)
     {
-        if (EmbeddingsMaxConcurrentBatches is <= 0)
-            errors.Add($"Value of `{nameof(EmbeddingsMaxConcurrentBatches)}` field must be a positive number.");
+        CoreValidateFields(errors);
 
         if (string.IsNullOrWhiteSpace(Uri))
             errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
 
-        if (string.IsNullOrWhiteSpace(Model))
-            errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
-
-        if (Temperature is < 0d)
-            errors.Add($"Value of `{nameof(Temperature)}` field must be non-negative.");
-
+        // Ollama embeddings are created from Uri and Model only (AiExtensions.cs), so a value would be ignored
         if (Dimensions.HasValue)
             errors.Add($"`{nameof(Dimensions)}` is not supported for Ollama.");
     }
@@ -105,18 +77,8 @@ public sealed class OllamaSettings : OpenAiBaseSettings
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
-
-        // The address is stored as "Uri", and the API key only when set, so older readers see the same keys as before.
-        json.RemoveInMemoryPropertyByName(nameof(Endpoint));
-        if (string.IsNullOrWhiteSpace(ApiKey))
-            json.RemoveInMemoryPropertyByName(nameof(ApiKey));
-
-        // Written for Ollama even when null, as before; the base writes it only when set.
-        json.RemoveInMemoryPropertyByName(nameof(Temperature));
-
-        json[nameof(Uri)] = Uri;
+        json[nameof(Uri)] = Uri; // the name older versions read
         json[nameof(Think)] = Think;
-        json[nameof(Temperature)] = Temperature;
 
         return json;
     }

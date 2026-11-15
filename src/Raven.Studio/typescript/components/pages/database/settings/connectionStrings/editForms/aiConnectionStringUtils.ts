@@ -170,7 +170,7 @@ const schema = yupObjectSchema<FormData>({
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("azureOpenAiSettings"),
         reasoningEffort: yup.string().nullable(),
-        apiMode: yup.string<Raven.Client.Documents.Operations.AI.OpenAiApiMode>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
     }),
     googleSettings: yupObjectSchema<FormData["googleSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
@@ -232,7 +232,8 @@ const schema = yupObjectSchema<FormData>({
         temperature: getTemperatureSchema("ollamaSettings"),
         apiKey: yup.string().nullable(),
         reasoningEffort: yup.string().nullable(),
-        apiMode: yup.string<Raven.Client.Documents.Operations.AI.OpenAiApiMode>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
+        enablePromptCache: yup.boolean().nullable(),
     }),
     embeddedSettings: yupObjectSchema<FormData["embeddedSettings"]>({
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("embeddedSettings"),
@@ -261,7 +262,7 @@ const schema = yupObjectSchema<FormData>({
         enablePromptCache: yup.boolean().nullable(),
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("openAiSettings"),
-        apiMode: yup.string<Raven.Client.Documents.Operations.AI.OpenAiApiMode>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
     }),
     vertexSettings: yupObjectSchema<FormData["vertexSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.VertexAIVersion>().nullable(),
@@ -360,7 +361,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 isSetTemperature: false,
                 temperature: null,
                 reasoningEffort: null,
-                apiMode: null,
+                chatApi: null,
             } satisfies Required<FormData["azureOpenAiSettings"]>,
             googleSettings: {
                 aiVersion: null,
@@ -386,7 +387,8 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 temperature: null,
                 apiKey: null,
                 reasoningEffort: null,
-                apiMode: null,
+                chatApi: null,
+                enablePromptCache: null,
             } satisfies Required<FormData["ollamaSettings"]>,
             embeddedSettings: {
                 embeddingsMaxConcurrentBatches: null,
@@ -403,7 +405,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 enablePromptCache: null,
                 isSetTemperature: false,
                 temperature: null,
-                apiMode: null,
+                chatApi: null,
             } satisfies Required<FormData["openAiSettings"]>,
             vertexSettings: {
                 aiVersion: null,

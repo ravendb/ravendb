@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// Configuration for the OpenAI API client.
 /// </summary>
-public sealed class OpenAiSettings : OpenAiBaseSettings
+public sealed class OpenAiSettings : OpenAiChatApiSettings
 {
     public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, 
         string projectId = null, int? dimensions = null, double? temperature = null,
@@ -15,7 +15,9 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         OrganizationId = organizationId;
         ProjectId = projectId;
         ReasoningEffort = reasoningEffort;
+#pragma warning disable CS0618 // Seed is kept for Chat Completions
         Seed = seed;
+#pragma warning restore CS0618
     }
 
     public OpenAiSettings()
@@ -37,20 +39,17 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         return uriBuilder.Uri;
     }
 
-    internal override OpenAiApiMode GetApiMode()
+    internal override OpenAiChatApi GetDefaultChatApi()
     {
-        if (ApiMode.HasValue)
-            return ApiMode.Value;
-
         if (string.IsNullOrEmpty(Endpoint))
-            return OpenAiApiMode.Responses;
+            return OpenAiChatApi.Responses;
 
         // OpenAI's own API has /responses. Any other endpoint is a server that may not, and connection strings
-        // pointing at one used Chat Completions before ApiMode existed.
+        // pointing at one used Chat Completions before ChatApi existed.
         if (Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals(OpenAiBaseUri.Host, StringComparison.OrdinalIgnoreCase))
-            return OpenAiApiMode.Responses;
+            return OpenAiChatApi.Responses;
 
-        return OpenAiApiMode.ChatCompletions;
+        return OpenAiChatApi.ChatCompletions;
     }
 
     /// <summary>
@@ -78,6 +77,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// This improves response stability (for example in automated tests),
     /// but does not guarantee fully deterministic results due to internal model behavior.
     /// </summary>
+    [Obsolete("Sent on the Chat Completions API only: the Responses API has no seed field, and OpenAI marks seed as deprecated.")]
     public int? Seed { get; set; }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -104,17 +104,19 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
             json[nameof(ProjectId)] = ProjectId;
 
+#pragma warning disable CS0618 // Seed is kept for Chat Completions
         if (Seed.HasValue)
             json[nameof(Seed)] = Seed.Value;
+#pragma warning restore CS0618
 
         return json;
     }
 }
 
 /// <summary>
-/// The OpenAI API used for chat requests, see <see cref="OpenAiBaseSettings.ApiMode"/>.
+/// The API that chat requests are sent to, see <see cref="OpenAiChatApiSettings.ChatApi"/>.
 /// </summary>
-public enum OpenAiApiMode
+public enum OpenAiChatApi
 {
     /// <summary>The <c>/responses</c> API.</summary>
     Responses,
@@ -125,7 +127,7 @@ public enum OpenAiApiMode
 
 /// <summary>
 /// Specifies the reasoning effort level used by supported models.
-/// Kept for migration only; use the string-based <see cref="OpenAiBaseSettings.ReasoningEffort"/> instead.
+/// Kept for migration only; use the string-based <see cref="OpenAiChatApiSettings.ReasoningEffort"/> instead.
 /// </summary>
 [Obsolete("Use the string-based OpenAiSettings.ReasoningEffort instead, e.g. OpenAiReasoningEffort.High.ToReasoningEffort().")]
 public enum OpenAiReasoningEffort
