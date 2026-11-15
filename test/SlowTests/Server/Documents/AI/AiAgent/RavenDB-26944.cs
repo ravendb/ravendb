@@ -340,39 +340,9 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
                     using var client = await _listener.AcceptTcpClientAsync();
                     var stream = client.GetStream();
 
-                    // read the request headers, then the declared body length
-                    var buffer = new byte[64 * 1024];
-                    var read = 0;
-                    int headerEnd;
-                    while (true)
-                    {
-                        var n = await stream.ReadAsync(buffer, read, buffer.Length - read);
-                        if (n == 0)
-                            break;
-                        read += n;
-                        headerEnd = Encoding.ASCII.GetString(buffer, 0, read).IndexOf("\r\n\r\n", StringComparison.Ordinal);
-                        if (headerEnd < 0)
-                            continue;
-
-                        var headers = Encoding.ASCII.GetString(buffer, 0, headerEnd);
-                        var contentLength = 0;
-                        foreach (var header in headers.Split("\r\n"))
-                        {
-                            if (header.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                                contentLength = int.Parse(header.Substring("Content-Length:".Length).Trim());
-                        }
-
-                        var bodyRead = read - (headerEnd + 4);
-                        while (bodyRead < contentLength)
-                        {
-                            var m = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (m == 0)
-                                break;
-                            bodyRead += m;
-                        }
-
-                        break;
-                    }
+                    // Answering before the body is drained fails this test with a transport error.
+                    if (await ReadRequestAsync(stream) == false)
+                        continue;
 
                     var response = Encoding.ASCII.GetBytes(
                         "HTTP/1.1 200 OK\r\n" +
@@ -388,6 +358,42 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             {
                 // listener disposed - test is done
             }
+        }
+
+        private static async Task<bool> ReadRequestAsync(System.Net.Sockets.NetworkStream stream)
+        {
+            var buffer = new byte[64 * 1024];
+            var read = 0;
+            int headerEnd;
+
+            while (true)
+            {
+                var n = await stream.ReadAsync(buffer, read, buffer.Length - read);
+                if (n == 0)
+                    return false;
+
+                read += n;
+                headerEnd = Encoding.ASCII.GetString(buffer, 0, read).IndexOf("\r\n\r\n", StringComparison.Ordinal);
+                if (headerEnd >= 0)
+                    break;
+            }
+
+            var headers = Encoding.ASCII.GetString(buffer, 0, headerEnd);
+            if (headers.Contains("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase) == false)
+                return true;
+
+            var bodyStart = headerEnd + 4;
+            var body = Encoding.ASCII.GetString(buffer, bodyStart, read - bodyStart);
+            while (body.Contains("0\r\n\r\n", StringComparison.Ordinal) == false)
+            {
+                var n = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (n == 0)
+                    return false;
+
+                body += Encoding.ASCII.GetString(buffer, 0, n);
+            }
+
+            return true;
         }
 
         public void Dispose() => _listener.Stop();
