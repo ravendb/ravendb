@@ -908,6 +908,7 @@ namespace Raven.Server.Documents.TransactionMerger
                                     op.RetryOnError = false;
 
                                     op.Execute(context, _recording.State);
+                                    UpdateGlobalReplicationInfoBeforeCommit(context);
 
                                     _recording.State?.TryRecord(context, TxInstruction.Commit);
                                     tx.Commit();
