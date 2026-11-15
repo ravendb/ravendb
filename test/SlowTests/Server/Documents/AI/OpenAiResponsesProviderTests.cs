@@ -33,7 +33,9 @@ namespace SlowTests.Server.Documents.AI
         public async Task Request_FromFullHistory_TranslatesEveryStoredMessage()
         {
             var settings = Settings();
+#pragma warning disable CS0618 // checks that Seed is not sent on Responses
             settings.Seed = 42;
+#pragma warning restore CS0618
 
             await WithClient(settings, _ => Ok(ResponsesWire.Response("completed", ResponsesWire.TextMessage("ok"))), async (client, ctx) =>
             {
@@ -152,7 +154,7 @@ namespace SlowTests.Server.Documents.AI
             });
         }
 
-        // a cut plain-text answer is still the answer; a cut JSON answer, tool call or empty answer is too many tokens
+        // any cut answer is too many tokens, plain text included (same as Chat Completions)
         [RavenTheory(RavenTestCategory.Ai)]
         [InlineData(false, "plain")]
         [InlineData(false, "structured")]
@@ -175,13 +177,6 @@ namespace SlowTests.Server.Documents.AI
             await WithClient(Settings(), _ => streaming ? Sse(body) : Ok(body), async (client, ctx) =>
             {
                 var usage = new AiUsage();
-                if (kind == "plain")
-                {
-                    var response = await SendAsync(client, ctx, streaming, structured: false, usage);
-                    Assert.Equal("The answer is", response.Result);
-                    return;
-                }
-
                 await Assert.ThrowsAsync<TooManyTokensException>(() => SendAsync(client, ctx, streaming, structured: kind == "structured", usage));
                 Assert.Equal(ResponsesWire.InputTokens, usage.PromptTokens); // a cut still uses tokens
             });
@@ -355,16 +350,16 @@ namespace SlowTests.Server.Documents.AI
         // existing connection strings to other servers keep Chat Completions
         [InlineData("https://my.host/v1", null, false)]
         [InlineData("https://api.openai.com.my.host/v1", null, false)]
-        [InlineData(null, OpenAiApiMode.ChatCompletions, false)]
-        [InlineData("https://my.host/v1", OpenAiApiMode.ChatCompletions, false)]
-        [InlineData("https://my.host/v1", OpenAiApiMode.Responses, true)]
-        public void TryGetParameters_PicksTheApi(string endpoint, OpenAiApiMode? apiMode, bool expectResponses)
+        [InlineData(null, OpenAiChatApi.ChatCompletions, false)]
+        [InlineData("https://my.host/v1", OpenAiChatApi.ChatCompletions, false)]
+        [InlineData("https://my.host/v1", OpenAiChatApi.Responses, true)]
+        public void TryGetParameters_PicksTheApi(string endpoint, OpenAiChatApi? chatApi, bool expectResponses)
         {
             var connection = new AiConnectionString
             {
                 Name = "openai",
                 ModelType = AiModelType.Chat,
-                OpenAiSettings = new OpenAiSettings("sk-test", endpoint, "gpt-5.4") { ApiMode = apiMode }
+                OpenAiSettings = new OpenAiSettings("sk-test", endpoint, "gpt-5.4") { ChatApi = chatApi }
             };
 
             Assert.True(AbstractChatCompletionProvider.TryGetParameters(connection, out var provider));

@@ -410,7 +410,7 @@ function mapAiFromSingleDto(
             isSetTemperature: d.AzureOpenAiSettings?.Temperature != null,
             temperature: d.AzureOpenAiSettings?.Temperature ?? null,
             reasoningEffort: d.AzureOpenAiSettings?.ReasoningEffort,
-            apiMode: d.AzureOpenAiSettings?.ApiMode,
+            chatApi: d.AzureOpenAiSettings?.ChatApi,
         },
         googleSettings: {
             aiVersion: d.GoogleSettings?.AiVersion,
@@ -435,7 +435,8 @@ function mapAiFromSingleDto(
             temperature: d.OllamaSettings?.Temperature ?? null,
             apiKey: d.OllamaSettings?.ApiKey,
             reasoningEffort: d.OllamaSettings?.ReasoningEffort,
-            apiMode: d.OllamaSettings?.ApiMode,
+            chatApi: d.OllamaSettings?.ChatApi,
+            enablePromptCache: d.OllamaSettings?.EnablePromptCache,
         },
         embeddedSettings: {
             embeddingsMaxConcurrentBatches: d.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
@@ -452,7 +453,7 @@ function mapAiFromSingleDto(
             enablePromptCache: d.OpenAiSettings?.EnablePromptCache,
             isSetTemperature: d.OpenAiSettings?.Temperature != null,
             temperature: d.OpenAiSettings?.Temperature ?? null,
-            apiMode: d.OpenAiSettings?.ApiMode,
+            chatApi: d.OpenAiSettings?.ChatApi,
         },
         mistralAiSettings: {
             apiKey: d.MistralAiSettings?.ApiKey,
