@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
@@ -42,6 +44,12 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, bool, IndexField> _getVectorField;
 
         private Dictionary<string, IndexField> _loadVectorFields;
+
+        // UTF-8 bytes of the collection names requested by LoadDocument, see IsSameCollection
+        private const int MaxCachedCollectionNames = 64;
+        private Dictionary<string, CollectionNameUtf8> _collectionNamesUtf8;
+        private string _lastCollectionName;
+        private CollectionNameUtf8 _lastCollectionNameUtf8;
         
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, ReferenceContainer> ReferencesByCollection;
@@ -337,21 +345,66 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static unsafe bool IsSameCollection(LazyStringValue collection, string collectionName)
+        [SkipLocalsInit]
+        private unsafe bool IsSameCollection(LazyStringValue collection, string collectionName)
         {
             if (collection == null)
                 return false;
 
-            // collection names are short, so we compare them without materializing a string
+            var actual = new ReadOnlySpan<byte>(collection.Buffer, collection.Size);
+
+            if (collectionName != null)
+            {
+                // the requested name comes from the index definition, so we compare the stored bytes with its cached UTF-8 bytes
+                var expected = GetCollectionNameUtf8(collectionName);
+
+                // the stored name almost always has the same casing as the requested one
+                if (actual.SequenceEqual(expected.Bytes))
+                    return true;
+
+                // for ASCII names, an ASCII case-insensitive comparison of the bytes is the same as OrdinalIgnoreCase
+                if (expected.IsAscii && Ascii.IsValid(actual))
+                    return Ascii.EqualsIgnoreCase(actual, expected.Bytes);
+            }
+
+            // non-ASCII names: decode and compare the chars
             const int maxSizeToDecodeOnStack = 256;
             if (collection.Size <= maxSizeToDecodeOnStack)
             {
                 Span<char> chars = stackalloc char[maxSizeToDecodeOnStack];
-                var length = Encodings.Utf8.GetChars(new ReadOnlySpan<byte>(collection.Buffer, collection.Size), chars);
+                var length = Encodings.Utf8.GetChars(actual, chars);
                 return chars.Slice(0, length).Equals(collectionName.AsSpan(), StringComparison.OrdinalIgnoreCase);
             }
 
             return string.Equals(collection.ToString(), collectionName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private CollectionNameUtf8 GetCollectionNameUtf8(string collectionName)
+        {
+            // the name is usually the same string instance as in the previous call (a literal from the index definition)
+            if (ReferenceEquals(collectionName, _lastCollectionName))
+                return _lastCollectionNameUtf8;
+
+            _collectionNamesUtf8 ??= new Dictionary<string, CollectionNameUtf8>(StringComparer.Ordinal);
+            if (_collectionNamesUtf8.TryGetValue(collectionName, out var utf8) == false)
+            {
+                var bytes = Encodings.Utf8.GetBytes(collectionName);
+                utf8 = new CollectionNameUtf8(bytes, Ascii.IsValid(bytes));
+
+                // an index loads from a few collections only, the limit is just a safety net
+                if (_collectionNamesUtf8.Count < MaxCachedCollectionNames)
+                    _collectionNamesUtf8.Add(collectionName, utf8);
+            }
+
+            _lastCollectionName = collectionName;
+            _lastCollectionNameUtf8 = utf8;
+            return utf8;
+        }
+
+        private sealed class CollectionNameUtf8(byte[] bytes, bool isAscii)
+        {
+            public readonly byte[] Bytes = bytes;
+            public readonly bool IsAscii = isAscii;
         }
 
         public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)

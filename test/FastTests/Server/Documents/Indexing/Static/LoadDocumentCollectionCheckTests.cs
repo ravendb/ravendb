@@ -24,8 +24,11 @@ namespace FastTests.Server.Documents.Indexing.Static
             public string ExactCase { get; set; }
             public string OtherCase { get; set; }
             public string Ascii { get; set; }
+            public string AsciiExactCase { get; set; }
             public string LongName { get; set; }
+            public string LongNameExactCase { get; set; }
             public string Mismatch { get; set; }
+            public string AsciiMismatch { get; set; }
         }
 
         [RavenTheory(RavenTestCategory.Indexes)]
@@ -53,8 +56,11 @@ select new
     ExactCase = LoadDocument(o.User, ""{NonAsciiCollection}"").Name,
     OtherCase = LoadDocument(o.User, ""{NonAsciiCollection.ToUpperInvariant()}"").Name,
     Ascii = LoadDocument(o.Company, ""companies"").Name,
+    AsciiExactCase = LoadDocument(o.Company, ""Companies"").Name,
     LongName = LoadDocument(o.Long, ""{LongCollection.ToLowerInvariant()}"").Name,
-    Mismatch = LoadDocument(o.User, ""Companies"").Name
+    LongNameExactCase = LoadDocument(o.Long, ""{LongCollection}"").Name,
+    Mismatch = LoadDocument(o.User, ""Companies"").Name,
+    AsciiMismatch = LoadDocument(o.Company, ""Companiez"").Name
 }}"
                 },
                 Fields = { [Constants.Documents.Indexing.Fields.AllFields] = new IndexFieldOptions { Storage = FieldStorage.Yes } }
@@ -68,14 +74,17 @@ select new
             using (var session = store.OpenSession())
             {
                 var result = session.Advanced
-                    .RawQuery<Result>($"from index '{indexName}' select ExactCase, OtherCase, Ascii, LongName, Mismatch")
+                    .RawQuery<Result>($"from index '{indexName}' select ExactCase, OtherCase, Ascii, AsciiExactCase, LongName, LongNameExactCase, Mismatch, AsciiMismatch")
                     .Single();
 
                 Assert.Equal("user", result.ExactCase);
                 Assert.Equal("user", result.OtherCase);
                 Assert.Equal("company", result.Ascii);
+                Assert.Equal("company", result.AsciiExactCase);
                 Assert.Equal("long", result.LongName);
+                Assert.Equal("long", result.LongNameExactCase);
                 Assert.Null(result.Mismatch);
+                Assert.Null(result.AsciiMismatch);
             }
         }
     }
