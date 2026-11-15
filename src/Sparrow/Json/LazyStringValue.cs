@@ -227,6 +227,10 @@ namespace Sparrow.Json
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
 
+            if (comparisonType == StringComparison.Ordinal && startIndex == 0 && count == Length &&
+                TryIndexOfOrdinalInBytes(value, out var indexInBytes))
+                return indexInBytes;
+
             var chars = DecodeToTempBuffer();
 
             if ((uint)startIndex > (uint)chars.Length)
@@ -237,6 +241,47 @@ namespace Sparrow.Json
 
             var index = chars.Slice(startIndex, count).IndexOf(value.AsSpan(), comparisonType);
             return index < 0 ? -1 : index + startIndex;
+        }
+
+        /// <summary>
+        /// Ordinal search for the value in the UTF-8 bytes of this string, without decoding them: the value is usually much
+        /// shorter, so we encode it instead. A UTF-8 encoding is unique, so an ordinal match of the chars is a match of the bytes.
+        /// Returns false when the value has unpaired surrogates (they can't be encoded exactly), then the caller has to search the chars.
+        /// </summary>
+        [SkipLocalsInit]
+        private bool TryIndexOfOrdinalInBytes(string value, out int index)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            var bytes = new ReadOnlySpan<byte>(Buffer, Size);
+
+            int byteIndex;
+            if (value.Length == 1 && value[0] < 0x80)
+            {
+                // a single ASCII char is a single byte
+                byteIndex = bytes.IndexOf((byte)value[0]);
+            }
+            else
+            {
+                // short values (the usual case) are encoded on the stack, a UTF-8 char takes at most 3 bytes per UTF-16 char
+                const int maxLengthToEncodeOnStack = 64;
+                Span<byte> utf8 = value.Length <= maxLengthToEncodeOnStack
+                    ? stackalloc byte[maxLengthToEncodeOnStack * 3]
+                    : GetLazyStringTempComparisonBuffer(value.Length);
+
+                if (System.Text.Unicode.Utf8.FromUtf16(value, utf8, out _, out var written, replaceInvalidSequences: false) != System.Buffers.OperationStatus.Done)
+                {
+                    index = -1;
+                    return false;
+                }
+
+                byteIndex = bytes.IndexOf(utf8.Slice(0, written));
+            }
+
+            // the caller expects a position in chars
+            index = byteIndex <= 0 ? byteIndex : Encodings.Utf8.GetCharCount(Buffer, byteIndex);
+            return true;
         }
 
 #endif
@@ -647,6 +692,13 @@ namespace Sparrow.Json
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
 
+            // every char takes at least one byte
+            if (value.Length > Size)
+                return false;
+
+            if (TryIndexOfOrdinalInBytes(value, out var index))
+                return index >= 0;
+
             return DecodeToTempBuffer().IndexOf(value.AsSpan()) >= 0;
 #else
             return ToString().Contains(value);
@@ -665,6 +717,16 @@ namespace Sparrow.Json
 
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
+
+            if (comparisonType == StringComparison.Ordinal)
+            {
+                // every char takes at least one byte
+                if (value.Length > Size)
+                    return false;
+
+                if (TryIndexOfOrdinalInBytes(value, out var index))
+                    return index >= 0;
+            }
 
             return DecodeToTempBuffer().IndexOf(value.AsSpan(), comparisonType) >= 0;
         }

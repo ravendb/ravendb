@@ -23,7 +23,9 @@ namespace FastTests.Sparrow
             new string('x', 300) + "London" + new string('y', 300)
         };
 
-        private static readonly string[] Needles = { string.Empty, "on", "ON", "/", "ü", "ss", "ß", "i", "😀", "abc", "London", "zzz" };
+        // "rich" and "b" are found after multi-byte chars, so their position in chars differs from the one in UTF-8 bytes;
+        // "\uD83D" is an unpaired surrogate (half of the emoji), which has no exact UTF-8 encoding
+        private static readonly string[] Needles = { string.Empty, "on", "ON", "/", "ü", "ss", "ß", "i", "😀", "abc", "London", "zzz", "rich", "b", "\uD83D" };
 
         private static readonly StringComparison[] Comparisons =
         {
