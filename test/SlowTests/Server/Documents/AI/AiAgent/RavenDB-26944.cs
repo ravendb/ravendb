@@ -51,13 +51,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
     // The injected tests never reach a provider, so any well-formed connection string will do.
     private const string FakeConnectionStringName = "ravendb-26944-connection";
 
-    private static AiConnectionString FakeConnection() => new()
-    {
-        Name = FakeConnectionStringName,
-        Identifier = FakeConnectionStringName,
-        ModelType = AiModelType.Chat,
-        OpenAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")
-    };
+    private static AiConnectionString FakeConnection() => AiAgentTest.FakeConnection(FakeConnectionStringName);
 
     #region streaming
 
@@ -145,7 +139,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore();
         var (_, error) = await StreamAsync(store, "chats/length-stream-" + shape, InjectedResponse.Sse(sse));
 
-        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -161,7 +155,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore();
         var (streamed, error) = await StreamAsync(store, "chats/prefix-then-invalid", InjectedResponse.Sse(sse));
 
-        Assert.True(HasException<UnexpectedResponseException>(error), $"expected UnexpectedResponseException, got: {error}");
+        Assert.True(AiAgentTest.HasException<UnexpectedResponseException>(error), $"expected UnexpectedResponseException, got: {error}");
         Assert.Contains("valid prefix ", streamed);
     }
 
@@ -486,7 +480,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             InjectedResponse.Json(Wire.Completion("", finishReason: "length", reasoning: RamblingReasoning)),
             maxModelIterationsPerCall: 16, withTool: true);
 
-        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -523,7 +517,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             : await RunAsync(store, conversationId, InjectedResponse.Json(Wire.Completion("Once upon a", finishReason: "length")),
                 maxModelIterationsPerCall: 16, noSchema: true);
 
-        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
     }
 
     #endregion
@@ -531,7 +525,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
 
     private static void AssertNoParserErrorLeaked<T>(Exception error) where T : Exception
     {
-        Assert.True(HasException<T>(error), $"expected {typeof(T).Name}, got: {error}");
+        Assert.True(AiAgentTest.HasException<T>(error), $"expected {typeof(T).Name}, got: {error}");
 
         // the raw JSON-parser error must never reach the caller
         var text = error.ToString();
@@ -543,14 +537,6 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
 
     // No existing test helper walks an exception chain by type (ExtractSingleInnerException only unwraps a
     // single AggregateException), so the walk lives here.
-    private static bool HasException<T>(Exception e) where T : Exception
-    {
-        for (; e != null; e = e.InnerException)
-            if (e is T)
-                return true;
-        return false;
-    }
-
     private static AiAgentConfiguration Agent(string connectionStringName, bool withTool) =>
         new("ravendb-26944-agent", connectionStringName, SystemPrompt)
         {
@@ -614,27 +600,10 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(FakeConnection()));
 
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        {
-            var handler = CreateHandler(database, injected);
-            // tool iterations stay enabled, so this stays a plain answer turn
-            Initialize(handler, conversationId, maxModelIterationsPerCall: 16, withTool: withTool, noSchema: noSchema);
 
-            // the real server-side streaming path writes the streamed property to this stream
-            using var clientStream = new MemoryStream();
-
-            Exception error = null;
-            try
-            {
-                await handler.HandleStreamingRequestAsync(context, clientStream,
-                    noSchema ? string.Empty : AnswerProperty, CancellationToken.None);
-            }
-            catch (Exception e)
-            {
-                error = e;
-            }
-
-            return (Encoding.UTF8.GetString(clientStream.ToArray()), error);
-        }
+        // tool iterations stay enabled, so this stays a plain answer turn
+        return await AiAgentTest.StreamAsync(Server.ServerStore, database, FakeConnection(), injected,
+            noSchema ? string.Empty : AnswerProperty,
+            handler => Initialize(handler, conversationId, maxModelIterationsPerCall: 16, withTool: withTool, noSchema: noSchema));
     }
 }
