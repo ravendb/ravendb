@@ -185,7 +185,6 @@ export default function EditRevision(props: EditRevisionProps) {
                             <FormDurationPicker
                                 control={control}
                                 name="minimumRevisionAgeToKeep"
-                                showDays
                                 showSeconds
                             />
                             {!isDefaultConflicts &&

@@ -21,7 +21,7 @@ import Button from "react-bootstrap/Button";
 import { RadioToggleWithIcon } from "./toggles/RadioToggle";
 import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
-import DurationDropdownPicker, { DurationPickerProps } from "./DurationDropdownPicker";
+import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
 import {
     ActionMeta,
@@ -591,7 +591,7 @@ export function ControlledDurationPicker<
     return (
         <div className="position-relative flex-grow-1">
             <div className="d-flex flex-grow-1">
-                <DurationDropdownPicker
+                <DurationPicker
                     totalSeconds={field.value}
                     onChange={field.onChange}
                     disabled={isSubmitting}

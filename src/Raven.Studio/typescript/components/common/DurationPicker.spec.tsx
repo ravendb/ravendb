@@ -29,7 +29,6 @@ function DurationForm({
                     <FormDurationPicker
                         control={control}
                         name="duration"
-                        showDays
                         showSeconds
                         defaultTotalSeconds={defaultTotalSeconds}
                     />
@@ -48,7 +47,7 @@ async function findDurationInput(screen: ReturnType<typeof rtlRender>["screen"])
     return within(await screen.findByRole("group", { name: "Duration" })).getByRole("textbox");
 }
 
-describe("DurationDropdownPicker", () => {
+describe("DurationPicker", () => {
     it("keeps the form pristine when it mounts without a value", async () => {
         const { screen } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: undefined }} />);
 

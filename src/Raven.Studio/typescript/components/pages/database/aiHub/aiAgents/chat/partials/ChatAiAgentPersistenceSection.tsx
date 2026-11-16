@@ -73,7 +73,7 @@ export default function ChatAiAgentPersistenceSection() {
                             </PopoverWithHoverWrapper>
                         </FormSwitch>
                         {formValues.isDocumentExpireInCustomizeEnabled && (
-                            <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays />
+                            <FormDurationPicker control={control} name="persistenceExpiresInSeconds" />
                         )}
                     </FormGroup>
                 )}

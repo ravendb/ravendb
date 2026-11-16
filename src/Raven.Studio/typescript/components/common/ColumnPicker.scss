@@ -1,37 +1,18 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.duration-dropdown-picker {
-    position: relative;
+.column-picker {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    width: max-content;
     min-width: 240px;
-
-    .form-control {
-        padding-left: 2rem;
-    }
-
-    &__icon {
-        position: absolute;
-        left: 0.65rem;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 3;
-        pointer-events: none;
-        color: colors.$text-muted-var;
-    }
-
-    &__menu {
-        position: absolute;
-        top: calc(100% + 2px);
-        left: 0;
-        width: max-content;
-        min-width: 240px;
-        z-index: 6;
-        overflow: hidden;
-        border: 1px solid colors.$border-color-light-var;
-        border-radius: sizes.$border-radius-sm;
-        background-color: colors.$panel-bg-1-var;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-    }
+    z-index: 6;
+    overflow: hidden;
+    border: 1px solid colors.$border-color-light-var;
+    border-radius: sizes.$border-radius-sm;
+    background-color: colors.$panel-bg-1-var;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 
     &__columns {
         display: flex;

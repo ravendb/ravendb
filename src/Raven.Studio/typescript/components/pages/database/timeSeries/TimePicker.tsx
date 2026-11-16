@@ -1,11 +1,10 @@
 import React, { ChangeEvent, useRef } from "react";
 import moment from "moment";
-import classNames from "classnames";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { useClickOutside } from "components/hooks/useClickOutside";
-import { useScrollActiveIntoView } from "components/hooks/useScrollActiveIntoView";
+import { ColumnPickerColumn, ColumnPickerMenu } from "components/common/ColumnPicker";
 import useBoolean from "components/hooks/useBoolean";
 import { FilterTimezone } from "./timeSeriesRangeUtils";
 
@@ -65,31 +64,6 @@ interface TimeColumnDef {
     current: number | null;
 }
 
-function TimeColumn({ label, values, current, onPick }: TimeColumnDef & { onPick: (value: number) => void }) {
-    const { listRef, activeRef } = useScrollActiveIntoView<HTMLUListElement, HTMLButtonElement>(true);
-
-    return (
-        <div className="ts-time-picker__col">
-            <ul className="ts-time-picker__list" ref={listRef} aria-label={label}>
-                {values.map((v) => (
-                    <li key={v}>
-                        <button
-                            type="button"
-                            ref={v === current ? activeRef : undefined}
-                            className={classNames("ts-time-picker__option", {
-                                "ts-time-picker__option--active": v === current,
-                            })}
-                            onClick={() => onPick(v)}
-                        >
-                            {pad2(v)}
-                        </button>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-}
-
 // Free-form text input (the source of truth, so exact HH:mm:ss.SSS can always be typed) plus a
 // click-to-pick Hour/Minute/Second dropdown. 24-hour, no native <select> (see HeaderSelect).
 export default function TimePicker({ value, invalid, timezone, onChange }: TimePickerProps) {
@@ -126,25 +100,35 @@ export default function TimePicker({ value, invalid, timezone, onChange }: TimeP
                 }}
             />
             {open && (
-                <div className="ts-time-picker__menu">
-                    <div className="ts-time-picker__columns">
-                        {columns.map((col) => (
-                            <TimeColumn
-                                key={col.unit}
-                                {...col}
-                                onPick={(v) => onChange(withTimePart(value, col.unit, v))}
-                            />
-                        ))}
-                    </div>
-                    <div className="ts-time-picker__footer">
-                        <button type="button" className="ts-time-picker__action" onClick={() => onChange(nowText())}>
-                            Now
-                        </button>
-                        <Button variant="primary" size="sm" onClick={closeMenu}>
-                            Apply
-                        </Button>
-                    </div>
-                </div>
+                <ColumnPickerMenu
+                    className="ts-time-picker__menu"
+                    footer={
+                        <div className="ts-time-picker__footer">
+                            <button
+                                type="button"
+                                className="ts-time-picker__action"
+                                onClick={() => onChange(nowText())}
+                            >
+                                Now
+                            </button>
+                            <Button variant="primary" size="sm" onClick={closeMenu}>
+                                Apply
+                            </Button>
+                        </div>
+                    }
+                >
+                    {columns.map((col) => (
+                        <ColumnPickerColumn
+                            key={col.unit}
+                            label={col.label}
+                            values={col.values}
+                            currentValue={col.current}
+                            formatValue={pad2}
+                            isLabelVisible={false}
+                            onPick={(v) => onChange(withTimePart(value, col.unit, v))}
+                        />
+                    ))}
+                </ColumnPickerMenu>
             )}
         </div>
     );
