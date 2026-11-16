@@ -132,11 +132,12 @@ internal sealed partial class AnthropicChatCompletionProvider
 
         if (hasToolUse == false)
         {
+            // Anthropic cannot have parsed a result without streaming text, so one check covers both branches
+            if (text.Length == 0)
+                throw UnexpectedResponseException.Create($"No content in streamed response (stop_reason='{state.StopReason}')", response, string.Empty, GetRequestId(response.Headers));
+
             if (state.StructuredOutput == false)
             {
-                if (text.Length == 0)
-                    throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
-
                 return new AiResponse(AiResponseType.Result)
                 {
                     Result = text,
@@ -144,14 +145,7 @@ internal sealed partial class AnthropicChatCompletionProvider
                 };
             }
 
-            var resultMessage = state.FinalResult;
-            if (resultMessage == null)
-            {
-                if (string.IsNullOrEmpty(text))
-                    throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
-
-                resultMessage = ReadStructuredOutput(streamingCtx, text, $"stop_reason='{state.StopReason}'", response, body: null);
-            }
+            var resultMessage = state.FinalResult ?? ReadStructuredOutput(streamingCtx, text, $"stop_reason='{state.StopReason}'", response, body: null);
 
             return new AiResponse(AiResponseType.Result)
             {

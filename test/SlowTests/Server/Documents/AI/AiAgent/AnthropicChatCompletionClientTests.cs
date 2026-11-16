@@ -818,22 +818,25 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         // an empty answer would be stored and re-sent with the history, which the provider rejects
-        [RavenFact(RavenTestCategory.Ai)]
-        public async Task PlainText_StreamWithNoContent_ThrowsInsteadOfReturningAnEmptyAnswer()
+        [RavenTheory(RavenTestCategory.Ai)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task PlainText_NoContent_ThrowsInsteadOfReturningAnEmptyAnswer(bool streaming)
         {
-            var empty =
-                Event("message_start", """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""") +
-                Event("content_block_start", """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}""") +
-                Event("content_block_stop", """{"type":"content_block_stop","index":0}""") +
-                Event("message_delta", """{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":0}}""") +
-                Event("message_stop", """{"type":"message_stop"}""");
+            var empty = streaming
+                ? Event("message_start", """{"type":"message_start","message":{"usage":{"input_tokens":3}}}""") +
+                  Event("content_block_start", """{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}""") +
+                  Event("content_block_stop", """{"type":"content_block_stop","index":0}""") +
+                  Event("message_delta", """{"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":0}}""") +
+                  Event("message_stop", """{"type":"message_stop"}""")
+                : """{"id":"m","type":"message","role":"assistant","content":[{"type":"text","text":""}],"stop_reason":"end_turn","usage":{"input_tokens":1,"output_tokens":1}}""";
 
-            await WithClient(_ => Sse(empty), async (client, ctx) =>
+            await WithClient(_ => streaming ? Sse(empty) : Ok(empty), async (client, ctx) =>
             {
                 var ex = await Assert.ThrowsAsync<UnexpectedResponseException>(() =>
-                    RunAsync(client, ctx, new AiChatRequest { Messages = [Msg(ctx, "user", "hi")], Schema = null }, streaming: true));
+                    RunAsync(client, ctx, new AiChatRequest { Messages = [Msg(ctx, "user", "hi")], Schema = null }, streaming));
 
-                Assert.Contains("No content in streamed response", ex.Message);
+                Assert.Contains(streaming ? "No content in streamed response" : "No text content in response", ex.Message);
             });
         }
 
