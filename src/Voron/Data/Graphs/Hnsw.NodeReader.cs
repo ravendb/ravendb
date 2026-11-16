@@ -18,6 +18,7 @@ public partial class Hnsw
         public long PostingListId;
         public long VectorId;
         public int CountOfLevels;
+        public int InDegree;
 
         private int _offset;
         private readonly Span<byte> _buffer = buffer;
@@ -29,6 +30,7 @@ public partial class Hnsw
         {
             node.VectorId = VectorId;
             node.PostingListId = PostingListId;
+            node.InDegree = InDegree;
             if (CountOfLevels == 0)
                 return;
             node.EncodedLevels = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
@@ -41,6 +43,7 @@ public partial class Hnsw
         {
             node.VectorId = VectorId;
             node.PostingListId = PostingListId;
+            node.InDegree = InDegree;
             node.EdgesPerLevel.EnsureCapacityFor(allocator, CountOfLevels);
             while (_offset < _buffer.Length)
             {

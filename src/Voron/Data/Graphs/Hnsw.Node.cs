@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
@@ -54,8 +55,13 @@ public partial class Hnsw
         // A bit for each level of EdgesPerLevel that was decoded, while EncodedLevels is set.
         internal ulong DecodedLevels;
 
+        // How many layer 0 lists hold the node, or -1 when the graph does not track it.
+        public int InDegree;
+
         // Set by every change to what Encode writes: a commit writes back only the nodes that have it.
         internal bool Modified;
+
+        internal const int HasInDegreeFlag = 0x40;
 
         // Appends an edge at the level. An index list that was in sync gets the edge too; a stale one is cleared, so that equal counts
         // cannot make it look in sync.
@@ -101,6 +107,36 @@ public partial class Hnsw
             VectorId = vectorId;
             Modified = true;
         }
+
+        // A layer 0 list now holds the node.
+        internal void IncrementInDegree()
+        {
+            if (InDegree < 0)
+                ThrowInDegreeNotStored(NodeId);
+            InDegree++;
+            Modified = true;
+        }
+
+        // A layer 0 list no longer holds the node.
+        internal void DecrementInDegree()
+        {
+            if (InDegree <= 0)
+                ThrowInDegreeUnderflow(NodeId);
+            InDegree--;
+            Modified = true;
+        }
+
+        [DoesNotReturn]
+        private static void ThrowInDegreeNotStored(long nodeId) =>
+            throw new InvalidOperationException($"Node {nodeId} is counted in a graph that does not store Node.InDegree.");
+
+        [DoesNotReturn]
+        private static void ThrowNegativeInDegree(long nodeId) =>
+            throw new InvalidOperationException($"Node {nodeId} of a graph that stores Node.InDegree has a negative count.");
+
+        [DoesNotReturn]
+        private static void ThrowInDegreeUnderflow(long nodeId) =>
+            throw new InvalidOperationException($"Node {nodeId} lost more layer 0 lists than held it.");
 
         // Gives the node an edge list for each level below levels. A node that gets more levels is written back.
         internal void EnsureLevels(ByteStringContext allocator, int levels)
@@ -180,16 +216,28 @@ public partial class Hnsw
             offset += pos;
             var countOfLevels = VariableSizeEncoding.Read<int>(span, out pos, offset);
             offset += pos;
+            int inDegree = -1;
+            if ((countOfLevels & HasInDegreeFlag) != 0)
+            {
+                inDegree = VariableSizeEncoding.Read<int>(span, out pos, offset);
+                offset += pos;
+            }
 
-            return new NodeReader(llt.Allocator, span[offset..]) { PostingListId = postingListId, VectorId = vectorId, CountOfLevels = countOfLevels };
+            return new NodeReader(llt.Allocator, span[offset..])
+            {
+                PostingListId = postingListId, VectorId = vectorId, CountOfLevels = countOfLevels & ~HasInDegreeFlag, InDegree = inDegree
+            };
         }
 
-        public Span<byte> Encode(ref ContextBoundNativeList<byte> buffer)
+        public Span<byte> Encode(ref ContextBoundNativeList<byte> buffer, bool withInDegree = false)
         {
             int countOfLevels = EdgesPerLevel.Count;
+            Debug.Assert(countOfLevels < HasInDegreeFlag, "The count of levels must not reach the in-degree flag");
+            if (withInDegree && InDegree < 0)
+                ThrowNegativeInDegree(NodeId);
 
-            // posting list id, vector id, count of levels
-            var maxSize = 3 * VariableSizeEncoding.MaximumSizeOf<long>();
+            // posting list id, vector id, count of levels, in-degree
+            var maxSize = 4 * VariableSizeEncoding.MaximumSizeOf<long>();
             for (int i = 0; i < countOfLevels; i++)
             {
                 maxSize += EdgesPerLevel[i].Count * VariableSizeEncoding.MaximumSizeOf<long>();
@@ -201,7 +249,9 @@ public partial class Hnsw
 
             var pos = VariableSizeEncoding.Write(bufferSpan, PostingListId);
             pos += VariableSizeEncoding.Write(bufferSpan, VectorId, pos);
-            pos += VariableSizeEncoding.Write(bufferSpan, countOfLevels, pos);
+            pos += VariableSizeEncoding.Write(bufferSpan, withInDegree ? countOfLevels | HasInDegreeFlag : countOfLevels, pos);
+            if (withInDegree)
+                pos += VariableSizeEncoding.Write(bufferSpan, InDegree, pos);
 
             for (int i = 0; i < countOfLevels; i++)
             {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow;
@@ -48,8 +49,9 @@ public partial class Hnsw
                 // The edges of the list, as node indexes in _edges and vectors in _edgeVectors, start here.
                 public int EdgesStart;
                 public int EdgesCount;
-                // The first Selected positions of its selection are the edges it keeps.
+                // The first Selected positions of its selection are the edges it keeps; the first Accepted of them passed the heuristic.
                 public int Selected;
+                public int Accepted;
             }
 
             private readonly ByteStringContext _allocator = searchState.Llt.Allocator;
@@ -60,7 +62,10 @@ public partial class Hnsw
             private NativeList<int> _selection;
             // For each node index, the number of the last list that added it, counted from 1: 0, the value of a new entry, means none.
             private NativeList<int> _listOfEdge;
+            private NativeList<bool> _kept;
             private NativeList<long> _ids;
+            // The lists that the selection did not write yet.
+            private readonly HashSet<int> _pending = [];
             private int _level;
             private int _maxEdges;
 
@@ -74,8 +79,24 @@ public partial class Hnsw
 
                 Select(token);
 
+                bool tracksInDegree = level == 0 && searchState.Options.TracksInDegree;
+                _pending.Clear();
+                if (tracksInDegree)
+                {
+                    foreach (var list in _lists.ToSpan())
+                        _pending.Add(list.Node);
+                }
+
                 for (int i = 0; i < _lists.Count; i++)
+                {
+                    if (tracksInDegree)
+                    {
+                        KeepLastEdgeToEachNode(i);
+                        _pending.Remove(_lists[i].Node);
+                    }
+
                     Write(i);
+                }
             }
 
             private Span<int> EdgesOf(in OverfullList list) => _edges.ToSpan().Slice(list.EdgesStart, list.EdgesCount);
@@ -134,7 +155,10 @@ public partial class Hnsw
                 // A list may hold an edge twice, and keeps it once.
                 ref int listOfEdge = ref _listOfEdge[edgeIndex];
                 if (listOfEdge == listMark)
+                {
+                    Debug.Assert(_level != 0 || searchState.Options.TracksInDegree == false, "A layer 0 list of a graph that stores Node.InDegree holds an edge twice.");
                     return;
+                }
 
                 listOfEdge = listMark;
                 _edges.Add(_allocator, edgeIndex);
@@ -149,9 +173,92 @@ public partial class Hnsw
                 {
                     ref var list = ref _lists[i];
                     var vectors = _edgeVectors.ToSpan().Slice(list.EdgesStart, list.EdgesCount);
-                    list.Selected = scratch.Select(searchState, list.Vector, vectors, _maxEdges, prunedFillLimit, SelectionOf(i));
+                    list.Selected = scratch.Select(searchState, list.Vector, vectors, _maxEdges, prunedFillLimit, SelectionOf(i), out list.Accepted);
                     return scratch;
                 }, scratch => scratch.Dispose());
+            }
+
+            // Keeps a dropped edge that is the only one leading to its node, so a search can still reach that node.
+            private void KeepLastEdgeToEachNode(int index)
+            {
+                ref var list = ref _lists[index];
+                var edges = EdgesOf(list);
+                var selection = SelectionOf(index);
+                _kept.Clear();
+                _kept.SetCapacity(_allocator, edges.Length);
+                var isKept = _kept.ToSpan();
+                foreach (var position in selection[..list.Selected])
+                    isKept[position] = true;
+
+                // A pruned edge, from the farthest, may give its slot to an edge that is the only one leading to its node.
+                int replaceable = list.Selected - 1;
+                for (int position = 0; position < edges.Length; position++)
+                {
+                    if (isKept[position] || searchState.GetNodeByIndex(edges[position]).InDegree != 1)
+                        continue;
+
+                    if (list.Selected < _maxEdges)
+                    {
+                        selection[list.Selected++] = position;
+                        isKept[position] = true;
+                        continue;
+                    }
+
+                    for (; replaceable >= list.Accepted; replaceable--)
+                    {
+                        if (searchState.GetNodeByIndex(edges[selection[replaceable]]).InDegree <= 1)
+                            continue;
+
+                        isKept[selection[replaceable]] = false;
+                        isKept[position] = true;
+                        selection[replaceable--] = position;
+                        break;
+                    }
+
+                    if (isKept[position] == false && Relink(edges[position], list.Node))
+                        isKept[position] = true;
+                }
+
+                for (int position = 0; position < edges.Length; position++)
+                {
+                    if (isKept[position] == false)
+                        searchState.GetNodeByIndex(edges[position]).DecrementInDegree();
+                }
+            }
+
+            // Adds a node that no list holds any more to the list of its nearest neighbor that has a free slot.
+            private bool Relink(int orphan, int droppedBy)
+            {
+                // Reading a node may move the nodes, so the ids are copied first.
+                _ids.ResetAndCopyFrom(_allocator, searchState.GetNodeByIndex(orphan).EdgesPerLevel[0].ToSpan());
+                long orphanId = searchState.GetNodeByIndex(orphan).NodeId;
+                var orphanVector = searchState.GetNodeByIndex(orphan).GetVectorUnmanagedSpan(searchState);
+                int closest = -1;
+                float closestDistance = float.MaxValue;
+                foreach (var id in _ids.ToSpan())
+                {
+                    int target = searchState.GetNodeIndexById(id);
+                    if (target == droppedBy || target == orphan || _pending.Contains(target))
+                        continue;
+
+                    ref var targetNode = ref searchState.GetNodeByIndex(target);
+                    ref var targetEdges = ref targetNode.EdgesPerLevel[0];
+                    if (targetEdges.Count >= _maxEdges || targetEdges.ToSpan().Contains(orphanId))
+                        continue;
+
+                    float distance = searchState.Distance(orphanVector, targetNode.GetVectorUnmanagedSpan(searchState));
+                    if (distance < closestDistance)
+                    {
+                        closest = target;
+                        closestDistance = distance;
+                    }
+                }
+
+                if (closest == -1)
+                    return false;
+
+                searchState.GetNodeByIndex(closest).AppendEdge(_allocator, 0, orphanId, orphan);
+                return true;
             }
 
             private void Write(int index)
@@ -173,6 +280,7 @@ public partial class Hnsw
                 _edgeVectors.Dispose(_allocator);
                 _selection.Dispose(_allocator);
                 _listOfEdge.Dispose(_allocator);
+                _kept.Dispose(_allocator);
                 _ids.Dispose(_allocator);
             }
         }

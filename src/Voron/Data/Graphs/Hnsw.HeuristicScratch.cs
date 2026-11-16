@@ -22,7 +22,7 @@ public partial class Hnsw
 
             // Writes the positions of the selected vectors to result, the accepted ones first, and returns how many there are.
             public int Select(SearchState searchState, UnmanagedSpan source, ReadOnlySpan<UnmanagedSpan> vectors, int maxEdges, int prunedFillLimit,
-                Span<int> result)
+                Span<int> result, out int accepted)
             {
                 EnsureLength(vectors.Length);
                 var distances = _distances.AsSpan(0, vectors.Length);
@@ -34,7 +34,7 @@ public partial class Hnsw
                 }
 
                 distances.Sort(order);
-                int accepted = 0;
+                accepted = 0;
                 int pruned = 0;
                 for (int i = 0; i < vectors.Length && accepted < maxEdges; i++)
                 {

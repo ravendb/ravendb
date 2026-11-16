@@ -62,6 +62,7 @@ public class HnswListSelection(ITestOutputHelper output) : StorageTest(output)
         using (var state = new Hnsw.SearchState(tx.LowLevelTransaction, treeName))
         {
             var count = state.Options.CountOfVectors;
+            var inDegree = new int[count + 1];
             for (long nodeId = 1; nodeId <= count; nodeId++)
             {
                 ref var node = ref state.GetDecodedNode(state.GetNodeIndexById(nodeId));
@@ -70,7 +71,13 @@ public class HnswListSelection(ITestOutputHelper output) : StorageTest(output)
                     int edges = node.EdgesPerLevel[level].Count;
                     Assert.True(edges <= state.Options.MaxEdgesAtLevel(level), $"the list of {nodeId} at level {level} holds {edges} edges");
                 }
+
+                foreach (var id in node.EdgesPerLevel[0].ToSpan())
+                    inDegree[id]++;
             }
+
+            for (long nodeId = 1; nodeId <= count; nodeId++)
+                Assert.Equal(inDegree[nodeId], state.GetNodeByIndex(state.GetNodeIndexById(nodeId)).InDegree);
         }
 
         return reselections;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -319,6 +320,8 @@ public unsafe partial class Hnsw
             // cached value would route the search from a level the entry point never reached.
             var optionsPtr = _tree.DirectRead(OptionsSlice);
             Options = Unsafe.Read<Options>(optionsPtr);
+            if (Options.Version > Constants.Graphs.HnswVersion.CurrentVersion)
+                ThrowNewerVersion(name, Options.Version);
             SimilarityCalc = _nodeCache != null ? _nodeCache.SimilarityCalc : GetDistanceKernel(Options);
 
             if (_nodeCache != null)
@@ -338,6 +341,10 @@ public unsafe partial class Hnsw
         }
 
         private const int InitialNodesCapacityWithCache = 256;
+
+        [DoesNotReturn]
+        private static void ThrowNewerVersion(Slice name, ushort version) =>
+            throw new NotSupportedException($"The vector graph '{name}' has version {version}, which is newer than the version this server supports ({Constants.Graphs.HnswVersion.CurrentVersion}).");
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float score)
@@ -1594,7 +1601,7 @@ public unsafe partial class Hnsw
                 return false;
             }
 
-            var encoded = node.Encode(ref byteBuffer);
+            var encoded = node.Encode(ref byteBuffer, _searchState.Options.TracksInDegree);
             if (_searchState.TryGetLocationForNode(node.NodeId, out var locationId))
             {
                 if (Container.GetReadOnly(_searchState.Llt, new ContainerEntryId(locationId)).SequenceEqual(encoded))
@@ -1626,7 +1633,7 @@ public unsafe partial class Hnsw
             if (stored == false)
                 return;
 
-            var encoded = node.Encode(ref byteBuffer);
+            var encoded = node.Encode(ref byteBuffer, _searchState.Options.TracksInDegree);
             Debug.Assert(Container.GetReadOnly(_searchState.Llt, new ContainerEntryId(locationId)).SequenceEqual(encoded), "A node changed without being marked as modified.");
         }
     }

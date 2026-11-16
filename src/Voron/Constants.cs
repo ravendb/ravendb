@@ -113,7 +113,10 @@ namespace Voron.Global
                 // float[dims] layout and are served by the norm-recomputing kernel.
                 public const ushort SinglesWithL2Norm = 7_001;
 
-                public const ushort CurrentVersion = SinglesWithL2Norm;
+                // Every node stores how many layer 0 lists hold it, so a selection does not drop the last edge that leads to a node.
+                public const ushort LayerZeroInDegree = 7_002;
+
+                public const ushort CurrentVersion = LayerZeroInDegree;
             }
         }
         

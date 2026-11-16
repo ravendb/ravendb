@@ -138,7 +138,7 @@ public partial class Hnsw
                 
                 _nextNodeIndex++; // do not attempt to insert the first node, since it is the graph root
                 ref Node startingNode = ref _searchState.Nodes[0];
-                Span<byte> span = startingNode.Encode(ref byteBuffer);
+                Span<byte> span = startingNode.Encode(ref byteBuffer, _searchState.Options.TracksInDegree);
                 var allocatedId = Container.Allocate(_searchState.Llt, _searchState.Options.Container, span.Length, out Span<byte> allocated);
                 entryPointNode = (long)allocatedId;
                 span.CopyTo(allocated);
@@ -160,6 +160,8 @@ public partial class Hnsw
         {
             ref var target = ref _searchState.GetNodeByIndex(targetIndex);
             _searchState.GetNodeByIndex(ownerIndex).AppendEdge(_searchState.Llt.Allocator, level, target.NodeId, targetIndex);
+            if (level == 0 && _searchState.Options.TracksInDegree)
+                target.IncrementInDegree();
         }
 
         private class NodePlacement(Registration parent, NodePlacementRunner runner)
@@ -172,6 +174,8 @@ public partial class Hnsw
             private readonly List<int> _requiresEdgeFiltering = [];
             private readonly HeuristicScratch _heuristic = new();
             private readonly List<UnmanagedSpan> _vectors = [];
+            // Register gives each new node the next id, so the created nodes have the last ids.
+            private readonly long _firstCreatedNodeId = parent._searchState.Options.CountOfVectors - parent._searchState.CreatedNodes + 1;
 
             // Per-task, point-in-time copy of the current (node, level) edge indexes. Filled on the
             // LLT thread in PrepareEdgesOnLLT and read by the worker in PopulateWorkListsOnWorker.
@@ -372,13 +376,25 @@ public partial class Hnsw
                     // important - we cannot reset here, since we have added edges from the in flight nodes in AddEdgesFromInFlightNodes()
                     list.EnsureCapacityFor(_searchState.Llt.Allocator, _candidates.Count);
                     _requiresEdgeFiltering.Clear();
+                    bool tracksInDegree = level == 0 && _searchState.Options.TracksInDegree;
+                    int edgesBeforeCandidates = list.Count;
                     foreach (var edgeIdx in _candidates)
                     {
                         Debug.Assert(edgeIdx != currentNodeIndex);
                         ref Node edge = ref _searchState.GetNodeByIndex(edgeIdx);
-                        list.AddUnsafe(edge.NodeId);
+                        // Before this loop, the list holds only nodes placed at the same time. The candidates are unique, so only those nodes can repeat.
+                        if (list.ToSpan()[..edgesBeforeCandidates].Contains(edge.NodeId) == false)
+                        {
+                            list.AddUnsafe(edge.NodeId);
+                            if (tracksInDegree)
+                                edge.IncrementInDegree();
+                        }
 
                         ref var edgeList = ref edge.EdgesPerLevel[level];
+                        // Only a created node can hold the new node before this append.
+                        Debug.Assert(edge.NodeId >= _firstCreatedNodeId || edgeList.ToSpan().Contains(node.NodeId) == false);
+                        if (tracksInDegree && edge.NodeId >= _firstCreatedNodeId && edgeList.ToSpan().Contains(node.NodeId))
+                            continue;
                         parent.AppendBackLink(edgeIdx, level, currentNodeIndex);
 
                         if (edgeList.Count <= _searchState.Options.MaxEdgesAtLevel(level))
@@ -453,6 +469,36 @@ public partial class Hnsw
                 }
 
                 var keptBackLinks = _candidates.Count > selected;
+                if (level == 0 && _searchState.Options.TracksInDegree)
+                {
+                    ClearVisited();
+                    foreach (var idx in _candidates)
+                        MarkVisited(idx);
+                    foreach (var idx in _liveIndexes)
+                    {
+                        if (MarkVisited(idx) is false)
+                            continue;
+
+                        ref var dropped = ref _searchState.GetNodeByIndex(idx);
+                        // The last edge that leads to a node stays while the list has room for it.
+                        if (dropped.InDegree == 1 && _candidates.Count < _searchState.Options.MaxEdgesAtLevel(0))
+                        {
+                            _candidates.Add(idx);
+                            continue;
+                        }
+
+                        dropped.DecrementInDegree();
+                    }
+
+                    ClearVisited();
+                    foreach (var idx in _liveIndexes)
+                        MarkVisited(idx);
+                    foreach (var idx in _candidates)
+                    {
+                        if (MarkVisited(idx))
+                            _searchState.GetNodeByIndex(idx).IncrementInDegree();
+                    }
+                }
 
                 _searchState.GetNodeByIndex(nodeIndex).SetEdges(_searchState, level, CollectionsMarshal.AsSpan(_candidates));
 
@@ -478,6 +524,8 @@ public partial class Hnsw
                     for (int level = 0; level < sharedLevels; level++)
                     {
                         n.EdgesPerLevel[level].Add(_searchState.Llt.Allocator, edge.NodeId);
+                        if (level == 0 && _searchState.Options.TracksInDegree)
+                            edge.IncrementInDegree();
                     }
                 }
                 _indexes.Clear();
@@ -503,7 +551,7 @@ public partial class Hnsw
 
                     CollectionsMarshal.SetCount(candidates, maxEdges);
                     int selected = Owner._heuristic.Select(searchState, _src, CollectionsMarshal.AsSpan(Owner._vectors), maxEdges, prunedFillLimit,
-                        CollectionsMarshal.AsSpan(candidates));
+                        CollectionsMarshal.AsSpan(candidates), out _);
                     CollectionsMarshal.SetCount(candidates, selected);
 
                     // The selection holds positions in _indexes, and the list holds node indexes.

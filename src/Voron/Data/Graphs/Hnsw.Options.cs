@@ -84,6 +84,8 @@ public partial class Hnsw
             return maxEdges - freeSlots;
         }
 
+        public bool TracksInDegree => Version >= Global.Constants.Graphs.HnswVersion.LayerZeroInDegree;
+
         public int MaxLevel => BitOperations.Log2((ulong)CountOfVectors);
 
         public int CurrentMaxLevel(int reduceBy) => BitOperations.Log2((ulong)(CountOfVectors - reduceBy));
