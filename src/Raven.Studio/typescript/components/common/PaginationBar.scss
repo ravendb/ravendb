@@ -1,9 +1,11 @@
 @use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
 
 .pagination-bar {
     .vr {
         align-self: stretch;
-        margin: 4px 0;
+        margin: sizes.$gutter-xxxs 0;
     }
 
     .page-size-select {
@@ -11,15 +13,15 @@
         min-width: 90px;
 
         .react-select__control {
-            min-height: 30px;
+            min-height: bs5variables.$input-height-sm;
         }
 
         .react-select__value-container {
-            padding: 0 6px;
+            padding: 0 sizes.$gutter-xxs;
         }
 
         .react-select__dropdown-indicator {
-            padding: 4px;
+            padding: sizes.$gutter-xxxs;
         }
     }
 }
@@ -35,12 +37,12 @@
         }
 
         .double-chevron {
-            margin-left: -8px !important;
+            margin-left: -#{sizes.$gutter-xxs} !important;
         }
     }
 
     .page-input {
         min-width: 4.5em;
-        padding: 2px 4px;
+        padding-inline: sizes.$gutter-xxxs;
     }
 }

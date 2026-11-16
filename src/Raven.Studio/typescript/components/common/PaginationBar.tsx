@@ -40,10 +40,10 @@ export function PaginationBar({ pagination, className }: PaginationBarProps) {
                     <>
                         <div className="vr" />
                         <label className="d-flex align-items-center gap-2 mb-0 text-nowrap">
-                            <small className="text-muted">Rows per page</small>
+                            <small className="text-muted">Items per page</small>
                             <Select
                                 className="page-size-select"
-                                aria-label="Rows per page"
+                                aria-label="Items per page"
                                 options={pageSizeSelector.options.map(toPageSizeOption)}
                                 value={toPageSizeOption(pageSizeSelector.pageSize)}
                                 onChange={(option) => pageSizeSelector.onChange(option.value)}
@@ -70,6 +70,10 @@ interface PageNavigationProps {
 const MIN_PAGES_FOR_SIMPLE_FIRST_AND_LAST_BUTTONS = 5;
 
 export function PageNavigation({ page, totalPages, onPageChange, isSimple, className }: PageNavigationProps) {
+    if (totalPages <= 1) {
+        return null;
+    }
+
     const hasFirstAndLastButtons = !isSimple || totalPages >= MIN_PAGES_FOR_SIMPLE_FIRST_AND_LAST_BUTTONS;
 
     return (
@@ -175,7 +179,7 @@ function PageInput({ page, totalPages, onPageChange }: PageInputProps) {
 
 function formatItemsRange({ firstItemNumber, lastItemNumber, totalCount }: PaginationBarState): string {
     if (firstItemNumber === 0) {
-        return "No rows";
+        return "No items";
     }
 
     const range = `${firstItemNumber.toLocaleString()}-${lastItemNumber.toLocaleString()}`;

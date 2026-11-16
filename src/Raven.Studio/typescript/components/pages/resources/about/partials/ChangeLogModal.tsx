@@ -34,12 +34,24 @@ export function ChangeLogModal(props: ChangelogModalProps) {
 
     const asyncGetChangeLog = useAsync(
         () => licenseService.getChangeLog((page - 1) * changeLogItemsPerPage, changeLogItemsPerPage),
-        [page]
+        [page],
+        {
+            setLoading: (state) => ({ ...state, loading: true }),
+            setError: (error, state) => ({ ...state, status: "error", loading: false, error }),
+        }
     );
+
+    const changeLog = asyncGetChangeLog.result;
+    const totalResults =
+        mode === "whatsNew" ? changeLog?.TotalBuildsForLatestMajorMinor : changeLog?.TotalBuildsForUserMajorMinor;
+
+    const pagination = changeLog
+        ? { page, totalPages: Math.ceil(totalResults / changeLogItemsPerPage), onPageChange: setPage }
+        : {};
 
     if (asyncGetChangeLog.loading) {
         return (
-            <ModalWrapper onClose={onClose} mode={mode}>
+            <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
                 <LazyLoad active>
                     <h3>VERSION</h3>
                 </LazyLoad>
@@ -53,7 +65,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
 
     if (asyncGetChangeLog.status === "error") {
         return (
-            <ModalWrapper onClose={onClose} mode={mode}>
+            <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
                 <div className="m-3">
                     <LoadError />
                 </div>
@@ -63,11 +75,11 @@ export function ChangeLogModal(props: ChangelogModalProps) {
 
     const versionsList =
         mode === "whatsNew"
-            ? asyncGetChangeLog.result?.BuildCompatibilitiesForLatestMajorMinor
-            : asyncGetChangeLog.result?.BuildCompatibilitiesForUserMajorMinor;
+            ? changeLog?.BuildCompatibilitiesForLatestMajorMinor
+            : changeLog?.BuildCompatibilitiesForUserMajorMinor;
 
     if (!versionsList?.length) {
-        const hasNoStableReleaseYet = isDevBuild && asyncGetChangeLog.result != null;
+        const hasNoStableReleaseYet = isDevBuild && changeLog != null;
 
         return (
             <ModalWrapper onClose={onClose} mode={mode}>
@@ -82,19 +94,8 @@ export function ChangeLogModal(props: ChangelogModalProps) {
         );
     }
 
-    const totalResults =
-        mode === "whatsNew"
-            ? asyncGetChangeLog.result.TotalBuildsForLatestMajorMinor
-            : asyncGetChangeLog.result.TotalBuildsForUserMajorMinor;
-
     return (
-        <ModalWrapper
-            onClose={onClose}
-            mode={mode}
-            page={page}
-            totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
-            onPageChange={setPage}
-        >
+        <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
             {isDevBuild && (
                 <RichAlert variant="info">
                     Nightly and development builds don&apos;t have their own changelog. Here are the latest stable
@@ -221,7 +222,7 @@ function ModalWrapper(
             </Modal.Header>
             <Modal.Body className="vstack gap-4 position-relative">{children}</Modal.Body>
             <Modal.Footer>
-                {mode === "whatsNew" && page && (
+                {mode === "whatsNew" && totalPages != null && (
                     <PageNavigation page={page} totalPages={totalPages} onPageChange={onPageChange} isSimple />
                 )}
                 <FlexGrow />

@@ -2,6 +2,7 @@
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./AboutPage.stories";
 import React from "react";
+import { mockServices } from "test/mocks/services/MockServices";
 
 const {
     AboutPage,
@@ -132,6 +133,24 @@ describe("AboutPage", function () {
             expect(await screen.findByText(/6\.0\.7/)).toBeInTheDocument();
             expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
             expect(screen.queryByRole("button", { name: "Last page" })).not.toBeInTheDocument();
+        });
+
+        it("keeps the page buttons when a changelog page fails to load", async function () {
+            const { screen, fireClick } = rtlRender(<AboutPage />);
+
+            await fireClick(await screen.findByText(selectors.versions.whatsNew));
+            expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+
+            mockServices.licenseService.getMock("getChangeLog").mockRejectedValueOnce(new Error("failed"));
+            await fireClick(screen.getByRole("button", { name: "Next page" }));
+
+            expect(await screen.findByText("Error loading data")).toBeInTheDocument();
+            expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: "Previous page" }));
+
+            expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+            expect(screen.queryByText("Error loading data")).not.toBeInTheDocument();
         });
 
         it("using latest version", async function () {
