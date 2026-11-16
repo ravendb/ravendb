@@ -220,6 +220,12 @@ namespace Sparrow.Json
                             return false;
                         }
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
+                        if (state.CurrentTokenType is not (JsonParserToken.StartObject or JsonParserToken.StartArray))
+                        {
+                            ReadJsonValue<TWriteStrategy, TJsonParser>();
+                            goto case ContinuationState.CompleteReadingPropertyValue;
+                        }
+
                         continuationState.PushByRef() = currentState;
 
                         goto case ContinuationState.ReadValue;
@@ -403,6 +409,12 @@ namespace Sparrow.Json
                         }
 
                         currentState.State = ContinuationState.CompleteArrayValue;
+                        if (state.CurrentTokenType is not (JsonParserToken.StartObject or JsonParserToken.StartArray))
+                        {
+                            ReadJsonValue<TWriteStrategy, TJsonParser>();
+                            goto case ContinuationState.CompleteArrayValue;
+                        }
+
                         continuationState.PushByRef() = currentState;
                         goto case ContinuationState.ReadValue;
 
