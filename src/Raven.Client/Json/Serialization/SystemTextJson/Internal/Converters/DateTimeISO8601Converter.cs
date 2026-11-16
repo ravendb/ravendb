@@ -38,7 +38,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return NullableDateTimeOffset;
         }
 
-        private const int DefaultRavenFormatLength = 27;
+        private const int SecondsPrecisionLength = 19;
+
+        private const int MaxFractionDigits = 7;
 
         private const int DefaultRavenFormatUtcLength = 28;
 
@@ -47,36 +49,47 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static void ThrowUnparseable(string value, Type type) =>
             throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
 
-        private static bool TryReadDefaultRavenFormat(ref Utf8JsonReader reader, out DateTime value)
+        private static bool TryReadWithoutOffset(ref Utf8JsonReader reader, out DateTime value)
         {
             value = default;
             if (reader.TokenType != JsonTokenType.String || reader.HasValueSequence)
                 return false;
 
             ReadOnlySpan<byte> s = reader.ValueSpan;
-            DateTimeKind kind;
-            switch (s.Length)
+            if (s.Length < SecondsPrecisionLength || s.Length > DefaultRavenFormatUtcLength)
+                return false;
+
+            DateTimeKind kind = DateTimeKind.Unspecified;
+            if (s[s.Length - 1] == (byte)'Z')
             {
-                case DefaultRavenFormatLength:
-                    kind = DateTimeKind.Unspecified;
-                    break;
-                case DefaultRavenFormatUtcLength when s[DefaultRavenFormatLength] == (byte)'Z':
-                    kind = DateTimeKind.Utc;
-                    break;
-                default:
-                    return false;
+                kind = DateTimeKind.Utc;
+                s = s.Slice(0, s.Length - 1);
             }
 
-            if (s[4] != (byte)'-' || s[7] != (byte)'-' || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':' || s[19] != (byte)'.')
+            if (s.Length < SecondsPrecisionLength)
                 return false;
+
+            if (s[4] != (byte)'-' || s[7] != (byte)'-' || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':')
+                return false;
+
+            int fraction = 0;
+            if (s.Length > SecondsPrecisionLength)
+            {
+                int fractionDigits = s.Length - SecondsPrecisionLength - 1;
+                if (s[SecondsPrecisionLength] != (byte)'.' || fractionDigits < 1 || fractionDigits > MaxFractionDigits ||
+                    TryReadDigits(s.Slice(SecondsPrecisionLength + 1), out fraction) == false)
+                    return false;
+
+                for (; fractionDigits < MaxFractionDigits; fractionDigits++)
+                    fraction *= 10;
+            }
 
             if (TryReadDigits(s.Slice(0, 4), out int year) == false ||
                 TryReadDigits(s.Slice(5, 2), out int month) == false ||
                 TryReadDigits(s.Slice(8, 2), out int day) == false ||
                 TryReadDigits(s.Slice(11, 2), out int hour) == false ||
                 TryReadDigits(s.Slice(14, 2), out int minute) == false ||
-                TryReadDigits(s.Slice(17, 2), out int second) == false ||
-                TryReadDigits(s.Slice(20, 7), out int fraction) == false)
+                TryReadDigits(s.Slice(17, 2), out int second) == false)
                 return false;
 
             if (year == 0 || month == 0 || month > 12 || day == 0 || day > DateTime.DaysInMonth(year, month) || hour > 23 || minute > 59 || second > 59)
@@ -138,7 +151,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                if (TryReadDefaultRavenFormat(ref reader, out DateTime value))
+                if (TryReadWithoutOffset(ref reader, out DateTime value))
                     return value;
 
                 string s = reader.GetString();

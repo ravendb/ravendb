@@ -140,6 +140,86 @@ namespace FastTests.Client
             }
         }
 
+        private class WithDate
+        {
+            public DateTime Value { get; set; }
+        }
+
+        private static readonly string[] DateTimeFormatsToRead =
+        [
+            "o",
+            "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff",
+            "yyyy-MM-ddTHH:mm:ss.fffffffzzz",
+            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
+            "r",
+            "yyyy-MM-ddTHH:mm:ss.fffK",
+            "yyyy-MM-ddTHH:mm:ss.FFFK"
+        ];
+
+        public static IEnumerable<object[]> DateTimeTexts()
+        {
+            string[] fractions = ["", ".", ".1", ".12", ".123", ".1234", ".12345", ".123456", ".1234567", ".12345678", ".0000000", ".9999999"];
+            string[] suffixes = ["", "Z", "z", "+00:00", "+02:00", "-05:30"];
+
+            foreach (string fraction in fractions)
+            foreach (string suffix in suffixes)
+                yield return ["2026-04-11T12:34:56" + fraction + suffix];
+
+            yield return ["2024-02-29T23:59:59.9999999Z"];
+            yield return ["0001-01-01T00:00:00.0000000"];
+            yield return ["0001-01-01T00:00:00Z"];
+            yield return ["9999-12-31T23:59:59.9999999Z"];
+            yield return ["9999-12-31T23:59:59.9999999"];
+            yield return ["2025-02-29T00:00:00Z"];
+            yield return ["2026-02-30T00:00:00.0000000Z"];
+            yield return ["2026-13-01T00:00:00Z"];
+            yield return ["2026-00-10T00:00:00Z"];
+            yield return ["2026-04-00T00:00:00Z"];
+            yield return ["0000-04-11T00:00:00Z"];
+            yield return ["2026-04-11T24:00:00Z"];
+            yield return ["2026-04-11T12:60:00Z"];
+            yield return ["2026-04-11T12:34:60Z"];
+            yield return ["2026-04-11T12:34:5Z"];
+            yield return ["2026-04-11T12:34:5"];
+            yield return ["2026-04-11 12:34:56Z"];
+            yield return ["2026/04/11T12:34:56Z"];
+            yield return ["2026-04-11T12.34.56Z"];
+            yield return ["2026-04-11T12:34:56,123Z"];
+            yield return ["2026-04-11T12:34:56.12a4567Z"];
+            yield return ["2026-04-11T1a:34:56.1234567Z"];
+            yield return ["2026-04-11T12:34:56.1234567ZZ"];
+            yield return [" 2026-04-11T12:34:56.1234567Z"];
+            yield return ["2026-04-11T12:34:56.1234567Z "];
+            yield return ["2026-04-11"];
+            yield return ["Sat, 11 Apr 2026 12:34:56 GMT"];
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [MemberData(nameof(DateTimeTexts))]
+        public void SystemTextJsonReadsDateTimeLikeTheSupportedFormats(string text)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            bool parsed = DateTime.TryParseExact(text, DateTimeFormatsToRead, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expected);
+            if (parsed && text.EndsWith("+00:00", StringComparison.Ordinal))
+                expected = expected.ToUniversalTime();
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.ReadObject(new DynamicJsonValue { [nameof(WithDate.Value)] = text }, "date"))
+            {
+                if (parsed == false)
+                {
+                    Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<WithDate>(json, "dates/1"));
+                    return;
+                }
+
+                DateTime actual = conventions.Serialization.DefaultConverter.FromBlittable<WithDate>(json, "dates/1").Value;
+
+                Assert.Equal(expected.Ticks, actual.Ticks);
+                Assert.Equal(expected.Kind, actual.Kind);
+            }
+        }
+
         private class WithIdAndTypedCollection
         {
             public string Id { get; set; }
