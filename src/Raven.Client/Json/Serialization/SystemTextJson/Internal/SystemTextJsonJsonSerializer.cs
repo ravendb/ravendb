@@ -197,7 +197,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             return JsonSerializer.Deserialize<T>(stjReader.GetUtf8Json(), Options);
         }
 
-        private static void WriteJsonToBlittableWriter(IJsonWriter writer, ReadOnlySpan<byte> utf8Json)
+        private static void WriteJsonToBlittableWriter(SystemTextJsonBlittableWriter writer, ReadOnlySpan<byte> utf8Json)
         {
             var jsonReader = new Utf8JsonReader(utf8Json);
             while (jsonReader.Read())
@@ -208,10 +208,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     case JsonTokenType.EndObject: writer.WriteEndObject(); break;
                     case JsonTokenType.StartArray: writer.WriteStartArray(); break;
                     case JsonTokenType.EndArray: writer.WriteEndArray(); break;
-                    case JsonTokenType.PropertyName: writer.WritePropertyName(jsonReader.GetString()); break;
+                    case JsonTokenType.PropertyName:
+                        if (jsonReader.ValueIsEscaped || jsonReader.ValueSpan.IsEmpty) writer.WritePropertyName(jsonReader.GetString());
+                        else writer.WritePropertyName(jsonReader.ValueSpan);
+                        break;
                     case JsonTokenType.String:
                         if (NamedFloatingPointLiterals.TryRead(ref jsonReader, out double literal)) writer.WriteValue(literal);
-                        else writer.WriteValue(jsonReader.GetString());
+                        else if (jsonReader.ValueIsEscaped) writer.WriteValue(jsonReader.GetString());
+                        else writer.WriteValue(jsonReader.ValueSpan);
                         break;
                     case JsonTokenType.Number:
                         if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
