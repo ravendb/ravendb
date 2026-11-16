@@ -26,6 +26,7 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
         private readonly byte[] _storage;
         private readonly byte[] _words;
+        private readonly byte[] _analyzed;
         private readonly Token[] _tokens;
         private readonly List<ArraySegment<byte>> _segments;
         private readonly Analyzer _lowercaseAnalyzer;
@@ -42,6 +43,7 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
             // a huge document which will cost us a huge amount of allocations and monopolize the dictionary.
             _storage = new byte[4096];
             _words = new byte[256];
+            _analyzed = new byte[512];
             _tokens = new Token[256];
             _segments = new List<ArraySegment<byte>>();
 
@@ -129,8 +131,11 @@ internal class CoraxDocumentTrainEnumerator : IReadOnlySpanEnumerator
 
         private void ProcessSelectedStream(Analyzer analyzer, ReadOnlySpan<byte> value)
         {
-            // Execute the analyzer.
-            var wordsSpan = _words.AsSpan();
+            analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+            if (outputSize > _analyzed.Length || tokenSize > _tokens.Length)
+                return;
+
+            var wordsSpan = _analyzed.AsSpan();
             var tokensSpan = _tokens.AsSpan();
             analyzer.Execute(value, ref wordsSpan, ref tokensSpan);
 
