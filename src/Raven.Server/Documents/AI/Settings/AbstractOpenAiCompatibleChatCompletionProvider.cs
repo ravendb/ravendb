@@ -324,22 +324,9 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         if (TryReadStructuredOutput(ctx, reasoning, out var promoted))
             return promoted;
 
-        // Blaming the model for invalid JSON would point at text it never offered as its answer.
         throw UnexpectedResponseException.Create(
-            $"Structured output was requested but the model returned no content, and its reasoning is not the structured answer (finish_reason='{finishReason}').{ReasoningPreview(reasoning)}",
-            response, responseContent?.ToString() ?? string.Empty, GetRequestId(response.Headers));
-    }
-
-    private const int MaxReasoningPreviewLength = 500;
-
-    private static string ReasoningPreview(string reasoning)
-    {
-        if (string.IsNullOrEmpty(reasoning))
-            return string.Empty;
-
-        return reasoning.Length <= MaxReasoningPreviewLength
-            ? $" Reasoning: {reasoning}"
-            : $" Reasoning: {reasoning[..MaxReasoningPreviewLength]}...";
+            $"Structured output was requested but the model returned no content, and its reasoning is not the structured answer (finish_reason='{finishReason}').",
+            response, responseContent, GetRequestId(response.Headers));
     }
 
     private object GetPlainTextContent(HttpResponseMessage response, BlittableJsonReaderObject responseContent,

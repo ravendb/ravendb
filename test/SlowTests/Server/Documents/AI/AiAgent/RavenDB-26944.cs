@@ -432,23 +432,6 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task Structured_NoContent_LongReasoning_IsExcerptedNotRepeated()
-    {
-        // The raw response body is appended to every provider error, so the reasoning is in the message
-        // either way; what the excerpt buys is not repeating an unbounded blob a second time.
-        const string tail = "end-of-a-very-long-deliberation";
-        var reasoning = new string('x', 600) + tail;
-
-        var error = await RunAsync("chats/long-reasoning",
-            InjectedResponse.Json(Wire.Completion("", finishReason: "stop", reasoning: reasoning)),
-            maxModelIterationsPerCall: 16, withTool: true);
-
-        var text = error.ToString();
-        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: true);
-        Assert.Equal(1, text.Split(tail).Length - 1);
-    }
-
-    [RavenFact(RavenTestCategory.Ai)]
     public async Task Structured_NonStreaming_CompletedAnswer_IsKept_DespiteTrailingGarbage()
     {
         // The non-streaming twin of the trailing-garbage streaming test: the completed structured answer wins
@@ -560,6 +543,9 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         }
         else
         {
+            // both paths name the content as the problem; which JSON failure it was differs by shape
+            Assert.True(text.Contains("content that is not valid JSON") || text.Contains("content that did not form a complete JSON object"),
+                "the error should name the content as unusable, but it was: " + text);
             Assert.DoesNotContain("no content", text);
         }
     }
