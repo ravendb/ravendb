@@ -286,7 +286,9 @@ namespace FastTests.Corax
 
             analyzer.Execute(source, ref buffer, ref tokens);
 
-            Assert.Equal(source.Length, buffer.Length);
+            // The trailing token-only filter does not touch the byte span, so it stays at the reserved
+            // size. That reserve is now 1.5x the input because LowerCaseTransformer can grow U+023A/U+023E.
+            Assert.Equal(bufferSize, buffer.Length);
             Assert.Equal(5, tokens.Length);
             Assert.Equal((byte)'t', buffer[0]);
             Assert.NotEqual(source[0], buffer[0]);
