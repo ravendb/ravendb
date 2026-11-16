@@ -322,7 +322,7 @@ public partial class Hnsw
                         while (_candidatesQ.TryDequeue(out var cur, out var curDistance))
                         {
                             if (-curDistance < lowerBound &&
-                                _nearestEdgesQ.Count == _searchState.Options.NumberOfCandidates)
+                                _nearestEdgesQ.Count == _searchState.Options.CandidatesAtLevel(level))
                                 break;
 
                             _processEdgesWorker.Reset(insertedVector, lowerBound, cur, level);
@@ -338,7 +338,7 @@ public partial class Hnsw
                         }
                         _candidates.Reverse();
 
-                        if (_candidates.Count > _searchState.Options.MaxEdgesAtLevel(level))
+                        if (_candidates.Count > _searchState.Options.PrunedFillLimitAtLevel(level))
                         {
                             _indexes.Clear();
                             _vectors.Clear();
@@ -555,7 +555,8 @@ public partial class Hnsw
                     // Keep pruned connections: fill the free slots with the closest candidates the
                     // diversity check rejected, so the node keeps its full degree. The queue yields the
                     // closest candidate first, so pruned is already ordered by distance.
-                    for (int i = 0; i < pruned.Count && candidates.Count < maxEdges; i++)
+                    int prunedFillLimit = searchState.Options.PrunedFillLimitAtLevel(Level);
+                    for (int i = 0; i < pruned.Count && candidates.Count < prunedFillLimit; i++)
                         candidates.Add(pruned[i]);
 
                     for (int i = 0; i < candidates.Count; i++)
@@ -589,7 +590,7 @@ public partial class Hnsw
                     var candidatesQ = Owner._candidatesQ;
                     var lowerBound  = LowerBound;
                     
-                    int numberOfCandidates = searchState.Options.NumberOfCandidates;
+                    int numberOfCandidates = searchState.Options.CandidatesAtLevel(Level);
                     for (int i = 0; i < indexes.Count; i++)
                     {
                         var nextIndex = indexes[i];
