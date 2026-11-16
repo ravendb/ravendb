@@ -151,6 +151,15 @@ public partial class Hnsw
             int maxTasks = Math.Min(numberOfBatches, MaxConcurrentBatches);
             NodePlacementRunner runner = new(this, maxTasks, token);
             runner.Run();
+            SelectOverfullLists(token);
+        }
+
+        // Adds the target to the list of the owner at the level, as the placement of the target does.
+        // PERF: The append keeps the index list in sync, so RegisterForPreloading and PrepareEdgesOnLLT do not rebuild it.
+        internal void AppendBackLink(int ownerIndex, int level, int targetIndex)
+        {
+            ref var target = ref _searchState.GetNodeByIndex(targetIndex);
+            _searchState.GetNodeByIndex(ownerIndex).AppendEdge(_searchState.Llt.Allocator, level, target.NodeId, targetIndex);
         }
 
         private class NodePlacement(Registration parent, NodePlacementRunner runner)
@@ -161,7 +170,7 @@ public partial class Hnsw
             private readonly List<int> _liveIndexes = [];
             private readonly List<int> _indexes = [];
             private readonly List<int> _requiresEdgeFiltering = [];
-            private readonly List<int> _pruned = [];
+            private readonly HeuristicScratch _heuristic = new();
             private readonly List<UnmanagedSpan> _vectors = [];
 
             // Per-task, point-in-time copy of the current (node, level) edge indexes. Filled on the
@@ -254,6 +263,7 @@ public partial class Hnsw
                 }
                 finally
                 {
+                    _heuristic.Dispose();
                     runner.Done();
                 }
             }
@@ -369,14 +379,24 @@ public partial class Hnsw
                         list.AddUnsafe(edge.NodeId);
 
                         ref var edgeList = ref edge.EdgesPerLevel[level];
-                        // PERF: The append keeps the index list in sync, so RegisterForPreloading and PrepareEdgesOnLLT do not rebuild it.
-                        edge.AppendEdge(_searchState.Llt.Allocator, level, node.NodeId, currentNodeIndex);
+                        parent.AppendBackLink(edgeIdx, level, currentNodeIndex);
 
                         if (edgeList.Count <= _searchState.Options.MaxEdgesAtLevel(level))
                             continue;
 
+                        // A list is selected once after the batch is placed, unless it grows past twice its cap.
+                        if (parent.SelectsListsAfterPlacement && edgeList.Count <= 2 * _searchState.Options.MaxEdgesAtLevel(level))
+                        {
+                            parent.AddOverfullList(edgeIdx, level);
+                            continue;
+                        }
+
                         _requiresEdgeFiltering.Add(edgeIdx);
                     }
+
+                    // The edges of the nodes placed at the same time come before the candidates, so the list may start over its cap.
+                    if (parent.SelectsListsAfterPlacement && list.Count > _searchState.Options.MaxEdgesAtLevel(level))
+                        parent.AddOverfullList(currentNodeIndex, level);
 
                     for (var filtered = 0; filtered < _requiresEdgeFiltering.Count; filtered++)
                     {
@@ -412,6 +432,7 @@ public partial class Hnsw
                 // PERF: An index list that holds as many entries as the id list mirrors it, so the live list is read without a lookup per id.
                 if (live.EdgesIndexesPerLevel.Count > level && live.EdgesIndexesPerLevel[level].Count == ids.Length)
                 {
+                    _searchState.AssertEdgeIndexesMatchEdges(nodeIndex, level);
                     _liveIndexes.AddRange(live.EdgesIndexesPerLevel[level].ToSpan());
                 }
                 else
@@ -475,70 +496,19 @@ public partial class Hnsw
 
                 protected override void DoWork()
                 {
-                    // See: https://icode.best/i/45208840268843 - Chinese, but auto-translate works, and a good explanation with 
-                    // conjunction of: https://img-bc.icode.best/20210425010212938.png
-                    // See also the paper here: https://arxiv.org/pdf/1603.09320
-                    // This implements the Fig. 2 / Algorithm 4
-
                     var searchState = Owner._searchState;
                     var candidates = Owner._candidates;
-                    var vectors = Owner._vectors;
-                    var indexes = Owner._indexes;
-                    var queue = Owner._candidatesQ;
-                    
-                    Debug.Assert(queue.Count is 0);
-                    for (int i = 0; i < indexes.Count; i++)
-                    {
-                        var distance = searchState.Distance(_src, vectors[i]);
-                        // note that we use local indexes here!
-                        queue.Enqueue(i, distance);
-                    }
-
-                    candidates.Clear();
-                    var pruned = Owner._pruned;
-                    pruned.Clear();
-
                     int maxEdges = searchState.Options.MaxEdgesAtLevel(Level);
-                    while (candidates.Count < maxEdges &&
-                           queue.TryDequeue(out var cur, out var distance))
-                    {
-                        bool match = true;
-                        foreach (var alternativeIndex in candidates)
-                        {
-                            var curDist = searchState.Distance(vectors[cur], vectors[alternativeIndex]);
-                            // there is already an item in the result that is *closer* to the current
-                            // node than the target node, so no need to add it
-                            if (curDist < distance)
-                            {
-                                match = false;
-                                break;
-                            }
-                        }
-
-                        if (match)
-                        {
-                            candidates.Add(cur);
-                        }
-                        else
-                        {
-                            pruned.Add(cur);
-                        }
-                    }
-
-                    // Keep pruned connections: fill the free slots with the closest candidates the
-                    // diversity check rejected, so the node keeps its full degree. The queue yields the
-                    // closest candidate first, so pruned is already ordered by distance.
                     int prunedFillLimit = searchState.Options.PrunedFillLimitAtLevel(Level);
-                    for (int i = 0; i < pruned.Count && candidates.Count < prunedFillLimit; i++)
-                        candidates.Add(pruned[i]);
 
-                    for (int i = 0; i < candidates.Count; i++)
-                    {
-                        // turn the local indexing into a global one
-                        candidates[i] = indexes[candidates[i]];
-                    }
+                    CollectionsMarshal.SetCount(candidates, maxEdges);
+                    int selected = Owner._heuristic.Select(searchState, _src, CollectionsMarshal.AsSpan(Owner._vectors), maxEdges, prunedFillLimit,
+                        CollectionsMarshal.AsSpan(candidates));
+                    CollectionsMarshal.SetCount(candidates, selected);
 
-                    queue.Clear();
+                    // The selection holds positions in _indexes, and the list holds node indexes.
+                    for (int i = 0; i < selected; i++)
+                        candidates[i] = Owner._indexes[candidates[i]];
                 }
             }
             private sealed class ProcessEdgesWorker(NodePlacementRunner runner) : WorkItem(runner)
@@ -696,6 +666,10 @@ public partial class Hnsw
                             _ = edge.GetVectorUnmanagedSpan(_searchState);
                     }
                 }
+                else
+                {
+                    _searchState.AssertEdgeIndexesMatchEdges(currentNodeIndex, level);
+                }
 
                 // Snapshot the now-in-sync edge indexes into the per-task buffer ON THE LLT THREAD.
                 // The worker reads this private copy in PopulateWorkListsOnWorker instead of the shared
@@ -778,7 +752,7 @@ public partial class Hnsw
             // Latches to true once an iteration completes with nothing left to preload, meaning
             // every node touched so far is resident. From that point we skip the RegisterForPreloading
             // scan (its O(items * edgesPerNode) VectorLoaded / TryGetNodeById sweep) and call
-            // AfterPreloading directly. The fast path stays correct even if the heuristic is wrong
+            // PrepareEdgesOnLLT directly. The fast path stays correct even if the heuristic is wrong
             // for a future item: GetVectorUnmanagedSpan falls back to a single-vector load on miss,
             // so the worst case is degrading to one cold load instead of a batched one.
             private bool _allVectorsInMemory;

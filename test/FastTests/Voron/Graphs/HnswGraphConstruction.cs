@@ -40,6 +40,7 @@ public class HnswGraphConstruction(ITestOutputHelper output) : StorageTest(outpu
                 // One task places every node, so each list is re-selected on the LLT thread in a fixed order.
                 registration.MaxConcurrentBatches = vectors.Length;
                 var testing = registration.ForTestingPurposesOnly();
+                testing.SelectsListsOnOverflow = true;
                 testing.BeforeEdgesReplaced = (state, nodeIndex, level) =>
                 {
                     ref var owner = ref state.GetNodeByIndex(nodeIndex);
@@ -54,10 +55,8 @@ public class HnswGraphConstruction(ITestOutputHelper output) : StorageTest(outpu
                         if (i == nodeIndex || target.EdgesPerLevel.Count == 0 || owner.EdgesPerLevel[0].ToSpan().Contains(target.NodeId))
                             continue;
 
-                        // Appends as a concurrent placement does: the index list follows the id list when it mirrors it.
-                        owner.EdgesPerLevel[0].Add(state.Llt.Allocator, target.NodeId);
-                        if (owner.EdgesIndexesPerLevel.Count > 0 && owner.EdgesIndexesPerLevel[0].Count == owner.EdgesPerLevel[0].Count - 1)
-                            owner.EdgesIndexesPerLevel[0].Add(state.Llt.Allocator, i);
+                        // Appends as a concurrent placement of the target does.
+                        registration.AppendBackLink(nodeIndex, 0, i);
                         appended.Add(target.NodeId);
                     }
 

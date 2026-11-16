@@ -533,6 +533,16 @@ public unsafe partial class Hnsw
             ResolveEdgeIndexesSlow(nodeIndex, level, ref nodeIds, ref indexes);
         }
 
+        // The index list of a level is used when its count equals the count of the id list, so then it must hold the same edges.
+        [Conditional("DEBUG")]
+        internal void AssertEdgeIndexesMatchEdges(int nodeIndex, int level)
+        {
+            ref var node = ref GetNodeByIndex(nodeIndex);
+            var ids = node.EdgesPerLevel[level].ToSpan();
+            foreach (var index in node.EdgesIndexesPerLevel[level].ToSpan())
+                Debug.Assert(ids.Contains(_nodes[index].NodeId), "The index list of a level has the count of the id list, but not the same edges.");
+        }
+
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void ResolveEdgeIndexesSlow(int nodeIndex, int level, ref NativeList<long> nodeIds, ref NativeList<int> indexes)
         {
@@ -1069,6 +1079,9 @@ public unsafe partial class Hnsw
             // LLT thread, around the rewrite of an overfull list from its dispatch snapshot: state, node index and level.
             internal Action<SearchState, int, int> BeforeEdgesReplaced;
             internal Action<SearchState, int, int> AfterEdgesReplaced;
+
+            // Selects a list as soon as a back-link puts it over its cap, instead of once after the batch is placed.
+            internal bool SelectsListsOnOverflow;
 
             // Latched once the matching buffer was actually moved while the worker was parked, so a test
             // can fail loudly if the race window was never exercised.
