@@ -1,7 +1,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { LicenseTypeToGenerate, SetupWizardFormData } from "../setupWizardValidation";
 import { Icon } from "components/common/Icon";
-import SetupWizardClickableCard from "../partials/SetupWizardClickableCard";
+import SelectableCard from "components/common/SelectableCard";
 import Button from "react-bootstrap/Button";
 import { FormCheckbox } from "components/common/Form";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -45,144 +45,146 @@ export function SetupWizardSecurityStep() {
         <div>
             <h2 className="mb-1">Security</h2>
             <p className="mb-4 text-muted">Choose how to secure your RavenDB server.</p>
-            <div className="mt-4">
-                <h5 className="mb-1 d-flex align-items-center">
-                    <Icon icon="lock" color="success" />
-                    Secure
-                    {isSecureRecommended && (
-                        <PopoverWithHoverWrapper
-                            message={
-                                <div>
-                                    You&#39;re using a Production License, so we highly recommend choosing a{" "}
-                                    <b>secure setup with a certificate</b>. This ensures optimal data protection,
-                                    encrypted communication, and compliance with best security practices for your
-                                    production environment.
-                                </div>
-                            }
-                        >
-                            <Badge pill bg="faded-success" className="ms-1">
-                                Recommended
-                            </Badge>
-                        </PopoverWithHoverWrapper>
-                    )}
-                </h5>
-                <ConditionalPopover
-                    className="w-100"
-                    conditions={{
-                        isActive: isLetsEncryptDisabled,
-                        message: (
-                            <div>
-                                Let&#39;s Encrypt is not available without a license. Go back to the <b>License Key</b>{" "}
-                                step and insert an existing license or generate a free{" "}
-                                <Button
-                                    variant="link"
-                                    className="text-info p-0 text-decoration-underline"
-                                    onClick={() => handleGoToGenerateLicense("community")}
-                                >
-                                    Community
-                                </Button>{" "}
-                                or{" "}
-                                <Button
-                                    variant="link"
-                                    className="text-developer p-0 text-decoration-underline"
-                                    onClick={() => handleGoToGenerateLicense("developer")}
-                                >
-                                    Developer
-                                </Button>{" "}
-                                license to use this option.
-                            </div>
-                        ),
-                    }}
-                >
-                    <SetupWizardClickableCard
+            <div role="radiogroup" aria-label="Security option">
+                <div className="mt-4">
+                    <h5 className="mb-1 d-flex align-items-center">
+                        <Icon icon="lock" color="success" />
+                        Secure
+                        {isSecureRecommended && (
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <div>
+                                        You&#39;re using a Production License, so we highly recommend choosing a{" "}
+                                        <b>secure setup with a certificate</b>. This ensures optimal data protection,
+                                        encrypted communication, and compliance with best security practices for your
+                                        production environment.
+                                    </div>
+                                }
+                            >
+                                <Badge pill bg="faded-success" className="ms-1">
+                                    Recommended
+                                </Badge>
+                            </PopoverWithHoverWrapper>
+                        )}
+                    </h5>
+                    <ConditionalPopover
                         className="w-100"
-                        icon="lets-encrypt"
-                        title="Generate Let's Encrypt certificate"
-                        description="Automatically issue and renew a trusted HTTPS certificate using your domain"
-                        isSelected={securityOption === "letsEncrypt"}
+                        conditions={{
+                            isActive: isLetsEncryptDisabled,
+                            message: (
+                                <div>
+                                    Let&#39;s Encrypt is not available without a license. Go back to the{" "}
+                                    <b>License Key</b> step and insert an existing license or generate a free{" "}
+                                    <Button
+                                        variant="link"
+                                        className="text-info p-0 text-decoration-underline"
+                                        onClick={() => handleGoToGenerateLicense("community")}
+                                    >
+                                        Community
+                                    </Button>{" "}
+                                    or{" "}
+                                    <Button
+                                        variant="link"
+                                        className="text-developer p-0 text-decoration-underline"
+                                        onClick={() => handleGoToGenerateLicense("developer")}
+                                    >
+                                        Developer
+                                    </Button>{" "}
+                                    license to use this option.
+                                </div>
+                            ),
+                        }}
+                    >
+                        <SelectableCard
+                            className="w-100"
+                            icon="lets-encrypt"
+                            title="Generate Let's Encrypt certificate"
+                            description="Automatically issue and renew a trusted HTTPS certificate using your domain"
+                            isSelected={securityOption === "letsEncrypt"}
+                            onClick={() => {
+                                setValue("securityStep.securityOption", "letsEncrypt", {
+                                    shouldDirty: true,
+                                });
+                                reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "letsEncrypt");
+                            }}
+                            isDisabled={isLetsEncryptDisabled}
+                            popoverMessage={
+                                <ul className="mb-0 ps-3">
+                                    <li>
+                                        Default choice for most users. Recommended if you don&#39;t need a custom
+                                        certificate and prefer RavenDB to manage encryption without any manual setup.
+                                    </li>
+                                    <li className="mt-1">
+                                        RavenDB will automatically issue and renew a trusted HTTPS certificate for your
+                                        domain (chosen in the next step).
+                                    </li>
+                                    <li className="mt-1">
+                                        Ideal for standard deployments where a public domain is available and you want a
+                                        simple, secure default option.
+                                    </li>
+                                </ul>
+                            }
+                        />
+                    </ConditionalPopover>
+                    <SelectableCard
+                        className="mt-2 w-100"
+                        icon="certificate"
+                        title="Provide your own certificate"
+                        description="Ideal for secure corporate setups with manual certificate management"
+                        isSelected={securityOption === "ownCertificate"}
                         onClick={() => {
-                            setValue("securityStep.securityOption", "letsEncrypt", {
+                            setValue("securityStep.securityOption", "ownCertificate", {
                                 shouldDirty: true,
                             });
-                            reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "letsEncrypt");
+                            reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "ownCertificate");
                         }}
-                        isDisabled={isLetsEncryptDisabled}
                         popoverMessage={
                             <ul className="mb-0 ps-3">
                                 <li>
-                                    Default choice for most users. Recommended if you don&#39;t need a custom
-                                    certificate and prefer RavenDB to manage encryption without any manual setup.
+                                    Use this when you need to provide a custom SSL/TLS certificate, often to comply with
+                                    corporate security policies or integrate with an internal certificate authority.
                                 </li>
                                 <li className="mt-1">
-                                    RavenDB will automatically issue and renew a trusted HTTPS certificate for your
-                                    domain (chosen in the next step).
-                                </li>
-                                <li className="mt-1">
-                                    Ideal for standard deployments where a public domain is available and you want a
-                                    simple, secure default option.
+                                    Recommended for <b>production environments</b> where certificates are managed
+                                    manually or by external infrastructure, and full control over certificate management
+                                    and trust configuration is required.
                                 </li>
                             </ul>
                         }
                     />
-                </ConditionalPopover>
-                <SetupWizardClickableCard
-                    className="mt-2 w-100"
-                    icon="certificate"
-                    title="Provide your own certificate"
-                    description="Ideal for secure corporate setups with manual certificate management"
-                    isSelected={securityOption === "ownCertificate"}
-                    onClick={() => {
-                        setValue("securityStep.securityOption", "ownCertificate", {
-                            shouldDirty: true,
-                        });
-                        reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "ownCertificate");
-                    }}
-                    popoverMessage={
-                        <ul className="mb-0 ps-3">
-                            <li>
-                                Use this when you need to provide a custom SSL/TLS certificate, often to comply with
-                                corporate security policies or integrate with an internal certificate authority.
-                            </li>
-                            <li className="mt-1">
-                                Recommended for <b>production environments</b> where certificates are managed manually
-                                or by external infrastructure, and full control over certificate management and trust
-                                configuration is required.
-                            </li>
-                        </ul>
-                    }
-                />
-            </div>
-            <div className="my-4">
-                <h5 className="mb-1">
-                    <Icon icon="lock" color="warning" />
-                    Unsecure
-                </h5>
-                <SetupWizardClickableCard
-                    icon="empty-set"
-                    title="Don't use certificate"
-                    description="Suitable only for quick local development with no security requirements"
-                    isSelected={securityOption === "none"}
-                    onClick={() => {
-                        setValue("securityStep.securityOption", "none", {
-                            shouldDirty: true,
-                        });
-                        reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "none");
-                    }}
-                    popoverMessage={
-                        <ul className="mb-0 ps-3">
-                            <li>
-                                Use only in <b>trusted, isolated environments</b> such as local development, internal
-                                testing, or secure private networks where encryption is intentionally not required
-                                (e.g., for performance or testing purposes).
-                            </li>
-                            <li className="mt-1">
-                                <b>Not recommended for production</b>, as all traffic will be transmitted without
-                                encryption or authentication, making it vulnerable to eavesdropping or man-in-the-middle
-                                attacks.
-                            </li>
-                        </ul>
-                    }
-                />
+                </div>
+                <div className="my-4">
+                    <h5 className="mb-1">
+                        <Icon icon="lock" color="warning" />
+                        Unsecure
+                    </h5>
+                    <SelectableCard
+                        icon="empty-set"
+                        title="Don't use certificate"
+                        description="Suitable only for quick local development with no security requirements"
+                        isSelected={securityOption === "none"}
+                        onClick={() => {
+                            setValue("securityStep.securityOption", "none", {
+                                shouldDirty: true,
+                            });
+                            reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "none");
+                        }}
+                        popoverMessage={
+                            <ul className="mb-0 ps-3">
+                                <li>
+                                    Use only in <b>trusted, isolated environments</b> such as local development,
+                                    internal testing, or secure private networks where encryption is intentionally not
+                                    required (e.g., for performance or testing purposes).
+                                </li>
+                                <li className="mt-1">
+                                    <b>Not recommended for production</b>, as all traffic will be transmitted without
+                                    encryption or authentication, making it vulnerable to eavesdropping or
+                                    man-in-the-middle attacks.
+                                </li>
+                            </ul>
+                        }
+                    />
+                </div>
             </div>
         </div>
     );

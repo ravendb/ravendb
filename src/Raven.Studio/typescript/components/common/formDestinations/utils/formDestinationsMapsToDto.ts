@@ -9,6 +9,15 @@ import {
     FormDestinations,
     DestinationsDto,
 } from "./formDestinationsTypes";
+import { getFtpProtocol } from "./ftpUrlUtils";
+
+function trim(value: string): string {
+    return value?.trim() ?? value;
+}
+
+function trimToNull(value: string): string | null {
+    return value?.trim() || null;
+}
 
 export function mapBackupSettingsToDto(
     destination: FormDestinationData
@@ -19,7 +28,7 @@ export function mapBackupSettingsToDto(
             ? {
                   Exec: destination.config.exec,
                   Arguments: destination.config.arguments,
-                  TimeoutInMs: destination.config.timeoutInMs,
+                  TimeoutInMs: destination.config.timeoutInMs ?? undefined,
               }
             : undefined,
     };
@@ -32,17 +41,17 @@ export function mapLocalToDto(destination: LocalDestination): Raven.Client.Docum
 
     return {
         ...mapBackupSettingsToDto(destination),
-        FolderPath: destination.folderPath,
+        FolderPath: trim(destination.folderPath),
     };
 }
 
 export function mapAmazonToDto(destination: S3Destination | GlacierDestination) {
     return {
-        AwsRegionName: destination.awsRegionName,
-        AwsAccessKey: destination.awsAccessKey,
-        AwsSecretKey: destination.awsSecretKey,
-        AwsSessionToken: destination.awsSessionToken,
-        RemoteFolderName: destination.remoteFolderName,
+        AwsRegionName: trim(destination.awsRegionName),
+        AwsAccessKey: trim(destination.awsAccessKey),
+        AwsSecretKey: trim(destination.awsSecretKey),
+        AwsSessionToken: trimToNull(destination.awsSessionToken),
+        RemoteFolderName: trimToNull(destination.remoteFolderName),
     };
 }
 
@@ -52,7 +61,9 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
     }
 
     const customServerUrl =
-        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.customServerUrl : undefined;
+        !destination.config.isOverrideConfig && destination.isUseCustomHost
+            ? trim(destination.customServerUrl)
+            : undefined;
 
     const forcePathStyle =
         !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
@@ -68,7 +79,8 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
         CustomServerUrl: customServerUrl,
         ForcePathStyle: forcePathStyle,
         DisableChecksumValidation: disableChecksumValidation,
-        BucketName: destination.bucketName,
+        BucketName: trim(destination.bucketName),
+        StorageClass: destination.storageClass ?? undefined,
     };
 }
 
@@ -78,8 +90,8 @@ export function mapAzureCredentialsToDto(
     const isSasToken = destination.authType === "sasToken";
 
     return {
-        AccountKey: isSasToken ? null : destination.accountKey,
-        SasToken: isSasToken ? destination.sasToken : null,
+        AccountKey: isSasToken ? null : trim(destination.accountKey),
+        SasToken: isSasToken ? trim(destination.sasToken) : null,
     };
 }
 
@@ -91,9 +103,9 @@ export function mapAzureToDto(destination: AzureDestination): Raven.Client.Docum
     return {
         ...mapBackupSettingsToDto(destination),
         ...mapAzureCredentialsToDto(destination),
-        StorageContainer: destination.storageContainer,
-        RemoteFolderName: destination.remoteFolderName,
-        AccountName: destination.accountName,
+        StorageContainer: trim(destination.storageContainer),
+        RemoteFolderName: trimToNull(destination.remoteFolderName),
+        AccountName: trim(destination.accountName),
     };
 }
 
@@ -106,8 +118,8 @@ export function mapGoogleCloudToDto(
 
     return {
         ...mapBackupSettingsToDto(destination),
-        BucketName: destination.bucketName,
-        RemoteFolderName: destination.remoteFolderName,
+        BucketName: trim(destination.bucketName),
+        RemoteFolderName: trimToNull(destination.remoteFolderName),
         GoogleCredentialsJson: destination.googleCredentialsJson,
     };
 }
@@ -122,7 +134,7 @@ export function mapGlacierToDto(
     return {
         ...mapBackupSettingsToDto(destination),
         ...mapAmazonToDto(destination),
-        VaultName: destination.vaultName,
+        VaultName: trim(destination.vaultName),
     };
 }
 
@@ -131,12 +143,12 @@ export function mapFtpToDto(destination: FtpDestination): Raven.Client.Documents
         return undefined;
     }
 
-    const certificateAsBase64 = destination.url.startsWith("ftps") ? destination.certificateAsBase64 : null;
+    const certificateAsBase64 = getFtpProtocol(destination.url) === "ftps" ? destination.certificateAsBase64 : null;
 
     return {
         ...mapBackupSettingsToDto(destination),
-        Url: destination.url,
-        UserName: destination.userName,
+        Url: trim(destination.url),
+        UserName: trim(destination.userName),
         Password: destination.password,
         CertificateAsBase64: certificateAsBase64,
     };

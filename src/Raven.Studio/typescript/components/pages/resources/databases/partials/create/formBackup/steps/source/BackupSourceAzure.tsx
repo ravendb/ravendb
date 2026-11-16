@@ -30,7 +30,7 @@ export default function BackupSourceAzure() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.accountName"
-                        placeholder="Enter Azure Storage Account Name"
+                        placeholder="e.g. companystorage"
                     />
                 </Col>
             </Row>
@@ -81,7 +81,7 @@ export default function BackupSourceAzure() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.container"
-                        placeholder="Enter Azure Storage Container Name"
+                        placeholder="e.g. backups"
                     />
                 </Col>
             </Row>
@@ -96,7 +96,7 @@ export default function BackupSourceAzure() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.remoteFolderName"
-                        placeholder="Enter remote folder name"
+                        placeholder="e.g. backups/orders"
                     />
                 </Col>
             </Row>

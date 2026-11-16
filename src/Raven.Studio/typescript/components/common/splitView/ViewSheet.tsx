@@ -8,6 +8,7 @@ import Button, { ButtonProps } from "react-bootstrap/Button";
 import { useSplitViewContext } from "./SplitView";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 export type ViewSheetWidth = number | `${number}%`;
 
@@ -27,7 +28,7 @@ interface SheetHeaderProps extends Required<PropsWithChildren>, ClassNameProps {
 }
 
 function SheetHeader({ isCloseHidden, isPinHidden, className, children }: SheetHeaderProps) {
-    const hasDefaultButtons = !isPinHidden && !isCloseHidden;
+    const hasDefaultButtons = !isPinHidden || !isCloseHidden;
 
     return (
         <div
@@ -55,9 +56,10 @@ function CloseButton(props: CloseButtonProps) {
     const { children, className = "text-reset", variant = "link" } = props;
 
     const { close } = useViewSheet();
+    const commonT = useStudioTranslation("common");
 
     return (
-        <Button variant={variant} className={className} onClick={close}>
+        <Button variant={variant} className={className} onClick={close} title={children ? undefined : commonT("close")}>
             {children ? children : <Icon icon="close" margin="m-0" />}
         </Button>
     );
@@ -143,6 +145,12 @@ export function useViewSheet() {
 
     const forceClose = () => setSheetComponent(null);
 
+    const closeThen = (action: () => void) =>
+        confirmBeforeClose(() => {
+            forceClose();
+            action();
+        });
+
     // For sheets whose content must stay in sync with a distribution row's own props (e.g. live task/progress
     // updates), render into this node from that row's JSX - via SheetPortalOutlet passed as `component` to `open` -
     // instead of imperatively pushing a new `component` on every relevant change.
@@ -153,6 +161,7 @@ export function useViewSheet() {
         open,
         renderIntoSheet,
         close: () => confirmBeforeClose(forceClose),
+        closeThen,
         forceClose,
         isOpen: !!sheetComponent,
         activeSheetOwnerId,

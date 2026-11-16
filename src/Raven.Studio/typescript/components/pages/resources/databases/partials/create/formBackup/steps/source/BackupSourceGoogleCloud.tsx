@@ -27,7 +27,7 @@ export default function BackupSourceGoogleCloud() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.googleCloud.bucketName"
-                        placeholder="Enter Google Cloud Storage Bucket Name"
+                        placeholder="e.g. company-backups"
                     />
                 </Col>
             </Row>
@@ -57,7 +57,7 @@ export default function BackupSourceGoogleCloud() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.googleCloud.remoteFolderName"
-                        placeholder="Enter Remote Folder Name"
+                        placeholder="e.g. backups/orders"
                     />
                 </Col>
             </Row>

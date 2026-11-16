@@ -1,239 +1,188 @@
-﻿import { useFormContext, useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
 import { FormDestinations } from "./utils/formDestinationsTypes";
-import Badge from "react-bootstrap/Badge";
-import Collapse from "react-bootstrap/Collapse";
-import Card from "react-bootstrap/Card";
-import { FormInput, FormSelectCreatable, FormSwitch } from "../Form";
-import OverrideConfiguration from "./OverrideConfiguration";
-import { useServices } from "components/hooks/useServices";
-import { useAsyncCallback } from "react-async-hook";
-import { mapS3ToDto } from "./utils/formDestinationsMapsToDto";
-import ButtonWithSpinner from "../ButtonWithSpinner";
-import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
-import { FlexGrow } from "components/common/FlexGrow";
-import { availableS3Regions } from "components/utils/common";
-import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
-import { FormLabel } from "components/common/Form";
-import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
+import { FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import OptionalLabel from "components/common/OptionalLabel";
+import { availableS3Regions, storageClassOptions } from "components/utils/common";
+import DestinationCard from "./DestinationCard";
+import AwsRegionField from "./AwsRegionField";
+import { useDestinationTest } from "./useDestinationTest";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 export default function AmazonS3() {
-    const { control, trigger } = useFormContext<FormDestinations>();
-    const {
-        destinations: { s3: formValues },
-    } = useWatch({ control });
-
-    const { manageServerService } = useServices();
-
-    const asyncTest = useAsyncCallback(async () => {
-        const isValid = await trigger(fieldBase);
-        if (!isValid) {
-            return;
-        }
-
-        return manageServerService.testPeriodicBackupCredentials("S3", mapS3ToDto(formValues));
-    });
+    const asyncTest = useDestinationTest("s3");
 
     return (
-        <Card className="well">
-            <Card.Body>
-                <FormSwitch name={getName("isEnabled")} control={control}>
-                    Amazon S3
-                </FormSwitch>
-                <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
-                    <div>
-                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
-                        {formValues.config.isOverrideConfig ? (
-                            <OverrideConfiguration fieldBase={fieldBase} />
-                        ) : (
-                            <>
-                                <div className="vstack gap-2">
-                                    <FormSwitch
-                                        control={control}
-                                        name={getName("isUseCustomHost")}
-                                        className="w-100"
-                                        color="secondary"
-                                    >
-                                        Use a custom S3 host
-                                    </FormSwitch>
-                                    {formValues.isUseCustomHost && (
-                                        <FormSwitch
-                                            control={control}
-                                            name={getName("forcePathStyle")}
-                                            className="w-100"
-                                            color="secondary"
-                                        >
-                                            <span className="d-flex gap-1 align-items-center">
-                                                Force path style
-                                                <PopoverWithHoverWrapper
-                                                    message={
-                                                        <>
-                                                            Whether to force path style URLs for S3 objects (e.g.,{" "}
-                                                            <code>
-                                                                https://{`{Server-URL}`}/{`{Bucket-Name}`}
-                                                            </code>{" "}
-                                                            instead of{" "}
-                                                            <code>
-                                                                {`{https://`}
-                                                                {`{Bucket-Name}`}.{`{Server-URL}`}
-                                                                {`}`}
-                                                            </code>
-                                                            )
-                                                        </>
-                                                    }
-                                                >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </span>
-                                        </FormSwitch>
-                                    )}
-                                    {formValues.isUseCustomHost && (
-                                        <FormSwitch
-                                            control={control}
-                                            name={getName("disableChecksumValidation")}
-                                            className="w-100"
-                                            color="secondary"
-                                        >
-                                            <span className="d-flex gap-1 align-items-center">
-                                                Disable Checksum Validation
-                                                <PopoverWithHoverWrapper
-                                                    message={<>Disables S3 checksum validation for uploads</>}
-                                                >
-                                                    <Icon icon="info" color="info" />
-                                                </PopoverWithHoverWrapper>
-                                            </span>
-                                        </FormSwitch>
-                                    )}
-                                </div>
-                                <div className="vstack gap-3 mt-2">
-                                    {formValues.isUseCustomHost && (
-                                        <div className="mb-2">
-                                            <FormLabel>Custom server URL</FormLabel>
-                                            <FormInput
-                                                control={control}
-                                                name={getName("customServerUrl")}
-                                                placeholder="Enter a custom server URL"
-                                                type="text"
-                                                autoComplete="off"
-                                            />
-                                        </div>
-                                    )}
-                                    <div className="mb-2">
-                                        <FormLabel className="d-flex align-items-center gap-1">
-                                            Bucket name
-                                            <PopoverWithHoverWrapper
-                                                message={
-                                                    <>
-                                                        Bucket should be created manually in order for this OLAP to
-                                                        work. You can use the{" "}
-                                                        <span className="text-info">Test credentials</span> button to
-                                                        verify its existence.
-                                                    </>
-                                                }
-                                            >
-                                                <Icon icon="info" color="info" margin="m-0" />
-                                            </PopoverWithHoverWrapper>
-                                            {asyncTest.result?.Success ? (
-                                                <Badge bg="success" pill>
-                                                    <Icon icon="check" />
-                                                    Successfully connected
-                                                </Badge>
-                                            ) : asyncTest.result?.Error ? (
-                                                <Badge bg="danger" pill>
-                                                    <Icon icon="warning" />
-                                                    Failed connection
-                                                </Badge>
-                                            ) : null}
-                                        </FormLabel>
-                                        <FormInput
-                                            control={control}
-                                            name={getName("bucketName")}
-                                            placeholder="Enter a bucket name"
-                                            type="text"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    <div className="mb-2">
-                                        <FormLabel>
-                                            Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                        </FormLabel>
-                                        <FormInput
-                                            control={control}
-                                            name={getName("remoteFolderName")}
-                                            placeholder="Enter a remote folder name"
-                                            type="text"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    <div className="mb-2">
-                                        <FormLabel>
-                                            Region{" "}
-                                            {formValues.isUseCustomHost && (
-                                                <small className="text-muted fw-light">(optional)</small>
-                                            )}
-                                        </FormLabel>
-                                        {formValues.isUseCustomHost ? (
-                                            <FormInput
-                                                type="text"
-                                                control={control}
-                                                name={getName("awsRegionName")}
-                                                placeholder="Enter an AWS region"
-                                                autoComplete="off"
-                                            />
-                                        ) : (
-                                            <FormSelectCreatable
-                                                name={getName("awsRegionName")}
-                                                control={control}
-                                                placeholder="Select an AWS region (or enter new one)"
-                                                options={availableS3Regions}
-                                            />
-                                        )}
-                                    </div>
-                                    <div className="mb-2">
-                                        <FormLabel>Access key</FormLabel>
-                                        <FormInput
-                                            name={getName("awsAccessKey")}
-                                            control={control}
-                                            placeholder="Enter an access key"
-                                            type="text"
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    <div className="mb-2">
-                                        <FormLabel>Secret key</FormLabel>
-                                        <FormInput
-                                            name={getName("awsSecretKey")}
-                                            control={control}
-                                            placeholder="Enter a secret key"
-                                            type="password"
-                                            passwordPreview
-                                            autoComplete="off"
-                                        />
-                                    </div>
-                                    <div className="d-flex justify-content-end">
-                                        <FlexGrow />
-                                        <ButtonWithSpinner
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={asyncTest.execute}
-                                            isSpinning={asyncTest.loading}
-                                            icon="rocket"
-                                        >
-                                            Test credentials
-                                        </ButtonWithSpinner>
-                                    </div>
-                                </div>
-                                {asyncTest.result?.Error && (
-                                    <div className="mt-3">
-                                        <ConnectionTestResult testResult={asyncTest.result} />
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                </Collapse>
-            </Card.Body>
-        </Card>
+        <DestinationCard type="s3" asyncTest={asyncTest}>
+            <AmazonS3Fields />
+        </DestinationCard>
+    );
+}
+
+interface AmazonS3FieldsProps {
+    allowedRegions?: string[];
+    isSessionTokenVisible?: boolean;
+    isStorageClassVisible?: boolean;
+}
+
+export function AmazonS3Fields({ allowedRegions, isSessionTokenVisible, isStorageClassVisible }: AmazonS3FieldsProps) {
+    const { control } = useFormContext<FormDestinations>();
+    const isUseCustomHost = useWatch({ control, name: getName("isUseCustomHost") });
+    const t = useStudioTranslation("formDestinations");
+
+    return (
+        <div className="vstack gap-3">
+            <FormGroup marginClass="m-0">
+                <FormLabel>{t("s3.provider")}</FormLabel>
+                <FormSelect
+                    control={control}
+                    name={getName("isUseCustomHost")}
+                    options={[
+                        { value: false, label: t("s3.providerAws") },
+                        { value: true, label: t("s3.providerCustom") },
+                    ]}
+                />
+            </FormGroup>
+            {isUseCustomHost && (
+                <FormGroup marginClass="m-0">
+                    <FormLabel>{t("s3.customServerUrl")}</FormLabel>
+                    <FormInput
+                        control={control}
+                        name={getName("customServerUrl")}
+                        placeholder={t("s3.customServerUrlPlaceholder")}
+                        type="text"
+                        autoComplete="off"
+                    />
+                </FormGroup>
+            )}
+            <FormGroup marginClass="m-0">
+                <FormLabel>
+                    {t("aws.region")} {isUseCustomHost && <OptionalLabel />}
+                </FormLabel>
+                {isUseCustomHost ? (
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name={getName("awsRegionName")}
+                        placeholder={t("aws.regionPlaceholder")}
+                        autoComplete="off"
+                    />
+                ) : (
+                    <AwsRegionField
+                        name={getName("awsRegionName")}
+                        availableRegions={availableS3Regions}
+                        allowedRegions={allowedRegions}
+                    />
+                )}
+            </FormGroup>
+            {isUseCustomHost && (
+                <div className="d-flex flex-column gap-1">
+                    <FormSwitch control={control} name={getName("forcePathStyle")} className="w-100">
+                        <span className="d-flex gap-1 align-items-center">
+                            {t("s3.forcePathStyle")}
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <StudioTrans
+                                        ns="formDestinations"
+                                        i18nKey="s3.forcePathStyleInfo"
+                                        components={{ code: <code /> }}
+                                    />
+                                }
+                            >
+                                <Icon icon="info" color="info" />
+                            </PopoverWithHoverWrapper>
+                        </span>
+                    </FormSwitch>
+                    <FormSwitch control={control} name={getName("disableChecksumValidation")} className="w-100">
+                        <span className="d-flex gap-1 align-items-center">
+                            {t("s3.disableChecksum")}
+                            <PopoverWithHoverWrapper message={t("s3.disableChecksumInfo")}>
+                                <Icon icon="info" color="info" />
+                            </PopoverWithHoverWrapper>
+                        </span>
+                    </FormSwitch>
+                </div>
+            )}
+            <FormGroup marginClass="m-0">
+                <FormLabel>{t("aws.accessKey")}</FormLabel>
+                <FormInput
+                    name={getName("awsAccessKey")}
+                    control={control}
+                    placeholder={t("aws.accessKeyPlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+            <FormGroup marginClass="m-0">
+                <FormLabel>{t("aws.secretKey")}</FormLabel>
+                <FormInput
+                    name={getName("awsSecretKey")}
+                    control={control}
+                    placeholder={t("aws.secretKeyPlaceholder")}
+                    type="password"
+                    passwordPreview
+                    autoComplete="off"
+                />
+            </FormGroup>
+            {isSessionTokenVisible && (
+                <FormGroup marginClass="m-0">
+                    <FormLabel>
+                        {t("aws.sessionToken")} <OptionalLabel />
+                    </FormLabel>
+                    <FormInput
+                        name={getName("awsSessionToken")}
+                        control={control}
+                        placeholder={t("aws.sessionTokenPlaceholder")}
+                        type="password"
+                        passwordPreview
+                        autoComplete="off"
+                    />
+                </FormGroup>
+            )}
+            <FormGroup marginClass="m-0">
+                <FormLabel className="d-flex align-items-center gap-1">
+                    {t("s3.bucketName")}
+                    <PopoverWithHoverWrapper
+                        message={
+                            <StudioTrans
+                                ns="formDestinations"
+                                i18nKey="bucketInfo"
+                                components={{ info: <span className="text-info" /> }}
+                            />
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="m-0" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormInput
+                    control={control}
+                    name={getName("bucketName")}
+                    placeholder={t("s3.bucketNamePlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+            <FormGroup marginClass="m-0">
+                <FormLabel>
+                    {t("remoteFolderName")} <OptionalLabel />
+                </FormLabel>
+                <FormInput
+                    control={control}
+                    name={getName("remoteFolderName")}
+                    placeholder={t("remoteFolderNamePlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+            {isStorageClassVisible && (
+                <FormGroup marginClass="m-0">
+                    <FormLabel>{t("s3.storageClass")}</FormLabel>
+                    <FormSelect control={control} name={getName("storageClass")} options={storageClassOptions} />
+                </FormGroup>
+            )}
+        </div>
     );
 }
 
@@ -241,6 +190,6 @@ const fieldBase = "destinations.s3";
 
 type FormFieldNames = keyof FormDestinations["destinations"]["s3"];
 
-function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+function getName<T extends FormFieldNames>(fieldName: T): `${typeof fieldBase}.${T}` {
     return `${fieldBase}.${fieldName}`;
 }

@@ -1,159 +1,102 @@
-﻿import Badge from "react-bootstrap/Badge";
-import Collapse from "react-bootstrap/Collapse";
-import Card from "react-bootstrap/Card";
-import { FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
-import OverrideConfiguration from "./OverrideConfiguration";
-import { FlexGrow } from "components/common/FlexGrow";
+import { FormGroup, FormInput, FormLabel } from "components/common/Form";
 import { Icon } from "components/common/Icon";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import OptionalLabel from "components/common/OptionalLabel";
 import { FormDestinations } from "./utils/formDestinationsTypes";
-import { useServices } from "components/hooks/useServices";
-import { useAsyncCallback } from "react-async-hook";
-import { mapAzureToDto } from "./utils/formDestinationsMapsToDto";
-import ButtonWithSpinner from "../ButtonWithSpinner";
-import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
-import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
-import OverrideConfigurationViaExternalScriptToggle from "components/common/formDestinations/OverrideConfigurationViaExternalScriptToggle";
-import AzureAuthTypeToggle from "components/common/formDestinations/AzureAuthTypeToggle";
+import AzureAuthTypeToggle from "./AzureAuthTypeToggle";
+import DestinationCard from "./DestinationCard";
+import { useDestinationTest } from "./useDestinationTest";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import { StudioTrans } from "components/common/i18n/StudioTrans";
 
 export default function Azure() {
-    const { control, trigger } = useFormContext<FormDestinations>();
-    const {
-        destinations: { azure: formValues },
-    } = useWatch({ control });
-
-    const { manageServerService } = useServices();
-
-    const asyncTest = useAsyncCallback(async () => {
-        const isValid = await trigger(fieldBase);
-        if (!isValid) {
-            return;
-        }
-
-        return manageServerService.testPeriodicBackupCredentials("Azure", mapAzureToDto(formValues));
-    });
+    const asyncTest = useDestinationTest("azure");
 
     return (
-        <Card className="well">
-            <Card.Body>
-                <FormSwitch name={getName("isEnabled")} control={control}>
-                    Azure
-                </FormSwitch>
-                <Collapse in={formValues.isEnabled} className="vstack gap-2 mt-2">
-                    <div>
-                        <OverrideConfigurationViaExternalScriptToggle fieldBase={fieldBase} />
-                        {formValues.config.isOverrideConfig ? (
-                            <OverrideConfiguration fieldBase={fieldBase} />
-                        ) : (
-                            <div className="vstack gap-3 mt-2">
-                                <div className="mb-2">
-                                    <FormLabel className="d-flex gap-1 align-items-center">
-                                        Storage container{" "}
-                                        <PopoverWithHoverWrapper
-                                            message={
-                                                <>
-                                                    Storage container should be created manually in order for this OLAP
-                                                    to work. You can use the{" "}
-                                                    <span className="text-info">Test credentials</span> button to verify
-                                                    its existence.
-                                                </>
-                                            }
-                                        >
-                                            <Icon icon="info" color="info" margin="m-0" />
-                                        </PopoverWithHoverWrapper>
-                                        {asyncTest.result?.Success ? (
-                                            <Badge bg="success" pill>
-                                                <Icon icon="check" />
-                                                Successfully connected
-                                            </Badge>
-                                        ) : asyncTest.result?.Error ? (
-                                            <Badge bg="danger" pill>
-                                                <Icon icon="warning" />
-                                                Failed connection
-                                            </Badge>
-                                        ) : null}
-                                    </FormLabel>
-                                    <FormInput
-                                        name={getName("storageContainer")}
-                                        control={control}
-                                        placeholder="Enter a storage container"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <FormLabel>
-                                        Remote folder name <small className="text-muted fw-light">(optional)</small>
-                                    </FormLabel>
-                                    <FormInput
-                                        name={getName("remoteFolderName")}
-                                        control={control}
-                                        placeholder="Enter a remote folder name"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <FormLabel>Account name</FormLabel>
-                                    <FormInput
-                                        name={getName("accountName")}
-                                        control={control}
-                                        placeholder="Enter an account name"
-                                        type="text"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                                <div className="mb-2">
-                                    <AzureAuthTypeToggle
-                                        control={control}
-                                        name={getName("authType")}
-                                        className="mb-2"
-                                    />
-                                    {formValues.authType === "sasToken" ? (
-                                        <FormInput
-                                            key="sasToken"
-                                            name={getName("sasToken")}
-                                            control={control}
-                                            placeholder="Enter a SAS token"
-                                            type="password"
-                                            passwordPreview
-                                            autoComplete="off"
-                                        />
-                                    ) : (
-                                        <FormInput
-                                            key="accountKey"
-                                            name={getName("accountKey")}
-                                            control={control}
-                                            placeholder="Enter an account key"
-                                            type="password"
-                                            passwordPreview
-                                            autoComplete="off"
-                                        />
-                                    )}
-                                </div>
-                                <div className="d-flex">
-                                    <FlexGrow />
-                                    <ButtonWithSpinner
-                                        type="button"
-                                        variant="secondary"
-                                        onClick={asyncTest.execute}
-                                        isSpinning={asyncTest.loading}
-                                        icon="rocket"
-                                    >
-                                        Test credentials
-                                    </ButtonWithSpinner>
-                                </div>
-                                {asyncTest.result?.Error && (
-                                    <div className="mt-3">
-                                        <ConnectionTestResult testResult={asyncTest.result} />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </Collapse>
-            </Card.Body>
-        </Card>
+        <DestinationCard type="azure" asyncTest={asyncTest}>
+            <AzureFields />
+        </DestinationCard>
+    );
+}
+
+export function AzureFields() {
+    const { control } = useFormContext<FormDestinations>();
+    const authType = useWatch({ control, name: getName("authType") });
+    const t = useStudioTranslation("formDestinations");
+
+    return (
+        <div className="vstack gap-3">
+            <FormGroup marginClass="m-0">
+                <FormLabel>{t("azure.accountName")}</FormLabel>
+                <FormInput
+                    name={getName("accountName")}
+                    control={control}
+                    placeholder={t("azure.accountNamePlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+            <div>
+                <AzureAuthTypeToggle control={control} name={getName("authType")} className="mb-2" />
+                {authType === "sasToken" ? (
+                    <FormInput
+                        key="sasToken"
+                        name={getName("sasToken")}
+                        control={control}
+                        placeholder={t("azure.sasTokenPlaceholder")}
+                        type="password"
+                        passwordPreview
+                        autoComplete="off"
+                    />
+                ) : (
+                    <FormInput
+                        key="accountKey"
+                        name={getName("accountKey")}
+                        control={control}
+                        placeholder={t("azure.accountKeyPlaceholder")}
+                        type="password"
+                        passwordPreview
+                        autoComplete="off"
+                    />
+                )}
+            </div>
+            <FormGroup marginClass="m-0">
+                <FormLabel className="d-flex gap-1 align-items-center">
+                    {t("azure.storageContainer")}
+                    <PopoverWithHoverWrapper
+                        message={
+                            <StudioTrans
+                                ns="formDestinations"
+                                i18nKey="azure.containerInfo"
+                                components={{ info: <span className="text-info" /> }}
+                            />
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="m-0" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormInput
+                    name={getName("storageContainer")}
+                    control={control}
+                    placeholder={t("azure.storageContainerPlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+            <FormGroup marginClass="m-0">
+                <FormLabel>
+                    {t("remoteFolderName")} <OptionalLabel />
+                </FormLabel>
+                <FormInput
+                    name={getName("remoteFolderName")}
+                    control={control}
+                    placeholder={t("remoteFolderNamePlaceholder")}
+                    type="text"
+                    autoComplete="off"
+                />
+            </FormGroup>
+        </div>
     );
 }
 
@@ -161,6 +104,6 @@ const fieldBase = "destinations.azure";
 
 type FormFieldNames = keyof FormDestinations["destinations"]["azure"];
 
-function getName(fieldName: FormFieldNames): `${typeof fieldBase}.${FormFieldNames}` {
+function getName<T extends FormFieldNames>(fieldName: T): `${typeof fieldBase}.${T}` {
     return `${fieldBase}.${fieldName}`;
 }

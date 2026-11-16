@@ -1094,6 +1094,79 @@ namespace Orders
         };
     }
 
+    static periodicBackupServerLimits(): periodicBackupServerLimitsResponse {
+        return {
+            LocalRootPath: null,
+            AllowedAwsRegions: null,
+            AllowedDestinations: null,
+            EnableUnencryptedBackupForEncryptedDatabase: true,
+        };
+    }
+
+    static periodicBackupConfiguration(): Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration {
+        return {
+            TaskId: 1,
+            Name: "Nightly backup",
+            Disabled: false,
+            BackupType: "Backup",
+            BackupUploadMode: "Default",
+            FullBackupFrequency: "0 2 * * 0",
+            IncrementalBackupFrequency: "30 * * * *",
+            MentorNode: null,
+            PinToMentorNode: false,
+            CreatedAt: null,
+            MaxReadOpsPerSecond: 1000,
+            SnapshotSettings: null,
+            BackupEncryptionSettings: { EncryptionMode: "None", Key: null },
+            RetentionPolicy: { Disabled: false, MinimumBackupAgeToKeep: "3.00:00:00" },
+            LocalSettings: {
+                Disabled: false,
+                FolderPath: "/var/lib/ravendb/backups",
+                GetBackupConfigurationScript: null,
+            },
+            S3Settings: {
+                Disabled: false,
+                GetBackupConfigurationScript: null,
+                AwsAccessKey: "access-key",
+                AwsSecretKey: "secret-key",
+                AwsSessionToken: null,
+                AwsRegionName: "us-east-1",
+                RemoteFolderName: "nightly",
+                BucketName: "ravendb-backups",
+                CustomServerUrl: null,
+                ForcePathStyle: false,
+                DisableChecksumValidation: false,
+                StorageClass: "Standard",
+            },
+            AzureSettings: {
+                Disabled: false,
+                GetBackupConfigurationScript: {
+                    Exec: "/opt/scripts/get-azure-credentials.sh",
+                    Arguments: "--environment production",
+                    TimeoutInMs: 10000,
+                },
+                AccountName: null,
+                AccountKey: null,
+                SasToken: null,
+                StorageContainer: null,
+                RemoteFolderName: null,
+            },
+            GlacierSettings: null,
+            GoogleCloudSettings: null,
+            FtpSettings: null,
+        };
+    }
+
+    static cronExpressionOccurrence(): Raven.Server.Web.Studio.StudioTasksHandler.NextCronExpressionOccurrence {
+        const nextRun = new Date(Date.now() + 15 * 60 * 60 * 1000).toISOString();
+        return {
+            IsValid: true,
+            ErrorMessage: null,
+            Utc: nextRun,
+            ServerTime: nextRun,
+        };
+    }
+
     static localFolderPathOptions(): Raven.Server.Web.Studio.FolderPathOptions {
         return {
             List: ["/bin", "/boot", "/data", "/dev", "/etc"],

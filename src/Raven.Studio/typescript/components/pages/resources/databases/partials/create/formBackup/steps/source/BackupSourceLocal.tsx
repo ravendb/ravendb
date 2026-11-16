@@ -35,7 +35,7 @@ export default function BackupSourceLocal() {
                         control={control}
                         name="sourceStep.sourceData.local.directory"
                         selectorTitle="Select backup directory path"
-                        placeholder="Enter backup directory path"
+                        placeholder="e.g. /var/backups/ravendb or D:\Backups\RavenDB"
                         getPathsProvider={(path: string) => getLocalFolderPathsProvider(path)}
                         getPathDependencies={(path: string) => [path]}
                     />

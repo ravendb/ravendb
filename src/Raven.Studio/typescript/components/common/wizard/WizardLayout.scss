@@ -1,0 +1,31 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.wizard-layout {
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--wizard-sidebar-width, 40%);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+        "main sidebar"
+        "footer sidebar";
+
+    .wizard-layout-main {
+        grid-area: main;
+        padding: sizes.$gutter;
+        overflow-y: auto;
+    }
+
+    .wizard-layout-footer {
+        grid-area: footer;
+        border-top: 1px solid colors.$border-color-light-var;
+        padding: sizes.$gutter-sm sizes.$gutter;
+    }
+
+    .wizard-layout-sidebar {
+        grid-area: sidebar;
+        padding: sizes.$gutter;
+        background-color: colors.$panel-bg-1-var;
+        overflow-y: auto;
+    }
+}

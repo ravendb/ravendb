@@ -103,7 +103,7 @@ export default function CreateDatabaseFromBackupStepSource() {
                             type="number"
                             control={control}
                             name="sourceStep.maxReadOpsPerSecond"
-                            placeholder="Enter the max read operations per second"
+                            placeholder="e.g. 1000"
                             min={1}
                             className="mb-2"
                         />

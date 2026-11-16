@@ -13,6 +13,7 @@ import "./Select.scss";
 import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
 import classNames from "classnames";
+import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 
 export type SelectValue = string | number | boolean;
 
@@ -35,7 +36,13 @@ export interface SelectOptionSeparator {
     horizontalSeparatorLine?: boolean;
 }
 
+export interface SelectOptionLicense {
+    licenseRequired?: LicenseBadgeText;
+}
+
 export type SelectOptionWithIcon<T extends SelectValue = string> = SelectOption<T> & SelectOptionIcon;
+export type SelectOptionWithIconAndLicense<T extends SelectValue = string> = SelectOptionWithIcon<T> &
+    SelectOptionLicense;
 export type SelectOptionWithWarning<T extends SelectValue = string> = SelectOption<T> & SelectOptionWarning;
 export type SelectOptionWithIconAndSeparator<T extends SelectValue = string> = SelectOptionWithIcon<T> &
     SelectOptionSeparator;
@@ -75,6 +82,22 @@ export function OptionWithIcon(props: OptionProps<SelectOptionWithIcon>) {
             <components.Option {...props}>
                 {data.icon && <Icon icon={data.icon} color={data.iconColor} />}
                 {data.label}
+            </components.Option>
+        </div>
+    );
+}
+
+export function OptionWithIconAndLicenseBadge(props: OptionProps<SelectOptionWithIconAndLicense>) {
+    const { data, isDisabled } = props;
+
+    return (
+        <div className="cursor-pointer">
+            <components.Option {...props}>
+                {data.icon && <Icon icon={data.icon} color={data.iconColor} />}
+                <span>{data.label}</span>
+                {isDisabled && data.licenseRequired && (
+                    <LicenseRestrictedBadge licenseRequired={data.licenseRequired} />
+                )}
             </components.Option>
         </div>
     );

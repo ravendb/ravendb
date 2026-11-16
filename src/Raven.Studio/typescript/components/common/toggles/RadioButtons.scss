@@ -1,0 +1,52 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.radio-buttons {
+    display: flex;
+    gap: sizes.$gutter-xs;
+
+    .radio-buttons-item {
+        position: relative;
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: sizes.$gutter-xxs;
+        margin: 0;
+        padding: sizes.$gutter-xxs sizes.$gutter-sm;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius;
+        color: colors.$text-muted-var;
+        text-align: center;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+        transition:
+            background-color 0.2s ease,
+            color 0.2s ease;
+
+        input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        &:hover:not(.disabled) {
+            color: colors.$text-emphasis-var;
+        }
+
+        &:has(input:checked) {
+            background-color: colors.$panel-header-bg-var;
+            color: colors.$text-emphasis-var;
+        }
+
+        &:has(input:focus-visible) {
+            outline: 2px solid colors.$primary-var;
+            outline-offset: 2px;
+        }
+
+        &.disabled {
+            cursor: not-allowed;
+        }
+    }
+}

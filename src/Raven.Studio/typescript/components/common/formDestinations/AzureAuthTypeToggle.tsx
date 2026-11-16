@@ -2,6 +2,7 @@ import { Control, FieldPath, FieldValues } from "react-hook-form";
 import { FormRadioToggleWithIcon } from "components/common/Form";
 import { RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
 import { AzureAuthType } from "components/common/formDestinations/utils/formDestinationsTypes";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 interface AzureAuthTypeToggleProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
@@ -14,6 +15,20 @@ export default function AzureAuthTypeToggle<TFieldValues extends FieldValues>({
     name,
     className,
 }: AzureAuthTypeToggleProps<TFieldValues>) {
+    const t = useStudioTranslation("formDestinations");
+
+    const accountKeyItem: RadioToggleWithIconInputItem<AzureAuthType> = {
+        label: t("azure.accountKey"),
+        value: "accountKey",
+        iconName: "key",
+    };
+
+    const sasTokenItem: RadioToggleWithIconInputItem<AzureAuthType> = {
+        label: t("azure.sasToken"),
+        value: "sasToken",
+        iconName: "lock",
+    };
+
     return (
         <FormRadioToggleWithIcon
             control={control}
@@ -24,15 +39,3 @@ export default function AzureAuthTypeToggle<TFieldValues extends FieldValues>({
         />
     );
 }
-
-const accountKeyItem: RadioToggleWithIconInputItem<AzureAuthType> = {
-    label: "Account key",
-    value: "accountKey",
-    iconName: "key",
-};
-
-const sasTokenItem: RadioToggleWithIconInputItem<AzureAuthType> = {
-    label: "SAS token",
-    value: "sasToken",
-    iconName: "lock",
-};

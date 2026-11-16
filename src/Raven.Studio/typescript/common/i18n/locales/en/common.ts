@@ -6,4 +6,26 @@ export default {
     loadFromFile: "Load from file",
     usefulLinks: "useful links",
     defaultPlaceholder: "Default ({{value}})",
+    back: "Back",
+    next: "Next",
+    edit: "Edit",
+    close: "Close",
+    copy: "Copy",
+    test: "Test",
+    whenToUse: "When to use?",
+    connectionTestFailed: "Connection test failed",
+    stepsCompleted: "{{completed}}/{{total}} steps completed",
+    responsibleNode: {
+        setLabel: "Set Responsible Node",
+        shardedInfo: "This option is not respected in case of sharded databases.",
+        noNodesInfo: "Currently, the responsible node cannot be selected because there are no nodes available.",
+        nodeOption: "Node {{nodeTag}}",
+        nodeOption_notMember: "Node {{nodeTag}} (not a member)",
+        pinLabel: "Pin node",
+        pinTitle: "Toggle on to pin selected node",
+        pinnedInfo:
+            "The selected node is now Pinned to handle this task.<br/>When this node is down, the task will Not execute as no other node will be selected to handle the task.<br/>In case the node is removed from the Database Group, a failover will occur as the cluster will select another node to handle the task.",
+        preferredInfo:
+            "The selected node will be the Preferred Node to handle the task.<br/>When this node is down, the cluster selects another node from the Database Group to handle the task.",
+    },
 } as const;

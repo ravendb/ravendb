@@ -1,16 +1,21 @@
-import { Meta } from "@storybook/react-webpack5";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
+import { userEvent, within } from "storybook/test";
 import Select, {
     OptionWithIcon,
+    OptionWithIconAndLicenseBadge,
     OptionWithIconAndSeparator,
     OptionWithWarning,
     SelectOption,
     SelectOptionWithIcon,
+    SelectOptionWithIconAndLicense,
     SelectOptionWithIconAndSeparator,
     SelectOptionWithWarning,
     SingleValueWithIcon,
 } from "components/common/select/Select";
 import SelectCreatable from "components/common/select/SelectCreatable";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+
+const LICENSE_SELECT_LABEL = "Select with license badges";
 
 export default {
     title: "Bits/Select",
@@ -103,8 +108,36 @@ const optionsWithIconAndSeparator: SelectOptionWithIconAndSeparator[] = [
     { value: "three", label: "Three", icon: "access-read-write" },
 ];
 
+const optionsWithLicense: SelectOptionWithIconAndLicense[] = [
+    { value: "one", label: "One", icon: "access-admin" },
+    { value: "two", label: "Two", icon: "access-read", isDisabled: true, licenseRequired: "Professional +" },
+    { value: "three", label: "Three", icon: "access-read-write", isDisabled: true, licenseRequired: "Enterprise" },
+    {
+        value: "four",
+        label: "An option with a very long label that does not fit in one line of the menu",
+        icon: "access-read-write",
+        isDisabled: true,
+        licenseRequired: "Enterprise AI",
+    },
+];
+
 const optionsWithWarning: SelectOptionWithWarning[] = [
     { value: "one", label: "One", isWarning: true },
     { value: "two", label: "Two", isWarning: true },
     { value: "three", label: "Three" },
 ];
+
+export const WithLicenseBadge: StoryObj = {
+    render: () => (
+        <div style={{ width: 300, height: 260 }}>
+            <Select
+                aria-label={LICENSE_SELECT_LABEL}
+                options={optionsWithLicense}
+                components={{ SingleValue: SingleValueWithIcon, Option: OptionWithIconAndLicenseBadge }}
+            />
+        </div>
+    ),
+    play: async ({ canvasElement }) => {
+        await userEvent.click(within(canvasElement).getByRole("combobox", { name: LICENSE_SELECT_LABEL }));
+    },
+};

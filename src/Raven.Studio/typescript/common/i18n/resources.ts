@@ -1,12 +1,15 @@
 import aboutView from "./locales/en/aboutView";
 import common from "./locales/en/common";
 import conflicts from "./locales/en/conflicts";
+import cronEditor from "./locales/en/cronEditor";
 import documentExpiration from "./locales/en/documentExpiration";
 import documentRefresh from "./locales/en/documentRefresh";
 import durationPicker from "./locales/en/durationPicker";
+import editBackupTask from "./locales/en/editBackupTask";
 import editCustomSorter from "./locales/en/editCustomSorter";
 import featureAvailabilitySummary from "./locales/en/featureAvailabilitySummary";
 import fieldWithDefault from "./locales/en/fieldWithDefault";
+import formDestinations from "./locales/en/formDestinations";
 import licenseLimitedFrequencyField from "./locales/en/licenseLimitedFrequencyField";
 import maxItemsToProcessField from "./locales/en/maxItemsToProcessField";
 import revisionsBin from "./locales/en/revisionsBin";
@@ -29,12 +32,15 @@ export const en = {
     aboutView,
     common,
     conflicts,
+    cronEditor,
     documentExpiration,
     documentRefresh,
     durationPicker,
+    editBackupTask,
     editCustomSorter,
     featureAvailabilitySummary,
     fieldWithDefault,
+    formDestinations,
     licenseLimitedFrequencyField,
     maxItemsToProcessField,
     revisionsBin,
