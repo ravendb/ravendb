@@ -4,8 +4,6 @@ export type DurationUnitSymbols = Record<DurationUnit, string>;
 
 type DurationParts = Record<DurationUnit, number>;
 
-export const MAX_LISTED_TOP_UNIT_VALUE = 365;
-
 const allUnits: DurationUnit[] = ["days", "hours", "minutes", "seconds"];
 
 const secondsPerUnit: Record<DurationUnit, number> = {
@@ -15,8 +13,8 @@ const secondsPerUnit: Record<DurationUnit, number> = {
     seconds: 1,
 };
 
-const maxValueBelowUnit: Record<DurationUnit, number> = {
-    days: MAX_LISTED_TOP_UNIT_VALUE,
+const maxListedValue: Record<DurationUnit, number> = {
+    days: 365,
     hours: 23,
     minutes: 59,
     seconds: 59,
@@ -29,8 +27,8 @@ const unitAliases: Record<DurationUnit, string[]> = {
     seconds: ["s", "sec", "secs", "second", "seconds"],
 };
 
-export function getVisibleUnits(showDays: boolean, showSeconds: boolean): DurationUnit[] {
-    return allUnits.filter((unit) => (unit === "days" ? showDays : unit === "seconds" ? showSeconds : true));
+export function getVisibleUnits(showSeconds: boolean): DurationUnit[] {
+    return showSeconds ? allUnits : allUnits.filter((unit) => unit !== "seconds");
 }
 
 export function splitDuration(totalSeconds: number, units: DurationUnit[]): DurationParts {
@@ -50,7 +48,7 @@ export function joinDuration(parts: DurationParts): number {
 }
 
 export function formatDuration(totalSeconds: number, units: DurationUnit[], symbols: DurationUnitSymbols): string {
-    if (totalSeconds == null || Number.isNaN(totalSeconds)) {
+    if (totalSeconds == null) {
         return "";
     }
 
@@ -88,8 +86,8 @@ export function parseDuration(text: string, units: DurationUnit[], symbols: Dura
     return totalSeconds;
 }
 
-export function getListedValues(unit: DurationUnit, units: DurationUnit[], currentValue: number): number[] {
-    const maxValue = unit === units[0] ? MAX_LISTED_TOP_UNIT_VALUE : maxValueBelowUnit[unit];
+export function getListedValues(unit: DurationUnit, currentValue: number): number[] {
+    const maxValue = maxListedValue[unit];
     const listedValues = Array.from({ length: maxValue + 1 }, (_, value) => value);
 
     return currentValue > maxValue ? [...listedValues, currentValue] : listedValues;

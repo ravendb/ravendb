@@ -20,7 +20,7 @@ describe("DocumentRefresh", () => {
 
         const refreshFrequency = await screen.findByRole("textbox", { name: "Refresh frequency" });
         expect(refreshFrequency).toBeEnabled();
-        expect(refreshFrequency).toHaveValue("35h 59m 59s");
+        expect(refreshFrequency).toHaveValue("1d 11h 59m 59s");
 
         await fireClick(screen.getByRole("checkbox", { name: "Enable Document Refresh" }));
 
@@ -78,7 +78,7 @@ describe("DocumentRefresh", () => {
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toHaveValue("35h 59m 59s");
+        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toHaveValue("1d 11h 59m 59s");
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "See full comparison" })).toHaveAttribute("href", appUrl.forAbout());
     });
@@ -100,7 +100,7 @@ describe("DocumentRefresh", () => {
         expect(refreshFrequency).toHaveValue("");
 
         await fireClick(documentRefreshSwitch);
-        expect(refreshFrequency).toHaveValue("36h");
+        expect(refreshFrequency).toHaveValue("1d 12h");
         expect(screen.getByText(/Minimum on your license/)).toHaveTextContent("Minimum on your license: 36 hours.");
         expect(screen.queryByText(licenseLimitWarning)).not.toBeInTheDocument();
     });

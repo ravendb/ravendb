@@ -7,10 +7,10 @@ import * as stories from "./DocumentExpiration.stories";
 const { DefaultDocumentExpiration, LicenseRestricted, InitialDocumentExpiration } = composeStories(stories);
 
 // DatabasesStubs.expirationConfiguration().DeleteFrequencyInSec is 129599 seconds
-const expectedDeleteFrequency = "35h 59m 59s";
+const expectedDeleteFrequency = "1d 11h 59m 59s";
 const licenseLimitWarning = "Your license doesn't allow an expiration frequency below 36 hours.";
 // LicenseStubs limits the minimum period to 36 hours
-const expectedLicenseMinimumDeleteFrequency = "36h";
+const expectedLicenseMinimumDeleteFrequency = "1d 12h";
 
 describe("DocumentExpiration", () => {
     it("can render", async () => {
@@ -82,7 +82,7 @@ describe("DocumentExpiration", () => {
         const deleteFrequency = screen.getByRole("textbox", { name: "Expiration frequency" });
         await user.type(deleteFrequency, "123h{Enter}");
 
-        expect(deleteFrequency).toHaveValue("123h");
+        expect(deleteFrequency).toHaveValue("5d 3h");
         expect(
             screen.getByRole("button", { name: "Reset to default", description: "Expiration frequency" })
         ).toBeInTheDocument();

@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { Control, FieldPath, FieldValues, useController } from "react-hook-form";
 import appUrl from "common/appUrl";
-import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationDropdownPicker";
+import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
 import FieldLabel from "components/common/FieldLabel";
 import { ControlledDurationPicker } from "components/common/Form";
 import { Icon } from "components/common/Icon";

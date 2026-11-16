@@ -1,0 +1,20 @@
+@use "Content/scss/colors";
+
+.duration-picker {
+    position: relative;
+    min-width: 240px;
+
+    .form-control {
+        padding-left: 2rem;
+    }
+
+    &__icon {
+        position: absolute;
+        left: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 3;
+        pointer-events: none;
+        color: colors.$text-muted-var;
+    }
+}

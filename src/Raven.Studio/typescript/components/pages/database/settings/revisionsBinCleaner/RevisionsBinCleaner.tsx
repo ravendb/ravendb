@@ -170,7 +170,6 @@ export default function RevisionsBinCleaner() {
                                                             !formValues.isMinimumEntriesAgeToKeepEnabled
                                                         }
                                                         defaultTotalSeconds={DEFAULT_MINIMUM_ENTRIES_AGE_TO_KEEP_IN_SEC}
-                                                        showDays
                                                     />
                                                 </div>
                                             </div>

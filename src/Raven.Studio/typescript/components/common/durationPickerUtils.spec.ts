@@ -4,23 +4,23 @@ import {
     getListedValues,
     getVisibleUnits,
     parseDuration,
-} from "components/common/durationDropdownPickerUtils";
+} from "components/common/durationPickerUtils";
 
 const symbols: DurationUnitSymbols = { days: "d", hours: "h", minutes: "m", seconds: "s" };
-const allUnits = getVisibleUnits(true, true);
-const hoursAndMinutes = getVisibleUnits(false, false);
+const allUnits = getVisibleUnits(true);
+const withoutSeconds = getVisibleUnits(false);
 
-describe("durationDropdownPickerUtils", () => {
+describe("durationPickerUtils", () => {
     it("formats only the non-zero units", () => {
         expect(formatDuration(100800 + 300, allUnits, symbols)).toBe("1d 4h 5m");
     });
 
     it("formats zero as the smallest visible unit", () => {
-        expect(formatDuration(0, hoursAndMinutes, symbols)).toBe("0m");
+        expect(formatDuration(0, withoutSeconds, symbols)).toBe("0m");
     });
 
-    it("rolls days into hours when days are hidden", () => {
-        expect(formatDuration(2 * 86400, hoursAndMinutes, symbols)).toBe("48h");
+    it("shows durations past 24 hours with days", () => {
+        expect(formatDuration(36 * 3600, withoutSeconds, symbols)).toBe("1d 12h");
     });
 
     it.each([
@@ -34,7 +34,7 @@ describe("durationDropdownPickerUtils", () => {
     });
 
     it("treats a bare number as the smallest visible unit", () => {
-        expect(parseDuration("90", hoursAndMinutes, symbols)).toBe(5400);
+        expect(parseDuration("90", withoutSeconds, symbols)).toBe(5400);
     });
 
     it("returns null for empty text", () => {
@@ -45,15 +45,15 @@ describe("durationDropdownPickerUtils", () => {
         expect(parseDuration(text, allUnits, symbols)).toBeNaN();
     });
 
-    it("lists up to 365 for the largest unit and natural limits below it", () => {
-        expect(getListedValues("days", allUnits, 0).at(-1)).toBe(365);
-        expect(getListedValues("hours", allUnits, 0).at(-1)).toBe(23);
-        expect(getListedValues("hours", hoursAndMinutes, 0).at(-1)).toBe(365);
-        expect(getListedValues("minutes", allUnits, 0).at(-1)).toBe(59);
+    it("lists up to 365 days and natural limits for the other units", () => {
+        expect(getListedValues("days", 0).at(-1)).toBe(365);
+        expect(getListedValues("hours", 0).at(-1)).toBe(23);
+        expect(getListedValues("seconds", 0).at(-1)).toBe(59);
+        expect(getListedValues("minutes", 0).at(-1)).toBe(59);
     });
 
     it("adds a typed value above 365 after 365 without listing the numbers in between", () => {
-        const listedValues = getListedValues("days", allUnits, 1000);
+        const listedValues = getListedValues("days", 1000);
 
         expect(listedValues).toHaveLength(367);
         expect(listedValues.slice(-2)).toEqual([365, 1000]);
