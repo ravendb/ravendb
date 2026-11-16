@@ -13,6 +13,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
 
+        // CachedProperties only looks this up and copies it when the name is new, so one instance serves every property
+        private LazyStringValue _propertyName;
+
         public JsonOperationContext Context { get; }
 
         public SystemTextJsonBlittableWriter(JsonOperationContext context)
@@ -71,6 +74,25 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void WritePropertyName(string name)
         {
             _manualBlittableJsonDocumentBuilder.WritePropertyName(name);
+        }
+
+        internal unsafe void WritePropertyName(ReadOnlySpan<byte> utf8Name)
+        {
+            fixed (byte* name = utf8Name)
+            {
+                LazyStringValue propertyName = _propertyName;
+                if (propertyName == null)
+                    _propertyName = propertyName = new LazyStringValue(null, name, utf8Name.Length, Context);
+                else
+                    propertyName.Renew(null, name, utf8Name.Length, Context);
+
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(propertyName);
+            }
+        }
+
+        internal void WriteValue(ReadOnlySpan<byte> utf8Value)
+        {
+            _manualBlittableJsonDocumentBuilder.WriteValue(utf8Value);
         }
 
         public void WritePropertyName(string name, bool escape)
