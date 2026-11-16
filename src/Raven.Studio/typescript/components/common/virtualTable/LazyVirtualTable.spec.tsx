@@ -163,7 +163,7 @@ describe("LazyVirtualTable", () => {
         expect(await screen.findByText(`Item ${(pageNumber - 1) * PAGE_SIZE}`)).toBeInTheDocument();
     });
 
-    it("can pick the rows per page and jump to a page from the input", async () => {
+    it("can pick the items per page and jump to a page from the input", async () => {
         const { screen, container } = rtlRender(
             <LazyVirtualTableStory
                 totalCount={TOTAL_COUNT}
@@ -180,7 +180,7 @@ describe("LazyVirtualTable", () => {
         expect(await screen.findByText(`1-${PAGE_SIZE} of ${TOTAL_COUNT.toLocaleString()}`)).toBeInTheDocument();
         expect(screen.getByText(String(PAGE_SIZE))).toBeInTheDocument();
 
-        fireEvent.keyDown(screen.getByRole("combobox", { name: "Rows per page" }), { key: "ArrowDown" });
+        fireEvent.keyDown(screen.getByRole("combobox", { name: "Items per page" }), { key: "ArrowDown" });
         fireEvent.click(await screen.findByText("100"));
 
         expect(await screen.findByText("Item 99")).toBeInTheDocument();

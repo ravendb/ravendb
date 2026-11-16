@@ -1,81 +1,92 @@
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { PaginationBar as PaginationBarComponent, PageNavigation as PageNavigationComponent } from "./PaginationBar";
+import { PaginationBar as PaginationBarComponent } from "./PaginationBar";
 import { useState } from "react";
-import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+interface PaginationBarStoryArgs {
+    totalCount: number;
+    initialPage: number;
+    isTotalUnknown: boolean;
+    hasPageSizeSelector: boolean;
+}
+
+function PaginationBarExample({
+    totalCount,
+    initialPage,
+    isTotalUnknown,
+    hasPageSizeSelector,
+}: PaginationBarStoryArgs) {
+    const [page, setPage] = useState(initialPage);
+    const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+
+    const knownTotalPages = Math.ceil(totalCount / pageSize);
+    const hasMorePages = page < knownTotalPages;
+    const firstItemNumber = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+
+    return (
+        <PaginationBarComponent
+            pagination={{
+                page,
+                totalPages: isTotalUnknown ? page + (hasMorePages ? 1 : 0) : knownTotalPages,
+                firstItemNumber,
+                lastItemNumber: Math.min(page * pageSize, totalCount),
+                totalCount: isTotalUnknown ? null : totalCount,
+                onPageChange: setPage,
+                pageSizeSelector: hasPageSizeSelector
+                    ? {
+                          pageSize,
+                          options: PAGE_SIZE_OPTIONS,
+                          onChange: (nextPageSize) => {
+                              setPageSize(nextPageSize);
+                              setPage(1);
+                          },
+                      }
+                    : undefined,
+            }}
+        />
+    );
+}
 
 export default {
-    title: "Bits/Pagination",
-    decorators: [withStorybookContexts, withBootstrap5],
-    component: PaginationBarComponent,
+    title: "Bits/Pagination/Pagination Bar",
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
+    render: (args) => <PaginationBarExample {...args} />,
+    args: {
+        totalCount: 1_059,
+        initialPage: 1,
+        isTotalUnknown: false,
+        hasPageSizeSelector: true,
+    },
     parameters: {
         design: {
             type: "figma",
             url: "https://www.figma.com/design/ITHbe2U19Ok7cjbEzYa4cb/Design-System-RavenDB-Studio?node-id=10-101",
         },
     },
-} satisfies Meta<typeof PaginationBarComponent>;
+} satisfies Meta<PaginationBarStoryArgs>;
 
-const totalCount = 1_059;
+type Story = StoryObj<PaginationBarStoryArgs>;
 
-export function PaginationBar() {
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+export const Default: Story = {};
 
-    const pageCount = Math.ceil(totalCount / pageSize);
-    const firstItemNumber = (page - 1) * pageSize + 1;
-
-    return (
-        <PaginationBarComponent
-            pagination={{
-                page,
-                totalPages: pageCount,
-                firstItemNumber,
-                lastItemNumber: Math.min(page * pageSize, totalCount),
-                totalCount,
-                onPageChange: setPage,
-                pageSizeSelector: {
-                    pageSize,
-                    options: [10, 25, 50, 100],
-                    onChange: (nextPageSize) => {
-                        setPageSize(nextPageSize);
-                        setPage(1);
-                    },
-                },
-            }}
-        />
-    );
-}
-
-interface PageNavigationStoryArgs {
-    totalPages: number;
-    isSimple: boolean;
-}
-
-function PageNavigationExample({ totalPages, isSimple }: PageNavigationStoryArgs) {
-    const [page, setPage] = useState(1);
-
-    return (
-        <PageNavigationComponent
-            page={Math.min(page, totalPages)}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            isSimple={isSimple}
-        />
-    );
-}
-
-export const PageNavigation: StoryObj<PageNavigationStoryArgs> = {
-    render: (args) => <PageNavigationExample {...args} />,
-    args: {
-        totalPages: 12,
-        isSimple: false,
-    },
+export const Empty: Story = {
+    args: { totalCount: 0 },
 };
 
-export const SimplePageNavigation: StoryObj<PageNavigationStoryArgs> = {
-    render: (args) => <PageNavigationExample {...args} />,
-    args: {
-        totalPages: 12,
-        isSimple: true,
-    },
+export const SinglePage: Story = {
+    args: { totalCount: 8 },
+};
+
+export const UnknownTotal: Story = {
+    args: { isTotalUnknown: true },
+};
+
+export const WithoutPageSizeSelector: Story = {
+    args: { hasPageSizeSelector: false },
+};
+
+export const LongValues: Story = {
+    args: { totalCount: 9_876_543_210, initialPage: 987_654_321 },
 };
