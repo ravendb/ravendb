@@ -182,11 +182,7 @@ export default function EditRevision(props: EditRevisionProps) {
                     </FormSwitch>
                     {formValues.isMinimumRevisionAgeToKeepEnabled && (
                         <div className="mb-2">
-                            <FormDurationPicker
-                                control={control}
-                                name="minimumRevisionAgeToKeep"
-                                showSeconds
-                            />
+                            <FormDurationPicker control={control} name="minimumRevisionAgeToKeep" showSeconds />
                             {!isDefaultConflicts &&
                             revisionsAgeInDaysLimit > 0 &&
                             minimumRevisionAgeToKeepDays > revisionsAgeInDaysLimit ? (
