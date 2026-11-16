@@ -10,7 +10,9 @@ namespace Corax.Pipeline
     public struct LowerCaseTransformer : ITransformer
     {
         public bool RequiresBufferSpace => true;
-        
+
+        public float BufferSpaceMultiplier => 1.5f;
+
         public void Dispose() { }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -29,7 +31,9 @@ namespace Corax.Pipeline
     public struct LowerCaseTransformerPre24423 : ITransformer
     {
         public bool RequiresBufferSpace => true;
-    
+
+        public float BufferSpaceMultiplier => 1.5f;
+
         public int Transform(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             var charCount = (uint)Encodings.Utf8.GetCharCount(source.Slice(0, (int)tokens[0].Length));
