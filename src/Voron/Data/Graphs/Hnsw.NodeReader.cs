@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
@@ -20,40 +22,66 @@ public partial class Hnsw
         private int _offset;
         private readonly Span<byte> _buffer = buffer;
 
+        /// <summary>
+        /// Reads the header of the node and keeps where its levels are, so their edges are decoded only if they are needed.
+        /// </summary>
+        public void LoadHeaderInto(ref Node node)
+        {
+            node.VectorId = VectorId;
+            node.PostingListId = PostingListId;
+            if (CountOfLevels == 0)
+                return;
+            node.EncodedLevels = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference(_buffer));
+            node.EncodedLevelsLength = _buffer.Length;
+            node.EncodedLevelCount = CountOfLevels;
+            node.DecodedLevels = 0;
+        }
+
         public void LoadInto(ref Node node)
         {
             node.VectorId = VectorId;
             node.PostingListId = PostingListId;
             node.EdgesPerLevel.EnsureCapacityFor(allocator, CountOfLevels);
-            while (NextReadEdges(out var list))
+            while (_offset < _buffer.Length)
             {
-                node.EdgesPerLevel.AddUnsafe(list);
+                node.EdgesPerLevel.AddUnsafe(ReadEdges(allocator, _buffer, ref _offset));
             }
         }
 
-        private bool NextReadEdges(out NativeList<long> list)
+        internal static NativeList<long> ReadEdges(ByteStringContext allocator, ReadOnlySpan<byte> buffer, ref int offset)
         {
-            if (_offset >= _buffer.Length)
-            {
-                list = default;
-                return false;
-            }
-
-            var count = VariableSizeEncoding.Read<int>(_buffer, out int offset, _offset);
-            _offset += offset;
-            list = new NativeList<long>();
+            var count = VariableSizeEncoding.Read<int>(buffer, out int size, offset);
+            offset += size;
+            var list = new NativeList<long>();
             list.EnsureCapacityFor(allocator, count);
             long prev = 0;
             for (int i = 0; i < count; i++)
             {
-                var item = VariableSizeEncoding.Read<long>(_buffer, out offset, _offset);
-                _offset += offset;
+                var item = VariableSizeEncoding.Read<long>(buffer, out size, offset);
+                offset += size;
                 prev += item;
                 Debug.Assert(prev >= 0, "prev >= 0");
                 list.AddUnsafe(prev);
             }
 
-            return true;
+            return list;
+        }
+
+        /// <summary>
+        /// Returns where the level after the one at <paramref name="offset"/> starts.
+        /// </summary>
+        internal static int SkipEdges(ReadOnlySpan<byte> buffer, int offset)
+        {
+            var count = VariableSizeEncoding.Read<int>(buffer, out int size, offset);
+            offset += size;
+            // Every value ends with the first byte that does not have the continuation bit.
+            while (count > 0)
+            {
+                if ((buffer[offset++] & 0x80) == 0)
+                    count--;
+            }
+
+            return offset;
         }
 
         public UnmanagedSpan ReadVector(in SearchState state) => ReadVector(VectorId, in state);

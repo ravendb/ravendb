@@ -89,7 +89,7 @@ public class HnswGraphConstruction(ITestOutputHelper output) : StorageTest(outpu
         using (var state = new Hnsw.SearchState(tx.LowLevelTransaction, treeName))
         {
             foreach (var id in done)
-                Assert.True(state.GetNodeByIndex(state.GetNodeIndexById(id)).EdgeCountAtLevel(0) <= state.Options.MaxEdgesAtLevel(0), "a list is over its cap");
+                Assert.True(state.GetDecodedNode(state.GetNodeIndexById(id)).EdgeCountAtLevel(0) <= state.Options.MaxEdgesAtLevel(0), "a list is over its cap");
         }
     }
 }

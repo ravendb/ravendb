@@ -31,8 +31,8 @@ public unsafe partial class Hnsw
         var searchState = new SearchState(llt, name);
         for (long nodeId = 1; nodeId <= searchState.Options.CountOfVectors; nodeId++)
         {
-            var node = searchState.GetNodeById(nodeId);
             int nodeIndex = searchState.GetNodeIndexById(nodeId);
+            var node = searchState.GetDecodedNode(nodeIndex);
             long[] entries = GetEntries(llt, node.PostingListId);
             var edgesByLevel = new (long NodeId, float Distance)[node.EdgesPerLevel.Count][];
             for (int i = 0; i < node.EdgesPerLevel.Count; i++)
@@ -169,7 +169,7 @@ table, th, td {
                 for (int j = 1; j <= searchState.Options.CountOfVectors; j++)
                 {
                     var nodeIdx = searchState.GetNodeIndexById(j);
-                    ref var n = ref searchState.Nodes[nodeIdx];
+                    ref var n = ref searchState.GetDecodedNode(nodeIdx);
                     if (level >= n.EdgesPerLevel.Count)
                         continue;
 

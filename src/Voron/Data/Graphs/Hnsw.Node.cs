@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron.Data.Containers;
 using Voron.Global;
@@ -44,12 +46,79 @@ public partial class Hnsw
         internal int* CachedOffsets;
         internal long* CachedEdges;
 
+        // Set when a search read only the header of the node: the encoded levels, in a page of the read transaction, that
+        // a level of EdgesPerLevel is decoded from when the search first expands the node at that level.
+        internal byte* EncodedLevels;
+        internal int EncodedLevelsLength;
+        internal int EncodedLevelCount;
+        // A bit for each level of EdgesPerLevel that was decoded, while EncodedLevels is set.
+        internal ulong DecodedLevels;
+
+        // Set by every change to what Encode writes: a commit writes back only the nodes that have it.
+        internal bool Modified;
+
+        // Appends an edge at the level. An index list that was in sync gets the edge too; a stale one is cleared, so that equal counts
+        // cannot make it look in sync.
+        internal void AppendEdge(ByteStringContext allocator, int level, long edgeId, int edgeIndex)
+        {
+            ref var ids = ref EdgesPerLevel[level];
+            bool hasIndexes = EdgesIndexesPerLevel.Count > level;
+            bool inSync = hasIndexes && EdgesIndexesPerLevel[level].Count == ids.Count;
+            ids.Add(allocator, edgeId);
+            if (inSync)
+                EdgesIndexesPerLevel[level].Add(allocator, edgeIndex);
+            else if (hasIndexes)
+                EdgesIndexesPerLevel[level].Clear();
+            Modified = true;
+        }
+
+        // Replaces the edges at the level with the nodes at these indexes.
+        internal void SetEdges(SearchState searchState, int level, ReadOnlySpan<int> edgeIndexes)
+        {
+            var allocator = searchState.Llt.Allocator;
+            ref var ids = ref EdgesPerLevel[level];
+            ids.ResetAndEnsureCapacity(allocator, edgeIndexes.Length);
+            foreach (var edgeIndex in edgeIndexes)
+                ids.AddUnsafe(searchState.GetNodeByIndex(edgeIndex).NodeId);
+
+            // PERF: The index list is rewritten from the indexes, without a lookup in the node id table.
+            if (EdgesIndexesPerLevel.Count > level)
+                EdgesIndexesPerLevel[level].ResetAndCopyFrom(allocator, edgeIndexes);
+            Modified = true;
+        }
+
+        internal void SetPostingListId(long postingListId)
+        {
+            if (PostingListId == postingListId)
+                return;
+
+            PostingListId = postingListId;
+            Modified = true;
+        }
+
+        internal void SetVectorId(long vectorId)
+        {
+            VectorId = vectorId;
+            Modified = true;
+        }
+
+        // Gives the node an edge list for each level below levels. A node that gets more levels is written back.
+        internal void EnsureLevels(ByteStringContext allocator, int levels)
+        {
+            if (EdgesPerLevel.Count >= levels)
+                return;
+
+            EdgesPerLevel.SetCapacity(allocator, levels);
+            Modified = true;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int GetLevelCount() => CachedHeader != null ? CachedHeader->LevelCount : EdgesPerLevel.Count;
+        internal int GetLevelCount() => CachedHeader != null ? CachedHeader->LevelCount : EncodedLevels != null ? EncodedLevelCount : EdgesPerLevel.Count;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal int EdgeCountAtLevel(int level)
         {
+            Debug.Assert(EncodedLevels == null || (DecodedLevels & (1UL << level)) != 0, "The edges of the level were not decoded");
             if (CachedHeader != null)
                 return CachedOffsets[level + 1] - CachedOffsets[level];
             return EdgesPerLevel[level].Count;
@@ -58,6 +127,7 @@ public partial class Hnsw
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ReadOnlySpan<long> EdgesAtLevel(int level)
         {
+            Debug.Assert(EncodedLevels == null || (DecodedLevels & (1UL << level)) != 0, "The edges of the level were not decoded");
             if (CachedHeader != null)
             {
                 int start = CachedOffsets[level];

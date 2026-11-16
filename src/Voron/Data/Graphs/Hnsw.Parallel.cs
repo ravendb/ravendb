@@ -369,18 +369,8 @@ public partial class Hnsw
                         list.AddUnsafe(edge.NodeId);
 
                         ref var edgeList = ref edge.EdgesPerLevel[level];
-                        edgeList.Add(_searchState.Llt.Allocator, node.NodeId);
-
-                        // Mirror the append into EdgesIndexesPerLevel so RegisterForPreloading
-                        // can skip its O(M) NodeId -> index rebuild. We only update when the
-                        // cache is already populated for this level and was in sync before this
-                        // append; otherwise we leave the lazy rebuild to fix it.
-                        if (edge.EdgesIndexesPerLevel.Count > level)
-                        {
-                            ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
-                            if (edgeIndexes.Count == edgeList.Count - 1)
-                                edgeIndexes.Add(_searchState.Llt.Allocator, currentNodeIndex);
-                        }
+                        // PERF: The append keeps the index list in sync, so RegisterForPreloading and PrepareEdgesOnLLT do not rebuild it.
+                        edge.AppendEdge(_searchState.Llt.Allocator, level, node.NodeId, currentNodeIndex);
 
                         if (edgeList.Count <= _searchState.Options.MaxEdgesAtLevel(level))
                             continue;
@@ -443,24 +433,7 @@ public partial class Hnsw
 
                 var keptBackLinks = _candidates.Count > selected;
 
-                ref Node node = ref _searchState.GetNodeByIndex(nodeIndex);
-                ref var list = ref node.EdgesPerLevel[level];
-                list.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
-                foreach (var idx in _candidates)
-                {
-                    list.AddUnsafe(_searchState.GetNodeByIndex(idx).NodeId);
-                }
-
-                // PERF: The candidates are node indexes, so the list of edge indexes is rewritten from them without a lookup in the node id table.
-                if (node.EdgesIndexesPerLevel.Count > level)
-                {
-                    ref var edgeIndexes = ref node.EdgesIndexesPerLevel[level];
-                    edgeIndexes.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
-                    foreach (var idx in _candidates)
-                    {
-                        edgeIndexes.AddUnsafe(idx);
-                    }
-                }
+                _searchState.GetNodeByIndex(nodeIndex).SetEdges(_searchState, level, CollectionsMarshal.AsSpan(_candidates));
 
                 if (keptBackLinks && _candidates.Count > _searchState.Options.MaxEdgesAtLevel(level))
                     _requiresEdgeFiltering.Add(nodeIndex);
@@ -697,7 +670,7 @@ public partial class Hnsw
                 // The slow path runs RegisterForPreloading first, which sizes both lists.
                 // The all-in-memory fast path skips that step, so we must guarantee the slot
                 // exists before we ref into it. SetCapacity is a no-op when already sized.
-                n.EdgesPerLevel.SetCapacity(_searchState.Llt.Allocator, level + 1);
+                n.EnsureLevels(_searchState.Llt.Allocator, level + 1);
                 n.EdgesIndexesPerLevel.SetCapacity(_searchState.Llt.Allocator, level + 1);
 
                 ref var edgesList = ref n.EdgesPerLevel[level];
@@ -1037,7 +1010,7 @@ public partial class Hnsw
                 if (n.VectorLoaded is false)
                     batch.Add(n.NodeId);
                 
-                n.EdgesPerLevel.SetCapacity(searchState.Llt.Allocator, Level + 1);
+                n.EnsureLevels(searchState.Llt.Allocator, Level + 1);
                 n.EdgesIndexesPerLevel.SetCapacity(searchState.Llt.Allocator, Level + 1);
 
                 ref var edgesList = ref n.EdgesPerLevel[Level];
