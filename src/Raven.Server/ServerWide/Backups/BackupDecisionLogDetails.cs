@@ -99,23 +99,43 @@ public sealed class BackupDecisionLog
         }
     }
 
-    public List<BackupDecision> GetDecisions(long? afterEtag = null)
+    public List<BackupDecision> GetDecisions()
     {
         lock (_decisions)
         {
-            var decisions = new List<BackupDecision>();
+            var decisions = new List<BackupDecision>(_count);
 
+            for (var i = 0; i < _count; i++)
+                decisions.Add(Copy(GetNewest(i)));
+
+            return decisions;
+        }
+    }
+
+    internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, BackupDecisionLogFilter filter, int take, out int totalMatches)
+    {
+        var decisions = new List<BackupDecision>();
+        totalMatches = 0;
+
+        lock (_decisions)
+        {
             for (var i = 0; i < _count; i++)
             {
                 var decision = GetNewest(i);
                 if (afterEtag != null && decision.Etag <= afterEtag)
                     break;
 
-                decisions.Add(Copy(decision));
-            }
+                if (filter.Matches(decision) == false)
+                    continue;
 
-            return decisions;
+                totalMatches++;
+
+                if (decisions.Count < take)
+                    decisions.Add(Copy(decision));
+            }
         }
+
+        return decisions;
     }
 
     public bool TryGetLatest(out BackupDecision decision)
@@ -176,21 +196,18 @@ public sealed class BackupDecisionLogFilter
                (TaskIds is not { Count: > 0 } || TaskIds.Contains(taskId));
     }
 
-    public bool Matches(BackupDecisionLogEntry entry)
+    internal bool Matches(BackupDecision decision)
     {
-        if (entry.Source == BackupDecisionSource.Task && MatchesTask(entry.Database, entry.TaskId.Value) == false)
+        if (Categories is { Count: > 0 } && Categories.Contains(decision.Category) == false)
             return false;
 
-        if (Categories is { Count: > 0 } && Categories.Contains(entry.Category) == false)
+        if (string.IsNullOrEmpty(Reason) == false && (decision.Reason == null || decision.Reason.Contains(Reason, StringComparison.OrdinalIgnoreCase) == false))
             return false;
 
-        if (string.IsNullOrEmpty(Reason) == false && (entry.Reason == null || entry.Reason.Contains(Reason, StringComparison.OrdinalIgnoreCase) == false))
+        if (From != null && decision.LastTime < From.Value)
             return false;
 
-        if (From != null && entry.LastTime < From.Value)
-            return false;
-
-        if (To != null && entry.FirstTime > To.Value)
+        if (To != null && decision.FirstTime > To.Value)
             return false;
 
         return true;

@@ -100,7 +100,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         Assert.True(log.TryGetLatest(out var latest));
         Assert.Equal("detail 4", latest.Detail);
 
-        Assert.Equal(new[] { "detail 4" }, log.GetDecisions(afterEtag: 5).Select(x => x.Detail));
+        Assert.Equal(new[] { "detail 4" }, log.GetMatchingDecisions(afterEtag: 5, new BackupDecisionLogFilter(), take: 10, out _).Select(x => x.Detail));
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
@@ -388,6 +388,74 @@ public class ServerBackupRunnerTests : ClusterTestBase
 
         Assert.True(started.FirstTime >= graceEndUtc,
             $"The scheduled backup started at '{started.FirstTime:HH:mm:ss.fff}', before the server startup grace period ended at '{graceEndUtc:HH:mm:ss.fff}'.");
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task DecisionLogUpdateMustCarryTheSummaryOfItsEntries()
+    {
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Backup.BackupRunnerFrequency)] = "60"
+            }
+        });
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        using var webSocket = new ClientWebSocket();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        await webSocket.ConnectAsync(new Uri($"{server.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?database={store.Database}&take=10"), cts.Token);
+
+        long completedBefore;
+        using (var snapshot = await ReceiveJsonAsync(webSocket, cts.Token))
+            completedBefore = snapshot.RootElement.GetProperty("Summary").GetProperty("Completed").GetProperty("Count").GetInt64();
+
+        await Backup.RunBackupAsync(server, taskId, store);
+
+        while (true)
+        {
+            using var update = await ReceiveJsonAsync(webSocket, cts.Token);
+            var hasCompleted = update.RootElement.GetProperty("Entries").EnumerateArray()
+                .Any(x => x.GetProperty("Category").GetString() == nameof(BackupDecisionCategory.Completed));
+
+            if (hasCompleted == false)
+                continue;
+
+            var completedCount = update.RootElement.GetProperty("Summary").GetProperty("Completed").GetProperty("Count").GetInt64();
+            Assert.True(completedCount == completedBefore + 1,
+                $"The update that delivered the Completed entry should count it in its summary (before: {completedBefore}, in the update: {completedCount}).");
+            break;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task DecisionLogSnapshotMustReturnTheNewestEntriesAndCountAllMatches()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var taskId1 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder1")), store);
+        var taskId2 = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder2")), store);
+
+        for (var i = 0; i < 2; i++)
+        {
+            await Backup.RunBackupAsync(server, taskId1, store);
+            await Backup.RunBackupAsync(server, taskId2, store);
+        }
+
+        var decisions = server.ServerStore.ServerBackupRunner.Decisions;
+        var categories = new HashSet<BackupDecisionCategory> { BackupDecisionCategory.Started, BackupDecisionCategory.Completed };
+
+        var all = decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Categories = categories, Take = BackupDecisionTracker.MaxDecisionLogSize }, afterEtag: null);
+        Assert.Equal(8, all.TotalResults);
+        Assert.Equal(8, all.Entries.Count);
+
+        var newest = decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Categories = categories, Take = 3 }, afterEtag: null);
+        Assert.Equal(8, newest.TotalResults);
+        Assert.Equal(all.Entries.Take(3).Select(x => x.Id), newest.Entries.Select(x => x.Id));
     }
 
     private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)
