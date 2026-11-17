@@ -88,6 +88,8 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
             }
 
             _hasLeftNonExisting = false;
+            _postingListIterator.Dispose();
+            _postingListIterator = default;
         }
 
         matchesCount = 0;

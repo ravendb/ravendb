@@ -29,6 +29,13 @@ namespace Corax.Querying.Matches
         private long _current;
         internal Bm25Relevance _bm25Relevance;
         private PostingList.Iterator _set;
+
+        // For the owner of the match, once it no longer reads it.
+        internal void ReleasePostingList()
+        {
+            _set.Dispose();
+            _set = default;
+        }
         private Container.Item _containerItem;
         private FastPForBufferedReader _containerReader;
         private ByteStringContext _ctx;

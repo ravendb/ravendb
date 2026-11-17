@@ -71,8 +71,7 @@ public partial class Hnsw
                 {
                     if (_postingListIterator.Fill(matches[index..], out var total) is false && total is 0)
                     {
-                        _postingListIterator = default;
-                        _postingList = null;
+                        CloseLargePostingList();
                         continue;
                     }
 
@@ -156,6 +155,14 @@ public partial class Hnsw
             return kept;
         }
 
+        private void CloseLargePostingList()
+        {
+            _postingListIterator.Dispose();
+            _postingListIterator = default;
+            _postingList.Dispose();
+            _postingList = null;
+        }
+
         private PostingList OpenPostingList(long rawPostingListId)
         {
             var setStateSpan = Container.GetReadOnly(_searchState.Llt, new(rawPostingListId));
@@ -172,6 +179,8 @@ public partial class Hnsw
 
         public void Dispose()
         {
+            if (_postingList != null)
+                CloseLargePostingList();
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
             _vectorsSearcher?.Dispose();

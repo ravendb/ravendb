@@ -90,6 +90,8 @@ where TInner : IQueryMatch
             }
 
             _hasLeftNulls = false;
+            _postingListIterator.Dispose();
+            _postingListIterator = default;
         }
 
         matchesCount = 0;

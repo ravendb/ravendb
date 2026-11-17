@@ -70,6 +70,7 @@ namespace Corax.Querying.Matches.TermProviders
                 }
                 
                 _fetchNulls = false;
+                ReleaseNullIterator();
             }
             
             return _iterator.Fill(containers);
@@ -78,6 +79,7 @@ namespace Corax.Querying.Matches.TermProviders
         public void Reset()
         {
             _fetchNulls = _nullExists;
+            ReleaseNullIterator();
             if (_fetchNulls)
                 _nullIterator = _nullPostingList.Iterate();
 
@@ -132,8 +134,15 @@ namespace Corax.Querying.Matches.TermProviders
             return false;
         }
 
+        private void ReleaseNullIterator()
+        {
+            _nullIterator.Dispose();
+            _nullIterator = default;
+        }
+
         public void Dispose()
         {
+            ReleaseNullIterator();
             if (_termsRetrieverKey != null)
                 _searcher._transaction.LowLevelTransaction.ReleaseCompactKey(ref _termsRetrieverKey);
         }

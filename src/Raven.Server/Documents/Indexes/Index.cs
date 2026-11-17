@@ -5336,7 +5336,7 @@ namespace Raven.Server.Documents.Indexes
                         return;
 
                     Span<long> buffer = stackalloc long[1024];
-                    var it = postingList.Iterate();
+                    using var _ = postingList.Iterate(out var it);
                     while (it.Fill(buffer, out var read))
                     {
                         for (int i = 0; i < read; i++)

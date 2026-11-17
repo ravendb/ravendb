@@ -163,6 +163,8 @@ public readonly unsafe struct PostingListLeafPage
             _reader = new FastPForBufferedReader(allocator);
         }
 
+        public void Dispose() => _reader.Dispose();
+
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
         {
             int totalRead = 0;

@@ -746,8 +746,10 @@ public unsafe partial class Hnsw
                     _filterScratch.Clear();
                     return found;
                 case Constants.Graphs.VectorId.PostingList: // large posting list
+                {
                     var setStateSpan = Container.GetReadOnly(Llt, new(rawPostingListId));
-                    var iterator = new PostingList(Llt, Slices.Empty, MemoryMarshal.AsRef<PostingListState>(setStateSpan)).Iterate();
+                    using var postingList = new PostingList(Llt, Slices.Empty, MemoryMarshal.AsRef<PostingListState>(setStateSpan));
+                    using var _ = postingList.Iterate(out var iterator);
                     Span<long> chunk = stackalloc long[256];
                     while (iterator.Fill(chunk, out var total) || total > 0)
                     {
@@ -756,6 +758,7 @@ public unsafe partial class Hnsw
                     }
 
                     return false;
+                }
                 default:
                     throw new ArgumentOutOfRangeException("Impossible scenario, we have only 4 options, but got: " + postingListId);
             }

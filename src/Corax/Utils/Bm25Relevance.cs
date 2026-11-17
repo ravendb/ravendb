@@ -279,6 +279,7 @@ public sealed unsafe class Bm25Relevance : IDisposable
         
         _isDisposed = true;
         _currentId = 0;
+        _setIterator.Dispose();
         _memoryHolder?.Dispose();
     }
 

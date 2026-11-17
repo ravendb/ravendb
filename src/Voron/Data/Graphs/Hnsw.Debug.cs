@@ -76,8 +76,8 @@ public unsafe partial class Hnsw
                 ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                 var postingList = new PostingList(llt, Slices.Empty, setState);
                 result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];
-                var it = postingList.Iterate();
-                it.Fill(result, out _);
+                using (postingList.Iterate(out var it))
+                    it.Fill(result, out _);
                 break;
             }
             default:

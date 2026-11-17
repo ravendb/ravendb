@@ -176,8 +176,14 @@ namespace Corax.Querying.Matches
                 match._inner.Reset();
                 _smallPostListIds.Clear();
                 _smallListReader.Dispose();
-                _postListIt = default;
+                ReleaseLargePostingList();
                 _smallListReader = default;
+            }
+
+            private void ReleaseLargePostingList()
+            {
+                _postListIt.Dispose();
+                _postListIt = default;
             }
 
             public int Read(ref MultiTermMatch<TTermProvider> match, Span<long> sortedIds, long maxTermsToRead, out long termsRead)
@@ -241,6 +247,7 @@ namespace Corax.Querying.Matches
                                 break;
                             case TermIdMask.PostingList:
                                 var postingList = _searcher.GetPostingList(postingListId);
+                                ReleaseLargePostingList();
                                 _postListIt = postingList.Iterate();
                                 postingListCalls++;
                                 ReadLargePostingList(sortedIds, ref currentIdx);
@@ -288,7 +295,7 @@ namespace Corax.Querying.Matches
             private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
             {
                 if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || (long)EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx + read - 1]) > _max)
-                    _postListIt = default;
+                    ReleaseLargePostingList();
                 
                 EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx..], read);
                 
@@ -314,6 +321,7 @@ namespace Corax.Querying.Matches
             public void Dispose()
             {
                 _smallListReader.Dispose();
+                ReleaseLargePostingList();
                 _smallPostListIds.Dispose();
                 _containerItemsScope.Dispose();
                 _itBufferScope.Dispose();
@@ -549,6 +557,7 @@ namespace Corax.Querying.Matches
         private bool NextTerm()
         {
             _isCurrentTermSingle = false;
+            _currentTerm.ReleasePostingList();
             if (_inner.Next(out var termId, out var termRatioToWholeCollection) == false)
             {
                 _currentTerm = TermMatch.CreateEmpty(_indexSearcher, _context);
