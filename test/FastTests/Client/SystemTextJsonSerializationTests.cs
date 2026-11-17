@@ -2616,6 +2616,46 @@ namespace FastTests.Client
             }
         }
 
+        private class InitializedOpenMember
+        {
+            public IOpenShape Shape { get; set; } = new OpenSquare { Name = "default", Side = 9 };
+
+            public IOpenShape Empty { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void InitializedInterfaceMemberIsPopulatedFromJsonWithoutTypeName()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Shape\":{\"Name\":\"loaded\"}}", "initialized"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<InitializedOpenMember>(json);
+
+                    var square = Assert.IsType<OpenSquare>(loaded.Shape);
+                    Assert.Equal("loaded", square.Name);
+                    Assert.Equal(9, square.Side);
+                    Assert.Null(loaded.Empty);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Shape\":null}", "null"))
+                    Assert.Null(conventions.Serialization.DefaultConverter.FromBlittable<InitializedOpenMember>(json).Shape);
+
+                string typeName = typeof(OpenSquare).FullName + ", " + typeof(OpenSquare).Assembly.GetName().Name;
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Shape\":{\"$type\":\"" + typeName + "\",\"Name\":\"typed\",\"Side\":1}}", "typed"))
+                {
+                    var square = Assert.IsType<OpenSquare>(conventions.Serialization.DefaultConverter.FromBlittable<InitializedOpenMember>(json).Shape);
+                    Assert.Equal("typed", square.Name);
+                    Assert.Equal(1, square.Side);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Empty\":{\"Name\":\"x\"}}", "empty"))
+                    Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<InitializedOpenMember>(json));
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
