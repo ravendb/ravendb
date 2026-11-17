@@ -70,11 +70,12 @@ interface PageNavigationProps {
 const MIN_PAGES_FOR_SIMPLE_FIRST_AND_LAST_BUTTONS = 5;
 
 export function PageNavigation({ page, totalPages, onPageChange, isSimple, className }: PageNavigationProps) {
-    if (totalPages <= 1) {
+    if (isSimple && totalPages <= 1) {
         return null;
     }
 
-    const hasFirstAndLastButtons = !isSimple || totalPages >= MIN_PAGES_FOR_SIMPLE_FIRST_AND_LAST_BUTTONS;
+    const lastPage = Math.max(totalPages, 1);
+    const hasFirstAndLastButtons = !isSimple || lastPage >= MIN_PAGES_FOR_SIMPLE_FIRST_AND_LAST_BUTTONS;
 
     return (
         <div className={classNames("page-navigation d-flex align-items-center gap-1", className)}>
@@ -89,20 +90,20 @@ export function PageNavigation({ page, totalPages, onPageChange, isSimple, class
             </PageButton>
             {isSimple ? (
                 <small className="text-muted mx-1 text-nowrap">
-                    Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+                    Page {page.toLocaleString()} of {lastPage.toLocaleString()}
                 </small>
             ) : (
                 <>
                     <small className="text-muted ms-1">Page</small>
-                    <PageInput page={page} totalPages={totalPages} onPageChange={onPageChange} />
-                    <small className="text-muted me-1 text-nowrap">of {totalPages.toLocaleString()}</small>
+                    <PageInput page={page} totalPages={lastPage} onPageChange={onPageChange} />
+                    <small className="text-muted me-1 text-nowrap">of {lastPage.toLocaleString()}</small>
                 </>
             )}
-            <PageButton title="Next page" isDisabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+            <PageButton title="Next page" isDisabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
                 <Icon icon="chevron-right" margin="m-0" />
             </PageButton>
             {hasFirstAndLastButtons && (
-                <PageButton title="Last page" isDisabled={page >= totalPages} onClick={() => onPageChange(totalPages)}>
+                <PageButton title="Last page" isDisabled={page >= lastPage} onClick={() => onPageChange(lastPage)}>
                     <Icon icon="chevron-right" margin="m-0" />
                     <Icon icon="chevron-right" margin="m-0" className="double-chevron" />
                 </PageButton>
