@@ -225,7 +225,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, objectTypeInfo);
         }
 
-        private sealed class BoundConstructor(ParameterInfo[] parameters, JsonPropertyInfo[] properties, object[] defaults)
+        private sealed class BoundConstructor(ParameterInfo[] parameters, JsonPropertyInfo[] properties, string[] names, object[] defaults)
         {
             private readonly BoundParameterReader[] _readers = Array.ConvertAll(properties, property => property == null ? null : BoundParameterReader.Create(property));
 
@@ -234,8 +234,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 var arguments = (object[])defaults.Clone();
                 for (int i = 0; i < parameters.Length; i++)
                 {
-                    if (properties[i] != null && TryGetProperty(json, properties[i].Name, options.PropertyNameCaseInsensitive, out JsonElement value))
-                        arguments[i] = _readers[i].Read(value, options);
+                    if (properties[i] != null)
+                    {
+                        if (TryGetProperty(json, properties[i].Name, options.PropertyNameCaseInsensitive, out JsonElement value))
+                            arguments[i] = _readers[i].Read(value, options);
+
+                        continue;
+                    }
+
+                    if (names[i] == null || TryGetProperty(json, names[i], ignoreCase: true, out JsonElement named) == false)
+                        continue;
+
+                    Type parameterType = parameters[i].ParameterType;
+                    if (named.ValueKind != JsonValueKind.Null)
+                        arguments[i] = named.Deserialize(parameterType, options);
+                    else if (parameterType.IsValueType == false)
+                        arguments[i] = null;
                 }
 
                 return arguments;
@@ -1379,6 +1393,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 return null;
 
             var properties = new JsonPropertyInfo[parameters.Length];
+            var names = new string[parameters.Length];
+            var constructorProperties = new List<JsonPropertyInfo>(parameters.Length);
             var defaults = new object[parameters.Length];
             bool allBound = true;
             bool anyBound = false;
@@ -1387,7 +1403,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 ParameterInfo parameter = parameters[i];
                 properties[i] = FindBoundProperty(typeInfo, parameter);
                 allBound &= properties[i] != null;
-                anyBound |= properties[i] != null;
+
+                JsonPropertyInfo supplied = properties[i];
+                if (supplied == null && parameter.Name != null)
+                {
+                    supplied = FindPropertyByMemberName(typeInfo, parameter.Name);
+                    names[i] = supplied?.Name ?? parameter.Name;
+                }
+
+                if (supplied != null)
+                    constructorProperties.Add(supplied);
+
+                anyBound |= properties[i] != null || names[i] != null;
                 defaults[i] = parameter.HasDefaultValue
                     ? parameter.DefaultValue
                     : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
@@ -1411,9 +1438,28 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             };
 
             if (anyBound)
-                _boundConstructors.Add(typeInfo, new BoundConstructor(parameters, properties, defaults));
+                _boundConstructors.Add(typeInfo, new BoundConstructor(parameters, properties, names, defaults));
 
-            return properties;
+            return constructorProperties.ToArray();
+        }
+
+        private static JsonPropertyInfo FindPropertyByMemberName(JsonTypeInfo typeInfo, string name)
+        {
+            JsonPropertyInfo ignoringCase = null;
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                if (property.AttributeProvider is not MemberInfo member)
+                    continue;
+
+                if (string.Equals(member.Name, name, StringComparison.Ordinal))
+                    return property;
+
+                if (ignoringCase == null && string.Equals(member.Name, name, StringComparison.OrdinalIgnoreCase))
+                    ignoringCase = property;
+            }
+
+            return ignoringCase;
         }
 
         private static bool HasParametersDifferingOnlyByCase(ParameterInfo[] parameters)

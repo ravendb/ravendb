@@ -2892,6 +2892,34 @@ namespace FastTests.Client
             }
         }
 
+        private class WiderConstructorParameters
+        {
+            public WiderConstructorParameters(IEnumerable<int> items, object tag)
+            {
+                Items = items.ToList();
+                Tag = tag.ToString();
+            }
+
+            public List<int> Items { get; }
+
+            public string Tag { get; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ConstructorParameterWithAWiderTypeThanItsMemberReceivesTheDocumentValue()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Items\":[1,2],\"Tag\":\"t\"}", "wider"))
+            {
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<WiderConstructorParameters>(json);
+
+                Assert.Equal([1, 2], loaded.Items);
+                Assert.Equal("t", loaded.Tag);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
