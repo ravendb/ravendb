@@ -1366,7 +1366,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static JsonPropertyInfo[] SetupUnboundParameterizedConstructor(JsonTypeInfo typeInfo)
         {
-            if (typeInfo.CreateObject != null || typeInfo.Type.IsAbstract || typeInfo.Type.IsInterface)
+            bool structWithDefaultConstructor = typeInfo.Type.IsValueType && typeInfo.CreateObject != null;
+            if ((typeInfo.CreateObject != null && structWithDefaultConstructor == false) || typeInfo.Type.IsAbstract || typeInfo.Type.IsInterface)
                 return null;
 
             ConstructorInfo constructor = GetParameterizedConstructor(typeInfo.Type);
@@ -1392,8 +1393,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
             }
 
-            if (allBound && HasParametersDifferingOnlyByCase(parameters) == false)
+            if (structWithDefaultConstructor)
+            {
+                if (allBound == false || Array.Exists(properties, static property => property.Set != null))
+                    return null;
+            }
+            else if (allBound && HasParametersDifferingOnlyByCase(parameters) == false)
+            {
                 return null;
+            }
 
             typeInfo.CreateObject = () =>
             {
