@@ -294,6 +294,73 @@ public class ServerBackupRunnerTests : ClusterTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task ScheduledBackupMustRunWhenTheNodeHasNoQuorum()
+    {
+        var settings = new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Cluster.OperationTimeout)] = "1"
+        };
+
+        var (nodes, server) = await CreateRaftCluster(2, shouldRunInMemory: false, customSettings: settings);
+        var other = nodes.Single(x => x != server);
+
+        using var store = GetDocumentStore(new Options
+        {
+            Server = server,
+            RunInMemory = false,
+            ReplicationFactor = 1,
+            DeleteDatabaseOnDispose = false,
+            ModifyDatabaseRecord = record => record.Topology = new DatabaseTopology { Members = new List<string> { server.ServerStore.NodeTag } }
+        });
+        await StoreDocument(store);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *");
+        var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+        var lastFullBackup = server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId)?.LastFullBackup;
+
+        await WaitForSecondOfMinuteBelow(30);
+        await DisposeServerAndWaitForFinishOfDisposalAsync(other);
+        await WaitAndAssertForValueAsync(() => server.ServerStore.Engine.CurrentState, RachisState.Candidate);
+        var noQuorumUtc = DateTime.UtcNow;
+
+        Assert.True(await WaitForValueAsync(() => Task.FromResult(Decisions(server, store.Database, taskId)
+                    .Any(d => d.Category == BackupDecisionCategory.Completed && d.LastTime >= noQuorumUtc)), true, timeout: 180_000, interval: 1000),
+            $"The scheduled backup didn't run while the node had no quorum.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+        var localStatus = server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
+        Assert.True(localStatus != null && localStatus.LastFullBackup > lastFullBackup,
+            $"The status of the backup that ran without quorum wasn't saved locally. Before: '{lastFullBackup}', after: '{localStatus?.LastFullBackup}'.");
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task IdleDatabaseMustUnloadWhileACpuCreditsHoldHoldsItsBackup()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, IgnoreHealthChecksBeforeBackup = false, CustomSettings = IdleSettings() });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        await StoreDocument(store);
+
+        server.CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
+
+        try
+        {
+            var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+            var state = await WaitForStateAsync(server.ServerStore.ServerBackupRunner, store.Database, taskId);
+            Assert.True(WaitForValue(() => state.NextBackup != null, true), "precondition: the first backup is scheduled");
+
+            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+
+            Assert.True(WaitForValue(() => server.ServerStore.IdleDatabases.ContainsKey(store.Database), true, timeout: 150_000, interval: 500),
+                $"The idle database stayed loaded although a CPU credits hold holds its backup. Next backup: '{state.NextBackup?.DateTime}'.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+            Assert.DoesNotContain(Decisions(server, store.Database, taskId), d => d.Category == BackupDecisionCategory.Started);
+        }
+        finally
+        {
+            server.CpuCreditsBalance.BackgroundTasksAlertRaised.Lower();
+        }
+    }
+
     private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)
     {
         var buffer = new byte[64 * 1024];
