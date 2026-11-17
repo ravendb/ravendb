@@ -196,7 +196,6 @@ public class ServerBackupRunner : IDisposable
                 }
 
                 database = await result.DatabaseTask;
-                backupState.DatabaseWakeUpTimeUtc = DateTime.UtcNow;
             }
             catch (Exception e)
             {
