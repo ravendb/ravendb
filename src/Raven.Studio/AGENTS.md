@@ -19,7 +19,7 @@ A change that adds or changes a view, an action or a data load must answer these
     - the route or menu item (`requiredAccess`). It is a hard gate: the menu item is disabled and the URL redirects to the databases list. Set it only when the view must not open at all. Many views have none on purpose: they open for every user and only disable their actions,
     - each action. A control the user cannot use is disabled and wrapped in `AccessPopover`, which says why. `AccessPopover` does not disable the control: get the flag from `accessManagerSelectors.getCanHandleOperation`,
     - the server endpoint. The `RavenAction` attribute on the handler shows the required `AuthorizationStatus`. Check the GET too, not only the save: a view can open and then fail to load its data.
-- **Database type.** Sharded or not, one node or a cluster. The menu item sets `shardingMode`, and `bridgeToReact` takes a sharded or non-sharded view type. Some features do not exist on a sharded database (search the server for `NotSupportedInShardingException`). Data can be per node and per shard, and paging, stats and change notifications behave differently on a sharded database.
+- **Database type.** Sharded or not, one node or a cluster. The menu item sets `shardingMode`, and `bridgeToReact` takes a sharded or non-sharded view type. Some features do not exist on a sharded database (search the server for `NotSupportedInShardingException`). Data can be per node and per shard (`useDatabaseWideAsync` loads it for every location), and paging, stats and change notifications behave differently on a sharded database.
 
 Stories and tests must cover the variants that change the UI, each in its own story. `mockStore` has helpers for each of them: `license.with_License` and `with_LicenseLimited`, `accessManager.with_securityClearance` and `with_databaseAccess`, `databases.withActiveDatabase_Sharded`, `_NonSharded_Cluster` and `_NonSharded_SingleNode`.
 
@@ -28,7 +28,7 @@ Stories and tests must cover the variants that change the UI, each in its own st
 - **React**: the `components` folder: `pages`, `common` (shared UI), `hooks`, `services`, `utils`, and the redux slices. **Legacy**: `viewmodels` with HTML views and LESS styles. Do not add new Knockout views.
 - **Routing**: menu items define the routes. A React page is wrapped with `bridgeToReact`. A React component inside a Knockout view or dialog uses the `react:` binding. Copy an existing usage.
 - **HTTP**: a command class, exposed by a method in a service, used through `useServices()` with `useAsync` or `useAsyncCallback`. Service methods should pass `...args: ConstructorParameters<typeof theCommand>`.
-- **Global state** (active database, cluster, license, access): redux, always through `useAppSelector`.
+- **Global state** (active database, cluster, license, access): redux, always through `useAppSelector`. A value that still lives in a Knockout observable or computed is read in React with `useKnockoutValue`.
 - **Links**: `useAppUrls` or `appUrl`. Do not build URL hashes by hand.
 - **Shared code**: `components/common`, `components/hooks`, `components/utils` and `generalUtils`. Most needs are already covered: form fields, virtual table, popovers, loading skeletons, confirm dialogs, and the formatting of sizes, numbers, dates and durations.
 - **Tests**: the `test` folder holds render helpers, mock services, the mock store and typed stubs.
@@ -39,8 +39,8 @@ Stories and tests must cover the variants that change the UI, each in its own st
 - Avoid `useEffect`. Use derived values, event handlers, `useAsync` / `useAsyncCallback` or React Hook Form. A needed effect gets a short comment that says why.
 - Search before you create. Find the closest existing component, hook or helper in the shared folders, open it and check if it does the job, maybe with one new prop. Extend it instead of writing a second version next to it. When you do create one that another view may need later, make it general and put it in the shared folders, not in the page folder.
 - A new shared component gets its own story with each of its states (default, disabled, error, long text, narrow). A change to a shared component or to a global stylesheet reaches every view that uses it: find the stories of its usages (`stories-find-by-component`) and compare their screenshots before and after.
-- Tables use `VirtualTable`. Before you write a cell, a column definition or a table hook, check the `virtualTable` folder: it has ready cells, shared column definitions and table hooks. A new common cell goes there too.
-- Other things that already exist: `Button` with `variant="link"` for an action that looks like a link, the `Form*` fields (`FormInput`, `FormSelect`, `FormSwitch`, `FormCheckbox` and more in the same file) with React Hook Form and yup, `ConditionalPopover`, `LazyLoad`, `useConfirm`, `useViewSheet`, `ThemeColor`, `studioSettings` for saved UI state, `messagePublisher` for errors.
+- Tables use `VirtualTable`. Before you write a cell, a column definition or a table hook, check the `virtualTable` folder: it has ready cells, shared column definitions and table hooks. A new common cell goes there too. A list that loads its rows from the server page by page uses `LazyVirtualTable` with `useLazyRows`.
+- Other things that already exist: `Button` with `variant="link"` for an action that looks like a link, the `Form*` fields (`FormInput`, `FormSelect`, `FormSwitch`, `FormCheckbox` and more in the same file) with React Hook Form and yup, `ConditionalPopover`, `LazyLoad`, `useConfirm`, `useViewSheet`, `ThemeColor`, `SegmentedControl`, `FilterMenu`, `NavigationCard`, `ClickableCard`, `OptionalLabel`, `studioSettings` for saved UI state, `messagePublisher` for errors.
 - Keep one source of truth. If the same rule, list or format exists in two places, move it to a helper. When you fix something, search for the same pattern in similar places and fix it there too.
 - No comments that describe the change or repeat the code. Use clear names.
 - New module constants are `SCREAMING_SNAKE_CASE`. Most older constants are camelCase. Rename one only when you already change the code that uses it. Boolean names start with `is`, `has`, `can`, `should`.
@@ -54,6 +54,15 @@ Stories and tests must cover the variants that change the UI, each in its own st
 - Values that users enter and values from the server can be much longer than the sample data. They must not break the layout.
 - Every control works with the keyboard and has visible hover and focus states. The focus ring follows the shape of the control, a click on a label focuses its control, an icon-only button has a `title`, and a clickable row works along its full width.
 - UI copy uses the words that the menu, the Studio search and the neighboring views use for the same thing, and the same pattern as similar controls. A placeholder shows a real example (`e.g. Orders`, not `e.g. name`). Check each text in every state it can show: empty, one item, a limited license, a sharded database.
+
+## Translations
+
+- The translations are in `common/i18n`. English is the source: each translated view has a namespace file in `locales/en`, shared texts are in the `common` namespace, and a new namespace is registered in `resources`. The types of the keys and their options come from the English files.
+- In a translated view every text the user sees comes from its namespace. Do not add a hardcoded text there.
+- React uses `useStudioTranslation(ns)` for plain text and `StudioTrans` for a text with tags. Other code (view models, helpers, commands) uses `createTranslator(ns)` and calls it when the text is needed, never at module scope. Knockout HTML uses the `i18n` and `i18nAttr` bindings with a `'namespace:key'` value.
+- Do not import `i18next` or `react-i18next` directly. Lint blocks it: only the Studio wrappers type-check the keys and options.
+- A text that depends on a state uses a context variant of the key (`heading_new`, `heading_edit`), and a text with a number uses the plural forms with `count`. Do not build such a text from parts.
+- A missing key throws under Jest, so the test fails. Storybook has a Language switch in the toolbar. `storybook-screenshot` renders English by default: pass `--language pl` to see a translated view in another language.
 
 ## Migrating a Knockout View to React
 
