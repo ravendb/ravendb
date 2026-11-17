@@ -522,6 +522,9 @@ public class ServerBackupRunnerTests : ClusterTestBase
                     .Any(x => x.Source == BackupDecisionSource.Server && x.Detail == "ConcurrentBackup" && x.LastTime > dueUtc), true, timeout: 150_000, interval: 250),
                 "precondition: the due backup waits for a free concurrent backup place");
 
+            Assert.Equal(1, WaitForValue(() => runner.Decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Take = 1 }, afterEtag: null).Summary.Running.WaitingForSlot, 1,
+                timeout: 15_000, interval: 250));
+
             var freedUtc = DateTime.UtcNow;
             counter.FinishBackup("OtherDatabase", "OtherBackup", backupStatus: null, elapsed: null, logger);
             placeFreed = true;
