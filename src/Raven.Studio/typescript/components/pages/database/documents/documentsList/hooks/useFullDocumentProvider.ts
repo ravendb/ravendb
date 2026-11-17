@@ -4,6 +4,8 @@ import { useServices } from "components/hooks/useServices";
 import document from "models/database/documents/document";
 import { useCallback, useRef } from "react";
 
+const MAX_CACHED_DOCUMENTS = 50;
+
 export function useFullDocumentProvider(databaseName: string) {
     const { databasesService } = useServices();
     const documentCacheRef = useRef(new Map<string, Promise<document | null>>());
@@ -20,7 +22,7 @@ export function useFullDocumentProvider(databaseName: string) {
     const getRevisionsCount = useCallback(
         (id: string) =>
             fetchOnce(revisionsCountCacheRef.current, id, async () => {
-                const { RevisionsCount } = await databasesService.getDocumentRevisionsCount(id, databaseName);
+                const { RevisionsCount } = await databasesService.getDocumentRevisionsCount(id, databaseName, false);
                 return RevisionsCount;
             }),
         [databasesService, databaseName]
@@ -68,20 +70,30 @@ export function useFullDocumentProvider(databaseName: string) {
 }
 
 function fetchOnce<T>(cache: Map<string, Promise<T>>, id: string, fetch: () => Promise<T>): Promise<T> {
-    if (!cache.has(id)) {
-        const fetched = fetch();
-        fetched.then(
-            (result) => {
-                if (result == null) {
-                    cache.delete(id);
-                }
-            },
-            () => cache.delete(id)
-        );
-        cache.set(id, fetched);
+    const fetched = cache.get(id) ?? fetchAndDropFailures(cache, id, fetch);
+
+    cache.delete(id);
+    cache.set(id, fetched);
+
+    if (cache.size > MAX_CACHED_DOCUMENTS) {
+        const [leastRecentId] = cache.keys();
+        cache.delete(leastRecentId);
     }
 
-    return cache.get(id);
+    return fetched;
+}
+
+function fetchAndDropFailures<T>(cache: Map<string, Promise<T>>, id: string, fetch: () => Promise<T>): Promise<T> {
+    const fetched = fetch();
+    fetched.then(
+        (result) => {
+            if (result == null) {
+                cache.delete(id);
+            }
+        },
+        () => cache.delete(id)
+    );
+    return fetched;
 }
 
 function hasIncompletePreviewValue(doc: document, property: string): boolean {

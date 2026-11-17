@@ -971,7 +971,8 @@ describe("DocumentsPage", () => {
             );
             expect(mockServices.databasesService.getMock("getDocumentRevisionsCount")).toHaveBeenCalledWith(
                 "orders/1-A",
-                DATABASE_NAME
+                DATABASE_NAME,
+                false
             );
         });
 

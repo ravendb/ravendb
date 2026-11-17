@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import Popover, { PopoverProps } from "react-bootstrap/Popover";
 import Overlay, { OverlayProps } from "react-bootstrap/Overlay";
 import { Placement, PopperRef } from "react-bootstrap/types";
@@ -95,7 +95,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
         scheduleHide();
     }, [scheduleHide]);
 
-    useEffect(() => {
+    const scheduleShow = useEffectEvent(() => {
         const opensWhenPrepared = prepare != null && openDelayInMs == null;
 
         const show = () => {
@@ -103,26 +103,30 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
             setHasBeenOpened(true);
         };
 
-        const startPreparing = () => {
-            prepareHandle.current = null;
-            prepare().then(() => {
-                if (opensWhenPrepared && overElement.current) {
-                    show();
-                }
-            });
+        const showWhenPrepared = () => {
+            if (opensWhenPrepared && overElement.current) {
+                show();
+            }
         };
 
+        const startPreparing = () => {
+            prepareHandle.current = null;
+            prepare().then(showWhenPrepared, showWhenPrepared);
+        };
+
+        if (prepare) {
+            prepareHandle.current = setTimeout(startPreparing, PREPARE_DELAY_IN_MS);
+        }
+        if (!opensWhenPrepared) {
+            showHandle.current = setTimeout(show, openDelayInMs ?? SHOW_DELAY_IN_MS);
+        }
+    });
+
+    useEffect(() => {
         const onEnter = () => {
             overElement.current = true;
             tooltipMutex(div, () => setOpen(false));
-
-            if (prepare) {
-                prepareHandle.current = setTimeout(startPreparing, PREPARE_DELAY_IN_MS);
-            }
-            if (!opensWhenPrepared) {
-                showHandle.current = setTimeout(show, openDelayInMs ?? SHOW_DELAY_IN_MS);
-            }
-
+            scheduleShow();
             maybeCancelHide();
         };
 
@@ -141,7 +145,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
                 div.removeEventListener("mouseleave", onLeave);
             };
         }
-    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div, prepare, openDelayInMs]);
+    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
 
     useEffect(() => maybeCancelShow, [maybeCancelShow]);
 

@@ -6,6 +6,7 @@ import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CSSProperties, PropsWithChildren, ReactNode, useState } from "react";
+import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
 
@@ -19,8 +20,6 @@ interface CellWithCopyProps extends PropsWithChildren {
     resolvePreviewValue?: () => Promise<unknown>;
 }
 
-type ResolvedPreview = { value: unknown } | { hasFailed: true };
-
 export function CellWithCopy({
     value,
     children,
@@ -31,21 +30,11 @@ export function CellWithCopy({
     resolvePreviewValue,
 }: CellWithCopyProps) {
     const [valuePopover, setValuePopover] = useState<HTMLElement>();
-    const [resolvedPreview, setResolvedPreview] = useState<ResolvedPreview>();
+    const asyncResolvePreviewValue = useAsyncCallback(resolvePreviewValue);
 
     if (value === undefined) {
         return null;
     }
-
-    const resolvePreview = resolvePreviewValue
-        ? async () => {
-              try {
-                  setResolvedPreview({ value: await resolvePreviewValue() });
-              } catch {
-                  setResolvedPreview({ hasFailed: true });
-              }
-          }
-        : undefined;
 
     return (
         <>
@@ -55,13 +44,13 @@ export function CellWithCopy({
             <PopoverWithHover
                 target={valuePopover}
                 placement="bottom-start"
-                prepare={resolvePreview}
+                prepare={resolvePreviewValue ? asyncResolvePreviewValue.execute : undefined}
                 style={popoverMaxWidth ? ({ "--bs-popover-max-width": popoverMaxWidth } as CSSProperties) : undefined}
             >
                 <Popover.Body>
                     {resolvePreviewValue ? (
                         <CellWithCopyResolvedPreview
-                            resolvedPreview={resolvedPreview}
+                            asyncResolvePreviewValue={asyncResolvePreviewValue}
                             previewLanguage={previewLanguage}
                             additionalButtons={additionalButtons}
                         />
@@ -114,28 +103,29 @@ function CellWithCopyPreview({
 }
 
 function CellWithCopyResolvedPreview({
-    resolvedPreview,
+    asyncResolvePreviewValue,
     previewLanguage,
     additionalButtons,
-}: { resolvedPreview?: ResolvedPreview } & Pick<CellWithCopyProps, "previewLanguage" | "additionalButtons">) {
-    if (!resolvedPreview) {
-        return null;
-    }
+}: { asyncResolvePreviewValue: UseAsyncReturn<unknown> } & Pick<
+    CellWithCopyProps,
+    "previewLanguage" | "additionalButtons"
+>) {
+    const { status, result } = asyncResolvePreviewValue;
 
-    if ("hasFailed" in resolvedPreview) {
+    if (status === "error") {
         return <span className="text-danger">Unable to load the value</span>;
     }
 
-    if (resolvedPreview.value === undefined) {
+    if (status !== "success") {
+        return null;
+    }
+
+    if (result === undefined) {
         return <span className="text-muted">The value no longer exists</span>;
     }
 
     return (
-        <CellWithCopyPreview
-            value={resolvedPreview.value}
-            previewLanguage={previewLanguage}
-            additionalButtons={additionalButtons}
-        />
+        <CellWithCopyPreview value={result} previewLanguage={previewLanguage} additionalButtons={additionalButtons} />
     );
 }
 
