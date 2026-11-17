@@ -541,8 +541,6 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         Assert.DoesNotContain(nameof(EndOfStreamException), text);
     }
 
-    // No existing test helper walks an exception chain by type (ExtractSingleInnerException only unwraps a
-    // single AggregateException), so the walk lives here.
     private static AiAgentConfiguration Agent(string connectionStringName, bool withTool) =>
         new("ravendb-26944-agent", connectionStringName, SystemPrompt)
         {
