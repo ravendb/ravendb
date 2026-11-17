@@ -18,7 +18,6 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Get_Fields_With_Different_Casing(Options options)
         {
-            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using var store = GetDocumentStore(options);
 
             var user = new User
@@ -58,7 +57,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task DocumentQuery_RQL_Expression_Should_Not_Include_Private_Members()
         {
-            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
+            using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
             {
