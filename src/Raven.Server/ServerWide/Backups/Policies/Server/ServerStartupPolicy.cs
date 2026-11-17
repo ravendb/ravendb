@@ -6,8 +6,6 @@ public class ServerStartupPolicy : IServerBackupPolicy
 {
     public static readonly ServerStartupPolicy Instance = new();
 
-    public static bool Disabled = false;
-
     private const string Reason = "The server just started.";
 
     private ServerStartupPolicy()
@@ -20,13 +18,7 @@ public class ServerStartupPolicy : IServerBackupPolicy
     {
         category = BackupDecisionCategory.Waiting;
 
-        if (Disabled)
-        {
-            reason = null;
-            return true;
-        }
-
-        if (now - serverStore.Server.Statistics.StartUpTime < TimeSpan.FromMinutes(5))
+        if (now - serverStore.Server.Statistics.StartUpTime < serverStore.Configuration.Backup.ServerStartupGracePeriod.AsTimeSpan)
         {
             reason = Reason;
             return false;

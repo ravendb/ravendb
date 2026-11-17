@@ -110,6 +110,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.DatabaseLoadedGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting DatabaseLoadedGracePeriod { get; set; }
 
+        [Description("Grace period after the server starts during which scheduled backups are held, to allow the server to fully initialize.")]
+        [DefaultValue(300)]
+        [MinValue(0)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.ServerStartupGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ServerStartupGracePeriod { get; set; }
+
         [Description("Maximum number of backup statuses of idle databases that are sent to the cluster in a single command when their incremental backups are skipped because nothing changed.")]
         [DefaultValue(100)]
         [MinValue(1)]
