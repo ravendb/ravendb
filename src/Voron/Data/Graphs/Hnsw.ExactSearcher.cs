@@ -16,6 +16,7 @@ public partial class Hnsw
             private readonly SearchState _searchState;
             private readonly Memory<byte> _vector;
             private ContextBoundNativeList<int> _candidates;
+            private ContextBoundNativeList<float> _distances;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
             private readonly int _numberOfCandidates;
@@ -28,6 +29,7 @@ public partial class Hnsw
                 _numberOfCandidates = numberOfCandidates;
                 _nodesToScan = nodesToScan;
                 _candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
+                _distances = new ContextBoundNativeList<float>(searchState.Llt.Allocator);
             }
 
             public void Dispose()
@@ -35,9 +37,10 @@ public partial class Hnsw
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
                 _candidates.Dispose();
+                _distances.Dispose();
             }
 
-            public ContextBoundNativeList<int> Search()
+            public (ContextBoundNativeList<int> Results, ContextBoundNativeList<float> Distances) Search()
             {
                 // Reset the visited set for this traversal and record the query vector so the
                 // per-node QueryDistance cache is either reused (same vector) or invalidated
@@ -59,11 +62,16 @@ public partial class Hnsw
                 }
 
                 _candidates.EnsureCapacityFor(_pq.Count);
-                while (_pq.TryDequeue(out var nodeId, out _))
+                _distances.EnsureCapacityFor(_pq.Count);
+                while (_pq.TryDequeue(out var nodeId, out var negatedDistance))
+                {
                     _candidates.AddUnsafe(_searchState.GetNodeIndexById(nodeId));
+                    _distances.AddUnsafe(-negatedDistance);
+                }
 
                 _candidates.Inner.Reverse();
-                return _candidates;
+                _distances.Inner.Reverse();
+                return (_candidates, _distances);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

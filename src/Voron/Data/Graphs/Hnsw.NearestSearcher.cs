@@ -24,6 +24,7 @@ public unsafe partial class Hnsw
             private int _internalNumberOfCandidates;
 
             private ContextBoundNativeList<int> _candidates;
+            private ContextBoundNativeList<float> _distances;
             private readonly NearestEdgesFlags _flags;
             private NativeList<int> _indexes;
             private NativeList<long> _nodeIds;
@@ -70,6 +71,7 @@ public unsafe partial class Hnsw
                 }
 
                 _candidates = candidates;
+                _distances = new ContextBoundNativeList<float>(searchState.Llt.Allocator);
                 _flags = flags;
                 _indexes = new NativeList<int>();
                 _nodeIds = new NativeList<long>();
@@ -93,14 +95,14 @@ public unsafe partial class Hnsw
                 return ref _nodeStates[nodeIndex];
             }
 
-            public ContextBoundNativeList<int> Search()
+            public (ContextBoundNativeList<int> Results, ContextBoundNativeList<float> Distances) Search()
             {
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
                 if (_filter.HasValue == false)
                 {
                     Walk();
                     ProcessResults(nearestEdgesQ);
-                    return _candidates;
+                    return (_candidates, _distances);
                 }
 
                 // A node is considered as a result when the search first reads its vector, so the search starts with no distance that an earlier search cached.
@@ -127,7 +129,7 @@ public unsafe partial class Hnsw
 
                 nearestEdgesQ.Clear();
                 ProcessResults(_searchState._nearestInFilterQ);
-                return _candidates;
+                return (_candidates, _distances);
             }
 
             // A walk from the starting point that ends once the nearest unexpanded node is farther than a full working set's farthest node, and returns
@@ -258,15 +260,22 @@ public unsafe partial class Hnsw
                 return (state & NodeState.InFilter) != 0;
             }
 
+            // The queues hold negated distances, so they pop the farthest node first.
             private void ProcessResults(PriorityQueue<int, float> resultsQ)
             {
                 _candidates.Clear();
                 _candidates.EnsureCapacityFor(resultsQ.Count);
+                _distances.Clear();
+                _distances.EnsureCapacityFor(resultsQ.Count);
 
-                while (resultsQ.TryDequeue(out var edgeId, out _))
+                while (resultsQ.TryDequeue(out var edgeId, out var negatedDistance))
+                {
                     _candidates.AddUnsafe(edgeId);
+                    _distances.AddUnsafe(-negatedDistance);
+                }
 
                 _candidates.Inner.Reverse();
+                _distances.Inner.Reverse();
             }
 
             /// <summary>
@@ -299,6 +308,7 @@ public unsafe partial class Hnsw
             public void Dispose()
             {
                 _candidates.Dispose();
+                _distances.Dispose();
                 _nodeIds.Dispose(_searchState.Llt.Allocator);
                 _indexes.Dispose(_searchState.Llt.Allocator);
                 // A search that throws leaves its queues filled, and the next search on the SearchState expects them empty.

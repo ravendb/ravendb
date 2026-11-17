@@ -29,7 +29,7 @@ public partial class Hnsw
         private readonly float _maximumDistance;
         private readonly IHnswSearcher _vectorsSearcher;
         private readonly ContextBoundNativeList<int> _candidates;
-        private readonly Memory<byte> _vector;
+        private readonly ContextBoundNativeList<float> _candidateDistances;
         // When the searchState-based entry points allocate a normalized copy of the query
         // vector they hand the scope here so Dispose releases it alongside the retriever's
         // other per-query state.
@@ -41,18 +41,17 @@ public partial class Hnsw
         
         public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
         
-        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity,
+        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, float minimumSimilarity,
             bool ownsSearchState = true, Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? queryVectorScope = null)
         {
             _searchState = searchState;
             _ownsSearchState = ownsSearchState;
             _vectorsSearcher = vectorsSearcher;
-            _vector = vector;
             _queryVectorScope = queryVectorScope;
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
             _maximumDistance = MinimumSimilarityToDistance(searchState.Options.SimilarityMethod, searchState.Options.VectorSizeBytes, minimumSimilarity);
-            _candidates = _vectorsSearcher.Search();
+            (_candidates, _candidateDistances) = _vectorsSearcher.Search();
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -122,8 +121,9 @@ public partial class Hnsw
         {
             while (_currentNode < _candidates.Count)
             {
-                var nodeIndex = _candidates[_currentNode++];
-                _currentDistance = QueryDistance(nodeIndex);
+                var nodeIndex = _candidates[_currentNode];
+                _currentDistance = _candidateDistances[_currentNode];
+                _currentNode++;
                 if (_currentDistance > _maximumDistance)
                     continue;
 
@@ -165,14 +165,6 @@ public partial class Hnsw
         {
             var setStateSpan = Container.GetReadOnly(_searchState.Llt, new(rawPostingListId));
             return new PostingList(_searchState.Llt, Slices.Empty, MemoryMarshal.AsRef<PostingListState>(setStateSpan));
-        }
-
-        private float QueryDistance(int nodeIndex)
-        {
-            long newVectorCount = 0;
-            var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref newVectorCount);
-            Debug.Assert(newVectorCount == 0, "newVectorCount == 0");
-            return distance;
         }
 
         public void Dispose()

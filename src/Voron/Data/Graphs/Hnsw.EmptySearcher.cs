@@ -12,7 +12,7 @@ public partial class Hnsw
             {
             }
 
-            public ContextBoundNativeList<int> Search() => default;
+            public (ContextBoundNativeList<int> Results, ContextBoundNativeList<float> Distances) Search() => default;
 
             public long CandidatesProcessed => 0L;
         }

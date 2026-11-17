@@ -158,7 +158,7 @@ table, th, td {
             var edges = new ContextBoundNativeList<int>(llt.Allocator, 16);
             searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel,  ref path);
             using var search = searchState.NearestSearch(path[0], new Memory<byte>(vector.ToArray()), 0, 8, edges, SearchState.NearestEdgesFlags.StartingPointAsEdge);
-            edges = search.Search();
+            edges = search.Search().Results;
             
             
             for (int level = searchState.Options.MaxLevel - 1; level >= 0; level--)

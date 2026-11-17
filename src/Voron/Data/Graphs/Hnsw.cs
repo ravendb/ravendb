@@ -1679,16 +1679,16 @@ public unsafe partial class Hnsw
     {
         var searchState = new SearchState(llt, name, ref vector);
         var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
-        return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
+        return new VectorSearchRetriever(searchState,  results, minimumSimilarity);
     }
 
     public static VectorSearchRetriever ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, GrowableBitArray? filter = null)
     {
         var searchState = new SearchState(llt, name, ref vector);
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity);
 
-        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), vector, minimumSimilarity);
+        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), minimumSimilarity);
     }
 
     /// <summary>
@@ -1707,9 +1707,9 @@ public unsafe partial class Hnsw
         searchState.OnQueryVector(vector);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity, ownsSearchState: false, queryVectorScope);
 
-        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), vector, minimumSimilarity,
+        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), minimumSimilarity,
             ownsSearchState: false, queryVectorScope);
     }
 
@@ -1722,12 +1722,12 @@ public unsafe partial class Hnsw
         TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         searchState.OnQueryVector(vector);
         var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
-        return new VectorSearchRetriever(searchState, results, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
+        return new VectorSearchRetriever(searchState, results, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
     public static VectorSearchRetriever EmptySearch(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity)
     {
         var searchState = new SearchState(llt, name);
-        return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
+        return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity);
     }
 }
