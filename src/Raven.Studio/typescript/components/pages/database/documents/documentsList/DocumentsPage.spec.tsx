@@ -686,8 +686,8 @@ describe("DocumentsPage", () => {
             expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
 
             fireEvent.mouseEnter(screen.getByText("compa...").closest(".cell-preview-target"));
-            act(() => {
-                jest.advanceTimersByTime(200);
+            await act(async () => {
+                jest.advanceTimersByTime(500);
             });
 
             expect(await screen.findByText(/companies\/1-A/)).toBeInTheDocument();
@@ -765,12 +765,38 @@ describe("DocumentsPage", () => {
     });
 
     describe("document preview", () => {
-        const hoverDocumentId = async (screen: Screen, documentId: string) => {
-            fireEvent.mouseEnter(screen.getByText(documentId).closest(".cell-preview-target"));
-            await act(async () => {
-                jest.advanceTimersByTime(200);
+        const serverError = { status: 500, statusText: "Internal Server Error" };
+
+        const waitPastHoverDelay = () =>
+            act(async () => {
+                jest.advanceTimersByTime(1000);
             });
+
+        const hover = async (element: Element) => {
+            fireEvent.mouseEnter(element);
+            await waitPastHoverDelay();
+        };
+
+        const leave = async (element: Element) => {
+            fireEvent.mouseLeave(element);
+            await waitPastHoverDelay();
+        };
+
+        const getIdCell = (screen: Screen, documentId: string) =>
+            screen.getByText(documentId).closest(".cell-preview-target");
+
+        const hoverDocumentId = async (screen: Screen, documentId: string) => {
+            await hover(getIdCell(screen, documentId));
             return screen.getByRole("tooltip");
+        };
+
+        const passOver = async (element: Element) => {
+            fireEvent.mouseEnter(element);
+            await act(async () => {
+                jest.advanceTimersByTime(100);
+            });
+            fireEvent.mouseLeave(element);
+            await waitPastHoverDelay();
         };
 
         const renderOrders = async () => {
@@ -788,24 +814,104 @@ describe("DocumentsPage", () => {
         };
 
         beforeEach(() => {
+            localStorage.clear();
             jest.useFakeTimers();
         });
 
-        it("opens the preview only once the document arrives", async () => {
+        it("shows the plain ID popover once the document preview is turned off", async () => {
+            const { screen } = await renderOrders();
+            openDisplayDropdown(screen);
+            const previewSwitch = await screen.findByRole("checkbox", { name: "Document preview" });
+            expect(previewSwitch).toBeChecked();
+
+            fireEvent.click(previewSwitch);
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(within(preview).getByTitle("Copy to clipboard")).toBeInTheDocument();
+            expect(within(preview).queryByRole("button", { name: "Copy ID" })).not.toBeInTheDocument();
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).not.toHaveBeenCalled();
+        });
+
+        it("shows the plain ID popover in all documents once the document preview is turned off", async () => {
+            const { screen } = rtlRender(<AllDocumentsStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+            openDisplayDropdown(screen);
+
+            fireEvent.click(await screen.findByRole("checkbox", { name: "Document preview" }));
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(within(preview).getByTitle("Copy to clipboard")).toBeInTheDocument();
+            expect(within(preview).queryByRole("button", { name: "Copy ID" })).not.toBeInTheDocument();
+        });
+
+        it("keeps the document preview off the next time the page opens", async () => {
+            const firstView = await renderOrders();
+            openDisplayDropdown(firstView.screen);
+            fireEvent.click(await firstView.screen.findByRole("checkbox", { name: "Document preview" }));
+            firstView.unmount();
+
+            const { screen } = await renderOrders();
+            openDisplayDropdown(screen);
+
+            expect(await screen.findByRole("checkbox", { name: "Document preview" })).not.toBeChecked();
+        });
+
+        it("opens the preview with the ID and loading lines while the document loads", async () => {
             const { screen } = await renderOrders();
             const releaseDocument = holdDocumentRequest();
 
-            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
-            await act(async () => {
-                jest.advanceTimersByTime(200);
-            });
-            expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(within(preview).getByText("orders/1-A")).toBeInTheDocument();
+            expect(within(preview).getByTestId("loader")).toBeInTheDocument();
 
             await releaseDocument(DatabasesStubs.documentWithMetadata("orders/1-A"));
 
-            const preview = await screen.findByRole("tooltip");
-            expect(preview.querySelector(".overlay-pending")).not.toBeInTheDocument();
             expect(preview).toHaveTextContent('"Company": "companies/65-A",');
+            expect(within(preview).queryByTestId("loader")).not.toBeInTheDocument();
+        });
+
+        it("loads the document while the pointer rests and opens the preview at 500 ms", async () => {
+            const { screen } = await renderOrders();
+
+            fireEvent.mouseEnter(getIdCell(screen, "orders/1-A"));
+            await act(async () => {
+                jest.advanceTimersByTime(400);
+            });
+
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalled();
+            expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+            await act(async () => {
+                jest.advanceTimersByTime(100);
+            });
+
+            expect(screen.getByRole("tooltip")).toHaveTextContent('"Company": "companies/65-A",');
+        });
+
+        it("opens the preview with the document when it loads quickly", async () => {
+            const { screen } = await renderOrders();
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(within(preview).queryByTestId("loader")).not.toBeInTheDocument();
+            expect(preview).toHaveTextContent('"Company": "companies/65-A",');
+        });
+
+        it("shows loading lines instead of the last error while it loads the document again", async () => {
+            const { screen } = await renderOrders();
+            mockServices.databasesService.getMock("getDocumentWithMetadata").mockRejectedValueOnce(serverError);
+            const idCell = getIdCell(screen, "orders/1-A");
+
+            await hover(idCell);
+            expect(within(screen.getByRole("tooltip")).getByText("Unable to load the document")).toBeInTheDocument();
+            await leave(idCell);
+
+            holdDocumentRequest();
+            await hover(idCell);
+
+            expect(within(screen.getByRole("tooltip")).getByTestId("loader")).toBeInTheDocument();
+            expect(screen.getByRole("tooltip")).not.toHaveTextContent("Unable to load the document");
         });
 
         it("opens a trimmed value's preview only once the value arrives", async () => {
@@ -814,9 +920,7 @@ describe("DocumentsPage", () => {
             const releaseDocument = holdDocumentRequest();
 
             fireEvent.mouseEnter(screen.getByText("compa...").closest(".cell-preview-target"));
-            await act(async () => {
-                jest.advanceTimersByTime(200);
-            });
+            await waitPastHoverDelay();
             expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 
             await releaseDocument(
@@ -824,8 +928,24 @@ describe("DocumentsPage", () => {
             );
 
             const preview = await screen.findByRole("tooltip");
-            expect(preview.querySelector(".overlay-pending")).not.toBeInTheDocument();
             expect(within(preview).getByTitle("Copy to clipboard")).toBeInTheDocument();
+        });
+
+        it("does not load a document the pointer only passes over", async () => {
+            const { screen } = await renderOrders();
+
+            await passOver(screen.getByText("orders/1-A").closest(".cell-preview-target"));
+
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).not.toHaveBeenCalled();
+        });
+
+        it("does not load a trimmed value the pointer only passes over", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+
+            await passOver(screen.getByText("compa...").closest(".cell-preview-target"));
+
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).not.toHaveBeenCalled();
         });
 
         afterEach(() => {
@@ -855,28 +975,17 @@ describe("DocumentsPage", () => {
             );
         });
 
-        it("starts loading the document as soon as the pointer reaches its ID", async () => {
+        it("loads a document once when its ID is hovered again", async () => {
             const { screen } = await renderOrders();
+            const idCell = getIdCell(screen, "orders/1-A");
 
-            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
-
-            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledWith(
-                "orders/1-A",
-                DATABASE_NAME,
-                true
-            );
-        });
-
-        it("opens the preview with the document it already loaded", async () => {
-            const { screen } = await renderOrders();
-
-            fireEvent.mouseEnter(screen.getByText("orders/1-A").closest(".cell-preview-target"));
-            await flushFetches();
-            await act(async () => {
-                jest.advanceTimersByTime(200);
-            });
+            await hover(idCell);
+            await leave(idCell);
+            await hover(idCell);
 
             expect(within(screen.getByRole("tooltip")).getByTitle("29 revisions")).toBeInTheDocument();
+            expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledTimes(1);
+            expect(mockServices.databasesService.getMock("getDocumentRevisionsCount")).toHaveBeenCalledTimes(1);
         });
 
         it("copies the ID from the preview", async () => {
@@ -909,6 +1018,64 @@ describe("DocumentsPage", () => {
             expect(preview).not.toHaveTextContent('"Company"');
         });
 
+        it("asks for a missing document once per hover", async () => {
+            const { screen } = await renderOrders();
+            const getDocument = mockServices.databasesService
+                .getMock("getDocumentWithMetadata")
+                .mockResolvedValue(null);
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(await within(preview).findByText("The document no longer exists")).toBeInTheDocument();
+            expect(getDocument).toHaveBeenCalledTimes(1);
+        });
+
+        it("asks for the revisions count again when it couldn't be loaded before", async () => {
+            const { screen } = await renderOrders();
+            const getRevisionsCount = mockServices.databasesService.getMock("getDocumentRevisionsCount");
+            getRevisionsCount.mockRejectedValueOnce(serverError);
+            const idCell = getIdCell(screen, "orders/1-A");
+
+            await hover(idCell);
+            expect(screen.getByRole("tooltip")).toHaveTextContent('"Company": "companies/65-A",');
+            expect(within(screen.getByRole("tooltip")).queryByTitle(/revision/)).not.toBeInTheDocument();
+
+            await leave(idCell);
+            await hover(idCell);
+
+            expect(within(screen.getByRole("tooltip")).getByTitle("29 revisions")).toBeInTheDocument();
+            expect(getRevisionsCount).toHaveBeenCalledTimes(2);
+        });
+
+        it("says when a trimmed value can't be loaded", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+            mockServices.databasesService.getMock("getDocumentWithMetadata").mockRejectedValue(serverError);
+
+            await hover(screen.getByText("compa...").closest(".cell-preview-target"));
+
+            expect(within(screen.getByRole("tooltip")).getByText("Unable to load the value")).toBeInTheDocument();
+        });
+
+        it("says when a trimmed value's document no longer exists", async () => {
+            const { screen } = rtlRender(<TrimmedValuesStory />);
+            expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
+            mockServices.databasesService.getMock("getDocumentWithMetadata").mockResolvedValue(null);
+
+            await hover(screen.getByText("compa...").closest(".cell-preview-target"));
+
+            expect(within(screen.getByRole("tooltip")).getByText("The value no longer exists")).toBeInTheDocument();
+        });
+
+        it("says when the previewed document can't be loaded", async () => {
+            const { screen } = await renderOrders();
+            mockServices.databasesService.getMock("getDocumentWithMetadata").mockRejectedValue(serverError);
+
+            const preview = await hoverDocumentId(screen, "orders/1-A");
+
+            expect(within(preview).getByText("Unable to load the document")).toBeInTheDocument();
+        });
+
         it("loads the document once for its preview and its trimmed values", async () => {
             const { screen } = rtlRender(<TrimmedValuesStory />);
             expect(await screen.findByText("orders/1-A")).toBeInTheDocument();
@@ -917,9 +1084,7 @@ describe("DocumentsPage", () => {
             expect(preview).toHaveTextContent('"Company": "companies/1-A"');
 
             fireEvent.mouseEnter(screen.getByText("compa...").closest(".cell-preview-target"));
-            await act(async () => {
-                jest.advanceTimersByTime(200);
-            });
+            await waitPastHoverDelay();
 
             expect(await screen.findByTitle("Copy to clipboard")).toBeInTheDocument();
             expect(mockServices.databasesService.getMock("getDocumentWithMetadata")).toHaveBeenCalledTimes(1);

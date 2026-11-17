@@ -1,20 +1,19 @@
 import { PreviewLine, getDocumentPreviewLines } from "./documentPreviewLines";
 
-const toText = (lines: PreviewLine[]) =>
-    lines.map(({ depth, tokens }) => "    ".repeat(depth) + tokens.map((token) => token.text).join(""));
+const toText = (lines: PreviewLine[]) => lines.map(({ tokens }) => tokens.map((token) => token.text).join(""));
 
 const editorText = (document: object) => JSON.stringify(document, null, 4).split("\n");
 
 const territory = (index: number) => ({ Code: `T${index}`, Name: `Town ${index}` });
 const territories = (count: number) => Array.from({ length: count }, (_, index) => territory(index + 1));
 
-const roomyLineLimit = 100;
+const ROOMY_LINE_LIMIT = 100;
 
 describe("getDocumentPreviewLines", () => {
     it("puts every property on its own line with the value in JSON form", () => {
         const { lines, hiddenLineCount } = getDocumentPreviewLines(
             { Company: "companies/65-A", Freight: 8.53, IsPaid: true, ShippedAt: null },
-            roomyLineLimit
+            ROOMY_LINE_LIMIT
         );
 
         expect(toText(lines)).toEqual([
@@ -39,7 +38,7 @@ describe("getDocumentPreviewLines", () => {
             "@metadata": { "@collection": "Regions", "@id": "regions/2-A" },
         };
 
-        const { lines } = getDocumentPreviewLines(document, roomyLineLimit);
+        const { lines } = getDocumentPreviewLines(document, ROOMY_LINE_LIMIT);
 
         expect(toText(lines)).toEqual(editorText(document));
     });
@@ -50,7 +49,7 @@ describe("getDocumentPreviewLines", () => {
                 Lines: [{ Product: "products/2-A", Discount: undefined }],
                 "@metadata": { "@collection": "Orders", "@flags": undefined },
             },
-            roomyLineLimit
+            ROOMY_LINE_LIMIT
         );
 
         expect(toText(lines)).toEqual([
@@ -109,7 +108,7 @@ describe("getDocumentPreviewLines", () => {
                 Origin: { "@metadata": { "@id": "categories/9-A" } },
                 "@metadata": { "@collection": "Categories", "@id": "categories/1-A" },
             },
-            roomyLineLimit
+            ROOMY_LINE_LIMIT
         );
 
         expect(toText(lines.filter((line) => line.isMetadata))).toEqual([
@@ -120,28 +119,36 @@ describe("getDocumentPreviewLines", () => {
         ]);
     });
 
+    it("marks empty metadata as one line", () => {
+        const { lines } = getDocumentPreviewLines({ Name: "Beverages", "@metadata": {} }, ROOMY_LINE_LIMIT);
+
+        expect(toText(lines.filter((line) => line.isMetadata))).toEqual(['    "@metadata": {}']);
+    });
+
     it("tells keys, strings, other values and punctuation apart", () => {
         const { lines } = getDocumentPreviewLines(
             { Name: "Chang", Lines: [{ Product: "products/2-A", Quantity: 24 }] },
-            roomyLineLimit
+            ROOMY_LINE_LIMIT
         );
 
         expect(lines[1].tokens).toEqual([
-            { kind: "key", text: '"Name"' },
-            { kind: "punctuation", text: ": " },
-            { kind: "string", text: '"Chang"' },
-            { kind: "punctuation", text: "," },
+            { text: "    " },
+            { type: "property", text: '"Name"' },
+            { type: "operator", text: ":" },
+            { text: " " },
+            { type: "string", text: '"Chang"' },
+            { type: "punctuation", text: "," },
         ]);
-        expect(lines[5].tokens).toContainEqual({ kind: "literal", text: "24" });
+        expect(lines[5].tokens).toContainEqual({ type: "number", text: "24" });
     });
 
-    it("cuts a long string once the line runs past what the card can show", () => {
-        const [, photoLine] = toText(
-            getDocumentPreviewLines({ Photo: "iVBORw0KGgo".repeat(10_000) }, roomyLineLimit).lines
-        );
+    it("cuts a long string and keeps it a string", () => {
+        const { lines } = getDocumentPreviewLines({ Photo: "iVBORw0KGgo".repeat(10_000) }, ROOMY_LINE_LIMIT);
 
-        expect(photoLine.startsWith('    "Photo": "iVBORw0KGgoiVBORw0KGgo')).toBe(true);
-        expect(photoLine.endsWith("…")).toBe(true);
-        expect(photoLine.length).toBeLessThan(300);
+        const photo = lines[1].tokens.find((token) => token.type === "string");
+
+        expect(photo.text.startsWith('"iVBORw0KGgoiVBORw0KGgo')).toBe(true);
+        expect(photo.text.endsWith('…"')).toBe(true);
+        expect(photo.text.length).toBeLessThan(300);
     });
 });

@@ -2,11 +2,11 @@ import { rtlRender, waitFor } from "test/rtlTestUtils";
 import Tooltip from "react-bootstrap/Tooltip";
 import OverlayTriggerWithMotion from "./OverlayTriggerWithMotion";
 
-const overrideTooltip = <Tooltip id="override-hint">Override server-wide analyzer</Tooltip>;
+const OVERRIDE_TOOLTIP = <Tooltip id="override-hint">Override server-wide analyzer</Tooltip>;
 
 const renderTrigger = (props: Partial<Parameters<typeof OverlayTriggerWithMotion>[0]> = {}) =>
     rtlRender(
-        <OverlayTriggerWithMotion overlay={overrideTooltip} {...props}>
+        <OverlayTriggerWithMotion overlay={OVERRIDE_TOOLTIP} {...props}>
             <button type="button">Override</button>
         </OverlayTriggerWithMotion>
     );

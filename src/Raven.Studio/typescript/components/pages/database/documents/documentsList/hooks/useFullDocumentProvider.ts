@@ -1,5 +1,5 @@
 import getDocumentsPreviewCommand from "commands/database/documents/getDocumentsPreviewCommand";
-import { DocumentPreview, DocumentPreviewSource } from "components/common/virtualTable/cells/CellWithDocumentPreview";
+import { DocumentPreviewSource } from "components/common/virtualTable/cells/CellWithDocumentPreview";
 import { useServices } from "components/hooks/useServices";
 import document from "models/database/documents/document";
 import { useCallback, useRef } from "react";
@@ -7,8 +7,7 @@ import { useCallback, useRef } from "react";
 export function useFullDocumentProvider(databaseName: string) {
     const { databasesService } = useServices();
     const documentCacheRef = useRef(new Map<string, Promise<document | null>>());
-    const previewCacheRef = useRef(new Map<string, Promise<DocumentPreview | null>>());
-    const loadedPreviewsRef = useRef(new Map<string, DocumentPreview>());
+    const revisionsCountCacheRef = useRef(new Map<string, Promise<number>>());
 
     const getFullDocument = useCallback(
         (id: string) =>
@@ -19,10 +18,11 @@ export function useFullDocumentProvider(databaseName: string) {
     );
 
     const getRevisionsCount = useCallback(
-        async (id: string) => {
-            const { RevisionsCount } = await databasesService.getDocumentRevisionsCount(id, databaseName);
-            return RevisionsCount;
-        },
+        (id: string) =>
+            fetchOnce(revisionsCountCacheRef.current, id, async () => {
+                const { RevisionsCount } = await databasesService.getDocumentRevisionsCount(id, databaseName);
+                return RevisionsCount;
+            }),
         [databasesService, databaseName]
     );
 
@@ -34,10 +34,7 @@ export function useFullDocumentProvider(databaseName: string) {
 
             return async () => {
                 const fullDocument = await getFullDocument(doc.getId());
-                if (!fullDocument) {
-                    throw new Error("The document no longer exists");
-                }
-                return fullDocument.getValue(property);
+                return fullDocument?.getValue(property);
             };
         },
         [getFullDocument]
@@ -49,22 +46,14 @@ export function useFullDocumentProvider(databaseName: string) {
             const hasRevisions = doc.__metadata.hasFlag("HasRevisions");
 
             return {
-                load: () =>
-                    fetchOnce(previewCacheRef.current, id, async () => {
-                        const [fullDocument, revisionsCount] = await Promise.all([
-                            getFullDocument(id),
-                            hasRevisions ? getRevisionsCount(id).catch(() => 0) : 0,
-                        ]);
+                load: async () => {
+                    const [fullDocument, revisionsCount] = await Promise.all([
+                        getFullDocument(id),
+                        hasRevisions ? getRevisionsCount(id).catch(() => 0) : 0,
+                    ]);
 
-                        if (!fullDocument) {
-                            return null;
-                        }
-
-                        const preview = { document: fullDocument, revisionsCount };
-                        loadedPreviewsRef.current.set(id, preview);
-                        return preview;
-                    }),
-                getLoaded: () => loadedPreviewsRef.current.get(id),
+                    return fullDocument ? { document: fullDocument, revisionsCount } : null;
+                },
             };
         },
         [getFullDocument, getRevisionsCount]
@@ -72,8 +61,7 @@ export function useFullDocumentProvider(databaseName: string) {
 
     const clearCache = () => {
         documentCacheRef.current.clear();
-        previewCacheRef.current.clear();
-        loadedPreviewsRef.current.clear();
+        revisionsCountCacheRef.current.clear();
     };
 
     return { getPropertyPreviewResolver, getDocumentPreviewSource, clearCache };
