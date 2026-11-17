@@ -58,8 +58,6 @@ public class ServerBackupRunner : IDisposable
 
     private readonly RavenLogger _logger;
 
-    private readonly RavenAuditLogger _auditLog;
-
     internal readonly BackupDecisionTracker Decisions;
 
     private readonly ConcurrentDictionary<string, IdleDatabaseSnapshot> _idleDatabases = new(StringComparer.OrdinalIgnoreCase);
@@ -68,7 +66,6 @@ public class ServerBackupRunner : IDisposable
     {
         _serverStore = serverStore;
         _logger = RavenLogManager.Instance.GetLoggerForServer<ServerBackupRunner>();
-        _auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
         Decisions = new BackupDecisionTracker(this, serverStore, _logger);
     }
 
@@ -465,7 +462,7 @@ public class ServerBackupRunner : IDisposable
                 {
                     var backupKind = backupTask._isFullBackup ? BackupKind.Full : BackupKind.Incremental;
                     var configurationString = context.ReadObject(backupState.Configuration.ToAuditJson(), nameof(PeriodicBackupConfiguration)).ToString();
-                    _auditLog.Audit($"BACKUP {backupKind} backup executed automatically as scheduled with configuration: '{configurationString}'");
+                    RavenLogManager.Instance.GetAuditLoggerForDatabase(database.Name).Audit($"BACKUP {backupKind} backup executed automatically as scheduled with configuration: '{configurationString}'");
                 }
             }
         }
@@ -1384,10 +1381,6 @@ public class ServerBackupRunner : IDisposable
                 var backupStatus = JsonDeserializationClient.PeriodicBackupStatus(context.ReadObject(currentStatus.ToJson(), "skipped-incremental-backup-status"));
 
                 backupStatus.Version++;
-                backupStatus.Error = null;
-                backupStatus.IsFull = false;
-                backupStatus.NodeTag = _serverStore.NodeTag;
-                backupStatus.DurationInMs = 0;
                 backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextBackup.DateTime;
 
                 if (backupStatus.LocalBackup != null)
