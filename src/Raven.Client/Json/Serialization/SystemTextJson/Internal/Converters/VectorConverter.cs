@@ -100,6 +100,21 @@ internal sealed class VectorConverter : JsonConverterFactory
             return new RavenVector<T>(values.ToArray());
         }
 
+        private static ulong ReadUInt64(ref Utf8JsonReader reader)
+        {
+            if (reader.TryGetUInt64(out ulong value))
+                return value;
+
+            if (reader.TryGetInt64(out long wrapped))
+                return unchecked((ulong)wrapped);
+
+            double number = reader.GetDouble();
+            if (number < 0 || double.IsNaN(number))
+                throw new JsonException($"The value {number.ToString(System.Globalization.CultureInfo.InvariantCulture)} cannot be read into a vector of {typeof(ulong).FullName}.");
+
+            return number >= ulong.MaxValue ? ulong.MaxValue : (ulong)number;
+        }
+
         private static T ReadElement(ref Utf8JsonReader reader)
         {
             if (typeof(T) == typeof(float))
@@ -115,7 +130,7 @@ internal sealed class VectorConverter : JsonConverterFactory
             if (typeof(T) == typeof(uint))
                 return (T)(object)reader.GetUInt32();
             if (typeof(T) == typeof(ulong))
-                return (T)(object)(reader.TryGetUInt64(out ulong unsigned) ? unsigned : unchecked((ulong)reader.GetInt64()));
+                return (T)(object)ReadUInt64(ref reader);
             if (typeof(T) == typeof(sbyte))
                 return (T)(object)reader.GetSByte();
             if (typeof(T) == typeof(short))
