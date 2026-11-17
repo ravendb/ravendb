@@ -138,17 +138,15 @@ public partial class Hnsw
         // Converts raw entries in place to entry ids, compacts them to the entries in the filter and gives those the current node's distance.
         private int KeepInFilter(Span<long> entries, Span<float> distances, GrowableBitArray? filter)
         {
-            Registration.InternalEntryIdToEntryId(entries);
-            var kept = entries.Length;
+            int kept;
             if (filter.HasValue)
             {
-                var inFilter = filter.Value;
-                kept = 0;
-                foreach (var entry in entries)
-                {
-                    if (inFilter.Contains(entry))
-                        entries[kept++] = entry;
-                }
+                kept = SearchState.KeepEntriesInFilter(entries, filter.Value, stopAtFirst: false);
+            }
+            else
+            {
+                Registration.InternalEntryIdToEntryId(entries);
+                kept = entries.Length;
             }
 
             distances[..kept].Fill(_currentDistance);

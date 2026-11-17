@@ -725,6 +725,7 @@ public unsafe partial class Hnsw
         }
 
         /// <summary>True when the posting list holds an entry of <paramref name="filter"/>.</summary>
+        [SkipLocalsInit]
         internal bool HasEntryInFilter(long postingListId, GrowableBitArray filter)
         {
             var rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
@@ -742,18 +743,26 @@ public unsafe partial class Hnsw
                     }
 
                     ReadPostingList(new ContainerEntryId(rawPostingListId), ref _filterScratch, ref _filterDecoder, out _);
-                    var found = ContainsAny(_filterScratch.ToSpan(), filter);
+                    var found = KeepEntriesInFilter(_filterScratch.ToSpan(), filter, stopAtFirst: true) > 0;
                     _filterScratch.Clear();
                     return found;
                 case Constants.Graphs.VectorId.PostingList: // large posting list
                 {
+                    if (filter.MaxSetBit < 0)
+                        return false;
+
                     var setStateSpan = Container.GetReadOnly(Llt, new(rawPostingListId));
                     using var postingList = new PostingList(Llt, Slices.Empty, MemoryMarshal.AsRef<PostingListState>(setStateSpan));
                     using var _ = postingList.Iterate(out var iterator);
+                    // Only the entries between the first and the last member of the filter are read.
+                    if (iterator.Seek(Registration.EntryIdToInternalEntryId(filter.MinSetBit)) == false)
+                        return false;
+
+                    var lastRawEntryInFilter = Registration.EntryIdToInternalEntryId(filter.MaxSetBit + 1) - 1;
                     Span<long> chunk = stackalloc long[256];
-                    while (iterator.Fill(chunk, out var total) || total > 0)
+                    while (iterator.Fill(chunk, out var total, lastRawEntryInFilter))
                     {
-                        if (ContainsAny(chunk[..total], filter))
+                        if (KeepEntriesInFilter(chunk[..total], filter, stopAtFirst: true) > 0)
                             return true;
                     }
 
@@ -764,16 +773,31 @@ public unsafe partial class Hnsw
             }
         }
 
-        private static bool ContainsAny(Span<long> rawEntries, GrowableBitArray filter)
+        /// <summary>
+        /// Converts sorted raw entries in place to entry ids, moves the ones that the filter has to the front and returns how many there are.
+        /// With <paramref name="stopAtFirst"/>, stops at the first one.
+        /// </summary>
+        internal static int KeepEntriesInFilter(Span<long> rawEntries, GrowableBitArray filter, bool stopAtFirst)
         {
             Registration.InternalEntryIdToEntryId(rawEntries);
+            if (rawEntries.IsEmpty || rawEntries[^1] < filter.MinSetBit || rawEntries[0] > filter.MaxSetBit)
+                return 0;
+
+            var kept = 0;
             foreach (var entry in rawEntries)
             {
-                if (filter.Contains(entry))
-                    return true;
+                if (entry > filter.MaxSetBit)
+                    break;
+
+                if (filter.Contains(entry) == false)
+                    continue;
+
+                rawEntries[kept++] = entry;
+                if (stopAtFirst)
+                    break;
             }
 
-            return false;
+            return kept;
         }
 
         public void ReadPostingList(ContainerEntryId rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
