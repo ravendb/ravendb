@@ -93,7 +93,7 @@ namespace Raven.Server.ServerWide.Backups
             if (string.IsNullOrWhiteSpace(configuration.Name) == false)
                 message += $", backup name: {configuration.Name}";
 
-            _serverStore.NotificationCenter.Add(AlertRaised.Create(
+            _serverStore.ServerBackupRunner.AddDatabaseAlert(DatabaseName, AlertRaised.Create(
                 DatabaseName,
                 "Couldn't schedule next backup, this shouldn't happen",
                 message,
@@ -110,7 +110,7 @@ namespace Raven.Server.ServerWide.Backups
 
             message += $", error: {parameters.Exception.Message}";
 
-            _serverStore.NotificationCenter.Add(AlertRaised.Create(
+            _serverStore.ServerBackupRunner.AddDatabaseAlert(DatabaseName, AlertRaised.Create(
                 DatabaseName,
                 "Backup frequency parsing error",
                 message,
