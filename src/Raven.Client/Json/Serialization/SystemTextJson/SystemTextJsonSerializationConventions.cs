@@ -268,6 +268,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             foreach (JsonConverter converter in IntegralNumberConverters.All)
                 options.Converters.Add(converter);
 
+            options.Converters.Add(EmptyStringNullableConverter.Instance);
             options.Converters.Add(CharConverter.Instance);
             options.Converters.Add(StringConverter.Instance);
             options.Converters.Add(BooleanConverter.Instance);

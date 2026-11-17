@@ -2656,6 +2656,75 @@ namespace FastTests.Client
             }
         }
 
+        private enum NullableShade
+        {
+            [System.Runtime.Serialization.EnumMember(Value = "dark-shade")]
+            Dark,
+            Light
+        }
+
+        private class NullableMembers
+        {
+            public bool? Flag { get; set; }
+
+            public NullableShade? Shade { get; set; }
+
+            public Guid? Guid { get; set; }
+
+            public TimeSpan? Span { get; set; }
+
+            public Dictionary<string, NullableShade?> Shades { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void EmptyStringsAreReadAsNullIntoNullableMembers(bool saveEnumsAsIntegers)
+        {
+            var conventions = new DocumentConventions { SaveEnumsAsIntegers = saveEnumsAsIntegers, Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Flag\":\"\",\"Shade\":\"\",\"Guid\":\"\",\"Span\":\"\",\"Shades\":{\"a\":\"\",\"b\":\"dark-shade\"}}", "empty"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<NullableMembers>(json);
+
+                    Assert.Null(loaded.Flag);
+                    Assert.Null(loaded.Shade);
+                    Assert.Null(loaded.Guid);
+                    Assert.Null(loaded.Span);
+                    Assert.Null(loaded.Shades["a"]);
+                    Assert.Equal(NullableShade.Dark, loaded.Shades["b"]);
+                }
+
+                var entity = new NullableMembers
+                {
+                    Flag = true,
+                    Shade = NullableShade.Dark,
+                    Guid = System.Guid.Parse("11111111-2222-3333-4444-555555555555"),
+                    Span = TimeSpan.FromMinutes(90),
+                    Shades = new Dictionary<string, NullableShade?> { ["n"] = null, ["l"] = NullableShade.Light }
+                };
+
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+                {
+                    string expectedShade = saveEnumsAsIntegers ? "0" : "\"dark-shade\"";
+                    string expectedLight = saveEnumsAsIntegers ? "1" : "\"Light\"";
+                    Assert.Equal(
+                        "{\"Flag\":true,\"Shade\":" + expectedShade + ",\"Guid\":\"11111111-2222-3333-4444-555555555555\",\"Span\":\"01:30:00\",\"Shades\":{\"n\":null,\"l\":" + expectedLight + "}}",
+                        json.ToString());
+
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<NullableMembers>(json);
+                    Assert.True(loaded.Flag);
+                    Assert.Equal(NullableShade.Dark, loaded.Shade);
+                    Assert.Equal(entity.Guid, loaded.Guid);
+                    Assert.Equal(entity.Span, loaded.Span);
+                    Assert.Null(loaded.Shades["n"]);
+                    Assert.Equal(NullableShade.Light, loaded.Shades["l"]);
+                }
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
