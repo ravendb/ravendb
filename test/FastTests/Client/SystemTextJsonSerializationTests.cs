@@ -2786,6 +2786,48 @@ namespace FastTests.Client
             }
         }
 
+        private record CaseOnlyRecord(string Name, string name, int Count);
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ConstructorParametersDifferingOnlyByCaseAreBoundByExactName()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"name\":\"lower\",\"Name\":\"upper\",\"Count\":3}", "record"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<CaseOnlyRecord>(json);
+
+                    Assert.Equal("upper", loaded.Name);
+                    Assert.Equal("lower", loaded.name);
+                    Assert.Equal(3, loaded.Count);
+
+                    using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(loaded, context))
+                        Assert.Equal("{\"Name\":\"upper\",\"name\":\"lower\",\"Count\":3}", written.ToString());
+                }
+
+                var shape = new { name = "", Name = "", Items = new List<int>() };
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"name\":\"lower\",\"Name\":\"upper\",\"Items\":[1,2]}", "anonymous"))
+                {
+                    dynamic loaded = conventions.Serialization.DefaultConverter.FromBlittable(shape.GetType(), json);
+
+                    Assert.Equal("upper", (string)loaded.Name);
+                    Assert.Equal("lower", (string)loaded.name);
+                    Assert.Equal([1, 2], (List<int>)loaded.Items);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"upper\"}", "missing"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<CaseOnlyRecord>(json);
+
+                    Assert.Equal("upper", loaded.Name);
+                    Assert.Null(loaded.name);
+                    Assert.Equal(0, loaded.Count);
+                }
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
