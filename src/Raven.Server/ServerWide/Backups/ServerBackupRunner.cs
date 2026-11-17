@@ -80,7 +80,6 @@ public class ServerBackupRunner : IDisposable
             new ServerCpuCreditsPolicy(),
             new ServerLowMemoryPolicy(),
             new ServerHighDirtyMemoryPolicy(),
-            ClusterHealthPolicy.Instance,
             new ServerConcurrentBackupPolicy(_serverStore.ConcurrentBackupsCounter)
         ];
 
@@ -1232,6 +1231,9 @@ public class ServerBackupRunner : IDisposable
             return false;
 
         var now = DateTime.UtcNow;
+        var serverHeldUntil = GetServerHeldUntil();
+        if (serverHeldUntil != null && serverHeldUntil.Value - now > window)
+            return false;
 
         try
         {
@@ -1552,6 +1554,23 @@ public class ServerBackupRunner : IDisposable
             ServerHighDirtyMemoryPolicy highDirtyMemoryPolicy => highDirtyMemoryPolicy.HeldUntil,
             _ => null
         };
+    }
+
+    private DateTime? GetServerHeldUntil()
+    {
+        var serverBackupPolicies = _serverBackupPolicies;
+        if (serverBackupPolicies == null)
+            return null;
+
+        DateTime? serverHeldUntil = null;
+        foreach (var policy in serverBackupPolicies)
+        {
+            var heldUntil = GetHeldUntil(policy);
+            if (heldUntil != null && (serverHeldUntil == null || heldUntil > serverHeldUntil))
+                serverHeldUntil = heldUntil;
+        }
+
+        return serverHeldUntil;
     }
 
     private TimeSpan GetWaitBeforeNextRun(IServerBackupPolicy failedServerPolicy)
