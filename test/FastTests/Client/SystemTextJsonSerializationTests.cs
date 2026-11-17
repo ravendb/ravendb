@@ -2511,6 +2511,56 @@ namespace FastTests.Client
             }
         }
 
+        private class JsonNodeMembers
+        {
+            public System.Text.Json.Nodes.JsonNode ArrayNode { get; set; }
+
+            public System.Text.Json.Nodes.JsonNode ObjectNode { get; set; }
+
+            public System.Text.Json.Nodes.JsonNode ValueNode { get; set; }
+
+            public System.Text.Json.Nodes.JsonObject Object { get; set; }
+
+            public System.Text.Json.Nodes.JsonArray Array { get; set; }
+
+            public List<System.Text.Json.Nodes.JsonNode> Nodes { get; set; }
+
+            public Dictionary<string, System.Text.Json.Nodes.JsonNode> NodesByKey { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void JsonNodeMembersRoundTrip()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var entity = new JsonNodeMembers
+            {
+                ArrayNode = System.Text.Json.Nodes.JsonNode.Parse("[1,{\"b\":true},\"x\",null]"),
+                ObjectNode = System.Text.Json.Nodes.JsonNode.Parse("{\"a\":[1,2]}"),
+                ValueNode = System.Text.Json.Nodes.JsonValue.Create(5),
+                Object = new System.Text.Json.Nodes.JsonObject { ["c"] = 1, ["d"] = new System.Text.Json.Nodes.JsonArray(1, 2) },
+                Array = new System.Text.Json.Nodes.JsonArray(1, "two"),
+                Nodes = [System.Text.Json.Nodes.JsonNode.Parse("[1]"), System.Text.Json.Nodes.JsonNode.Parse("{\"e\":1}"), null],
+                NodesByKey = new Dictionary<string, System.Text.Json.Nodes.JsonNode> { ["k"] = System.Text.Json.Nodes.JsonNode.Parse("[\"v\"]") }
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+            {
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<JsonNodeMembers>(json);
+
+                Assert.Equal("[1,{\"b\":true},\"x\",null]", loaded.ArrayNode.ToJsonString());
+                Assert.Equal("{\"a\":[1,2]}", loaded.ObjectNode.ToJsonString());
+                Assert.Equal("5", loaded.ValueNode.ToJsonString());
+                Assert.Equal("{\"c\":1,\"d\":[1,2]}", loaded.Object.ToJsonString());
+                Assert.Equal("[1,\"two\"]", loaded.Array.ToJsonString());
+                Assert.Equal(3, loaded.Nodes.Count);
+                Assert.Equal("[1]", loaded.Nodes[0].ToJsonString());
+                Assert.Equal("{\"e\":1}", loaded.Nodes[1].ToJsonString());
+                Assert.Null(loaded.Nodes[2]);
+                Assert.Equal("[\"v\"]", loaded.NodesByKey["k"].ToJsonString());
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
