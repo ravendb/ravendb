@@ -1,7 +1,5 @@
 using System;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -13,7 +11,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
