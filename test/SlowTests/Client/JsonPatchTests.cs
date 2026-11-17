@@ -1142,7 +1142,7 @@ namespace SlowTests.Client
 
                 var converter = new ExpandoObjectConverter();
                 dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
-                jpd.ApplyTo(expected);
+                ApplyLocally(jpd, expected);
 
                 Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
 
@@ -1178,7 +1178,7 @@ namespace SlowTests.Client
 
                 var converter = new ExpandoObjectConverter();
                 dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
-                jpd.ApplyTo(expected);
+                ApplyLocally(jpd, expected);
 
                 Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
 
@@ -1223,7 +1223,7 @@ namespace SlowTests.Client
 
                 var converter = new ExpandoObjectConverter();
                 dynamic expected = JsonConvert.DeserializeObject<ExpandoObject>(JsonConvert.SerializeObject(original), converter);
-                jpd.ApplyTo(expected);
+                ApplyLocally(jpd, expected);
 
                 Assert.Equal(PatchStatus.Patched, store.Operations.Send(new JsonPatchOperation(documentId, jpd)).Status);
 
