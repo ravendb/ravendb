@@ -61,6 +61,9 @@ public abstract class SortingMatch : IQueryMatch, IDisposable, IRequireSortingDa
     /// on an iterable sort index; forcing IndexOrderStreaming also suppresses the over-scan bailout.</summary>
     public CoraxSortingStrategy? ForcedStrategy;
 
+    /// <summary>Stream-scan learner for a bitmap that isn't a <see cref="CompiledQueryMatch"/> (which brings its own plan's).</summary>
+    public Planning.InflationEwma StreamScanInflation;
+
     /// <summary>Streaming strategy only: entry IDs read from the sort index and intersected against the candidate set.</summary>
     public long EntriesStreamed;
 
