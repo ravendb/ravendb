@@ -408,6 +408,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             bool constructedWithParameters = typeInfo.CreateObject == null;
             SetupUnboundParameterizedConstructor(typeInfo);
             PopulateReadOnlyMembers(typeInfo, constructedWithParameters);
+            PopulateInitializedOpenMembers(typeInfo, constructedWithParameters);
             ApplyNewtonsoftReadOnlyFieldSetters(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
             ApplyNewtonsoftMemberOrder(typeInfo);
@@ -1453,6 +1454,48 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                         value = existing == null || existing is string || existing.GetType().IsValueType ? null : ReadCapturedJson(json, existing.GetType(), present, options);
 
                     PopulateExisting(existing, value, options);
+                };
+            }
+        }
+
+        private static void PopulateInitializedOpenMembers(JsonTypeInfo typeInfo, bool constructedWithParameters)
+        {
+            if (constructedWithParameters)
+                return;
+
+            JsonSerializerOptions options = typeInfo.Options;
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                JsonPropertyInfo property = typeInfo.Properties[i];
+                Type type = property.PropertyType;
+                if (property.Set == null || property.Get == null || property.IsExtensionData || (type.IsInterface == false && type.IsAbstract == false) || typeof(IEnumerable).IsAssignableFrom(type))
+                    continue;
+
+                if (TypeNameConverter.Owns(property.CustomConverter) == false)
+                    continue;
+
+                JsonConverter tracker = TrackPresentMembers(property);
+                if (tracker == null)
+                    continue;
+
+                Func<object, object> get = property.Get;
+                Action<object, object> set = property.Set;
+                property.Set = (target, value) =>
+                {
+                    if (value != null || TryTakeCapturedJson(tracker, out JsonElement json, out PresentMembers present) == false)
+                    {
+                        set(target, value);
+                        return;
+                    }
+
+                    object existing = get(target);
+                    if (existing == null)
+                    {
+                        set(target, json.Deserialize(type, options));
+                        return;
+                    }
+
+                    PopulateExisting(existing, ReadCapturedJson(json, existing.GetType(), present, options), options);
                 };
             }
         }

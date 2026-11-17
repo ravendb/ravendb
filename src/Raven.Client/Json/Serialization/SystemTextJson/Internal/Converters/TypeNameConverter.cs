@@ -995,6 +995,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             return true;
         }
 
+        internal static bool Owns(JsonConverter converter)
+        {
+            if (converter == null || converter.GetType().IsGenericType == false)
+                return false;
+
+            Type definition = converter.GetType().GetGenericTypeDefinition();
+            return definition == typeof(DeclaredTypeConverter<>) || definition == typeof(UntypedConverter<>);
+        }
+
         private sealed class UntypedConverter<T> : JsonConverter<T>
         {
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
