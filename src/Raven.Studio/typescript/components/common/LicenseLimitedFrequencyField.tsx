@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { Control, FieldPath, FieldValues, useController } from "react-hook-form";
+import Form from "react-bootstrap/Form";
 import appUrl from "common/appUrl";
 import { ZERO_DURATION_PLACEHOLDER } from "components/common/DurationPicker";
 import FieldLabel from "components/common/FieldLabel";
@@ -33,11 +34,12 @@ export default function LicenseLimitedFrequencyField<
 }: LicenseLimitedFrequencyFieldProps<TFieldValues, TName>) {
     const t = useStudioTranslation("licenseLimitedFrequencyField");
     const labelId = useUniqueId("license-limited-frequency-label-");
+    const controlId = useUniqueId("license-limited-frequency-control-");
     const { field, fieldState, formState } = useController({ control, name });
 
     return (
-        <div>
-            <FieldLabel id={labelId} className="d-block">
+        <Form.Group controlId={controlId}>
+            <FieldLabel id={labelId} className={classNames("d-block", { "form-label-disabled": disabled })}>
                 {label}
             </FieldLabel>
             <ControlledDurationPicker
@@ -73,6 +75,6 @@ export default function LicenseLimitedFrequencyField<
                     {t("seeFullComparison")}
                 </a>
             </div>
-        </div>
+        </Form.Group>
     );
 }

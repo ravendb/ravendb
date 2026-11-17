@@ -9,6 +9,7 @@ import {
     formatDuration,
     getListedValues,
     getVisibleUnits,
+    hasSecondsPart,
     joinDuration,
     parseDuration,
     splitDuration,
@@ -26,6 +27,7 @@ export interface DurationPickerProps {
     disabled?: boolean;
     placeholder?: DurationPlaceholder;
     defaultTotalSeconds?: number;
+    "aria-label"?: string;
     "aria-labelledby"?: string;
 }
 
@@ -45,6 +47,7 @@ export default function DurationPicker(props: DurationPickerProps) {
         placeholder,
         defaultTotalSeconds,
         disabled,
+        "aria-label": ariaLabel,
         "aria-labelledby": ariaLabelledBy,
     } = props;
 
@@ -52,7 +55,8 @@ export default function DurationPicker(props: DurationPickerProps) {
     const commonT = useStudioTranslation("common");
     const menuId = useUniqueId("duration-picker-menu-");
 
-    const units = getVisibleUnits(showSeconds);
+    const [hasStoredSeconds, setHasStoredSeconds] = useState(() => hasSecondsPart(totalSeconds));
+    const units = getVisibleUnits(showSeconds || hasStoredSeconds);
     const symbols: DurationUnitSymbols = {
         days: t("daysSymbol"),
         hours: t("hoursSymbol"),
@@ -70,8 +74,10 @@ export default function DurationPicker(props: DurationPickerProps) {
 
     const consumerTotalSeconds = totalSeconds ?? null;
     if (consumerTotalSeconds !== syncedTotalSeconds) {
+        const willShowStoredSeconds = hasStoredSeconds || hasSecondsPart(consumerTotalSeconds);
+        setHasStoredSeconds(willShowStoredSeconds);
         setSyncedTotalSeconds(consumerTotalSeconds);
-        setText(formatDuration(consumerTotalSeconds, units, symbols));
+        setText(formatDuration(consumerTotalSeconds, getVisibleUnits(showSeconds || willShowStoredSeconds), symbols));
     }
 
     const commitTotalSeconds = (newTotalSeconds: number) => {
@@ -85,6 +91,10 @@ export default function DurationPicker(props: DurationPickerProps) {
     const readText = (textToRead: string) => parseDuration(textToRead, units, symbols);
 
     const commitText = () => {
+        if (text === formatDuration(syncedTotalSeconds, units, symbols)) {
+            return;
+        }
+
         const parsedTotalSeconds = readText(text);
         commitTotalSeconds(Number.isNaN(parsedTotalSeconds) ? syncedTotalSeconds : parsedTotalSeconds);
     };
@@ -169,9 +179,11 @@ export default function DurationPicker(props: DurationPickerProps) {
             <Form.Control
                 ref={inputRef}
                 id={id}
+                role="combobox"
                 value={text}
                 placeholder={getPlaceholder()}
                 disabled={disabled}
+                aria-label={ariaLabel}
                 aria-labelledby={ariaLabelledBy}
                 aria-expanded={isOpen}
                 aria-haspopup="dialog"

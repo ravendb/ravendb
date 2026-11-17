@@ -227,7 +227,7 @@ describe("FieldWithDefault", () => {
     it("names the duration picker after the field", async () => {
         const { screen } = rtlRender(<States />);
 
-        expect(await screen.findByRole("textbox", { name: "Duration" })).toHaveValue("1h");
+        expect(await screen.findByRole("combobox", { name: "Duration" })).toHaveValue("1h");
     });
 
     it("focuses the duration when its label is clicked", async () => {
@@ -235,13 +235,13 @@ describe("FieldWithDefault", () => {
 
         await user.click(await screen.findByText("Duration", { selector: "label" }));
 
-        expect(screen.getByRole("textbox", { name: "Duration" })).toHaveFocus();
+        expect(screen.getByRole("combobox", { name: "Duration" })).toHaveFocus();
     });
 
     it("shows the default duration once the duration is cleared", async () => {
         const { screen, user } = rtlRender(<States />);
 
-        const durationInput = await screen.findByRole("textbox", { name: "Duration" });
+        const durationInput = await screen.findByRole("combobox", { name: "Duration" });
         await user.clear(durationInput);
         await user.keyboard("{Enter}");
 

@@ -31,6 +31,10 @@ export function getVisibleUnits(showSeconds: boolean): DurationUnit[] {
     return showSeconds ? allUnits : allUnits.filter((unit) => unit !== "seconds");
 }
 
+export function hasSecondsPart(totalSeconds: number): boolean {
+    return totalSeconds != null && totalSeconds % secondsPerUnit.minutes !== 0;
+}
+
 export function splitDuration(totalSeconds: number, units: DurationUnit[]): DurationParts {
     const parts: DurationParts = { days: 0, hours: 0, minutes: 0, seconds: 0 };
     let remainingSeconds = Math.max(0, Math.round(totalSeconds));
@@ -76,7 +80,7 @@ export function parseDuration(text: string, units: DurationUnit[], symbols: Dura
 
     let totalSeconds = 0;
     for (const [, amount, unitText] of tokens) {
-        const unit = isSingleBareNumber ? units.at(-1) : findUnit(unitText, symbols);
+        const unit = isSingleBareNumber ? units.at(-1) : findUnit(unitText, units, symbols);
         if (!unit) {
             return NaN;
         }
@@ -93,6 +97,6 @@ export function getListedValues(unit: DurationUnit, currentValue: number): numbe
     return currentValue > maxValue ? [...listedValues, currentValue] : listedValues;
 }
 
-function findUnit(unitText: string, symbols: DurationUnitSymbols): DurationUnit {
-    return allUnits.find((unit) => unitAliases[unit].includes(unitText) || symbols[unit].toLowerCase() === unitText);
+function findUnit(unitText: string, units: DurationUnit[], symbols: DurationUnitSymbols): DurationUnit {
+    return units.find((unit) => unitAliases[unit].includes(unitText) || symbols[unit].toLowerCase() === unitText);
 }

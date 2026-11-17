@@ -15,7 +15,7 @@ describe("DataArchival", () => {
     it("can disable and set to null expiration frequency after disabling 'Enable Data Archival'", async () => {
         const { screen, fireClick } = rtlRender(<LicenseAllowed />);
 
-        const archiveFrequency = await screen.findByRole("textbox", { name: "Archive frequency" });
+        const archiveFrequency = await screen.findByRole("combobox", { name: "Archive frequency" });
         expect(archiveFrequency).toBeEnabled();
         expect(archiveFrequency).toHaveValue("1m 5s");
 
@@ -28,7 +28,7 @@ describe("DataArchival", () => {
     it("rejects an archive frequency of zero", async () => {
         const { screen, user } = rtlRender(<LicenseAllowed />);
 
-        const archiveFrequency = await screen.findByRole("textbox", { name: "Archive frequency" });
+        const archiveFrequency = await screen.findByRole("combobox", { name: "Archive frequency" });
         await user.clear(archiveFrequency);
         await user.type(archiveFrequency, "0{Enter}");
 
@@ -38,7 +38,7 @@ describe("DataArchival", () => {
     it("goes back to the default archive frequency when the frequency is cleared", async () => {
         const { screen, user } = rtlRender(<LicenseAllowed />);
 
-        const archiveFrequency = await screen.findByRole("textbox", { name: "Archive frequency" });
+        const archiveFrequency = await screen.findByRole("combobox", { name: "Archive frequency" });
         await user.clear(archiveFrequency);
         await user.keyboard("{Enter}");
 
