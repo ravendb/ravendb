@@ -125,6 +125,38 @@ describe("PopoverWithHover with content to prepare", () => {
         expect(await screen.findByRole("tooltip")).toHaveTextContent("Five order lines");
     });
 
+    it("opens when its content can't be prepared", async () => {
+        const prepare = jest.fn(() => Promise.reject(new Error("Unable to load the order lines")));
+        const { screen } = rtlRender(<PreparedValueCell prepare={prepare} />);
+
+        fireEvent.mouseEnter(screen.getByText("[...]5"));
+        await waitPastHoverDelay();
+
+        expect(await screen.findByRole("tooltip")).toHaveTextContent("Five order lines");
+    });
+
+    it("keeps listening to the pointer when it gets a new prepare function", () => {
+        const { screen, rerender } = rtlRender(<PreparedValueCell prepare={() => Promise.resolve()} />);
+        const addEventListener = jest.spyOn(screen.getByText("[...]5"), "addEventListener");
+
+        rerender(<PreparedValueCell prepare={() => Promise.resolve()} />);
+
+        expect(addEventListener).not.toHaveBeenCalled();
+    });
+
+    it("prepares its content with the latest prepare function", async () => {
+        const firstPrepare = jest.fn(() => Promise.resolve());
+        const latestPrepare = jest.fn(() => Promise.resolve());
+        const { screen, rerender } = rtlRender(<PreparedValueCell prepare={firstPrepare} />);
+
+        rerender(<PreparedValueCell prepare={latestPrepare} />);
+        fireEvent.mouseEnter(screen.getByText("[...]5"));
+        await waitPastHoverDelay();
+
+        expect(latestPrepare).toHaveBeenCalledTimes(1);
+        expect(firstPrepare).not.toHaveBeenCalled();
+    });
+
     it("does not prepare its content for a pointer passing over it", async () => {
         const { prepare } = holdPreparation();
         const { screen } = rtlRender(<PreparedValueCell prepare={prepare} />);

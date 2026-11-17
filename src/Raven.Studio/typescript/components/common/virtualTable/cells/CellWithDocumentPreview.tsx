@@ -9,6 +9,7 @@ import { PreviewLine, getDocumentPreviewLines } from "components/common/virtualT
 import document from "models/database/documents/document";
 import documentMetadata from "models/database/documents/documentMetadata";
 import { PropsWithChildren, useState } from "react";
+import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
 
@@ -20,8 +21,6 @@ export interface DocumentPreview {
 export interface DocumentPreviewSource {
     load: () => Promise<DocumentPreview | null>;
 }
-
-type LoadedPreview = { preview: DocumentPreview | null } | { hasFailed: true };
 
 interface CellWithDocumentPreviewProps extends PropsWithChildren {
     id: string;
@@ -41,16 +40,7 @@ const LOADING_LINE_WIDTHS = ["58%", "44%", "70%", "36%", "62%", "50%", "28%"];
 
 export function CellWithDocumentPreview({ id, previewSource, children }: CellWithDocumentPreviewProps) {
     const [target, setTarget] = useState<HTMLElement>();
-    const [loadedPreview, setLoadedPreview] = useState<LoadedPreview>();
-
-    const loadPreview = async () => {
-        setLoadedPreview(undefined);
-        try {
-            setLoadedPreview({ preview: await previewSource.load() });
-        } catch {
-            setLoadedPreview({ hasFailed: true });
-        }
-    };
+    const asyncLoadPreview = useAsyncCallback(previewSource.load);
 
     return (
         <>
@@ -61,7 +51,7 @@ export function CellWithDocumentPreview({ id, previewSource, children }: CellWit
                 target={target}
                 placement="right"
                 className="document-preview-popover"
-                prepare={loadPreview}
+                prepare={asyncLoadPreview.execute}
                 openDelayInMs={OPEN_DELAY_IN_MS}
             >
                 <div className="document-preview-header">
@@ -77,7 +67,7 @@ export function CellWithDocumentPreview({ id, previewSource, children }: CellWit
                         <Icon icon="copy" margin="m-0" />
                     </Button>
                 </div>
-                {loadedPreview ? <DocumentPreviewBody loadedPreview={loadedPreview} /> : <DocumentPreviewLoading />}
+                <DocumentPreviewBody asyncLoadPreview={asyncLoadPreview} />
             </PopoverWithHover>
         </>
     );
@@ -95,16 +85,22 @@ function DocumentPreviewLoading() {
     );
 }
 
-function DocumentPreviewBody({ loadedPreview }: { loadedPreview: LoadedPreview }) {
-    if ("hasFailed" in loadedPreview) {
+function DocumentPreviewBody({ asyncLoadPreview }: { asyncLoadPreview: UseAsyncReturn<DocumentPreview | null> }) {
+    const { status, result } = asyncLoadPreview;
+
+    if (status === "error") {
         return <div className="document-preview-status text-danger">Unable to load the document</div>;
     }
 
-    if (!loadedPreview.preview) {
+    if (status !== "success") {
+        return <DocumentPreviewLoading />;
+    }
+
+    if (!result) {
         return <div className="document-preview-status text-muted">The document no longer exists</div>;
     }
 
-    return <DocumentPreviewContent preview={loadedPreview.preview} />;
+    return <DocumentPreviewContent preview={result} />;
 }
 
 function DocumentPreviewContent({ preview }: { preview: DocumentPreview }) {
