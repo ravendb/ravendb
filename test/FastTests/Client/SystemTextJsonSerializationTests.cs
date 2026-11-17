@@ -2242,6 +2242,107 @@ namespace FastTests.Client
             }
         }
 
+        private class FullItem
+        {
+            public string Name { get; set; }
+
+            public string Extra { get; set; }
+        }
+
+        private class PartialItem : IComparable<PartialItem>
+        {
+            public string Name { get; set; }
+
+            public int CompareTo(PartialItem other) => string.CompareOrdinal(Name, other?.Name);
+        }
+
+        private class FullCollections
+        {
+            public string Name { get; set; }
+
+            public List<FullItem> Stacked { get; set; }
+
+            public List<FullItem> Sorted { get; set; }
+
+            public List<FullItem> Hashed { get; set; }
+        }
+
+        private class PartialCollections
+        {
+            public string Name { get; set; }
+
+            public Stack<PartialItem> Stacked { get; set; }
+
+            public SortedSet<PartialItem> Sorted { get; set; }
+
+            public HashSet<PartialItem> Hashed { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task PreserveDocumentPropertiesNotFoundOnModel_KeepsPropertiesWithTheirItemInReorderingCollections()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            static List<FullItem> Items() =>
+            [
+                new FullItem { Name = "z", Extra = "z extra" },
+                new FullItem { Name = "a", Extra = "a extra" },
+                new FullItem { Name = "m", Extra = "m extra" }
+            ];
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new FullCollections { Name = "holder", Stacked = Items(), Sorted = Items(), Hashed = Items() }, "collections/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var entity = await session.LoadAsync<PartialCollections>("collections/1");
+                Assert.Equal(3, entity.Stacked.Count);
+                Assert.Equal(3, entity.Sorted.Count);
+                Assert.Equal(3, entity.Hashed.Count);
+
+                entity.Name = "renamed";
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("collections/1");
+                Assert.True(raw.TryGet("Name", out string holderName));
+                Assert.Equal("renamed", holderName);
+
+                AssertExtras(raw, nameof(PartialCollections.Stacked), required: true);
+                AssertExtras(raw, nameof(PartialCollections.Hashed), required: true);
+                AssertExtras(raw, nameof(PartialCollections.Sorted), required: false);
+            }
+
+            static void AssertExtras(BlittableJsonReaderObject raw, string property, bool required)
+            {
+                Assert.True(raw.TryGet(property, out BlittableJsonReaderArray items));
+                Assert.Equal(3, items.Length);
+
+                foreach (BlittableJsonReaderObject item in items)
+                {
+                    Assert.True(item.TryGet("Name", out string name));
+                    if (item.TryGet("Extra", out string extra) == false)
+                    {
+                        Assert.False(required, $"{property}: item '{name}' lost its Extra property");
+                        continue;
+                    }
+
+                    Assert.Equal(name + " extra", extra);
+                }
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

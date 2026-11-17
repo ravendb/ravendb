@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization.Metadata;
@@ -18,6 +19,8 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
     private static readonly byte[] TypePropertyName = Encoding.UTF8.GetBytes(TypeNameConverter.TypePropertyName);
 
     private static readonly byte[] ValuesPropertyName = Encoding.UTF8.GetBytes(TypeNameConverter.ValuesPropertyName);
+
+    private static readonly ConcurrentDictionary<Type, ItemOrder> ItemOrders = new();
 
     public Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
 
@@ -174,6 +177,20 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     private bool CaptureItems(IEnumerable items, in BlittableJsonReaderObject.ArrayView json)
     {
+        Type type = items.GetType();
+        if (ItemOrders.TryGetValue(type, out ItemOrder order) == false)
+            order = ItemOrders.GetOrAdd(type, GetItemOrder(type));
+
+        switch (order)
+        {
+            case ItemOrder.Unknown:
+                return false;
+            case ItemOrder.Reversed when items is not ICollection { Count: var count } || count != json.Count:
+                return false;
+            case ItemOrder.DocumentWhenSameCount when CountItems(items) != json.Count:
+                return false;
+        }
+
         bool captured = false;
         int index = 0;
         foreach (object item in items)
@@ -181,12 +198,62 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
             if (index >= json.Count)
                 break;
 
-            BlittableJsonToken token = json.GetItem(index++, out int position);
+            int jsonIndex = order == ItemOrder.Reversed ? json.Count - 1 - index : index;
+            index++;
+
+            BlittableJsonToken token = json.GetItem(jsonIndex, out int position);
             if (CanHoldMissingProperties(item) && IsContainer(token))
                 captured |= CaptureValue(item, json.Owner, token, position);
         }
 
         return captured;
+    }
+
+    private static int CountItems(IEnumerable items)
+    {
+        int count = 0;
+        foreach (object _ in items)
+            count++;
+
+        return count;
+    }
+
+    private static ItemOrder GetItemOrder(Type type)
+    {
+        if (type.IsArray || typeof(IList).IsAssignableFrom(type))
+            return ItemOrder.Document;
+
+        if (type == typeof(Stack))
+            return ItemOrder.Reversed;
+
+        if (type.IsGenericType)
+        {
+            Type definition = type.GetGenericTypeDefinition();
+            if (definition == typeof(Stack<>) || definition == typeof(ConcurrentStack<>) || definition.FullName == "System.Collections.Immutable.ImmutableStack`1")
+                return ItemOrder.Reversed;
+
+            if (definition == typeof(HashSet<>))
+                return ItemOrder.DocumentWhenSameCount;
+
+            if (definition == typeof(ConcurrentBag<>))
+                return ItemOrder.Unknown;
+        }
+
+        foreach (Type implemented in type.GetInterfaces())
+        {
+            if (implemented.IsGenericType && implemented.GetGenericTypeDefinition() == typeof(ISet<>))
+                return ItemOrder.Unknown;
+        }
+
+        return ItemOrder.Document;
+    }
+
+    private enum ItemOrder
+    {
+        Document,
+        DocumentWhenSameCount,
+        Reversed,
+        Unknown
     }
 
     private bool RestoreObject(object instance, BlittableJsonReaderObject json)
