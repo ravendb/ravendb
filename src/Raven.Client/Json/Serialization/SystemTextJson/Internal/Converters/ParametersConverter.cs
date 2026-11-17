@@ -118,7 +118,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                             writer.WriteStringValue(((DateTimeOffset)v).UtcDateTime.GetDefaultRavenFormat(true));
                             break;
                         case ParameterType.Enumerable:
-                            JsonSerializer.Serialize(writer, v, vType, _untypedOptions());
+                            TypeNameConverter.WriteUntyped(writer, v, _untypedOptions());
                             break;
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
                         case ParameterType.DateOnly:
