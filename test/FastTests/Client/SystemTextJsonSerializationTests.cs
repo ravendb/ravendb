@@ -2479,6 +2479,38 @@ namespace FastTests.Client
             }
         }
 
+        private class UntypedSlots
+        {
+            public object Slot { get; set; }
+
+            public List<object> Items { get; set; }
+
+            public Dictionary<string, object> Bag { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("System.Byte[], System.Private.CoreLib")]
+        [InlineData("System.Byte[], mscorlib")]
+        public void ReadsByteArraysWrittenByNewtonsoftIntoUntypedMembers(string typeName)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            string bytes = "{\"$type\":\"" + typeName + "\",\"$value\":\"AQL/\"}";
+            string document = "{\"Slot\":" + bytes + ",\"Items\":[" + bytes + ",1],\"Bag\":{\"b\":" + bytes + ",\"n\":2}}";
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(document, "slots"))
+            {
+                var slots = conventions.Serialization.DefaultConverter.FromBlittable<UntypedSlots>(json);
+
+                Assert.Equal(new byte[] { 1, 2, 255 }, Assert.IsType<byte[]>(slots.Slot));
+                Assert.Equal(2, slots.Items.Count);
+                Assert.Equal(new byte[] { 1, 2, 255 }, Assert.IsType<byte[]>(slots.Items[0]));
+                Assert.Equal(1L, slots.Items[1]);
+                Assert.Equal(new byte[] { 1, 2, 255 }, Assert.IsType<byte[]>(slots.Bag["b"]));
+                Assert.Equal(2L, slots.Bag["n"]);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

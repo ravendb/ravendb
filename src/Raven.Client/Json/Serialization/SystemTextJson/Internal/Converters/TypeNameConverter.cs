@@ -23,6 +23,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         internal const string ValuesPropertyName = "$values";
 
+        private const string ValuePropertyName = "$value";
+
         private static readonly ConcurrentDictionary<Type, string> _typeNames = new();
 
         private static readonly ConcurrentDictionary<string, Type> _types = new();
@@ -674,6 +676,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             Type type = ResolveType(typeName, declaredType);
 
+            if (TryReadWrappedValue(ref reader, type, options, out value))
+                return true;
+
             if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType))
                 value = ReadDictionary(ref reader, type, keyType, valueType, options);
             else if (type != typeof(string) && typeof(IEnumerable).IsAssignableFrom(type))
@@ -683,6 +688,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 value = JsonSerializer.Deserialize(ref reader, GetTypeInfo(type, options));
                 RemoveTypeNameFromExtensionData(value, options);
             }
+
+            return true;
+        }
+
+        private static bool TryReadWrappedValue(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options, out object value)
+        {
+            Utf8JsonReader peek = reader;
+            peek.Read();
+            peek.Read();
+            if (peek.Read() == false || peek.TokenType != JsonTokenType.PropertyName || peek.ValueTextEquals(ValuePropertyName) == false)
+            {
+                value = null;
+                return false;
+            }
+
+            peek.Read();
+            reader = peek;
+            value = ReadTyped(ref reader, type, options);
+
+            if (reader.Read() == false || reader.TokenType != JsonTokenType.EndObject)
+                throw new JsonException($"Expected the end of the object after '{ValuePropertyName}' for type '{type.FullName}'.");
 
             return true;
         }
