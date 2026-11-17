@@ -303,6 +303,7 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     RevisionsStorage.IncrementCountOfRevisions(context, _document, -1); // the twin and this row become one row
+                    MergeTwinConflictRevisions(context, _document, row.Etag, twin.Etag, etag, flags);
 
                     var twinChangeVector = context.GetChangeVector(twin.ChangeVector);
                     if (twinChangeVector.IsSingle == false)
@@ -329,6 +330,24 @@ namespace Raven.Server.Documents.Revisions
                     FullChangeVector = changeVector
                 });
             }
+        }
+
+        // Twins become one row: the conflict revisions tree drops both rows' etags and lists the merged row's.
+        private static void MergeTwinConflictRevisions(DocumentsOperationContext context, Slice lowerIdPrefix, long rowEtag, long twinEtag, long mergedEtag, DocumentFlags mergedFlags)
+        {
+            if (mergedFlags.Contain(DocumentFlags.Conflicted) == false && mergedFlags.Contain(DocumentFlags.Resolved) == false)
+                return; // neither row is a conflict revision, so neither etag is in the tree
+
+            var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
+            if (tree.MultiCount(lowerIdPrefix) == 0)
+                return; // the document is not listed yet: listing it later reads the merged row
+
+            var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
+            revisionsStorage.RemoveConflictRevision(context, lowerIdPrefix, rowEtag);
+            revisionsStorage.RemoveConflictRevision(context, lowerIdPrefix, twinEtag);
+
+            using (GetEtagAsSlice(context, mergedEtag, out var mergedEtagSlice))
+                tree.MultiAdd(lowerIdPrefix, mergedEtagSlice);
         }
 
         private Scan MoveRevisionAttachments(DocumentsOperationContext context)
@@ -499,8 +518,8 @@ namespace Raven.Server.Documents.Revisions
                         var owner = storage.RevisionsStorage.EnsureRevisionTableCreated(tx, storage.ExtractCollectionName(context, revision.Data));
                         owner.Delete(revision.StorageId);
 
-                        using (RevisionsStorage.GetKeyPrefix(context.Allocator, lowerId, out var countKey))
-                            RevisionsStorage.IncrementCountOfRevisions(context, countKey, -1);
+                        using (RevisionsStorage.GetKeyPrefix(context.Allocator, lowerId, out var lowerIdPrefix))
+                            storage.RevisionsStorage.UpdateRevisionCountsByOne(context, revision.Flags, lowerIdPrefix, owner, revision.Etag, increment: false);
                     }
 
                     using (AttachmentsStorage.BuildRevisionAttachmentPrefix(context, new RevisionKey(hash, changeVector), lowerId, out var prefixes))

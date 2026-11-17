@@ -1551,7 +1551,7 @@ namespace Raven.Server.Documents.Revisions
             return numbers.Increment(prefixedLowerId, delta);
         }
 
-        private void UpdateRevisionCountsByOne(DocumentsOperationContext context, DocumentFlags flags, Slice lowerIdPrefix, Table table, long etag, bool increment = true)
+        internal void UpdateRevisionCountsByOne(DocumentsOperationContext context, DocumentFlags flags, Slice lowerIdPrefix, Table table, long etag, bool increment = true)
         {
             var count = IncrementCountOfRevisions(context, lowerIdPrefix, increment ? 1 : -1);
 
@@ -1575,7 +1575,7 @@ namespace Raven.Server.Documents.Revisions
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiAdd(prefixedLowerId, etagSlice);
         }
 
-        private void RemoveConflictRevision(DocumentsOperationContext context, Slice prefixedLowerId, long etag)
+        internal void RemoveConflictRevision(DocumentsOperationContext context, Slice prefixedLowerId, long etag)
         {
             using (DocumentsStorage.GetEtagAsSlice(context, etag, out var etagSlice))
                 context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice).MultiDelete(prefixedLowerId, etagSlice);
@@ -1754,8 +1754,8 @@ namespace Raven.Server.Documents.Revisions
                 LastModifiedTicks = revision.LastModified.Ticks,
                 TransactionMarker = context.GetTransactionMarker(),
                 ResolvedField = (int)resolvedFlag,
-                // Use incoming full CV: a Legacy source's `revision.ChangeVector` is version-only (field 0), would violate rule B.
-                FullChangeVector = incomingChangeVector
+                // A hashed row keeps its own full CV; a Legacy row's `revision.ChangeVector` is version-only (field 0), so it takes the incoming one.
+                FullChangeVector = copyTvr.Count > (int)RevisionsTable.FullChangeVector ? ReadChangeVectorFromTvr(context, ref copyTvr) : incomingChangeVector
             });
 
             using (GetKeyPrefix(context, keys.Slices.LowerId, out var lowerIdPrefix))
