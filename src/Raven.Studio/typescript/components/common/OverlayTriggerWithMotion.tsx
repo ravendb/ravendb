@@ -1,7 +1,8 @@
 import classNames from "classnames";
-import { overlayMotionClassName, withTopLeftPositioning } from "components/common/overlayMotion";
-import { cloneElement, isValidElement, ReactNode } from "react";
-import { OverlayChildren } from "react-bootstrap/Overlay";
+import { OVERLAY_MOTION_CLASS_NAME, withTopLeftPositioning } from "components/common/overlayMotion";
+import { cloneElement, isValidElement, ReactElement } from "react";
+import { OverlayChildren, OverlayInjectedProps } from "react-bootstrap/Overlay";
+// eslint-disable-next-line no-restricted-imports
 import OverlayTrigger, { OverlayTriggerProps } from "react-bootstrap/OverlayTrigger";
 
 export default function OverlayTriggerWithMotion({ overlay, popperConfig, ...props }: OverlayTriggerProps) {
@@ -12,16 +13,15 @@ export default function OverlayTriggerWithMotion({ overlay, popperConfig, ...pro
 
 function withMotion(overlay: OverlayChildren): OverlayChildren {
     if (typeof overlay === "function") {
-        return (injectedProps) => withMotionClass(overlay(injectedProps));
+        return (injectedProps) => {
+            const node = overlay(injectedProps);
+            return isValidElement<OverlayInjectedProps>(node) ? withMotionClass(node) : node;
+        };
     }
 
     return withMotionClass(overlay);
 }
 
-function withMotionClass<T extends ReactNode>(node: T): T {
-    if (!isValidElement<{ className?: string }>(node)) {
-        return node;
-    }
-
-    return cloneElement(node, { className: classNames(node.props.className, overlayMotionClassName) }) as T;
+function withMotionClass(element: ReactElement<OverlayInjectedProps>) {
+    return cloneElement(element, { className: classNames(element.props.className, OVERLAY_MOTION_CLASS_NAME) });
 }

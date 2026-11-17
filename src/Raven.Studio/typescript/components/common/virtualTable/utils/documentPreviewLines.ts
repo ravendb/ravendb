@@ -1,12 +1,12 @@
-export type PreviewTokenKind = "punctuation" | "key" | "string" | "literal";
+import Prism from "prismjs";
+import "prismjs/components/prism-json";
 
 export interface PreviewToken {
-    kind: PreviewTokenKind;
+    type?: string;
     text: string;
 }
 
 export interface PreviewLine {
-    depth: number;
     tokens: PreviewToken[];
     isMetadata: boolean;
 }
@@ -16,103 +16,34 @@ export interface DocumentPreviewLines {
     hiddenLineCount: number;
 }
 
-interface ValuePlacement {
-    depth: number;
-    head: PreviewToken[];
-    hasComma: boolean;
-    isMetadata: boolean;
+const STRING_LENGTH_LIMIT = 200;
+const METADATA_LINE_START = '    "@metadata": ';
+
+export function getDocumentPreviewLines(document: Record<string, unknown>, maxLines: number): DocumentPreviewLines {
+    const allLines = toJsonLines(document);
+    const shownLineCount = allLines.length > maxLines ? maxLines - 1 : allLines.length;
+    const metadataStart = allLines.findIndex((line) => line.startsWith(METADATA_LINE_START));
+    const metadataEnd = metadataStart === -1 ? -1 : metadataStart + toJsonLines(document["@metadata"]).length;
+
+    return {
+        lines: allLines.slice(0, shownLineCount).map((line, index) => ({
+            tokens: Prism.tokenize(line, Prism.languages.json).map(toPreviewToken),
+            isMetadata: index >= metadataStart && index < metadataEnd,
+        })),
+        hiddenLineCount: allLines.length - shownLineCount,
+    };
 }
 
-interface ChildValue {
-    key?: string;
-    value: unknown;
+function toJsonLines(value: unknown) {
+    return JSON.stringify(value, limitStringLength, 4).split("\n");
 }
 
-const stringTextLimit = 200;
-const metadataKey = "@metadata";
-
-export function getDocumentPreviewLines(document: object, maxLines: number): DocumentPreviewLines {
-    const lineCount = countLines(document);
-    const shownLineCount = lineCount > maxLines ? maxLines - 1 : lineCount;
-
-    const lines: PreviewLine[] = [];
-    addValueLines(lines, shownLineCount, document, { depth: 0, head: [], hasComma: false, isMetadata: false });
-
-    return { lines: lines.slice(0, shownLineCount), hiddenLineCount: lineCount - shownLineCount };
+function limitStringLength(_key: string, value: unknown) {
+    return typeof value === "string" && value.length > STRING_LENGTH_LIMIT
+        ? value.slice(0, STRING_LENGTH_LIMIT) + "…"
+        : value;
 }
 
-function countLines(value: unknown): number {
-    if (!isObject(value)) {
-        return 1;
-    }
-
-    const children = childrenOf(value);
-    return children.length === 0 ? 1 : children.reduce((sum, child) => sum + countLines(child.value), 2);
-}
-
-function addValueLines(lines: PreviewLine[], lineLimit: number, value: unknown, placement: ValuePlacement) {
-    const { depth, head, hasComma, isMetadata } = placement;
-    const tail = hasComma ? [punctuation(",")] : [];
-    const addLine = (tokens: PreviewToken[]) => lines.push({ depth, tokens, isMetadata });
-
-    if (!isObject(value)) {
-        addLine([...head, primitive(value), ...tail]);
-        return;
-    }
-
-    const [opening, closing] = Array.isArray(value) ? ["[", "]"] : ["{", "}"];
-    const children = childrenOf(value);
-
-    if (children.length === 0) {
-        addLine([...head, punctuation(opening + closing), ...tail]);
-        return;
-    }
-
-    addLine([...head, punctuation(opening)]);
-    for (const [index, child] of children.entries()) {
-        if (lines.length >= lineLimit) {
-            return;
-        }
-        addValueLines(lines, lineLimit, child.value, {
-            depth: depth + 1,
-            head: child.key === undefined ? [] : [keyToken(child.key), punctuation(": ")],
-            hasComma: index < children.length - 1,
-            isMetadata: isMetadata || (depth === 0 && child.key === metadataKey),
-        });
-    }
-    addLine([punctuation(closing), ...tail]);
-}
-
-function childrenOf(value: object): ChildValue[] {
-    if (Array.isArray(value)) {
-        return value.map((item) => ({ value: item }));
-    }
-
-    return Object.entries(value)
-        .filter(([, propertyValue]) => propertyValue !== undefined)
-        .map(([key, propertyValue]) => ({ key, value: propertyValue }));
-}
-
-function primitive(value: unknown): PreviewToken {
-    if (typeof value === "string") {
-        return { kind: "string", text: limitText(JSON.stringify(value)) };
-    }
-
-    return { kind: "literal", text: String(value) };
-}
-
-function limitText(text: string): string {
-    return text.length > stringTextLimit ? text.slice(0, stringTextLimit) + "…" : text;
-}
-
-function keyToken(key: string): PreviewToken {
-    return { kind: "key", text: JSON.stringify(key) };
-}
-
-function punctuation(text: string): PreviewToken {
-    return { kind: "punctuation", text };
-}
-
-function isObject(value: unknown): value is object {
-    return value !== null && typeof value === "object";
+function toPreviewToken(token: string | Prism.Token): PreviewToken {
+    return typeof token === "string" ? { text: token } : { type: token.type, text: String(token.content) };
 }

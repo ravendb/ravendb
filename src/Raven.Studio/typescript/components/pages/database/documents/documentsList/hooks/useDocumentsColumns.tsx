@@ -30,7 +30,7 @@ interface UseDocumentsColumnsProps {
     collectionName: string | null;
     tableBodyWidthInPx: number;
     getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
-    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"];
+    getDocumentPreviewSource?: FullDocumentProvider["getDocumentPreviewSource"];
 }
 
 const NO_COLUMNS: string[] = [];
@@ -263,7 +263,7 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
 function createMetadataColumns(
     databaseName: string,
     appUrl: AppUrl,
-    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"]
+    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"] | undefined
 ): ColumnDef<document>[] {
     return [
         {
@@ -276,7 +276,7 @@ function createMetadataColumns(
                     collection={row.original.getCollection()}
                     databaseName={databaseName}
                     hasHyperlink
-                    previewSource={getDocumentPreviewSource(row.original)}
+                    previewSource={getDocumentPreviewSource?.(row.original)}
                 />
             ),
             enableHiding: false,

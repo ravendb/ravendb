@@ -1,11 +1,10 @@
 import "./OverlayMotion.scss";
 import { OverlayProps } from "react-bootstrap/Overlay";
 
-export const overlayMotionClassName = "overlay-motion";
-export const overlayPendingClassName = "overlay-pending";
+export const OVERLAY_MOTION_CLASS_NAME = "overlay-motion";
 
-const topLeftPositioning = { name: "computeStyles", options: { gpuAcceleration: false } };
+const TOP_LEFT_POSITIONING = { name: "computeStyles", options: { gpuAcceleration: false } };
 
 export function withTopLeftPositioning(popperConfig: OverlayProps["popperConfig"] = {}): OverlayProps["popperConfig"] {
-    return { ...popperConfig, modifiers: [topLeftPositioning, ...(popperConfig.modifiers ?? [])] };
+    return { ...popperConfig, modifiers: [TOP_LEFT_POSITIONING, ...(popperConfig.modifiers ?? [])] };
 }

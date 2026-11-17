@@ -3,13 +3,11 @@ import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import Code, { CodeLanguage } from "components/common/Code";
 import { Icon } from "components/common/Icon";
-import { overlayPendingClassName } from "components/common/overlayMotion";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CSSProperties, PropsWithChildren, ReactNode, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
-import Spinner from "react-bootstrap/Spinner";
 
 interface CellWithCopyProps extends PropsWithChildren {
     value: unknown;
@@ -21,7 +19,7 @@ interface CellWithCopyProps extends PropsWithChildren {
     resolvePreviewValue?: () => Promise<unknown>;
 }
 
-type ResolvedPreview = { value: unknown } | { errorMessage: string };
+type ResolvedPreview = { value: unknown } | { hasFailed: true };
 
 export function CellWithCopy({
     value,
@@ -43,8 +41,8 @@ export function CellWithCopy({
         ? async () => {
               try {
                   setResolvedPreview({ value: await resolvePreviewValue() });
-              } catch (error) {
-                  setResolvedPreview({ errorMessage: error instanceof Error ? error.message : String(error) });
+              } catch {
+                  setResolvedPreview({ hasFailed: true });
               }
           }
         : undefined;
@@ -121,11 +119,11 @@ function CellWithCopyResolvedPreview({
     additionalButtons,
 }: { resolvedPreview?: ResolvedPreview } & Pick<CellWithCopyProps, "previewLanguage" | "additionalButtons">) {
     if (!resolvedPreview) {
-        return <Spinner size="sm" className={overlayPendingClassName} />;
+        return null;
     }
 
-    if ("errorMessage" in resolvedPreview) {
-        return <span className="text-danger">Unable to load the value: {resolvedPreview.errorMessage}</span>;
+    if ("hasFailed" in resolvedPreview) {
+        return <span className="text-danger">Unable to load the value</span>;
     }
 
     if (resolvedPreview.value === undefined) {

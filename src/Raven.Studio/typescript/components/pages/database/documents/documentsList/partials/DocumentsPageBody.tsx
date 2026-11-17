@@ -15,6 +15,7 @@ import { useDocumentsDataChanged } from "components/pages/database/documents/doc
 import { useFullDocumentProvider } from "components/pages/database/documents/documentsList/hooks/useFullDocumentProvider";
 import DocumentsListToolbar from "components/pages/database/documents/documentsList/partials/DocumentsListToolbar";
 import DocumentsSelectionActions from "components/pages/database/documents/documentsList/partials/DocumentsSelectionActions";
+import { documentPreviewStorage } from "components/pages/database/documents/documentsList/utils/documentPreviewStorage";
 import { useAppSelector } from "components/store";
 import document from "models/database/documents/document";
 import { useRef, useState } from "react";
@@ -49,6 +50,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         getDocumentPreviewSource,
         clearCache: clearFullDocumentCache,
     } = useFullDocumentProvider(databaseName);
+    const [isDocumentPreviewEnabled, setIsDocumentPreviewEnabled] = useState(() => documentPreviewStorage.isEnabled());
     const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -59,7 +61,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         collectionName,
         tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx),
         getPropertyPreviewResolver,
-        getDocumentPreviewSource,
+        getDocumentPreviewSource: isDocumentPreviewEnabled ? getDocumentPreviewSource : undefined,
     });
 
     const lazyRows = useLazyRows<document, pagedResultWithAvailableColumns<document>>({
@@ -111,12 +113,19 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         lazyRows.reload();
     };
 
+    const handleDocumentPreviewChange = (isEnabled: boolean) => {
+        documentPreviewStorage.save(isEnabled);
+        setIsDocumentPreviewEnabled(isEnabled);
+    };
+
     return (
         <div ref={bodyRef} className="vstack min-height-0">
             <DocumentsListToolbar
                 collectionName={collectionName}
                 isPaginated={isPaginated}
                 onIsPaginatedChange={setIsPaginated}
+                isDocumentPreviewEnabled={isDocumentPreviewEnabled}
+                onIsDocumentPreviewEnabledChange={handleDocumentPreviewChange}
                 isCustomLayout={columns.isCustomLayout}
                 onOpenColumnSettings={openColumnSettings}
                 getVisibleColumnFields={() => columns.getExportFields(table)}

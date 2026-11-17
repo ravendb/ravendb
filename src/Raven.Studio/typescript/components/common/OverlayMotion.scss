@@ -67,13 +67,6 @@ $aligned-placement-origins: (
     }
 }
 
-.popover.overlay-motion:has(.overlay-pending),
-.tooltip.overlay-motion:has(.overlay-pending) {
-    opacity: 0;
-    pointer-events: none;
-    animation: none;
-}
-
 @keyframes overlay-enter {
     from {
         scale: 0.95;

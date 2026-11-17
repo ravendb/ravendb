@@ -3,15 +3,13 @@ import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { Icon } from "components/common/Icon";
-import { overlayPendingClassName } from "components/common/overlayMotion";
-import { PopoverWithHover, usePopoverReposition } from "components/common/PopoverWithHover";
+import { LazyLoad } from "components/common/LazyLoad";
+import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { PreviewLine, getDocumentPreviewLines } from "components/common/virtualTable/utils/documentPreviewLines";
 import document from "models/database/documents/document";
 import documentMetadata from "models/database/documents/documentMetadata";
-import { PropsWithChildren, useLayoutEffect, useState } from "react";
-import { useAsync } from "react-async-hook";
+import { PropsWithChildren, useState } from "react";
 import Button from "react-bootstrap/Button";
-import Spinner from "react-bootstrap/Spinner";
 import IconName from "typings/server/icons";
 
 export interface DocumentPreview {
@@ -21,8 +19,9 @@ export interface DocumentPreview {
 
 export interface DocumentPreviewSource {
     load: () => Promise<DocumentPreview | null>;
-    getLoaded: () => DocumentPreview | undefined;
 }
+
+type LoadedPreview = { preview: DocumentPreview | null } | { hasFailed: true };
 
 interface CellWithDocumentPreviewProps extends PropsWithChildren {
     id: string;
@@ -36,10 +35,22 @@ interface PreviewBadge {
     title: string;
 }
 
-const maxVisibleLines = 13;
+const MAX_VISIBLE_LINES = 13;
+const OPEN_DELAY_IN_MS = 500;
+const LOADING_LINE_WIDTHS = ["58%", "44%", "70%", "36%", "62%", "50%", "28%"];
 
 export function CellWithDocumentPreview({ id, previewSource, children }: CellWithDocumentPreviewProps) {
     const [target, setTarget] = useState<HTMLElement>();
+    const [loadedPreview, setLoadedPreview] = useState<LoadedPreview>();
+
+    const loadPreview = async () => {
+        setLoadedPreview(undefined);
+        try {
+            setLoadedPreview({ preview: await previewSource.load() });
+        } catch {
+            setLoadedPreview({ hasFailed: true });
+        }
+    };
 
     return (
         <>
@@ -50,10 +61,13 @@ export function CellWithDocumentPreview({ id, previewSource, children }: CellWit
                 target={target}
                 placement="right"
                 className="document-preview-popover"
-                prepare={previewSource.load}
+                prepare={loadPreview}
+                openDelayInMs={OPEN_DELAY_IN_MS}
             >
                 <div className="document-preview-header">
-                    <span className="document-preview-id">{id}</span>
+                    <span className="document-preview-id" title={id}>
+                        {id}
+                    </span>
                     <Button
                         variant="link"
                         title="Copy ID"
@@ -63,53 +77,38 @@ export function CellWithDocumentPreview({ id, previewSource, children }: CellWit
                         <Icon icon="copy" margin="m-0" />
                     </Button>
                 </div>
-                <DocumentPreviewBody previewSource={previewSource} />
+                {loadedPreview ? <DocumentPreviewBody loadedPreview={loadedPreview} /> : <DocumentPreviewLoading />}
             </PopoverWithHover>
         </>
     );
 }
 
-function DocumentPreviewBody({ previewSource }: Pick<CellWithDocumentPreviewProps, "previewSource">) {
-    const loadedPreview = previewSource.getLoaded();
-
-    if (loadedPreview) {
-        return <DocumentPreviewContent preview={loadedPreview} />;
-    }
-
-    return <DocumentPreviewLoader load={previewSource.load} />;
+function DocumentPreviewLoading() {
+    return (
+        <div className="document-preview-body">
+            <LazyLoad active className="document-preview-content document-preview-loading">
+                {Array.from({ length: MAX_VISIBLE_LINES }, (_, index) => (
+                    <div key={index} style={{ width: LOADING_LINE_WIDTHS[index % LOADING_LINE_WIDTHS.length] }} />
+                ))}
+            </LazyLoad>
+        </div>
+    );
 }
 
-function DocumentPreviewLoader({ load }: Pick<DocumentPreviewSource, "load">) {
-    const asyncPreview = useAsync(load, []);
-    const reposition = usePopoverReposition();
-
-    useLayoutEffect(() => {
-        if (!asyncPreview.loading) {
-            reposition?.();
-        }
-    }, [asyncPreview.loading, reposition]);
-
-    if (asyncPreview.loading) {
-        return (
-            <div className={classNames("document-preview-status", overlayPendingClassName)}>
-                <Spinner size="sm" />
-            </div>
-        );
-    }
-
-    if (asyncPreview.error) {
+function DocumentPreviewBody({ loadedPreview }: { loadedPreview: LoadedPreview }) {
+    if ("hasFailed" in loadedPreview) {
         return <div className="document-preview-status text-danger">Unable to load the document</div>;
     }
 
-    if (!asyncPreview.result) {
+    if (!loadedPreview.preview) {
         return <div className="document-preview-status text-muted">The document no longer exists</div>;
     }
 
-    return <DocumentPreviewContent preview={asyncPreview.result} />;
+    return <DocumentPreviewContent preview={loadedPreview.preview} />;
 }
 
 function DocumentPreviewContent({ preview }: { preview: DocumentPreview }) {
-    const { lines, hiddenLineCount } = getDocumentPreviewLines(toEditorDto(preview.document), maxVisibleLines);
+    const { lines, hiddenLineCount } = getDocumentPreviewLines(toEditorDto(preview.document), MAX_VISIBLE_LINES);
     const badges = getBadges(preview);
 
     return (
@@ -148,9 +147,8 @@ function DocumentPreviewContent({ preview }: { preview: DocumentPreview }) {
 function DocumentPreviewLine({ line }: { line: PreviewLine }) {
     return (
         <div className={classNames("document-preview-line", { metadata: line.isMetadata })}>
-            {"    ".repeat(line.depth)}
             {line.tokens.map((token, index) => (
-                <span key={index} className={token.kind}>
+                <span key={index} className={token.type}>
                     {token.text}
                 </span>
             ))}

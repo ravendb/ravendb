@@ -21,6 +21,8 @@ interface DocumentsListToolbarProps {
     collectionName: string | null;
     isPaginated: boolean;
     onIsPaginatedChange: (isPaginated: boolean) => void;
+    isDocumentPreviewEnabled: boolean;
+    onIsDocumentPreviewEnabledChange: (isEnabled: boolean) => void;
     isCustomLayout: boolean;
     onOpenColumnSettings: () => void;
     getVisibleColumnFields: () => string[];
@@ -32,6 +34,8 @@ export default function DocumentsListToolbar({
     collectionName,
     isPaginated,
     onIsPaginatedChange,
+    isDocumentPreviewEnabled,
+    onIsDocumentPreviewEnabledChange,
     isCustomLayout,
     onOpenColumnSettings,
     getVisibleColumnFields,
@@ -154,6 +158,16 @@ export default function DocumentsListToolbar({
                                         Pagination
                                     </Switch>
                                 </ConditionalPopover>
+                            </Dropdown.ItemText>
+                            <Dropdown.ItemText>
+                                <Switch
+                                    selected={isDocumentPreviewEnabled}
+                                    toggleSelection={() => onIsDocumentPreviewEnabledChange(!isDocumentPreviewEnabled)}
+                                    color="primary"
+                                    title="Preview the document when hovering its ID"
+                                >
+                                    Document preview
+                                </Switch>
                             </Dropdown.ItemText>
                         </Dropdown.Menu>
                     </Dropdown>
