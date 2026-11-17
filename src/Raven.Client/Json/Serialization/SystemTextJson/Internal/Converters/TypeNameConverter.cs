@@ -628,7 +628,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (writing.Add(value) == false)
                 throw new JsonException($"Self referencing loop detected for type '{runtimeType.FullName}'.");
 
-            if (HasTypeNameProperty(RavenJsonTypeInfoResolver.GetObjectTypeInfo(options, runtimeType)))
+            if (runtimeType.IsValueType == false && HasTypeNameProperty(RavenJsonTypeInfoResolver.GetObjectTypeInfo(options, runtimeType)))
             {
                 RavenSerializationBinder.Instance.ValidateType(runtimeType);
                 object previous = _writingTypeNameFor;
