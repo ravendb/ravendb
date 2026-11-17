@@ -2991,7 +2991,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
                         return backupStatus != null;
-                    }, true, timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds);
+                    }, true);
 
                     Assert.True(backupStatus != null,
                         $"The cluster did not display data about the successful completion of at least one backup at the designated time. The {nameof(backupStatus)} is null.");

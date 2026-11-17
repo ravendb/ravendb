@@ -284,8 +284,8 @@ public static class BackupUtils
     {
         var nowUtc = DateTime.UtcNow;
 
-        var lastFullBackupUtc = parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
-        var lastIncrementalBackupUtc = parameters.BackupStatus?.LastIncrementalBackupInternal ?? parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
+        var lastFullBackupUtc = parameters.BackupStatus?.LastFullBackupInternal ?? parameters.Configuration.CreatedAt ?? nowUtc;
+        var lastIncrementalBackupUtc = parameters.BackupStatus?.LastIncrementalBackupInternal ?? parameters.BackupStatus?.LastFullBackupInternal ?? nowUtc;
         var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {
             BackupFrequency = parameters.Configuration.FullBackupFrequency,
@@ -545,8 +545,6 @@ public static class BackupUtils
         public PeriodicBackupConfiguration Configuration { get; set; }
 
         public PeriodicBackupStatus BackupStatus { get; set; }
-
-        public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 
         public string NodeTag { get; set; }
 

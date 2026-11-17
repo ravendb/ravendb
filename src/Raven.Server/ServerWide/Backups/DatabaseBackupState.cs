@@ -38,8 +38,6 @@ namespace Raven.Server.ServerWide.Backups
 
         public DateTime StartTimeInUtc { get; set; }
 
-        public DateTime? DatabaseWakeUpTimeUtc { get; set; }
-
         public MultipleUseFlag Stale { get; } = new();
 
         private readonly BackupDecisionLog _decisionLog = new(BackupDecisionTracker.MaxDecisionLogSize);
@@ -130,7 +128,6 @@ namespace Raven.Server.ServerWide.Backups
                 OnParsingError = skipErrorLog ? null : OnParsingError,
                 Configuration = Configuration,
                 BackupStatus = backupStatus,
-                DatabaseWakeUpTimeUtc = DatabaseWakeUpTimeUtc,
                 NodeTag = _serverStore.NodeTag,
                 OnMissingNextBackupInfo = skipErrorLog ? null : OnMissingNextBackupInfo
             });
