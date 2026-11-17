@@ -2828,6 +2828,70 @@ namespace FastTests.Client
             }
         }
 
+        private struct ImmutableMeasure
+        {
+            public readonly long Count;
+
+            public readonly double Rate;
+
+            public string Name { get; }
+
+            public ImmutableMeasure(string name, long count, double rate)
+            {
+                Name = name;
+                Count = count;
+                Rate = rate;
+            }
+        }
+
+        private class HoldsImmutableMeasure
+        {
+            public ImmutableMeasure Measure { get; set; }
+
+            public ImmutableMeasure? Maybe { get; set; }
+
+            public List<ImmutableMeasure> Many { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ImmutableStructIsCreatedThroughItsConstructor()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            const string measure = "{\"Count\":2,\"Rate\":1.5,\"Name\":\"n\"}";
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(measure, "root"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<ImmutableMeasure>(json);
+
+                    Assert.Equal("n", loaded.Name);
+                    Assert.Equal(2, loaded.Count);
+                    Assert.Equal(1.5, loaded.Rate);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Measure\":" + measure + ",\"Maybe\":" + measure + ",\"Many\":[" + measure + ",{\"Name\":\"partial\"}]}", "holder"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<HoldsImmutableMeasure>(json);
+
+                    Assert.Equal("n", loaded.Measure.Name);
+                    Assert.Equal(2, loaded.Measure.Count);
+                    Assert.Equal(1.5, loaded.Measure.Rate);
+                    Assert.Equal(2, loaded.Maybe.Value.Count);
+                    Assert.Equal(2, loaded.Many.Count);
+                    Assert.Equal(1.5, loaded.Many[0].Rate);
+                    Assert.Equal("partial", loaded.Many[1].Name);
+                    Assert.Equal(0, loaded.Many[1].Count);
+
+                    using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(loaded, context))
+                    {
+                        Assert.True(written.TryGet(nameof(HoldsImmutableMeasure.Measure), out BlittableJsonReaderObject writtenMeasure));
+                        Assert.Equal(measure, writtenMeasure.ToString());
+                    }
+                }
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
