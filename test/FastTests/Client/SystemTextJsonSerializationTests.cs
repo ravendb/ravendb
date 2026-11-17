@@ -2758,6 +2758,34 @@ namespace FastTests.Client
             }
         }
 
+        private class PartlyBoundCollection
+        {
+            public PartlyBoundCollection(List<int> items, string name, int notAMember)
+            {
+                Items = items ?? new List<int>();
+                Name = name;
+            }
+
+            public List<int> Items { get; }
+
+            public string Name { get; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void CollectionPassedThroughAPartlyBoundConstructorIsNotPopulatedAgain()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Items\":[1,2],\"Name\":\"n\"}", "partly"))
+            {
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<PartlyBoundCollection>(json);
+
+                Assert.Equal([1, 2], loaded.Items);
+                Assert.Equal("n", loaded.Name);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

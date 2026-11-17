@@ -406,8 +406,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AddMetadataIdentityProperties(typeInfo, extensionData);
             SetupNonPublicConstructor(typeInfo);
             bool constructedWithParameters = typeInfo.CreateObject == null;
-            SetupUnboundParameterizedConstructor(typeInfo);
-            PopulateReadOnlyMembers(typeInfo, constructedWithParameters);
+            JsonPropertyInfo[] constructorProperties = SetupUnboundParameterizedConstructor(typeInfo);
+            PopulateReadOnlyMembers(typeInfo, constructedWithParameters, constructorProperties);
             PopulateInitializedOpenMembers(typeInfo, constructedWithParameters);
             ApplyNewtonsoftReadOnlyFieldSetters(typeInfo);
             SetupIdentityPropertyConditionalSerialization(typeInfo);
@@ -1364,18 +1364,18 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
-        private static void SetupUnboundParameterizedConstructor(JsonTypeInfo typeInfo)
+        private static JsonPropertyInfo[] SetupUnboundParameterizedConstructor(JsonTypeInfo typeInfo)
         {
             if (typeInfo.CreateObject != null || typeInfo.Type.IsAbstract || typeInfo.Type.IsInterface)
-                return;
+                return null;
 
             ConstructorInfo constructor = GetParameterizedConstructor(typeInfo.Type);
             if (constructor == null)
-                return;
+                return null;
 
             ParameterInfo[] parameters = constructor.GetParameters();
             if (parameters.Length == 0)
-                return;
+                return null;
 
             var properties = new JsonPropertyInfo[parameters.Length];
             var defaults = new object[parameters.Length];
@@ -1393,7 +1393,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
 
             if (allBound)
-                return;
+                return null;
 
             typeInfo.CreateObject = () =>
             {
@@ -1404,6 +1404,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             if (anyBound)
                 _boundConstructors.Add(typeInfo, new BoundConstructor(parameters, properties, defaults));
+
+            return properties;
         }
 
         private static JsonPropertyInfo FindBoundProperty(JsonTypeInfo typeInfo, ParameterInfo parameter)
@@ -1432,13 +1434,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return publicConstructors.Length == 1 ? publicConstructors[0] : null;
         }
 
-        private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo, bool constructedWithParameters)
+        private static void PopulateReadOnlyMembers(JsonTypeInfo typeInfo, bool constructedWithParameters, JsonPropertyInfo[] constructorProperties)
         {
             JsonSerializerOptions options = typeInfo.Options;
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
                 if (property.Set != null || property.Get == null || property.PropertyType.IsValueType || property.PropertyType == typeof(string))
+                    continue;
+
+                if (constructorProperties != null && Array.IndexOf(constructorProperties, property) >= 0)
                     continue;
 
                 bool isCollection = typeof(IEnumerable).IsAssignableFrom(property.PropertyType);
