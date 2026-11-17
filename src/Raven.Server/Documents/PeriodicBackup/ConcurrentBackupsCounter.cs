@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
 
+        internal Action RunningBackupsChanged { get; set; }
+
         public int CurrentNumberOfRunningBackups
         {
             get
@@ -83,6 +85,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
 
+            RunningBackupsChanged?.Invoke();
+
             if (logger.IsInfoEnabled)
                 logger.Info($"Starting backup task '{backupName}'");
         }
@@ -103,6 +107,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _runningBackupsPerDatabase[databaseName] = runningBackups - 1;
                 }
             }
+
+            RunningBackupsChanged?.Invoke();
 
             if (logger.IsInfoEnabled)
             {

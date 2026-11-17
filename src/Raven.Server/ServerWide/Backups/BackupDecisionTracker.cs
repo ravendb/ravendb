@@ -37,7 +37,7 @@ public sealed class BackupDecisionTracker
 
     private TaskCompletionSource<object> _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    private BackupDecisionLogSummary _summary;
+    private BackupDecisionLogSummary _scheduleSummary;
 
     private long _summaryVersion;
 
@@ -63,6 +63,7 @@ public sealed class BackupDecisionTracker
     internal void Start()
     {
         _runnerStartTime = DateTime.UtcNow;
+        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged = OnRunningBackupsChanged;
     }
 
     internal static string GetCancelReasonText(string cancelReason)
@@ -86,11 +87,18 @@ public sealed class BackupDecisionTracker
         }
     }
 
-    internal BackupDecision AddDecision(BackupDecisionLog decisionLog, BackupDecisionCategory category, string detail, string reason, DateTime now)
+    internal void AddDecision(DatabaseBackupState backupState, BackupDecisionLog decisionLog, BackupDecisionCategory category, string detail, string reason, DateTime now)
     {
         lock (_decisionEtagLock)
         {
-            return decisionLog.Add(category, detail, reason, now, NextDecisionId, NextDecisionEtag);
+            var decision = decisionLog.Add(category, detail, reason, now, NextDecisionId, NextDecisionEtag);
+
+            if (category is BackupDecisionCategory.Completed or BackupDecisionCategory.Failed)
+            {
+                OnBackupOutcome(backupState, decision);
+                _summaryVersion++;
+                TaskExecutor.CompleteAndReplace(ref _changed);
+            }
         }
     }
 
@@ -149,11 +157,11 @@ public sealed class BackupDecisionTracker
     {
         try
         {
-            var summary = GetSummary(DateTime.UtcNow);
+            var scheduleSummary = GetScheduleSummary(DateTime.UtcNow);
 
             lock (_decisionEtagLock)
             {
-                _summary = summary;
+                _scheduleSummary = scheduleSummary;
                 _summaryVersion++;
                 TaskExecutor.CompleteAndReplace(ref _changed);
             }
@@ -165,7 +173,7 @@ public sealed class BackupDecisionTracker
         }
     }
 
-    internal void OnBackupOutcome(DatabaseBackupState backupState, BackupDecision decision)
+    private void OnBackupOutcome(DatabaseBackupState backupState, BackupDecision decision)
     {
         var outcome = new BackupDecisionLogSummary.Outcome
         {
@@ -176,18 +184,24 @@ public sealed class BackupDecisionTracker
             Error = decision.Category == BackupDecisionCategory.Failed ? decision.Reason : null
         };
 
+        if (decision.Category == BackupDecisionCategory.Failed)
+        {
+            _failedCount++;
+            _latestFailure = outcome;
+        }
+        else
+        {
+            _completedCount++;
+            _latestCompletion = outcome;
+        }
+    }
+
+    private void OnRunningBackupsChanged()
+    {
         lock (_decisionEtagLock)
         {
-            if (decision.Category == BackupDecisionCategory.Failed)
-            {
-                _failedCount++;
-                _latestFailure = outcome;
-            }
-            else
-            {
-                _completedCount++;
-                _latestCompletion = outcome;
-            }
+            _summaryVersion++;
+            TaskExecutor.CompleteAndReplace(ref _changed);
         }
     }
 
@@ -200,16 +214,18 @@ public sealed class BackupDecisionTracker
         {
             NodeTag = nodeTag,
             RunnerStartTime = _runnerStartTime,
-            Summary = _summary ?? GetSummary(now)
+            Summary = GetSummary(now)
         };
 
         var includeFilterOptions = afterEtag == null;
+        var take = afterEtag == null ? filter.Take : int.MaxValue;
         var matches = new List<BackupDecisionLogEntry>();
         var databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tasks = new Dictionary<(string Database, long TaskId), BackupDecisionLogTask>();
 
-        foreach (var decision in _serverDecisionLog.GetDecisions(afterEtag))
-            AddIfMatches(BackupDecisionLogEntry.Create(decision, nodeTag));
+        var serverDecisions = _serverDecisionLog.GetMatchingDecisions(afterEtag, filter, take, out var totalResults);
+        foreach (var decision in serverDecisions)
+            matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag));
 
         foreach (var (_, backupStates) in _runner.BackupsPerDatabasePerTaskId)
         {
@@ -229,33 +245,55 @@ public sealed class BackupDecisionTracker
                 if (filter.MatchesTask(backupState.OriginalDatabaseName, taskId) == false)
                     continue;
 
-                foreach (var decision in backupState.GetDecisionLog(afterEtag))
-                    AddIfMatches(BackupDecisionLogEntry.Create(decision, nodeTag, backupState));
+                var taskDecisions = backupState.GetMatchingDecisions(afterEtag, filter, take, out var taskMatches);
+                foreach (var decision in taskDecisions)
+                    matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag, backupState));
+
+                totalResults += taskMatches;
             }
         }
 
-        details.TotalResults = matches.Count;
+        details.TotalResults = totalResults;
         details.Entries = matches
             .OrderByDescending(x => x.LastTime)
             .ThenByDescending(x => x.Id)
-            .Take(afterEtag == null ? filter.Take : int.MaxValue)
+            .Take(take)
             .ToList();
         details.Databases = includeFilterOptions ? databases.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList() : null;
         details.Tasks = includeFilterOptions ? tasks.Values.OrderBy(x => x.Database, StringComparer.OrdinalIgnoreCase).ThenBy(x => x.TaskId).ToList() : null;
 
         return details;
-
-        void AddIfMatches(BackupDecisionLogEntry entry)
-        {
-            if (filter.Matches(entry))
-                matches.Add(entry);
-        }
     }
 
     private BackupDecisionLogSummary GetSummary(DateTime now)
     {
+        var scheduleSummary = _scheduleSummary ?? GetScheduleSummary(now);
+        var counter = _serverStore.ConcurrentBackupsCounter;
+
+        var summary = new BackupDecisionLogSummary
+        {
+            WaitingForSchedule = scheduleSummary.WaitingForSchedule,
+            HeldBack = scheduleSummary.HeldBack,
+            ServerBlock = scheduleSummary.ServerBlock
+        };
+
+        summary.Running.Current = counter.CurrentNumberOfRunningBackups;
+        summary.Running.Max = counter.MaxNumberOfConcurrentBackups;
+
+        lock (_decisionEtagLock)
+        {
+            summary.Failed.Count = _failedCount;
+            summary.Failed.Latest = _latestFailure;
+            summary.Completed.Count = _completedCount;
+            summary.Completed.Latest = _latestCompletion;
+        }
+
+        return summary;
+    }
+
+    private BackupDecisionLogSummary GetScheduleSummary(DateTime now)
+    {
         var summary = new BackupDecisionLogSummary();
-        summary.Running.Max = _serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups;
 
         var activeWindow = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan * 2;
 
@@ -330,16 +368,6 @@ public sealed class BackupDecisionTracker
                     summary.WaitingForSchedule.NextBackupTaskName = backupState.Configuration.Name;
                 }
             }
-        }
-
-        summary.Running.Current = _serverStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
-
-        lock (_decisionEtagLock)
-        {
-            summary.Failed.Count = _failedCount;
-            summary.Failed.Latest = _latestFailure;
-            summary.Completed.Count = _completedCount;
-            summary.Completed.Latest = _latestCompletion;
         }
 
         return summary;

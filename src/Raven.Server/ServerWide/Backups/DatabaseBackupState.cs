@@ -147,11 +147,7 @@ namespace Raven.Server.ServerWide.Backups
 
         public void AddToDecisionLog(BackupDecisionCategory category, string detail, string reason, DateTime now)
         {
-            var decisions = _serverStore.ServerBackupRunner.Decisions;
-            var decision = decisions.AddDecision(_decisionLog, category, detail, reason, now);
-
-            if (category is BackupDecisionCategory.Completed or BackupDecisionCategory.Failed)
-                decisions.OnBackupOutcome(this, decision);
+            _serverStore.ServerBackupRunner.Decisions.AddDecision(this, _decisionLog, category, detail, reason, now);
         }
 
         internal void CancelRunningBackup(string reason)
@@ -218,9 +214,14 @@ namespace Raven.Server.ServerWide.Backups
             };
         }
 
-        public List<BackupDecision> GetDecisionLog(long? afterEtag = null)
+        public List<BackupDecision> GetDecisionLog()
         {
-            return _decisionLog.GetDecisions(afterEtag);
+            return _decisionLog.GetDecisions();
+        }
+
+        internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, BackupDecisionLogFilter filter, int take, out int totalMatches)
+        {
+            return _decisionLog.GetMatchingDecisions(afterEtag, filter, take, out totalMatches);
         }
 
         public bool TryGetLatestDecision(out BackupDecision decision)
