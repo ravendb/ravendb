@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
 
-        internal Action RunningBackupsChanged { get; set; }
+        internal event Action<bool> RunningBackupsChanged;
 
         public int CurrentNumberOfRunningBackups
         {
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
 
-            RunningBackupsChanged?.Invoke();
+            RunningBackupsChanged?.Invoke(false);
 
             if (logger.IsInfoEnabled)
                 logger.Info($"Starting backup task '{backupName}'");
@@ -93,10 +93,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
         {
+            bool fullLimitFreed;
+
             lock (_locker)
             {
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups) == false)
                     throw new InvalidOperationException("Tried to finish a backup which wasn't even started!");
+
+                var wasFull = _runningBackupsPerDatabase.Count >= MaxNumberOfConcurrentBackups;
 
                 if (runningBackups - 1 == 0)
                 {
@@ -106,9 +110,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups - 1;
                 }
+
+                fullLimitFreed = wasFull && _runningBackupsPerDatabase.Count < MaxNumberOfConcurrentBackups;
             }
 
-            RunningBackupsChanged?.Invoke();
+            RunningBackupsChanged?.Invoke(fullLimitFreed);
 
             if (logger.IsInfoEnabled)
             {
