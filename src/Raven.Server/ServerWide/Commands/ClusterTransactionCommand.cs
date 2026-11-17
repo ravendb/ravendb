@@ -867,7 +867,7 @@ namespace Raven.Server.ServerWide.Commands
                     [nameof(PreviousCount)] = PreviousCount,
                     [nameof(Index)] = Index,
                     [nameof(Options)] = Options.ToJson(),
-                    [nameof(Index)] = new DynamicJsonArray(Commands),
+                    [nameof(Commands)] = new DynamicJsonArray(Commands),
                     [nameof(ShardNumber)] = ShardNumber
                 };
             }
