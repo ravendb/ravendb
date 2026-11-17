@@ -6,6 +6,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class BlittableJsonConverter : BlittableJsonConverterBase, IBlittableJsonConverter
     {
+        private IJsonSerializer _serializer;
+
         public BlittableJsonConverter(ISerializationConventions conventions)
             : base(conventions)
         {
@@ -34,8 +36,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var jsonSerializer = ((ISerializationConventions)Conventions).CreateSerializer();
-            return ToBlittable(entity, context, jsonSerializer);
+            return ToBlittable(entity, context, _serializer ??= ((ISerializationConventions)Conventions).CreateSerializer());
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, JsonOperationContext context, IJsonSerializer jsonSerializer)
@@ -43,10 +44,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
-            Type type = entity.GetType();
             return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: false,
-                () => serializer.SerializeToBlittable(entity, type, context));
+                (SystemTextJsonJsonSerializer)jsonSerializer, metadata: null, documentInfo: null);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context)
@@ -54,8 +53,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var jsonSerializer = ((ISerializationConventions)Conventions).CreateSerializer();
-            return ToBlittable(entity, metadata, context, jsonSerializer);
+            return ToBlittable(entity, metadata, context, _serializer ??= ((ISerializationConventions)Conventions).CreateSerializer());
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context, IJsonSerializer jsonSerializer)
@@ -63,10 +61,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (entity is BlittableJsonReaderObject bjro)
                 return bjro;
 
-            var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
-            Type type = entity.GetType();
             return ConvertToBlittable(entity, Conventions.Conventions, context, removeIdentityProperty: true,
-                () => serializer.SerializeToBlittableWithMetadata(entity, type, metadata, context));
+                (SystemTextJsonJsonSerializer)jsonSerializer, metadata, documentInfo: null);
         }
     }
 }

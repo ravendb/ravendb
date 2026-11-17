@@ -111,10 +111,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (documentInfo != null)
                 _session.OnBeforeConversionToDocumentInvoke(documentInfo.Id, entity);
 
-            var serializer = (SystemTextJsonJsonSerializer)_session.JsonSerializer;
-            Type type = entity.GetType();
             BlittableJsonReaderObject document = ConvertToBlittable(entity, _session.Conventions, _session.Context, removeIdentityProperty: true,
-                () => serializer.SerializeToBlittable(entity, type, documentInfo, _session.Context));
+                (SystemTextJsonJsonSerializer)_session.JsonSerializer, metadata: null, documentInfo);
 
             document = RestoreMissingProperties(entity, document, _session.Context);
 

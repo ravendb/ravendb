@@ -60,8 +60,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             var buffer = new ContextMemoryBufferWriter(context);
             try
             {
-                using (var writer = new Utf8JsonWriter((IBufferWriter<byte>)buffer, SystemTextJsonSerializationConventions.WriterOptions))
+                Utf8JsonWriter writer = RentWriter(ref _entityWriter, buffer, SystemTextJsonSerializationConventions.WriterOptions);
+                try
+                {
                     SerializeValue(writer, value, objectType);
+                    writer.Flush();
+                }
+                finally
+                {
+                    ReturnWriter(ref _entityWriter, writer);
+                }
 
                 return buffer;
             }
@@ -72,24 +80,51 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
         }
 
-        internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
+        [ThreadStatic]
+        private static Utf8JsonWriter _entityWriter;
+
+        [ThreadStatic]
+        private static Utf8JsonWriter _metadataWriter;
+
+        private static Utf8JsonWriter RentWriter(ref Utf8JsonWriter cached, IBufferWriter<byte> buffer, JsonWriterOptions options)
         {
-            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
-            return ParseBufferToBlittable(buffer, context);
+            Utf8JsonWriter writer = cached;
+            if (writer == null)
+                return new Utf8JsonWriter(buffer, options);
+
+            cached = null;
+            writer.Reset(buffer);
+            return writer;
         }
 
-        internal BlittableJsonReaderObject SerializeToBlittableWithMetadata(object value, Type objectType, IMetadataDictionary metadata, JsonOperationContext context)
+        private static void ReturnWriter(ref Utf8JsonWriter cached, Utf8JsonWriter writer)
         {
-            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
-            AppendMetadata(buffer, objectType, metadata);
-            return ParseBufferToBlittable(buffer, context);
+            writer.Reset(DetachedOutput.Instance);
+            cached = writer;
         }
 
-        internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, DocumentInfo documentInfo, JsonOperationContext context)
+        private sealed class DetachedOutput : IBufferWriter<byte>
+        {
+            public static readonly DetachedOutput Instance = new();
+
+            private readonly byte[] _buffer = new byte[256];
+
+            public void Advance(int count)
+            {
+            }
+
+            public Memory<byte> GetMemory(int sizeHint = 0) => sizeHint <= _buffer.Length ? _buffer : new byte[sizeHint];
+
+            public Span<byte> GetSpan(int sizeHint = 0) => GetMemory(sizeHint).Span;
+        }
+
+        internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, IMetadataDictionary metadata, DocumentInfo documentInfo, JsonOperationContext context)
         {
             using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
             if (documentInfo != null)
                 AppendMetadata(buffer, objectType, documentInfo);
+            else
+                AppendMetadata(buffer, objectType, metadata);
 
             return ParseBufferToBlittable(buffer, context);
         }
@@ -99,8 +134,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (metadata == null || metadata.Count == 0)
                 return;
 
-            using (Utf8JsonWriter metadataWriter = OpenMetadata(buffer, objectType))
+            Utf8JsonWriter metadataWriter = OpenMetadata(buffer, objectType);
+            try
+            {
                 SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
+                metadataWriter.Flush();
+            }
+            finally
+            {
+                ReturnWriter(ref _metadataWriter, metadataWriter);
+            }
 
             buffer.WriteByte((byte)'}');
         }
@@ -112,7 +155,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (hasModifications == false && documentInfo.Metadata == null && documentInfo.MetadataInstance == null && documentInfo.Collection == null)
                 return;
 
-            using (Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType))
+            Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType);
+            try
             {
                 var sink = new Utf8JsonMetadataValueSink(metadataWriter);
                 if (hasModifications)
@@ -154,6 +198,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                     sink.WriteEndObject();
                 }
+
+                metadataWriter.Flush();
+            }
+            finally
+            {
+                ReturnWriter(ref _metadataWriter, metadataWriter);
             }
 
             bufferWriter.WriteByte((byte)'}');
@@ -170,7 +220,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (hasProperties)
                 bufferWriter.WriteByte((byte)',');
 
-            var metadataWriter = new Utf8JsonWriter((IBufferWriter<byte>)bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions);
+            Utf8JsonWriter metadataWriter = RentWriter(ref _metadataWriter, bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions);
             metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);
             return metadataWriter;
         }

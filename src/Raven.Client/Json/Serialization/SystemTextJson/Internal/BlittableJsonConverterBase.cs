@@ -183,7 +183,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             DocumentConventions conventions,
             JsonOperationContext context,
             bool removeIdentityProperty,
-            Func<BlittableJsonReaderObject> serialize)
+            SystemTextJsonJsonSerializer serializer,
+            IMetadataDictionary metadata,
+            DocumentInfo documentInfo)
         {
             var type = entity.GetType();
             var isDynamicObject = entity is IDynamicMetaObjectProvider;
@@ -194,11 +196,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (useResolver)
             {
                 using (RavenJsonTypeInfoResolver.EnterRoot(entity, removeIdentityProperty, hasIdentityProperty))
-                    reader = serialize();
+                    reader = serializer.SerializeToBlittable(entity, type, metadata, documentInfo, context);
             }
             else
             {
-                reader = serialize();
+                reader = serializer.SerializeToBlittable(entity, type, metadata, documentInfo, context);
             }
 
             if (useResolver == false || hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
