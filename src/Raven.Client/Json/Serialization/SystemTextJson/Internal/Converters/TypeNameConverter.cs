@@ -104,7 +104,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (declaredType.IsValueType || declaredType == typeof(string) || declaredType.IsPointer || declaredType.IsByRef)
                 return false;
 
-            if (IsSparrowType(declaredType) || HasConverter(declaredType, options))
+            if (IsSparrowType(declaredType) || IsJsonNode(declaredType) || HasConverter(declaredType, options))
                 return false;
 
             if (TryGetDictionaryTypes(declaredType, out _, out Type valueType))
@@ -124,8 +124,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (itemType.IsValueType || itemType == typeof(string) || itemType.IsSealed)
                 return false;
 
-            return IsSparrowType(itemType) == false && HasConverter(itemType, options) == false;
+            return IsSparrowType(itemType) == false && IsJsonNode(itemType) == false && HasConverter(itemType, options) == false;
         }
+
+        private static bool IsJsonNode(Type type) => typeof(JsonNode).IsAssignableFrom(type);
 
         private static bool IsOpen(Type type) => type.IsInterface || type.IsAbstract || type.IsSealed == false;
 
@@ -648,6 +650,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         {
             if (reader.TokenType == JsonTokenType.Null)
                 return null;
+
+            if (IsJsonNode(declaredType))
+                return ReadTyped(ref reader, declaredType, options);
 
             if (reader.TokenType == JsonTokenType.StartObject)
             {
