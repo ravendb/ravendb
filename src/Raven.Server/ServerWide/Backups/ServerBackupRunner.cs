@@ -46,6 +46,8 @@ public class ServerBackupRunner : IDisposable
 
     private readonly ConcurrentQueue<DatabaseBackupState> _backupQueue = new();
 
+    private readonly ManualResetEventSlim _wakeUp = new(false);
+
     internal readonly ConcurrentDictionary<string, ConcurrentDictionary<long, DatabaseBackupState>> BackupsPerDatabasePerTaskId = new(StringComparer.OrdinalIgnoreCase);
 
     private List<IServerBackupPolicy> _serverBackupPolicies;
@@ -73,6 +75,7 @@ public class ServerBackupRunner : IDisposable
     public void Initialize()
     {
         Decisions.Start();
+        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged += OnRunningBackupsChanged;
 
         _serverBackupPolicies =
         [
@@ -114,6 +117,8 @@ public class ServerBackupRunner : IDisposable
 
     private void Run(object state)
     {
+        var waitHandles = new[] { _serverStore.ServerShutdown.WaitHandle, _wakeUp.WaitHandle };
+
         try
         {
             while (_serverStore.ServerShutdown.IsCancellationRequested == false)
@@ -157,7 +162,8 @@ public class ServerBackupRunner : IDisposable
 
                 Decisions.RefreshSummary();
 
-                _serverStore.ServerShutdown.WaitHandle.WaitOne(GetWaitBeforeNextRun(failedServerPolicy));
+                WaitHandle.WaitAny(waitHandles, GetWaitBeforeNextRun(failedServerPolicy));
+                _wakeUp.Reset();
             }
         }
         catch (Exception e)
@@ -970,6 +976,7 @@ public class ServerBackupRunner : IDisposable
         if (thread != null && thread != PoolOfThreads.LongRunningWork.Current)
             thread.Join(int.MaxValue);
 
+        _wakeUp.Dispose();
     }
 
     private void StopTracking(string trackedName, ConcurrentDictionary<long, DatabaseBackupState> backupStates)
@@ -1591,6 +1598,12 @@ public class ServerBackupRunner : IDisposable
 
         var concurrentBackupsDelay = _serverStore.Configuration.Backup.ConcurrentBackupsDelay.AsTimeSpan;
         return concurrentBackupsDelay < runnerFrequency ? concurrentBackupsDelay : runnerFrequency;
+    }
+
+    private void OnRunningBackupsChanged(bool fullLimitFreed)
+    {
+        if (fullLimitFreed)
+            _wakeUp.Set();
     }
 
     internal void AddDatabaseAlert(string databaseName, AlertRaised alert)

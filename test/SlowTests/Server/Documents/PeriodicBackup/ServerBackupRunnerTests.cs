@@ -18,6 +18,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
@@ -27,6 +28,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -484,6 +486,54 @@ public class ServerBackupRunnerTests : ClusterTestBase
         {
             using (notificationCenter.Storage.Read(id, out var stored))
                 return stored != null && stored.Json.TryGet(nameof(AlertRaised.Message), out string message) ? message : null;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ScheduledBackupMustStartAsSoonAsAConcurrentBackupPlaceFrees()
+    {
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = "1",
+                [RavenConfiguration.GetKey(x => x.Backup.BackupRunnerFrequency)] = "60",
+                [RavenConfiguration.GetKey(x => x.Backup.ConcurrentBackupsDelay)] = "60"
+            }
+        });
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var counter = server.ServerStore.ConcurrentBackupsCounter;
+        var logger = RavenLogManager.Instance.CreateNullLogger();
+        counter.StartBackup("OtherDatabase", "OtherBackup", logger, enforceLimit: true);
+        var placeFreed = false;
+
+        try
+        {
+            var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+
+            var runner = server.ServerStore.ServerBackupRunner;
+            var state = await WaitForStateAsync(runner, store.Database, taskId);
+            Assert.True(WaitForValue(() => state.NextBackup != null, true), "precondition: the first backup is scheduled");
+            var dueUtc = state.NextBackup.DateTime;
+
+            Assert.True(WaitForValue(() => runner.Decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Take = 50 }, afterEtag: null).Entries
+                    .Any(x => x.Source == BackupDecisionSource.Server && x.Detail == "ConcurrentBackup" && x.LastTime > dueUtc), true, timeout: 150_000, interval: 250),
+                "precondition: the due backup waits for a free concurrent backup place");
+
+            var freedUtc = DateTime.UtcNow;
+            counter.FinishBackup("OtherDatabase", "OtherBackup", backupStatus: null, elapsed: null, logger);
+            placeFreed = true;
+
+            Assert.True(WaitForValue(() => Decisions(server, store.Database, taskId).Any(x => x.Category == BackupDecisionCategory.Started && x.FirstTime >= freedUtc), true,
+                    timeout: 15_000, interval: 100),
+                $"The waiting backup didn't start right after a concurrent backup place freed.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+        }
+        finally
+        {
+            if (placeFreed == false)
+                counter.FinishBackup("OtherDatabase", "OtherBackup", backupStatus: null, elapsed: null, logger);
         }
     }
 

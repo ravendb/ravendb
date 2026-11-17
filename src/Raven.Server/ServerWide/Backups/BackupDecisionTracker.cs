@@ -63,7 +63,7 @@ public sealed class BackupDecisionTracker
     internal void Start()
     {
         _runnerStartTime = DateTime.UtcNow;
-        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged = OnRunningBackupsChanged;
+        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged += _ => OnRunningBackupsChanged();
     }
 
     internal static string GetCancelReasonText(string cancelReason)
