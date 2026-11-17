@@ -2725,6 +2725,39 @@ namespace FastTests.Client
             }
         }
 
+        private class UnsignedVector
+        {
+            public RavenVector<ulong> Vector { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Vector)]
+        public void UnsignedLongVectorIsReadFromValuesAboveTheSignedRange()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var entity = new UnsignedVector { Vector = new RavenVector<ulong>([1UL, 5000000000UL, ulong.MaxValue]) };
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<UnsignedVector>(json);
+                    Assert.Equal([1UL, 5000000000UL, ulong.MaxValue], loaded.Vector.Embedding);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Vector\":{\"@vector\":[1,18446744073709551615]}}", "newtonsoft"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<UnsignedVector>(json);
+                    Assert.Equal([1UL, ulong.MaxValue], loaded.Vector.Embedding);
+                }
+
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Vector\":{\"@vector\":[1,7]}}", "small"))
+                {
+                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<UnsignedVector>(json);
+                    Assert.Equal([1UL, 7UL], loaded.Vector.Embedding);
+                }
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
