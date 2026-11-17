@@ -361,6 +361,35 @@ public class ServerBackupRunnerTests : ClusterTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ScheduledBackupsMustWaitForTheServerStartupGracePeriod()
+    {
+        var gracePeriod = TimeSpan.FromSeconds(90);
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Backup.ServerStartupGracePeriod)] = ((int)gracePeriod.TotalSeconds).ToString()
+            }
+        });
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+        var graceEndUtc = server.Statistics.StartUpTime + gracePeriod;
+
+        BackupDecision started = null;
+        Assert.True(await WaitForValueAsync(() =>
+            {
+                started = Decisions(server, store.Database, taskId).LastOrDefault(d => d.Category == BackupDecisionCategory.Started);
+                return Task.FromResult(started != null);
+            }, true, timeout: 180_000, interval: 1000),
+            $"The scheduled backup didn't start after the server startup grace period.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+        Assert.True(started.FirstTime >= graceEndUtc,
+            $"The scheduled backup started at '{started.FirstTime:HH:mm:ss.fff}', before the server startup grace period ended at '{graceEndUtc:HH:mm:ss.fff}'.");
+    }
+
     private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)
     {
         var buffer = new byte[64 * 1024];
