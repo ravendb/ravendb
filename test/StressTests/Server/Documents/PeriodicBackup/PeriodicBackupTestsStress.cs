@@ -197,7 +197,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                         $"Expected PeriodicBackup with pinned to mentor node '{mentorNode}' to have no scheduled next backup " +
                         $"on Node '{server.ServerStore.NodeTag}', but it did.");
 
-                    Assert.True(backup.BackupStatus?.LastFullBackup == null && backup.BackupStatus?.LastIncrementalBackup == null && backup.BackupStatus?.LastOperationId == null,
+                    Assert.True(backup.BackupStatus?.LastFullBackup == null && backup.BackupStatus?.LastIncrementalBackup == null && backup.BackupStatus?.LastOperationId == null &&
+                                backup.BackupStatus?.Error == null && backup.BackupStatus?.LastFullBackupInternal == null && backup.BackupStatus?.LastIncrementalBackupInternal == null,
                         $"Expected no backup on Node '{server.ServerStore.NodeTag}' as " +
                         $"PeriodicBackup is pinned to mentor node '{mentorNode}', but a backup was performed.");
                 }
