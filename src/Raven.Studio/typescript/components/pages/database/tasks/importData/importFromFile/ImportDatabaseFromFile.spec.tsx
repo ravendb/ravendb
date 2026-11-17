@@ -656,6 +656,30 @@ describe("ImportDatabaseFromFile", () => {
             expect(screen.getByRole("textbox", { name: "Collections to import" })).toHaveValue("orders");
         });
 
+        it("checks the current list when names are added with Enter more than once", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick, fillInput, user } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            const input = screen.getByRole("textbox", { name: "Collections to import" });
+
+            await fillInput(input, "Orders, Employees");
+            await user.keyboard("{Enter}");
+            await waitFor(() => expect(getSwitch(rendered, "Employees")).toBeChecked());
+
+            await fillInput(input, "orders, Products");
+            await user.keyboard("{Enter}");
+
+            expect(await screen.findByText('"orders" is already on the list')).toBeInTheDocument();
+            expect(getSwitch(rendered, "Orders")).toBeChecked();
+            expect(getSwitch(rendered, "Employees")).toBeChecked();
+            expect(getSwitch(rendered, "Products")).toBeChecked();
+
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Orders", "Employees", "Products"]);
+        });
+
         it("ignores the listed names when switching back to importing all collections", async () => {
             const rendered = rtlRender(<Default hasAllLicenseFeatures />);
             const { screen, fireClick } = rendered;
