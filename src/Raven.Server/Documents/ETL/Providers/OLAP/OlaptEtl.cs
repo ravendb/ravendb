@@ -16,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -55,7 +56,13 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         public override bool ShouldTrackTimeSeries() => false;
 
-        protected override void WaitBeforeFirstRun() => _waitForChanges.Wait(CancellationToken);
+        protected override void WaitBeforeFirstRun()
+        {
+            if (Database is ShardedDocumentDatabase)
+                return;
+
+            _waitForChanges.Wait(CancellationToken);
+        }
 
         public override void NotifyAboutWork(DatabaseChange change)
         {
