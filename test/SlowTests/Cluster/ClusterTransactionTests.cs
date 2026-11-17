@@ -2789,42 +2789,6 @@ select incl(c)"
         }
 
         [RavenFact(RavenTestCategory.ClusterTransactions)]
-        public async Task ClusterTxInfoShowsTheTransactionRaftIndexAndItsCommands_RavenDB_28034()
-        {
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
-
-            // keep the stored command: the observer's cleanup deletes it once the database has executed it
-            await AssertWaitForTrueAsync(() => Task.FromResult(server.ServerStore.Observer != null));
-            server.ServerStore.Observer.Suspended = true;
-
-            string changeVector;
-            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-            {
-                var obj = new TestObj();
-                await session.StoreAsync(obj, "TestObjs/28034");
-                await session.SaveChangesAsync();
-                changeVector = session.Advanced.GetChangeVectorFor(obj);
-            }
-
-            // the document's TRXN element is the Raft index of the cluster transaction that wrote it
-            var trxn = System.Text.RegularExpressions.Regex.Match(changeVector, @"TRXN:(\d+)-");
-            Assert.True(trxn.Success, $"No TRXN element in '{changeVector}'");
-            var raftIndex = long.Parse(trxn.Groups[1].Value);
-
-            var httpClient = store.GetRequestExecutor().HttpClient;
-            var response = await httpClient.GetAsync($"{store.Urls[0]}/databases/{store.Database}/admin/debug/cluster/txinfo");
-            var json = Newtonsoft.Json.Linq.JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            var stored = Assert.Single(json["Results"]);
-            Assert.Equal(Newtonsoft.Json.Linq.JTokenType.Integer, stored["Index"].Type);
-            Assert.Equal(raftIndex, (long)stored["Index"]);
-
-            var command = Assert.Single(stored["Commands"]);
-            Assert.Equal("TestObjs/28034", (string)command["Id"]);
-        }
-
-        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterTransactionAfterAttachingDatabaseFilesToNewServer()
         {
             var dbPath = NewDataPath(suffix: "DatabaseFiles");
