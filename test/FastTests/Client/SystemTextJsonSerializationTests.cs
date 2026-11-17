@@ -2372,6 +2372,44 @@ namespace FastTests.Client
             }
         }
 
+        private class RequiredIdentity
+        {
+            public required string Id { get; set; }
+
+            public required string Name { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task CanLoadEntityWithRequiredIdentityProperty()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new RequiredIdentity { Id = "required/1", Name = "name" });
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("required/1");
+                Assert.False(raw.TryGetMember(nameof(RequiredIdentity.Id), out _));
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<RequiredIdentity>("required/1");
+                Assert.Equal("required/1", loaded.Id);
+                Assert.Equal("name", loaded.Name);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -1932,6 +1932,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 if (isIdentityProperty)
                 {
+                    property.IsRequired = false;
                     AndShouldSerialize(property, ShouldSerializeIdentityProperty);
                     break;
                 }
