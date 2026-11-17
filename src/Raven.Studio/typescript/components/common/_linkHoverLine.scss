@@ -1,0 +1,21 @@
+@mixin link-hover-line($color, $width, $offset, $easing) {
+    &::after {
+        content: "";
+        position: absolute;
+        right: 7.5%;
+        bottom: $offset;
+        left: 7.5%;
+        border-bottom: $width solid $color;
+        transform: scaleX(0);
+        transition: transform 0.2s $easing 0.05s;
+        pointer-events: none;
+    }
+}
+
+@mixin link-hover-line-shown($color) {
+    &::after {
+        border-bottom-color: $color;
+        transform: scaleX(1);
+        transition: transform 0.35s cubic-bezier(0, 1.7, 0.4, 0.8);
+    }
+}

@@ -5,6 +5,7 @@ import {
     useDocumentColumnsProvider,
 } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
 import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
@@ -313,9 +314,7 @@ function createMetadataColumns(
 
                 return (
                     <CellWithCopy value={collection}>
-                        <a href={appUrl.forDocuments(collection, databaseName)} className="cell-link">
-                            {collection}
-                        </a>
+                        <CellLink href={appUrl.forDocuments(collection, databaseName)}>{collection}</CellLink>
                     </CellWithCopy>
                 );
             },

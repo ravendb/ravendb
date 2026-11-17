@@ -1,3 +1,4 @@
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import {
@@ -24,13 +25,7 @@ export default function CellDocumentId({
     const { appUrl } = useAppUrls();
     const documentUrl = appUrl.forEditDoc(id, databaseName, collection);
 
-    const idValue = hasHyperlink ? (
-        <a href={documentUrl} className="cell-link">
-            {id}
-        </a>
-    ) : (
-        <CellValue value={id} />
-    );
+    const idValue = hasHyperlink ? <CellLink href={documentUrl}>{id}</CellLink> : <CellValue value={id} />;
 
     if (previewSource) {
         return (

@@ -1,4 +1,5 @@
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import { useAppUrls } from "components/hooks/useAppUrls";
@@ -38,9 +39,7 @@ export default function CellDocumentValue({
     if (hasHyperlinkForIds && documentLink) {
         return (
             <CellWithCopy value={value} resolvePreviewValue={resolvePreviewValue}>
-                <a href={documentLink} className="cell-link">
-                    {String(value)}
-                </a>
+                <CellLink href={documentLink}>{String(value)}</CellLink>
             </CellWithCopy>
         );
     }
@@ -49,9 +48,7 @@ export default function CellDocumentValue({
     if (url) {
         return (
             <CellWithCopy value={url} resolvePreviewValue={resolvePreviewValue}>
-                <a href={url} className="cell-link">
-                    {url}
-                </a>
+                <CellLink href={url}>{url}</CellLink>
             </CellWithCopy>
         );
     }
