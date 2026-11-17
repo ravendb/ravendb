@@ -2920,6 +2920,66 @@ namespace FastTests.Client
             }
         }
 
+        private struct OpenStructShape : IOpenShape
+        {
+            public string Name { get; set; }
+
+            public int Corners { get; set; }
+        }
+
+        private class HoldsBoxedStructs
+        {
+            public IOpenShape Shape { get; set; }
+
+            public object Slot { get; set; }
+
+            public List<IOpenShape> Shapes { get; set; }
+
+            public List<object> Items { get; set; }
+
+            public Dictionary<string, IOpenShape> ByKey { get; set; }
+
+            public OpenStructShape Declared { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void StructInInterfaceOrObjectMemberIsWrittenWithItsTypeName()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var entity = new HoldsBoxedStructs
+            {
+                Shape = new OpenStructShape { Name = "shape", Corners = 3 },
+                Slot = new OpenStructShape { Name = "slot", Corners = 4 },
+                Shapes = [new OpenStructShape { Name = "listed", Corners = 5 }, new OpenSquare { Name = "square", Side = 2 }],
+                Items = [new OpenStructShape { Name = "item", Corners = 6 }, 7L, "text"],
+                ByKey = new Dictionary<string, IOpenShape> { ["k"] = new OpenStructShape { Name = "keyed", Corners = 8 } },
+                Declared = new OpenStructShape { Name = "declared", Corners = 9 }
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+            {
+                Assert.True(json.TryGet(nameof(HoldsBoxedStructs.Shape), out BlittableJsonReaderObject shape));
+                Assert.True(shape.TryGet(Constants.Json.Fields.Type, out string typeName));
+                Assert.Equal(typeof(OpenStructShape), Type.GetType(typeName));
+
+                Assert.True(json.TryGet(nameof(HoldsBoxedStructs.Declared), out BlittableJsonReaderObject declared));
+                Assert.False(declared.TryGetMember(Constants.Json.Fields.Type, out _));
+
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<HoldsBoxedStructs>(json);
+
+                Assert.Equal(new OpenStructShape { Name = "shape", Corners = 3 }, Assert.IsType<OpenStructShape>(loaded.Shape));
+                Assert.Equal(new OpenStructShape { Name = "slot", Corners = 4 }, Assert.IsType<OpenStructShape>(loaded.Slot));
+                Assert.Equal(new OpenStructShape { Name = "listed", Corners = 5 }, Assert.IsType<OpenStructShape>(loaded.Shapes[0]));
+                Assert.Equal(2, Assert.IsType<OpenSquare>(loaded.Shapes[1]).Side);
+                Assert.Equal(new OpenStructShape { Name = "item", Corners = 6 }, Assert.IsType<OpenStructShape>(loaded.Items[0]));
+                Assert.Equal(7L, loaded.Items[1]);
+                Assert.Equal("text", loaded.Items[2]);
+                Assert.Equal(new OpenStructShape { Name = "keyed", Corners = 8 }, Assert.IsType<OpenStructShape>(loaded.ByKey["k"]));
+                Assert.Equal(new OpenStructShape { Name = "declared", Corners = 9 }, loaded.Declared);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
