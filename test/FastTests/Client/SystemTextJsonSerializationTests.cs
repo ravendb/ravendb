@@ -140,6 +140,103 @@ namespace FastTests.Client
             }
         }
 
+        private sealed class WriterPathChild
+        {
+            public string Name { get; set; }
+
+            public int Count { get; set; }
+        }
+
+        private sealed class WriterPathEntity
+        {
+            public string Plain { get; set; }
+
+            public string Empty { get; set; }
+
+            public string Escaped { get; set; }
+
+            public string ControlCharacters { get; set; }
+
+            public string Unicode { get; set; }
+
+            public string Long { get; set; }
+
+            public string Null { get; set; }
+
+            public int Number { get; set; }
+
+            public long Big { get; set; }
+
+            public double Fraction { get; set; }
+
+            public decimal Money { get; set; }
+
+            public bool Flag { get; set; }
+
+            public Dictionary<string, string> ByName { get; set; }
+
+            public List<string> Items { get; set; }
+
+            public List<WriterPathChild> Children { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SystemTextJsonWriterBuildsTheSameDocumentAsTheDefaultConverter()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            var entity = new WriterPathEntity
+            {
+                Plain = "plain",
+                Empty = string.Empty,
+                Escaped = "quote \" backslash \\ newline \n tab \t slash / done",
+                ControlCharacters = "a\u0001b\u001fc",
+                Unicode = "zażółć gęślą jaźń 你好 😀",
+                Long = new string('a', 300) + "\"" + new string('b', 300),
+                Null = null,
+                Number = -42,
+                Big = long.MaxValue,
+                Fraction = 1.5,
+                Money = 12345.6789m,
+                Flag = true,
+                ByName = new Dictionary<string, string>
+                {
+                    ["plain"] = "value",
+                    ["quoted \" key"] = "quoted \" value",
+                    [""] = "empty key",
+                    ["zażółć"] = "jaźń",
+                    ["line\nbreak"] = null
+                },
+                Items = ["first", "", "third \\ item"],
+                Children =
+                [
+                    new WriterPathChild { Name = "child \" one", Count = 1 },
+                    new WriterPathChild { Name = "child two", Count = 2 }
+                ]
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject expected = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+            using (var writer = conventions.Serialization.CreateWriter(context))
+            {
+                conventions.Serialization.CreateSerializer().Serialize(writer, entity);
+                writer.FinalizeDocument();
+
+                using (BlittableJsonReaderObject actual = writer.CreateReader())
+                {
+                    Assert.Equal(expected.ToString(), actual.ToString());
+
+                    Assert.True(actual.TryGet(nameof(WriterPathEntity.ByName), out BlittableJsonReaderObject byName));
+                    Assert.True(byName.TryGet("quoted \" key", out string quoted));
+                    Assert.Equal("quoted \" value", quoted);
+                    Assert.True(byName.TryGet("", out string emptyKey));
+                    Assert.Equal("empty key", emptyKey);
+                    Assert.True(byName.TryGet("zażółć", out string unicode));
+                    Assert.Equal("jaźń", unicode);
+                }
+            }
+        }
+
         private class WithDate
         {
             public DateTime Value { get; set; }
