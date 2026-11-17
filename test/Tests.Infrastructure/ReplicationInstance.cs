@@ -52,6 +52,11 @@ namespace Tests.Infrastructure
             _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
             _database.Configuration.Replication.MaxItemsCount = null;
             mre.Set();
+
+            // With BreakReplicationOnStart (the default, used by BreakReplication()) the ctor installs _replicateOnceMre and
+            // Break() replaces it right away. A handler that read DebugWaitAndRunReplicationOnce in between is blocked on
+            // _replicateOnceMre, not on the MRE released above, so release it too or replication never resumes.
+            _replicateOnceMre?.Set();
         }
 
         private void InitializeReplicateOnce()
