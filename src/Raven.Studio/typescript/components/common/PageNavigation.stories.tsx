@@ -42,8 +42,8 @@ export const SimpleFewPages: Story = {
     args: { isSimple: true, totalPages: 4 },
 };
 
-export const SinglePage: Story = {
-    args: { totalPages: 1 },
+export const SimpleSinglePage: Story = {
+    args: { isSimple: true, totalPages: 1 },
 };
 
 export const LongValues: Story = {
