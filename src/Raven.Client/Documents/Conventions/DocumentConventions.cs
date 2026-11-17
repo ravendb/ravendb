@@ -1333,14 +1333,28 @@ namespace Raven.Client.Documents.Conventions
 
         private static Type ResolveClrType(string typeName)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (System.Runtime.Loader.AssemblyLoadContext.CurrentContextualReflectionContext != null)
+                return GetTypeByName(typeName);
+#endif
+
             if (ResolvedClrTypes.TryGetValue(typeName, out Type type))
                 return type;
 
             type = GetTypeByName(typeName);
-            if (type != null)
+            if (CanCacheClrType(type))
                 ResolvedClrTypes.TryAdd(typeName, type);
 
             return type;
+        }
+
+        private static bool CanCacheClrType(Type type)
+        {
+#if NETCOREAPP3_1_OR_GREATER
+            return type is { IsCollectible: false };
+#else
+            return type != null;
+#endif
         }
 
         /// <summary>

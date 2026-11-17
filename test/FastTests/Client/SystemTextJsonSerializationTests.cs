@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Loader;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -2340,6 +2341,34 @@ namespace FastTests.Client
 
                     Assert.Equal(name + " extra", extra);
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void DefaultClrTypeResolutionFollowsTheContextualReflectionContext()
+        {
+            Type defaultType = typeof(SystemTextJsonSerializationTests);
+            string typeName = defaultType.FullName + ", " + defaultType.Assembly.GetName().Name;
+            var conventions = new DocumentConventions();
+
+            Assert.Same(defaultType, conventions.ResolveTypeFromClrTypeName(typeName));
+
+            var loadContext = new AssemblyLoadContext("clr-type-resolution", isCollectible: true);
+            try
+            {
+                loadContext.LoadFromAssemblyPath(defaultType.Assembly.Location);
+                using (loadContext.EnterContextualReflection())
+                {
+                    Type expected = Type.GetType(typeName);
+                    Assert.NotSame(defaultType, expected);
+                    Assert.Same(expected, conventions.ResolveTypeFromClrTypeName(typeName));
+                }
+
+                Assert.Same(defaultType, conventions.ResolveTypeFromClrTypeName(typeName));
+            }
+            finally
+            {
+                loadContext.Unload();
             }
         }
 
