@@ -1275,6 +1275,7 @@ describe("DocumentsPage", () => {
 
             selectDocuments(screen, ["orders/1-A", "orders/2-A"]);
             fireEvent.click(getSelectionActionButton(screen, "Copy"));
+            fireEvent.click(await screen.findByRole("button", { name: "Copy documents" }));
 
             const dialog = await screen.findByRole("dialog");
             expect(dialog).toHaveTextContent("companies/1-A");
@@ -1291,8 +1292,8 @@ describe("DocumentsPage", () => {
 
             fireEvent.click(getSelectAllCheckbox(screen));
             selectDocuments(screen, ["orders/2-A"]);
-            fireEvent.click(getSelectionActionButton(screen, "More copy options"));
-            fireEvent.click(await screen.findByText("Copy IDs"));
+            fireEvent.click(getSelectionActionButton(screen, "Copy"));
+            fireEvent.click(await screen.findByRole("button", { name: "Copy IDs" }));
 
             const dialog = await screen.findByRole("dialog");
             expect(dialog).toHaveTextContent('"orders/1-A", "orders/3-A", "orders/4-A", "orders/5-A"');

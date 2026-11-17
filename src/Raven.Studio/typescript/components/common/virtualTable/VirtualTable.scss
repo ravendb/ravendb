@@ -1,6 +1,7 @@
 @use "Content/scss/bs5variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
+@use "../linkHoverLine";
 
 $row-bg-selected: color-mix(in srgb, colors.$primary-var 20%, colors.$row-bg-var);
 $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$row-bg-var);
@@ -42,7 +43,10 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
 
         .vr {
             align-self: stretch;
-            opacity: 0.5;
+            width: 0;
+            border-left: 1px solid colors.$border-color-light-var;
+            background-color: transparent;
+            opacity: 1;
         }
     }
 
@@ -198,10 +202,35 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
                     background-color: colors.$row-even-bg-var;
                 }
 
-                .cell-link::after {
-                    content: "";
-                    position: absolute;
-                    inset: 0;
+                .cell-link {
+                    transition: color 0.1s;
+                    transition-delay: 0.05s;
+
+                    &::after {
+                        content: "";
+                        position: absolute;
+                        inset: 0;
+                    }
+
+                    &:hover,
+                    &:focus {
+                        transition: color 0.1s;
+                    }
+                }
+
+                .cell-link-text {
+                    position: relative;
+                    @include linkHoverLine.link-hover-line(
+                        colors.$border-color-light-var,
+                        sizes.$border-width,
+                        sizes.$gutter-xxs * -0.25,
+                        sizes.$global-easing
+                    );
+                }
+
+                .cell-link:hover .cell-link-text,
+                .cell-link:focus .cell-link-text {
+                    @include linkHoverLine.link-hover-line-shown(colors.$primary-var);
                 }
 
                 .value-string {

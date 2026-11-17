@@ -817,3 +817,7 @@ table {
         font-family: var(--table-font), var(--bs-font-sans-serif);
     }
 }
+
+.dropdown-toggle::after {
+    vertical-align: 0.125rem !important;
+}
