@@ -313,12 +313,15 @@ public sealed class BackupDecisionLogSummary : IDynamicJson
 
         public int Max { get; set; }
 
+        public int WaitingForSlot { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Current)] = Current,
-                [nameof(Max)] = Max
+                [nameof(Max)] = Max,
+                [nameof(WaitingForSlot)] = WaitingForSlot
             };
         }
     }

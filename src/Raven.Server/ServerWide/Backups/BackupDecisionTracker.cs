@@ -279,6 +279,7 @@ public sealed class BackupDecisionTracker
 
         summary.Running.Current = counter.CurrentNumberOfRunningBackups;
         summary.Running.Max = counter.MaxNumberOfConcurrentBackups;
+        summary.Running.WaitingForSlot = scheduleSummary.Running.WaitingForSlot;
 
         lock (_decisionEtagLock)
         {
@@ -296,6 +297,7 @@ public sealed class BackupDecisionTracker
         var summary = new BackupDecisionLogSummary();
 
         var activeWindow = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan * 2;
+        var counter = _serverStore.ConcurrentBackupsCounter;
 
         BackupDecision serverDecision;
         DateTime? serverHeldUntil;
@@ -353,8 +355,18 @@ public sealed class BackupDecisionTracker
                 }
 
                 var nextBackup = backupState.NextBackup;
-                if (nextBackup == null || nextBackup.DateTime <= now)
+                if (nextBackup == null)
                     continue;
+
+                if (nextBackup.DateTime <= now)
+                {
+                    if (counter.CanRunBackup(backupState.OriginalDatabaseName) == false &&
+                        _runner.IsActiveOnThisNode(context, backupState) &&
+                        _runner.CanSkipIncrementalBackup(context, backupState) == false)
+                        summary.Running.WaitingForSlot++;
+
+                    continue;
+                }
 
                 if (_runner.IsActiveOnThisNode(context, backupState) == false)
                     continue;
