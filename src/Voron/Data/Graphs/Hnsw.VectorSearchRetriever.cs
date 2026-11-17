@@ -61,7 +61,7 @@ public partial class Hnsw
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DistancesToScores(Span<float> distances) => _searchState.DistancesToScores(distances);
 
-        // The searcher admits only nodes with an entry in the filter; the filter here drops the node's other entries.
+        // The searcher returns only nodes with an entry in the filter; the filter here drops the node's other entries.
         public int Fill(Span<long> matches, Span<float> distances, GrowableBitArray? filter)
         {
             var index = 0;
@@ -76,7 +76,7 @@ public partial class Hnsw
                         continue;
                     }
 
-                    index += KeepAdmitted(matches.Slice(index, total), distances[index..], filter);
+                    index += KeepInFilter(matches.Slice(index, total), distances[index..], filter);
                     continue;
                 }
 
@@ -85,7 +85,7 @@ public partial class Hnsw
                     var copy = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
                     _postingListResults.CopyTo(matches[index..], _currentMatchesIndex, copy);
                     _currentMatchesIndex += copy;
-                    index += KeepAdmitted(matches.Slice(index, copy), distances[index..], filter);
+                    index += KeepInFilter(matches.Slice(index, copy), distances[index..], filter);
                     continue;
                 }
 
@@ -102,7 +102,7 @@ public partial class Hnsw
                         continue;
                     case Constants.Graphs.VectorId.Single: // single item posting list
                         matches[index] = rawPostingListId;
-                        index += KeepAdmitted(matches.Slice(index, 1), distances[index..], filter);
+                        index += KeepInFilter(matches.Slice(index, 1), distances[index..], filter);
                         continue;
                     case Constants.Graphs.VectorId.SmallPostingList: // small posting list
                         _searchState.ReadPostingList(new ContainerEntryId(rawPostingListId), ref _postingListResults, ref _pforDecoder, out _);
@@ -136,18 +136,18 @@ public partial class Hnsw
             return false;
         }
 
-        // Converts raw entries in place to entry ids, compacts them to the entries that the filter admits and gives those the current node's distance.
-        private int KeepAdmitted(Span<long> entries, Span<float> distances, GrowableBitArray? filter)
+        // Converts raw entries in place to entry ids, compacts them to the entries in the filter and gives those the current node's distance.
+        private int KeepInFilter(Span<long> entries, Span<float> distances, GrowableBitArray? filter)
         {
             Registration.InternalEntryIdToEntryId(entries);
             var kept = entries.Length;
             if (filter.HasValue)
             {
-                var admitted = filter.Value;
+                var inFilter = filter.Value;
                 kept = 0;
                 foreach (var entry in entries)
                 {
-                    if (admitted.Contains(entry))
+                    if (inFilter.Contains(entry))
                         entries[kept++] = entry;
                 }
             }

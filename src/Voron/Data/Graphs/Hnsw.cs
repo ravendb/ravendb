@@ -194,8 +194,8 @@ public unsafe partial class Hnsw
 
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
-        // The nearest nodes of a filtered traversal that the filter admits, created by the first filtered traversal.
-        private PriorityQueue<int, float> _admittedQ;
+        // The nearest nodes of a filtered search that are in the filter, created by the first filtered search.
+        private PriorityQueue<int, float> _nearestInFilterQ;
         private readonly Dictionary<long, int> _nodeIdToIdx = new();
         private NativeList<Node> _nodes = default;
         private NativeList<int> _newNodes = default;
@@ -203,9 +203,8 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         // _visitsCounter versions Node.Visited; every traversal start bumps it so the visited
-        // set is reset in O(1). _queryVectorVersion versions Node.QueryDistanceVersion; it is
-        // bumped when the query vector changes and when a filtered search starts, so a node's
-        // cached distance survives across the traversals in between. Both start at 1 so
+        // set is reset in O(1). _queryVectorVersion versions Node.QueryDistanceVersion; bumping it
+        // drops every cached distance at once. Both start at 1 so
         // freshly-loaded nodes (fields default to 0) never spuriously match.
         private int _visitsCounter = 1;
         private int _queryVectorVersion = 1;
@@ -1006,14 +1005,14 @@ public unsafe partial class Hnsw
        {
            Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ must be empty between sub-queries on a shared SearchState");
            Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ must be empty between sub-queries on a shared SearchState");
-           Debug.Assert(_admittedQ is null || _admittedQ.Count == 0, "_admittedQ must be empty between sub-queries on a shared SearchState");
+           Debug.Assert(_nearestInFilterQ is null || _nearestInFilterQ.Count == 0, "_nearestInFilterQ must be empty between sub-queries on a shared SearchState");
        }
 
        public void Dispose()
        {
            _candidatesQ.Clear();
            _nearestEdgesQ.Clear();
-           _admittedQ?.Clear();
+           _nearestInFilterQ?.Clear();
            _newNodes.Dispose(Llt.Allocator);
 
            _nodes.Dispose(Llt.Allocator);

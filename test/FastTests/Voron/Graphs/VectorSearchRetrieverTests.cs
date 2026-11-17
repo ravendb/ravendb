@@ -84,8 +84,7 @@ public class VectorSearchRetrieverTests(ITestOutputHelper output) : StorageTest(
         Assert.True(returned.Intersect(nearest).Count() >= requested / 2, "the search returns at least half of the nearest filter members");
     }
 
-    // The filter holds more than 1024 matches and none of them has a vector, so no walk holds a match and the search stops at the read budget of
-    // large filters: half the filter's matches, at most a fifth of the graph.
+    // None of the filter's matches has a vector, so no walk holds a match and the search stops at its read budget.
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Vector)]
     public void FilteredSearchWithoutMatchesInTheGraphStopsAtTheReadBudget()
     {
