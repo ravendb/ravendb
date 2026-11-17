@@ -415,6 +415,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             ApplyNewtonsoftDefaultValueHandling(typeInfo);
             ApplySerializationCallbacks(typeInfo);
             AssertNoNewtonsoftMemberAttributes(typeInfo);
+            typeInfo.PolymorphismOptions = null;
             AddTypeNameProperty(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
         }

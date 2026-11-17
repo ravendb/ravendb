@@ -2410,6 +2410,75 @@ namespace FastTests.Client
             }
         }
 
+        [JsonPolymorphic]
+        [JsonDerivedType(typeof(PolymorphicDog), "dog")]
+        [JsonDerivedType(typeof(PolymorphicCat), "cat")]
+        private abstract class PolymorphicAnimal
+        {
+            public string Name { get; set; }
+        }
+
+        private class PolymorphicDog : PolymorphicAnimal
+        {
+            public bool Barks { get; set; }
+        }
+
+        private class PolymorphicCat : PolymorphicAnimal
+        {
+            public int Lives { get; set; }
+        }
+
+        private class PolymorphicOwner
+        {
+            public PolymorphicAnimal Pet { get; set; }
+
+            public List<PolymorphicAnimal> Pets { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task JsonPolymorphicHierarchyIsStoredWithClrTypeNames()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new PolymorphicOwner
+                {
+                    Pet = new PolymorphicDog { Name = "rex", Barks = true },
+                    Pets = [new PolymorphicCat { Name = "tom", Lives = 9 }, new PolymorphicDog { Name = "fido" }]
+                }, "owners/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("owners/1");
+                Assert.True(raw.TryGet(nameof(PolymorphicOwner.Pet), out BlittableJsonReaderObject pet));
+                Assert.True(pet.TryGet(Constants.Json.Fields.Type, out string typeName));
+                Assert.Equal(typeof(PolymorphicDog), Type.GetType(typeName));
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<PolymorphicOwner>("owners/1");
+                var dog = Assert.IsType<PolymorphicDog>(loaded.Pet);
+                Assert.Equal("rex", dog.Name);
+                Assert.True(dog.Barks);
+
+                Assert.Equal(2, loaded.Pets.Count);
+                var cat = Assert.IsType<PolymorphicCat>(loaded.Pets[0]);
+                Assert.Equal("tom", cat.Name);
+                Assert.Equal(9, cat.Lives);
+                Assert.IsType<PolymorphicDog>(loaded.Pets[1]);
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
