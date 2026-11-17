@@ -1392,7 +1392,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     : parameter.ParameterType.IsValueType ? Activator.CreateInstance(parameter.ParameterType) : null;
             }
 
-            if (allBound)
+            if (allBound && HasParametersDifferingOnlyByCase(parameters) == false)
                 return null;
 
             typeInfo.CreateObject = () =>
@@ -1408,18 +1408,37 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return properties;
         }
 
+        private static bool HasParametersDifferingOnlyByCase(ParameterInfo[] parameters)
+        {
+            for (int i = 1; i < parameters.Length; i++)
+            {
+                for (int j = 0; j < i; j++)
+                {
+                    if (string.Equals(parameters[i].Name, parameters[j].Name, StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
         private static JsonPropertyInfo FindBoundProperty(JsonTypeInfo typeInfo, ParameterInfo parameter)
         {
+            JsonPropertyInfo ignoringCase = null;
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.AttributeProvider is MemberInfo member &&
-                    string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) &&
-                    property.PropertyType == parameter.ParameterType)
+                if (property.AttributeProvider is not MemberInfo member || property.PropertyType != parameter.ParameterType)
+                    continue;
+
+                if (string.Equals(member.Name, parameter.Name, StringComparison.Ordinal))
                     return property;
+
+                if (ignoringCase == null && string.Equals(member.Name, parameter.Name, StringComparison.OrdinalIgnoreCase))
+                    ignoringCase = property;
             }
 
-            return null;
+            return ignoringCase;
         }
 
         private static ConstructorInfo GetParameterizedConstructor(Type type)

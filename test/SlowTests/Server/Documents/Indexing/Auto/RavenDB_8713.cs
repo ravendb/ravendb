@@ -94,7 +94,6 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanQueryOnCaseSensitiveGroupByFields(Options options)
         {
-            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
