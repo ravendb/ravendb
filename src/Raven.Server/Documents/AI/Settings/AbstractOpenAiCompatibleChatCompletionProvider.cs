@@ -325,7 +325,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             return promoted;
 
         throw UnexpectedResponseException.Create(
-            $"Structured output was requested but the model returned no content, and its reasoning is not the structured answer (finish_reason='{finishReason}').",
+            $"Structured output was requested but the model returned no content, and its reasoning is not the structured answer (finish_reason='{finishReason}')",
             response, responseContent, GetRequestId(response.Headers));
     }
 
