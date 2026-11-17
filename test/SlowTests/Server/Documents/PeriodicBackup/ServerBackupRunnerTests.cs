@@ -18,6 +18,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.NotificationCenter;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Backups.Policies.Database;
@@ -456,6 +458,33 @@ public class ServerBackupRunnerTests : ClusterTestBase
         var newest = decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Categories = categories, Take = 3 }, afterEtag: null);
         Assert.Equal(8, newest.TotalResults);
         Assert.Equal(all.Entries.Take(3).Select(x => x.Id), newest.Entries.Select(x => x.Id));
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupAlertMustGoToTheDatabaseNotificationCenterOnlyWhenTheDatabaseIsLoaded()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+        var runner = server.ServerStore.ServerBackupRunner;
+
+        var loadedAlert = AlertRaised.Create(store.Database, "Periodic Backup", "loaded", AlertReason.PeriodicBackup, NotificationSeverity.Info);
+        runner.AddDatabaseAlert(store.Database, loadedAlert);
+        Assert.True(WaitForValue(() => StoredMessage(database.NotificationCenter, loadedAlert.Id) == "loaded", true),
+            "The backup alert of a loaded database should be raised in the database notification center.");
+
+        var notLoadedDatabase = GetDatabaseName();
+        var notLoadedAlert = AlertRaised.Create(notLoadedDatabase, "Periodic Backup", "not loaded", AlertReason.PeriodicBackup, NotificationSeverity.Info);
+        runner.AddDatabaseAlert(notLoadedDatabase, notLoadedAlert);
+        Assert.True(WaitForValue(() => StoredMessage(server.ServerStore.NotificationCenter, notLoadedAlert.Id) == "not loaded", true),
+            "The backup alert of a database that isn't loaded should be raised in the server notification center.");
+        Assert.Equal("loaded", StoredMessage(database.NotificationCenter, loadedAlert.Id));
+
+        static string StoredMessage(AbstractNotificationCenter notificationCenter, string id)
+        {
+            using (notificationCenter.Storage.Read(id, out var stored))
+                return stored != null && stored.Json.TryGet(nameof(AlertRaised.Message), out string message) ? message : null;
+        }
     }
 
     private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)

@@ -309,7 +309,7 @@ public class ServerBackupRunner : IDisposable
 
             BackupUtils.SaveBackupStatus(backupState.BackupStatus, backupState.DatabaseName, _serverStore, _logger);
 
-            _serverStore.NotificationCenter.Add(AlertRaised.Create(
+            AddDatabaseAlert(backupState.DatabaseName, AlertRaised.Create(
                 backupState.DatabaseName,
                 $"Periodic Backup task: '{backupState.Configuration.Name}'",
                 $"Failed to start the backup task '{backupState.Configuration.Name}'. The next backup will be rescheduled.",
@@ -783,7 +783,7 @@ public class ServerBackupRunner : IDisposable
             if (disableLog == false)
             {
                 var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                AddDatabaseAlert(databaseName, AlertRaised.Create(
                     databaseName,
                     "Periodic Backup",
                     message,
@@ -1591,6 +1591,17 @@ public class ServerBackupRunner : IDisposable
 
         var concurrentBackupsDelay = _serverStore.Configuration.Backup.ConcurrentBackupsDelay.AsTimeSpan;
         return concurrentBackupsDelay < runnerFrequency ? concurrentBackupsDelay : runnerFrequency;
+    }
+
+    internal void AddDatabaseAlert(string databaseName, AlertRaised alert)
+    {
+        if (_serverStore.DatabasesLandlord.TryGetDatabaseIfLoaded(databaseName, out var database))
+        {
+            database.NotificationCenter.Add(alert);
+            return;
+        }
+
+        _serverStore.NotificationCenter.Add(alert);
     }
 
     public sealed class RunningBackupTask
