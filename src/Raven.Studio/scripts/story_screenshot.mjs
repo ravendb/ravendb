@@ -15,6 +15,7 @@ const QUIET_DOM_TIMEOUT_MS = 5_000;
 const MAX_HIDDEN_HEIGHT = 6_000;
 const MAX_STORY_NAME_LENGTH = 40;
 const THEMES = ["dark", "light", "blue", "classic"];
+const LANGUAGES = ["en", "pl"];
 // Most users have a 1080p screen, and 720p is the smallest screen where every view must still look good.
 const SCREENS = {
     "720p": { width: 1280, height: 720 },
@@ -24,7 +25,7 @@ const DEFAULT_SCREEN = "1080p";
 // A story renders only the view. In Studio the shell takes this space from the screen: the main menu (open
 // by default), the navbar and the footer. The margin around the view is added by the `withBootstrap5` decorator.
 const SHELL = { menuWidth: 280, navbarHeight: 70, footerHeight: 32 };
-const USAGE = `usage: npm run storybook-screenshot -- <story-id> [--out file.png] [--theme ${THEMES.join("|")}] [--screen ${Object.keys(SCREENS).join("|")}] [--width px] [--height px] [--viewport-only] [--args name=value]...
+const USAGE = `usage: npm run storybook-screenshot -- <story-id> [--out file.png] [--theme ${THEMES.join("|")}] [--language ${LANGUAGES.join("|")}] [--screen ${Object.keys(SCREENS).join("|")}] [--width px] [--height px] [--viewport-only] [--args name=value]...
 
   --screen           the screen of the user, ${DEFAULT_SCREEN} by default. The story gets the space that is left for the view
                      inside the Studio shell: the screen without the main menu, navbar and footer
@@ -39,6 +40,7 @@ const { values: options, positionals } = parseArgs({
     options: {
         out: { type: "string" },
         theme: { type: "string", default: "dark" },
+        language: { type: "string", default: "en" },
         screen: { type: "string", default: DEFAULT_SCREEN },
         width: { type: "string" },
         height: { type: "string" },
@@ -57,6 +59,7 @@ const hasValidArguments =
     positionals.length === 1 &&
     isKnownScreen &&
     THEMES.includes(options.theme) &&
+    LANGUAGES.includes(options.language) &&
     isPositiveInteger(width) &&
     isPositiveInteger(height) &&
     storyArgEntries.every(Boolean);
@@ -70,7 +73,7 @@ const hasStoryArgs = storyArgEntries.length > 0;
 await ensureStorybookIsRunning();
 
 const outPath = path.resolve(options.out ?? getDefaultOutPath());
-const storyUrl = `${STORYBOOK_URL}/iframe.html?${new URLSearchParams({ id: storyId, viewMode: "story", globals: `theme:${options.theme}` })}`;
+const storyUrl = `${STORYBOOK_URL}/iframe.html?${new URLSearchParams({ id: storyId, viewMode: "story", globals: `theme:${options.theme};language:${options.language}` })}`;
 
 const browser = await chromium.launch({ channel: "chrome" });
 try {
@@ -260,13 +263,13 @@ function setStoryArgsBeforeRender({ storyId, requestedArgs }) {
 // Story ids and args can be long. The hash keeps the name short, and different screenshots never share a file.
 function getDefaultOutPath() {
     const storyName = storyId.split("--").at(-1).slice(0, MAX_STORY_NAME_LENGTH);
-    const settings = [storyId, options.theme, width, height, options["viewport-only"], storyArgs];
+    const settings = [storyId, options.theme, options.language, width, height, options["viewport-only"], storyArgs];
     const settingsHash = crypto.createHash("sha256").update(JSON.stringify(settings)).digest("hex").slice(0, 8);
     return path.join(os.tmpdir(), "studio-story-screenshots", `${storyName}.${settingsHash}.png`);
 }
 
 function describeSettings() {
-    const settings = [`theme ${options.theme}`, `story viewport ${width}x${height}`];
+    const settings = [`theme ${options.theme}`, `language ${options.language}`, `story viewport ${width}x${height}`];
     const argsText = Object.entries(storyArgs)
         .map(([name, value]) => `${name}=${value}`)
         .join(", ");
