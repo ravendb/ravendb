@@ -134,6 +134,37 @@ loadToOrders(noPartition(), {
             }
         }
 
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding)]
+        public async Task RestartedOlapEtlProcessOfAShardShouldExportRightAway()
+        {
+            using (var store = Sharding.GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var shards = await Sharding.GetShardsDocumentDatabaseInstancesFor(store).ToListAsync();
+                var orderShardNumber = await Sharding.GetShardNumberForAsync(store, "orders/1");
+                var database = shards.Single(s => s.ShardNumber == orderShardNumber);
+                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                // the initial export of every shard that holds orders has completed
+                for (var i = 1; i <= 3; i++)
+                {
+                    var shardNumber = await Sharding.GetShardNumberForAsync(store, $"orders/{i}");
+                    var process = shards.Single(s => s.ShardNumber == shardNumber).EtlLoader.Processes.Single();
+                    Assert.True(await WaitForValueAsync(() => process.Statistics.LastProcessedEtag > 0, true));
+                }
+
+                var filesAfterInitialExport = CountFiles(path);
+
+                // another shard completed its run - the shared last batch time doesn't tell whether this shard exported its changes
+                await UpdateEtlState(database, lastBatchTime: DateTime.UtcNow);
+
+                await ModifyOrder(store);
+                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+
+                Assert.Equal(filesAfterInitialExport + 1, await WaitForValueAsync(() => CountFiles(path), filesAfterInitialExport + 1));
+            }
+        }
+
         [RavenFact(RavenTestCategory.Etl)]
         public async Task SavingTheProgressAfterEveryBatchShouldKeepTheStoredLastBatchTime()
         {

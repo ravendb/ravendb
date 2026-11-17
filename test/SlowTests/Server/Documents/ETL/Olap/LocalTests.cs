@@ -15,7 +15,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.OLAP;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
@@ -2591,28 +2590,23 @@ loadToOrders(noPartition(), {
 
         private async Task<UpdateEtlOperationResult> EnableEtlAndTriggerScheduledRun(DocumentStore store, long taskId, OlapEtlConfiguration configuration, RavenDatabaseMode databaseMode)
         {
-            var databases = new List<DocumentDatabase>();
-            if (databaseMode == RavenDatabaseMode.Sharded)
-            {
-                await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(store))
-                    databases.Add(shard);
-            }
-            else
-            {
-                databases.Add(await GetDocumentDatabaseInstanceFor(store));
-            }
-
-            // the process of a disabled task isn't started, wait for it so the enabled processes are only the new ones
-            Assert.True(await WaitForValueAsync(() => databases.All(d => d.EtlLoader.Processes.OfType<OlapEtl>().All(p => p.Configuration.Disabled)), true));
-
             configuration.Disabled = false;
+
+            // the processes of a sharded database don't wait for the next scheduled run
+            if (databaseMode == RavenDatabaseMode.Sharded)
+                return store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+
+            // the process of a disabled task isn't started, wait for it so the enabled process is only the new one
+            Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().All(p => p.Configuration.Disabled), true));
+
             var result = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
 
-            Assert.True(await WaitForValueAsync(() => databases.All(d => d.EtlLoader.Processes.OfType<OlapEtl>().Any(p => p.Configuration.Disabled == false)), true));
+            Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().Any(p => p.Configuration.Disabled == false), true));
 
             // the enabled process waits for the next scheduled run
-            foreach (var process in databases.SelectMany(d => d.EtlLoader.Processes.OfType<OlapEtl>()).Where(p => p.Configuration.Disabled == false))
-                process.ForTestingPurposesOnly().TriggerScheduledRun();
+            database.EtlLoader.Processes.OfType<OlapEtl>().Single(p => p.Configuration.Disabled == false).ForTestingPurposesOnly().TriggerScheduledRun();
 
             return result;
         }
