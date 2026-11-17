@@ -18,7 +18,7 @@ describe("RevisionsBinCleaner", () => {
     it("can disable 'set minimum entries age to keep' after disabling 'enable revisions bin cleaner'", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        const minimumEntriesAge = await screen.findByRole("combobox", { name: "Minimum entries age" });
 
         expect(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" })).toBeChecked();
         expect(minimumEntriesAge).toHaveValue("1m");
@@ -34,7 +34,7 @@ describe("RevisionsBinCleaner", () => {
     it("rejects a minimum entries age of zero", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        const minimumEntriesAge = await screen.findByRole("combobox", { name: "Minimum entries age" });
         await user.clear(minimumEntriesAge);
         await user.type(minimumEntriesAge, "0{Enter}");
 
@@ -58,7 +58,7 @@ describe("RevisionsBinCleaner", () => {
 
         await user.click(screen.getByRole("checkbox", { name: "Set minimum entries age to keep" }));
 
-        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        const minimumEntriesAge = await screen.findByRole("combobox", { name: "Minimum entries age" });
         expect(minimumEntriesAge).toHaveValue("");
         expect(minimumEntriesAge).toBeEnabled();
         expect(minimumEntriesAge).toHaveAttribute("placeholder", "Default (30d)");
@@ -78,7 +78,7 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        const minimumEntriesAge = await screen.findByRole("combobox", { name: "Minimum entries age" });
         expect(minimumEntriesAge).toHaveValue("");
         expect(minimumEntriesAge).toHaveAttribute("placeholder", "Default (30d)");
     });
@@ -94,7 +94,7 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const minimumEntriesAge = await screen.findByRole("textbox", { name: "Minimum entries age" });
+        const minimumEntriesAge = await screen.findByRole("combobox", { name: "Minimum entries age" });
         expect(minimumEntriesAge).toHaveValue("2h");
 
         await user.click(screen.getByRole("button", { name: "Reset to default", description: "Minimum entries age" }));
@@ -109,13 +109,14 @@ describe("RevisionsBinCleaner", () => {
     it("can disable cleaner frequency after disabling 'enable revisions bin cleaner'", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        const cleanerFrequency = await screen.findByRole("textbox", { name: "Cleaner frequency" });
+        const cleanerFrequency = await screen.findByRole("combobox", { name: "Cleaner frequency" });
         expect(cleanerFrequency).toBeEnabled();
 
         await user.type(cleanerFrequency, "500{Enter}");
         await user.click(screen.getByRole("checkbox", { name: "Enable Revisions Bin Cleaner" }));
 
         expect(cleanerFrequency).toBeDisabled();
+        expect(cleanerFrequency).toHaveValue("");
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
         ).not.toBeInTheDocument();
@@ -161,7 +162,7 @@ describe("RevisionsBinCleaner", () => {
         });
         expect(isRevisionBinCleanerEnabledSwitch).toBeDisabled();
         expect(minimumEntriesAgeToKeepSwitch).toBeDisabled();
-        expect(await screen.findByRole("textbox", { name: "Cleaner frequency" })).toBeDisabled();
+        expect(await screen.findByRole("combobox", { name: "Cleaner frequency" })).toBeDisabled();
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Cleaner frequency" })
         ).not.toBeInTheDocument();
@@ -178,7 +179,7 @@ describe("RevisionsBinCleaner", () => {
             />
         );
 
-        const cleanerFrequency = await screen.findByRole("textbox", { name: "Cleaner frequency" });
+        const cleanerFrequency = await screen.findByRole("combobox", { name: "Cleaner frequency" });
         expect(cleanerFrequency).toHaveValue("8m 20s");
 
         await user.click(screen.getByRole("button", { name: "Reset to default", description: "Cleaner frequency" }));
@@ -194,7 +195,7 @@ describe("RevisionsBinCleaner", () => {
     it("rejects a cleaner frequency of zero", async () => {
         const { screen, user } = await rtlRender_WithWaitForLoad(<DefaultRevisionsBinCleaner />);
 
-        await user.type(await screen.findByRole("textbox", { name: "Cleaner frequency" }), "0{Enter}");
+        await user.type(await screen.findByRole("combobox", { name: "Cleaner frequency" }), "0{Enter}");
 
         expect(await screen.findByText("Please enter positive number")).toBeInTheDocument();
     });

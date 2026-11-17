@@ -18,7 +18,7 @@ describe("DocumentRefresh", () => {
     it("can disable and set to null refresh frequency after disabling 'Enable Document Refresh'", async () => {
         const { screen, fireClick } = rtlRender(<DefaultDocumentRefresh />);
 
-        const refreshFrequency = await screen.findByRole("textbox", { name: "Refresh frequency" });
+        const refreshFrequency = await screen.findByRole("combobox", { name: "Refresh frequency" });
         expect(refreshFrequency).toBeEnabled();
         expect(refreshFrequency).toHaveValue("1d 11h 59m 59s");
 
@@ -69,7 +69,7 @@ describe("DocumentRefresh", () => {
             await screen.findByRole("button", { name: "Reset to default", description: "Refresh frequency" })
         );
 
-        expect(screen.getByRole("textbox", { name: "Refresh frequency" })).toHaveAttribute(
+        expect(screen.getByRole("combobox", { name: "Refresh frequency" })).toHaveAttribute(
             "placeholder",
             "Default (1m)"
         );
@@ -78,15 +78,24 @@ describe("DocumentRefresh", () => {
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toHaveValue("1d 11h 59m 59s");
+        expect(await screen.findByRole("combobox", { name: "Refresh frequency" })).toHaveValue("1d 11h 59m 59s");
         expect(screen.getByText(licenseLimitWarning)).toBeInTheDocument();
         expect(screen.getByRole("link", { name: "See full comparison" })).toHaveAttribute("href", appUrl.forAbout());
+    });
+
+    it("focuses the frequency when its label is clicked on a limited license", async () => {
+        const { screen, user } = rtlRender(<LicenseRestricted />);
+
+        const refreshFrequency = await screen.findByRole("combobox", { name: "Refresh frequency" });
+        await user.click(screen.getByText("Refresh frequency", { selector: "label" }));
+
+        expect(refreshFrequency).toHaveFocus();
     });
 
     it("does not offer a reset to default on a limited license", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        expect(await screen.findByRole("textbox", { name: "Refresh frequency" })).toBeInTheDocument();
+        expect(await screen.findByRole("combobox", { name: "Refresh frequency" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Reset to default" })).not.toBeInTheDocument();
     });
 
@@ -94,7 +103,7 @@ describe("DocumentRefresh", () => {
         const { screen, fireClick } = rtlRender(<LicenseRestricted />);
 
         const documentRefreshSwitch = await screen.findByRole("checkbox", { name: "Enable Document Refresh" });
-        const refreshFrequency = screen.getByRole("textbox", { name: "Refresh frequency" });
+        const refreshFrequency = screen.getByRole("combobox", { name: "Refresh frequency" });
 
         await fireClick(documentRefreshSwitch);
         expect(refreshFrequency).toHaveValue("");

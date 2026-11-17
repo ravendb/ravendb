@@ -187,7 +187,11 @@ function TracingFields() {
                         </PopoverWithHoverWrapper>
                     </FormSwitch>
                     {formValues.isSetTracingExpiration && (
-                        <FormDurationPicker control={control} name="tracingExpirationInSeconds" />
+                        <FormDurationPicker
+                            control={control}
+                            name="tracingExpirationInSeconds"
+                            aria-label="Conversation documents expiration"
+                        />
                     )}
                 </FormGroup>
             )}

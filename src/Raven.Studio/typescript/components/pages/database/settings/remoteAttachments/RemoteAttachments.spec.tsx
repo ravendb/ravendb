@@ -19,7 +19,7 @@ describe("RemoteAttachments", () => {
         );
 
         const saveButton = screen.queryByRole("button", { name: selectors.titles.save });
-        const checkFrequencyInput = screen.getByRole("textbox", {
+        const checkFrequencyInput = screen.getByRole("combobox", {
             name: "Interval between remote attachments task runs",
         });
 

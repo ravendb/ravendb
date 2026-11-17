@@ -3,6 +3,7 @@ import {
     formatDuration,
     getListedValues,
     getVisibleUnits,
+    hasSecondsPart,
     parseDuration,
 } from "components/common/durationPickerUtils";
 
@@ -35,6 +36,20 @@ describe("durationPickerUtils", () => {
 
     it("treats a bare number as the smallest visible unit", () => {
         expect(parseDuration("90", withoutSeconds, symbols)).toBe(5400);
+    });
+
+    it.each(["90s", "1m 30s", "5 sec"])("rejects hidden seconds in '%s'", (text) => {
+        expect(parseDuration(text, withoutSeconds, symbols)).toBeNaN();
+    });
+
+    it.each([
+        [90, true],
+        [61.5, true],
+        [120, false],
+        [0, false],
+        [null, false],
+    ])("tells whether %s seconds has a seconds part", (totalSeconds, expected) => {
+        expect(hasSecondsPart(totalSeconds)).toBe(expected);
     });
 
     it("returns null for empty text", () => {

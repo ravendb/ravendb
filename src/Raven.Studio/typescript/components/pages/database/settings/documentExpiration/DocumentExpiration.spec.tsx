@@ -22,7 +22,7 @@ describe("DocumentExpiration", () => {
     it("can disable expiration frequency after disabling 'Enable Document Expiration'", async () => {
         const { screen, fireClick } = rtlRender(<DefaultDocumentExpiration />);
 
-        const deleteFrequency = await screen.findByRole("textbox", { name: "Expiration frequency" });
+        const deleteFrequency = await screen.findByRole("combobox", { name: "Expiration frequency" });
         expect(deleteFrequency).toBeEnabled();
         expect(deleteFrequency).toHaveValue(expectedDeleteFrequency);
 
@@ -65,7 +65,7 @@ describe("DocumentExpiration", () => {
 
         await fireClick(await screen.findByRole("checkbox", { name: "Enable Document Expiration" }));
 
-        const deleteFrequency = screen.getByRole("textbox", { name: "Expiration frequency" });
+        const deleteFrequency = screen.getByRole("combobox", { name: "Expiration frequency" });
         expect(deleteFrequency).toBeEnabled();
         expect(deleteFrequency).toHaveValue("");
         expect(deleteFrequency).toHaveAttribute("placeholder", "Default (1m)");
@@ -79,7 +79,7 @@ describe("DocumentExpiration", () => {
 
         await fireClick(await screen.findByRole("checkbox", { name: "Enable Document Expiration" }));
 
-        const deleteFrequency = screen.getByRole("textbox", { name: "Expiration frequency" });
+        const deleteFrequency = screen.getByRole("combobox", { name: "Expiration frequency" });
         await user.type(deleteFrequency, "123h{Enter}");
 
         expect(deleteFrequency).toHaveValue("5d 3h");
@@ -97,7 +97,7 @@ describe("DocumentExpiration", () => {
     it("shows the license limit while the frequency is below the license minimum", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        const deleteFrequency = await screen.findByRole("textbox", { name: "Expiration frequency" });
+        const deleteFrequency = await screen.findByRole("combobox", { name: "Expiration frequency" });
         expect(deleteFrequency).toBeEnabled();
         expect(deleteFrequency).toHaveValue(expectedDeleteFrequency);
 
@@ -108,7 +108,7 @@ describe("DocumentExpiration", () => {
     it("does not offer a reset to default on a limited license", async () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
-        expect(await screen.findByRole("textbox", { name: "Expiration frequency" })).toBeInTheDocument();
+        expect(await screen.findByRole("combobox", { name: "Expiration frequency" })).toBeInTheDocument();
         expect(
             screen.queryByRole("button", { name: "Reset to default", description: "Expiration frequency" })
         ).not.toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("DocumentExpiration", () => {
 
         const documentExpirationSwitch = await screen.findByRole("checkbox", { name: "Enable Document Expiration" });
 
-        const deleteFrequency = screen.getByRole("textbox", { name: "Expiration frequency" });
+        const deleteFrequency = screen.getByRole("combobox", { name: "Expiration frequency" });
 
         await fireClick(documentExpirationSwitch);
         expect(deleteFrequency).toHaveValue("");

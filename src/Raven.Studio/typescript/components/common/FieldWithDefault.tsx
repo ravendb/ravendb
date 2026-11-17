@@ -172,7 +172,12 @@ function FieldWithDefault<TFieldValues extends FieldValues, TName extends FieldP
         <Form.Group controlId={controlId}>
             <div className="field-with-default-label-row">
                 <div className="d-flex align-items-center gap-2">
-                    <FieldLabel id={labelId} tooltip={tooltip} tooltipPlacement={tooltipPlacement} className="mb-0">
+                    <FieldLabel
+                        id={labelId}
+                        tooltip={tooltip}
+                        tooltipPlacement={tooltipPlacement}
+                        className={classNames("mb-0", { "form-label-disabled": disabled })}
+                    >
                         {label}
                     </FieldLabel>
                     {isOptimal && (

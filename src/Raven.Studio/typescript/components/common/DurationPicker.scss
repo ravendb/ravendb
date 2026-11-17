@@ -17,4 +17,8 @@
         pointer-events: none;
         color: colors.$text-muted-var;
     }
+
+    &:has(.form-control:disabled) &__icon {
+        opacity: 0.5;
+    }
 }

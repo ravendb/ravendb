@@ -12,9 +12,11 @@ interface DurationFormData {
 function DurationForm({
     defaultValues,
     defaultTotalSeconds,
+    showSeconds = true,
 }: {
     defaultValues: DurationFormData;
     defaultTotalSeconds?: number;
+    showSeconds?: boolean;
 }) {
     const { control, formState, reset } = useForm<DurationFormData>({ defaultValues });
     const { isSet, duration } = useWatch({ control });
@@ -29,7 +31,7 @@ function DurationForm({
                     <FormDurationPicker
                         control={control}
                         name="duration"
-                        showSeconds
+                        showSeconds={showSeconds}
                         defaultTotalSeconds={defaultTotalSeconds}
                     />
                 </div>
@@ -44,10 +46,22 @@ function DurationForm({
 }
 
 async function findDurationInput(screen: ReturnType<typeof rtlRender>["screen"]) {
-    return within(await screen.findByRole("group", { name: "Duration" })).getByRole("textbox");
+    return within(await screen.findByRole("group", { name: "Duration" })).getByRole("combobox");
+}
+
+function NamedDurationForm() {
+    const { control } = useForm<DurationFormData>({ defaultValues: { isSet: true, duration: 60 } });
+
+    return <FormDurationPicker control={control} name="duration" aria-label="History expiration" />;
 }
 
 describe("DurationPicker", () => {
+    it("names the field when it has no visible label", async () => {
+        const { screen } = rtlRender(<NamedDurationForm />);
+
+        expect(await screen.findByRole("combobox", { name: "History expiration" })).toHaveValue("1m");
+    });
+
     it("keeps the form pristine when it mounts without a value", async () => {
         const { screen } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: undefined }} />);
 
@@ -60,6 +74,46 @@ describe("DurationPicker", () => {
 
         expect(await findDurationInput(screen)).toHaveValue("1m 2s");
         expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("keeps a fractional value when the field is clicked and left without typing", async () => {
+        const { screen, user } = rtlRender(<DurationForm defaultValues={{ isSet: true, duration: 61.5 }} />);
+
+        await user.click(await findDurationInput(screen));
+        await user.click(screen.getByText("Form is pristine"));
+
+        expect(screen.getByText("Value: 61.5")).toBeInTheDocument();
+        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("shows stored seconds in a field that hides seconds", async () => {
+        const { screen, user } = rtlRender(
+            <DurationForm defaultValues={{ isSet: true, duration: 90 }} showSeconds={false} />
+        );
+
+        const input = await findDurationInput(screen);
+        expect(input).toHaveValue("1m 30s");
+
+        await user.click(input);
+        expect(
+            within(screen.getByRole("dialog", { name: "Choose duration" })).getByRole("list", { name: "Seconds" })
+        ).toBeInTheDocument();
+
+        await user.click(screen.getByText("Form is pristine"));
+        expect(screen.getByText("Value: 90")).toBeInTheDocument();
+        expect(screen.getByText("Form is pristine")).toBeInTheDocument();
+    });
+
+    it("keeps seconds hidden when the stored value has none", async () => {
+        const { screen, user } = rtlRender(
+            <DurationForm defaultValues={{ isSet: true, duration: 120 }} showSeconds={false} />
+        );
+
+        await user.click(await findDurationInput(screen));
+
+        expect(
+            within(screen.getByRole("dialog", { name: "Choose duration" })).queryByRole("list", { name: "Seconds" })
+        ).not.toBeInTheDocument();
     });
 
     it("keeps the form pristine when it is shown and hidden again", async () => {

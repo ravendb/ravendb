@@ -219,7 +219,11 @@ function HistoryFields() {
                         </PopoverWithHoverWrapper>
                     </FormSwitch>
                     {formValues.trimming.isSetHistoryExpiration && (
-                        <FormDurationPicker control={control} name="trimming.historyExpirationInSeconds" />
+                        <FormDurationPicker
+                            control={control}
+                            name="trimming.historyExpirationInSeconds"
+                            aria-label="History expiration"
+                        />
                     )}
                 </FormGroup>
             )}
