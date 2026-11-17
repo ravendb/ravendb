@@ -46,6 +46,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             {
                 if (value != null && _typeNameHandling != TypeNameHandling.None && value.GetType() != objectType)
                     TypeNameConverter.WriteValue(writer, value, objectType, alwaysWriteObjectTypeName: _typeNameHandling == TypeNameHandling.Objects, Options);
+                else if (value != null && _typeNameHandling == TypeNameHandling.None)
+                    TypeNameConverter.WriteUntyped(writer, value, Options);
                 else
                     JsonSerializer.Serialize(writer, value, objectType, Options);
             }

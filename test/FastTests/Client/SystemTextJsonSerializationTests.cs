@@ -2561,6 +2561,61 @@ namespace FastTests.Client
             }
         }
 
+        private interface IOpenShape
+        {
+            string Name { get; set; }
+        }
+
+        private class OpenSquare : IOpenShape
+        {
+            public string Name { get; set; }
+
+            public int Side { get; set; }
+        }
+
+        private class OpenShapeOwner
+        {
+            public IOpenShape Shape { get; set; }
+
+            public List<IOpenShape> Shapes { get; set; }
+        }
+
+        private class HoldsParameters
+        {
+            public Parameters Value { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ParameterCollectionsAreWrittenWithTheMembersOfTheItemsRuntimeType()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var holder = new HoldsParameters
+            {
+                Value = new Parameters
+                {
+                    ["list"] = new List<IOpenShape> { new OpenSquare { Name = "a", Side = 5 } },
+                    ["array"] = new IOpenShape[] { new OpenSquare { Name = "b", Side = 6 } },
+                    ["byKey"] = new Dictionary<string, IOpenShape> { ["k"] = new OpenSquare { Name = "c", Side = 7 } },
+                    ["owners"] = new List<OpenShapeOwner>
+                    {
+                        new OpenShapeOwner { Shape = new OpenSquare { Name = "d", Side = 8 }, Shapes = [new OpenSquare { Name = "e", Side = 9 }] }
+                    },
+                    ["numbers"] = new[] { 1, 2 },
+                    ["text"] = "plain"
+                }
+            };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(holder, context))
+            {
+                Assert.True(json.TryGet(nameof(HoldsParameters.Value), out BlittableJsonReaderObject value));
+                Assert.Equal(
+                    "{\"list\":[{\"Name\":\"a\",\"Side\":5}],\"array\":[{\"Name\":\"b\",\"Side\":6}],\"byKey\":{\"k\":{\"Name\":\"c\",\"Side\":7}}," +
+                    "\"owners\":[{\"Shape\":{\"Name\":\"d\",\"Side\":8},\"Shapes\":[{\"Name\":\"e\",\"Side\":9}]}],\"numbers\":[1,2],\"text\":\"plain\"}",
+                    value.ToString());
+            }
+        }
+
         private class IgnoresNullIdentity
         {
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

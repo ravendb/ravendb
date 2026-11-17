@@ -92,8 +92,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         public static JsonConverter TryCreate(Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
         {
-            if (typeNameHandling == TypeNameHandling.None || declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
+            if (declaredType == typeof(object) || IsCandidate(declaredType, options) == false)
                 return null;
+
+            if (typeNameHandling == TypeNameHandling.None)
+                return (JsonConverter)Activator.CreateInstance(typeof(UntypedConverter<>).MakeGenericType(declaredType));
 
             Type converterType = typeof(DeclaredTypeConverter<>).MakeGenericType(declaredType);
             return (JsonConverter)Activator.CreateInstance(converterType, [typeNameHandling == TypeNameHandling.Objects]);
@@ -433,6 +436,54 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 JsonSerializer.Serialize(writer, item, GetTypeInfo(item.GetType(), options));
             else
                 WriteValue(writer, item, declaredType, typeNameHandling == TypeNameHandling.Objects, options);
+        }
+
+        internal static void WriteUntyped(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
+        {
+            if (value == null)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+
+            Type runtimeType = value.GetType();
+            if (IsWrittenAsIs(runtimeType, options))
+            {
+                WriteTyped(writer, value, runtimeType, options);
+                return;
+            }
+
+            if (TryGetDictionaryTypes(runtimeType, out Type keyType, out _))
+            {
+                if (value is not IDictionary dictionary)
+                {
+                    JsonSerializer.Serialize(writer, value, GetTypeInfo(runtimeType, options));
+                    return;
+                }
+
+                writer.WriteStartObject();
+                foreach (DictionaryEntry entry in dictionary)
+                {
+                    WriteKey(writer, entry.Key, keyType, options);
+                    WriteUntyped(writer, entry.Value, options);
+                }
+
+                writer.WriteEndObject();
+                return;
+            }
+
+            JsonTypeInfo typeInfo = GetTypeInfo(runtimeType, options);
+            if (value is IEnumerable enumerable && typeInfo.Kind == JsonTypeInfoKind.Enumerable)
+            {
+                writer.WriteStartArray();
+                foreach (object item in enumerable)
+                    WriteUntyped(writer, item, options);
+
+                writer.WriteEndArray();
+                return;
+            }
+
+            JsonSerializer.Serialize(writer, value, typeInfo);
         }
 
         internal static void WriteValue(Utf8JsonWriter writer, object value, Type declaredType, bool alwaysWriteObjectTypeName, JsonSerializerOptions options)
@@ -942,6 +993,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             typeName = reader.GetString();
             return true;
+        }
+
+        private sealed class UntypedConverter<T> : JsonConverter<T>
+        {
+            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+                (T)JsonSerializer.Deserialize(ref reader, GetTypeInfo(typeof(T), options));
+
+            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) =>
+                WriteUntyped(writer, value, options);
         }
 
         private sealed class DeclaredTypeConverter<T>(bool alwaysWriteObjectTypeName) : JsonConverter<T>

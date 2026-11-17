@@ -35,7 +35,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             if (_typeNameHandling == TypeNameHandling.None)
             {
-                JsonSerializer.Serialize(writer, value, runtimeType, options);
+                TypeNameConverter.WriteUntyped(writer, value, options);
                 return;
             }
 
