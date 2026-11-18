@@ -59,9 +59,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         internal ContextMemoryBufferWriter SerializeToBuffer(object value, Type objectType, JsonOperationContext context)
         {
+            return SerializeToBuffer(value, objectType, metadata: null, documentInfo: null, context);
+        }
+
+        internal ContextMemoryBufferWriter SerializeToBuffer(object value, Type objectType, IMetadataDictionary metadata, DocumentInfo documentInfo, JsonOperationContext context)
+        {
             var buffer = new ContextMemoryBufferWriter(context);
             try
             {
+                bool hasMetadata = documentInfo != null ? WriteMetadata(buffer, documentInfo) : WriteMetadata(buffer, metadata);
+                int entityStart = buffer.WrittenCount;
+
                 Utf8JsonWriter writer = RentWriter(ref _entityWriter, buffer, SystemTextJsonSerializationConventions.WriterOptions);
                 try
                 {
@@ -72,6 +80,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 {
                     ReturnWriter(ref _entityWriter, writer);
                 }
+
+                if (hasMetadata)
+                    JoinEntityToMetadata(buffer, entityStart, objectType);
 
                 return buffer;
             }
@@ -122,21 +133,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         internal BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, IMetadataDictionary metadata, DocumentInfo documentInfo, JsonOperationContext context)
         {
-            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, context);
-            if (documentInfo != null)
-                AppendMetadata(buffer, objectType, documentInfo);
-            else
-                AppendMetadata(buffer, objectType, metadata);
-
+            using ContextMemoryBufferWriter buffer = SerializeToBuffer(value, objectType, metadata, documentInfo, context);
             return ParseBufferToBlittable(buffer, context);
         }
 
-        internal static void AppendMetadata(ContextMemoryBufferWriter buffer, Type objectType, IMetadataDictionary metadata)
+        private static bool WriteMetadata(ContextMemoryBufferWriter buffer, IMetadataDictionary metadata)
         {
             if (metadata == null || metadata.Count == 0)
-                return;
+                return false;
 
-            Utf8JsonWriter metadataWriter = OpenMetadata(buffer, objectType);
+            Utf8JsonWriter metadataWriter = OpenMetadata(buffer);
             try
             {
                 SystemTextJsonSerializationConventions.WriteMetadata(metadataWriter, metadata);
@@ -147,17 +153,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 ReturnWriter(ref _metadataWriter, metadataWriter);
             }
 
-            buffer.WriteByte((byte)'}');
+            return true;
         }
 
-        private static void AppendMetadata(ContextMemoryBufferWriter bufferWriter, Type objectType, DocumentInfo documentInfo)
+        private static bool WriteMetadata(ContextMemoryBufferWriter bufferWriter, DocumentInfo documentInfo)
         {
             DynamicJsonValue modifications = documentInfo.Metadata?.Modifications;
             bool hasModifications = modifications != null && modifications.Properties.Count > 0;
             if (hasModifications == false && documentInfo.Metadata == null && documentInfo.MetadataInstance == null && documentInfo.Collection == null)
-                return;
+                return false;
 
-            Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter, objectType);
+            Utf8JsonWriter metadataWriter = OpenMetadata(bufferWriter);
             try
             {
                 var sink = new Utf8JsonMetadataValueSink(metadataWriter);
@@ -208,19 +214,29 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 ReturnWriter(ref _metadataWriter, metadataWriter);
             }
 
-            bufferWriter.WriteByte((byte)'}');
+            return true;
         }
 
-        private static Utf8JsonWriter OpenMetadata(ContextMemoryBufferWriter bufferWriter, Type objectType)
+        private static void JoinEntityToMetadata(ContextMemoryBufferWriter bufferWriter, int entityStart, Type objectType)
         {
             ReadOnlySpan<byte> written = bufferWriter.WrittenSpan;
-            if (written.Length < 2 || written[written.Length - 1] != '}')
+            int entityLength = written.Length - entityStart;
+            if (entityLength < 2 || written[entityStart] != '{' || written[written.Length - 1] != '}')
                 throw new InvalidOperationException($"Entity of type '{objectType}' must serialize to a JSON object.");
 
-            bool hasProperties = written.Length > 2;
-            bufferWriter.Truncate(1);
-            if (hasProperties)
-                bufferWriter.WriteByte((byte)',');
+            if (entityLength == 2)
+            {
+                bufferWriter.Truncate(2);
+                bufferWriter.WriteByte((byte)'}');
+                return;
+            }
+
+            bufferWriter.Overwrite(entityStart, (byte)',');
+        }
+
+        private static Utf8JsonWriter OpenMetadata(ContextMemoryBufferWriter bufferWriter)
+        {
+            bufferWriter.WriteByte((byte)'{');
 
             Utf8JsonWriter metadataWriter = RentWriter(ref _metadataWriter, bufferWriter, SystemTextJsonSerializationConventions.MetadataWriterOptions);
             metadataWriter.WritePropertyName(Constants.Documents.Metadata.Key);

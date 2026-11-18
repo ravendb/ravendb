@@ -35,6 +35,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             _position -= count;
         }
 
+        public void Overwrite(int position, byte value)
+        {
+            if (position < 0 || position >= _position)
+                throw new ArgumentOutOfRangeException(nameof(position));
+
+            _allocation.Address[position] = value;
+        }
+
         public void WriteByte(byte value)
         {
             GetSpan(1)[0] = value;
