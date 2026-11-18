@@ -12,7 +12,6 @@ import testPeriodicBackupCredentialsCommand = require("commands/serverWide/testP
 import saveServerWideCustomSorterCommand = require("commands/serverWide/sorters/saveServerWideCustomSorterCommand");
 import saveServerWideCustomAnalyzerCommand from "commands/serverWide/analyzers/saveServerWideCustomAnalyzerCommand";
 import getServerSettingsCommand from "commands/maintenance/getServerSettingsCommand";
-import getBackupDecisionLogCommand = require("commands/maintenance/getBackupDecisionLogCommand");
 import getClusterLogCommand from "commands/database/cluster/getClusterLogCommand";
 import getClusterLogEntryCommand from "commands/database/cluster/getClusterLogEntryCommand";
 import removeEntryFromLogCommand from "commands/database/cluster/removeEntryFromLogCommand";
@@ -88,10 +87,6 @@ export default class ManageServerService {
 
     async getServerSettings() {
         return new getServerSettingsCommand().execute();
-    }
-
-    async getBackupDecisionLog(databaseName?: string, take?: number) {
-        return new getBackupDecisionLogCommand(databaseName, take).execute();
     }
 
     async getClusterLog(nodeTag: string, from: number, pageSize: number) {

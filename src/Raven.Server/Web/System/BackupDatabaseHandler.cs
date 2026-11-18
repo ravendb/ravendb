@@ -42,5 +42,12 @@ namespace Raven.Server.Web.System
                 context.Write(writer, json);
             }
         }
+
+        [RavenAction("/admin/periodic-backup/decision-log/watch", "GET", AuthorizationStatus.Operator)]
+        public async Task WatchBackupDecisionLog()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForWatchDecisionLog(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -101,6 +103,112 @@ public class ServerBackupRunnerTests : ClusterTestBase
         Assert.Equal(new[] { "detail 4" }, log.GetDecisions(afterEtag: 5).Select(x => x.Detail));
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task DecisionLogMustBeServedPerNodeAndWatchedLive()
+    {
+        var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
+        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 });
+        await StoreDocument(store);
+        var taskId = await Backup.UpdateConfigAsync(leader, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        var other = nodes.Single(x => x != leader);
+        Assert.True(WaitForValue(() => BackupTestBase.GetBackupState(other.ServerStore.ServerBackupRunner, store.Database, taskId) != null, true),
+            "precondition: the other node tracks the task");
+        Assert.True(WaitForValue(() => Decisions(other, store.Database, taskId).Count > 0, true, timeout: 30_000, interval: 250),
+            "precondition: the other node logged a decision for the task");
+
+        using (var otherWebSocket = new ClientWebSocket())
+        using (var otherCts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+        {
+            await otherWebSocket.ConnectAsync(new Uri($"{leader.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?nodeTag={other.ServerStore.NodeTag}&database={store.Database}&taskId={taskId}&take=10"), otherCts.Token);
+
+            using var json = await ReceiveJsonAsync(otherWebSocket, otherCts.Token);
+            var root = json.RootElement;
+
+            Assert.Equal("Snapshot", root.GetProperty("Type").GetString());
+            Assert.Equal(other.ServerStore.NodeTag, root.GetProperty("NodeTag").GetString());
+            Assert.Contains(store.Database, root.GetProperty("Databases").EnumerateArray().Select(x => x.GetString()));
+
+            var entries = root.GetProperty("Entries").EnumerateArray().ToList();
+            Assert.Contains(entries, x => x.GetProperty("Source").GetString() == nameof(BackupDecisionSource.Task));
+
+            foreach (var entry in entries)
+            {
+                Assert.Equal(other.ServerStore.NodeTag, entry.GetProperty("NodeTag").GetString());
+
+                if (entry.GetProperty("Source").GetString() != nameof(BackupDecisionSource.Task))
+                    continue;
+
+                Assert.Equal(store.Database, entry.GetProperty("Database").GetString());
+                Assert.Equal(taskId, entry.GetProperty("TaskId").GetInt64());
+            }
+        }
+
+        var runner = leader.ServerStore.ServerBackupRunner;
+        var database = await Databases.GetDocumentDatabaseInstanceFor(leader, store);
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+        Assert.False(WaitForValue(() => state.Running.IsRaised(), false, timeout: 60_000, interval: 100), "precondition: no backup is running");
+
+        using var webSocket = new ClientWebSocket();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        await webSocket.ConnectAsync(new Uri($"{leader.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?database={store.Database}&take=10"), cts.Token);
+
+        int snapshotTotal;
+        using (var snapshot = await ReceiveJsonAsync(webSocket, cts.Token))
+        {
+            Assert.Equal("Snapshot", snapshot.RootElement.GetProperty("Type").GetString());
+            Assert.Equal(leader.ServerStore.NodeTag, snapshot.RootElement.GetProperty("NodeTag").GetString());
+            Assert.True(snapshot.RootElement.TryGetProperty("Summary", out _));
+            snapshotTotal = snapshot.RootElement.GetProperty("TotalResults").GetInt32();
+        }
+
+        var hold = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        runner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[store.Database] = new ServerBackupRunner.TestingStuffInternal { OnBackupTaskRunHoldBackupExecution = hold };
+
+        try
+        {
+            var operationId = runner.StartBackupNowTask(database, taskId, isFullBackup: true, database.Operations.GetNextOperationId());
+            Assert.True(WaitForValue(() => state.RunningTask != null, true, timeout: 15_000, interval: 50), "precondition: the backup is running");
+
+            await database.Operations.KillOperationAsync(operationId, CancellationToken.None);
+        }
+        finally
+        {
+            hold.TrySetResult(null);
+        }
+
+        var sawStarted = false;
+        string cancelDetail = null;
+        var totalResults = snapshotTotal;
+        while (cancelDetail == null)
+        {
+            using var update = await ReceiveJsonAsync(webSocket, cts.Token);
+            Assert.Equal("Update", update.RootElement.GetProperty("Type").GetString());
+            Assert.Equal(JsonValueKind.Object, update.RootElement.GetProperty("Summary").ValueKind);
+            Assert.Equal(JsonValueKind.Null, update.RootElement.GetProperty("Databases").ValueKind);
+            Assert.Equal(JsonValueKind.Null, update.RootElement.GetProperty("Tasks").ValueKind);
+            totalResults = update.RootElement.GetProperty("TotalResults").GetInt32();
+
+            foreach (var entry in update.RootElement.GetProperty("Entries").EnumerateArray())
+            {
+                var entryTaskId = entry.GetProperty("TaskId");
+                if (entryTaskId.ValueKind != JsonValueKind.Number || entryTaskId.GetInt64() != taskId)
+                    continue;
+
+                var category = entry.GetProperty("Category").GetString();
+                if (category == nameof(BackupDecisionCategory.Started))
+                    sawStarted = true;
+                else if (category == nameof(BackupDecisionCategory.Cancelled))
+                    cancelDetail = entry.GetProperty("Detail").GetString();
+            }
+        }
+
+        Assert.True(sawStarted, "The watch should send the Started decision of the backup");
+        Assert.Equal(BackupDecisionTracker.CancelReasonUser, cancelDetail);
+        Assert.True(totalResults >= snapshotTotal + 2,
+            $"The update should count all matching entries, including the new Started and Cancelled ones (snapshot: {snapshotTotal}, last update: {totalResults})");
+    }
+
     [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
     [InlineData(false)]
     [InlineData(true)]
@@ -183,6 +291,32 @@ public class ServerBackupRunnerTests : ClusterTestBase
         {
             foreach (var (store, _) in stores)
                 store.Dispose();
+        }
+    }
+
+    private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)
+    {
+        var buffer = new byte[64 * 1024];
+        using var ms = new MemoryStream();
+
+        while (true)
+        {
+            ms.SetLength(0);
+
+            while (true)
+            {
+                var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), token);
+                ms.Write(buffer, 0, result.Count);
+
+                if (result.EndOfMessage)
+                    break;
+            }
+
+            if (ms.ToArray().SequenceEqual(WebSocketHelper.Heartbeat))
+                continue;
+
+            ms.Position = 0;
+            return await JsonDocument.ParseAsync(ms, cancellationToken: token);
         }
     }
 
