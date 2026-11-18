@@ -84,6 +84,35 @@ public unsafe partial class Pager : IDisposable
         return (pager, state);
     }
 
+    /// <summary>
+    /// A pager over memory with no file on disk. It maps <paramref name="initialSize"/> and grows up to <paramref name="maxSize"/>,
+    /// in multiples of <see cref="AnonymousGranularity"/>.
+    /// </summary>
+    public static (Pager Pager, State State) CreateAnonymous(StorageEnvironmentOptions options, string name, long initialSize, long maxSize, Pal.OpenFileFlags flags)
+    {
+        if (Pal.PalVoronPageSize != Constants.Storage.PageSize)// JIT should eliminate this
+            throw new InvalidOperationException($"Expected the PAL to have page size matching Voron but was: {Pal.PalVoronPageSize}");
+
+        flags |= Pal.OpenFileFlags.Anonymous | Pal.OpenFileFlags.Temporary | Pal.OpenFileFlags.WritableMap;
+        var pager = new Pager(options, name, flags, GetFunctions(options, flags));
+        var result = Pal.rvn_init_anonymous_pager(name, initialSize, maxSize, flags,
+            out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
+        if (result != PalFlags.FailCodes.Success)
+            RaiseError(name, error, result, initialSize);
+
+        pager.Write = Pal.rvn_get_writer(handle);
+        var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle, options.PageSize);
+        state.TotalPhysicalSpace = memorySize;
+        pager.InstallState(state);
+        pager.Initialize(memorySize);
+        pager._canPrefetch = false;
+        return (pager, state);
+    }
+
+    public const long AnonymousGranularity = 64 * Constants.Size.Kilobyte;
+
+    public bool IsAnonymous => _flags.HasFlag(Pal.OpenFileFlags.Anonymous);
+
     public Pal.WriterFunc Write = WriterNotSetupYet;
 
     private static PalFlags.FailCodes WriterNotSetupYet(void* handle, Pal.page_to_write* buffers, int count, out int errorCode)
@@ -393,14 +422,8 @@ public unsafe partial class Pager : IDisposable
         if (requestedPageNumber + numberOfPages <= state.NumberOfAllocatedPages)
             return;
 
-        // this ensures that if we want to get a range that is more than the current expansion
-        // we will increase as much as needed in one shot
         var minRequested = (requestedPageNumber + numberOfPages) * Constants.Storage.PageSize;
-        var allocationSize = Math.Max(state.NumberOfAllocatedPages * Constants.Storage.PageSize, Constants.Storage.PageSize);
-        while (minRequested > allocationSize)
-        {
-            allocationSize = GetNewLength(allocationSize, minRequested);
-        }
+        var allocationSize = GetAllocationSize(state, minRequested);
         Debug.Assert(allocationSize > state.TotalAllocatedSize, "allocationSize > state.TotalAllocatedSize");
         
         if (Options.CopyOnWriteMode && state.Pager.FileName.EndsWith(Constants.DatabaseFilename))
@@ -419,6 +442,22 @@ public unsafe partial class Pager : IDisposable
         InstallState(state);
     }
 
+
+    private long GetAllocationSize(State state, long minRequested)
+    {
+        // memory without a file: the caller charges the size to a memory budget, so take only what is needed
+        if (IsAnonymous)
+            return (minRequested + AnonymousGranularity - 1) / AnonymousGranularity * AnonymousGranularity;
+
+        // this ensures that if we want to get a range that is more than the current expansion
+        // we will increase as much as needed in one shot
+        var allocationSize = Math.Max(state.NumberOfAllocatedPages * Constants.Storage.PageSize, Constants.Storage.PageSize);
+        while (minRequested > allocationSize)
+        {
+            allocationSize = GetNewLength(allocationSize, minRequested);
+        }
+        return allocationSize;
+    }
 
     private long GetNewLength(long current, long minRequested)
     {
@@ -496,7 +535,8 @@ public unsafe partial class Pager : IDisposable
 
         if (PlatformDetails.RunningOnPosix &&
             Options.OwnsPagers &&
-            _flags.HasFlag(Pal.OpenFileFlags.Temporary))
+            _flags.HasFlag(Pal.OpenFileFlags.Temporary) &&
+            IsAnonymous == false)
         {
             // Posix doesn't support DeleteOnClose
             try

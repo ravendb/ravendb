@@ -110,6 +110,13 @@ namespace Raven.Server.Config.Categories
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Storage.MaxScratchBufferSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaxScratchBufferSize { get; set; }
+
+
+        [Description("The most memory that the scratch buffers of all storage environments on the server hold without a file on disk. Scratch pages come from this memory first and from scratch files when it is used up; then the environments that hold the most give back memory once no transaction uses it. Default: 10% of the physical memory (or of the container memory limit). Set 0 to use scratch files only.")]
+        [DefaultValue(null)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("Storage.GlobalScratchMemoryLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size? GlobalScratchMemoryLimit { get; set; }
         
         [Description("Max size of write ahead journals that Voron will use.")]
         [DefaultValue(2048)]

@@ -47,6 +47,16 @@ namespace Voron.Impl.Scratch
 
         private readonly LinkedList<ScratchBufferItem> _recycleArea = new();
 
+        // Pages come from memory before the scratch files: up to MaxMemorySegments segments of MaxScratchBufferSize / 4,
+        // lowest first, each its own object so it can be given back whole on every platform, and charged to the budget
+        // of the options. Under pressure, the last segment of an environment that has more than one takes no new pages,
+        // and is closed once no transaction can see its pages.
+        private const long MemoryGrowthStep = Constants.Size.Megabyte;
+        private const int MaxMemorySegments = 4;
+        private readonly long _memorySegmentSize;
+        private readonly List<ScratchBufferItem> _memorySegments = new();
+        private long _memoryRetryAfter; // a commit failed (out of memory): the files take the pages until then
+
         private readonly DisposeOnce<ExceptionRetry> _disposeOnceRunner;
 
         private long _lastLowMemoryEventTicks = 0;
@@ -64,6 +74,8 @@ namespace Voron.Impl.Scratch
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
+                var memoryReserved = MemoryReserved;
+
                 foreach (var scratch in _scratchBuffers)
                 {
                     scratch.Value.File.Dispose();
@@ -72,6 +84,9 @@ namespace Voron.Impl.Scratch
 
                 _scratchBuffers.Clear();
                 _scratchBuffersByPager.Clear();
+
+                _memorySegments.Clear();
+                _options.ScratchMemoryBudget.Release(memoryReserved);
 
                 while (_recycleArea.First != null)
                 {
@@ -92,6 +107,9 @@ namespace Voron.Impl.Scratch
             _env = env;
             _options = env.Options;
             _scratchSpaceMonitor = env.Options.ScratchSpaceUsage;
+            _memorySegmentSize = _options.RunningOn32Bits
+                ? 0
+                : RoundUp(Math.Max(_options.MaxScratchBufferSize / 4, Pager.AnonymousGranularity), Pager.AnonymousGranularity);
             _current = NextFile(_options.InitialLogFileSize, null);
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
@@ -172,6 +190,9 @@ namespace Voron.Impl.Scratch
                 throw new ArgumentNullException(nameof(tx));
             var size = Bits.NextAllocationSize(numberOfPages);
 
+            if (TryAllocateFromMemory(tx, numberOfPages, size, pageNumber, previousVersion, out var fromMemory))
+                return fromMemory;
+
             var current = _current;
 
             if (current.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, pageNumber, previousVersion, out PageFromScratchBuffer result))
@@ -207,6 +228,111 @@ namespace Voron.Impl.Scratch
                 // That's why we update only after exiting. 
                 _current = current;
             }
+        }
+
+        private long MemoryReserved => _memorySegments.Sum(x => x.File.Size);
+
+        private bool IsDraining(ScratchBufferItem segment) =>
+            _memorySegments.Count > 1 && segment == _memorySegments[^1] && _options.ScratchMemoryBudget.UnderPressure;
+
+        private static long RoundUp(long size, long step) => (size + step - 1) / step * step;
+
+        private bool TryAllocateFromMemory(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, Page previousVersion,
+            out PageFromScratchBuffer result)
+        {
+            result = default;
+            var requiredSize = (long)size * Constants.Storage.PageSize;
+            if (requiredSize > _memorySegmentSize)
+                return false;
+
+            TryCloseDrainedSegment(tx);
+
+            foreach (var segment in _memorySegments)
+            {
+                if (IsDraining(segment))
+                    continue;
+
+                if (segment.File.TryGettingFromAllocatedBuffer(tx, numberOfPages, size, pageNumber, previousVersion, out result))
+                    return true;
+
+                if (TryReserveMemory(segment, (segment.File.LastUsedPage + size) * Constants.Storage.PageSize))
+                {
+                    result = segment.File.Allocate(tx, numberOfPages, size, pageNumber, previousVersion);
+                    return true;
+                }
+            }
+
+            // a new segment under pressure would be the next to drain
+            if (_memorySegments.Count == MaxMemorySegments || _options.ScratchMemoryBudget.UnderPressure || TryReserveMemory(null, requiredSize) == false)
+                return false;
+
+            result = _memorySegments[^1].File.Allocate(tx, numberOfPages, size, pageNumber, previousVersion);
+            return true;
+        }
+
+        // Makes the segment at least requiredSize long, growing it by MemoryGrowthStep steps up to the segment size, or adds
+        // a segment when it is null. The new memory is charged to the budget, and committed before it is used.
+        private bool TryReserveMemory(ScratchBufferItem segment, long requiredSize)
+        {
+            if (segment != null && requiredSize <= segment.File.Size)
+                return true;
+
+            var newSize = Math.Min(_memorySegmentSize, RoundUp(requiredSize, MemoryGrowthStep));
+            var currentSize = segment?.File.Size ?? 0;
+            if (newSize < requiredSize || Environment.TickCount64 < _memoryRetryAfter ||
+                _options.ScratchMemoryBudget.TryReserve(newSize - currentSize) == false)
+                return false;
+
+            try
+            {
+                if (segment != null)
+                {
+                    segment.File.Grow(newSize);
+                }
+                else
+                {
+                    var number = _currentScratchNumber + 1;
+                    var (pager, state) = _options.CreateScratchMemoryPager(number, newSize, _memorySegmentSize);
+                    segment = new ScratchBufferItem(number, new ScratchBufferFile(pager, state, number));
+                    _currentScratchNumber = number;
+                    _scratchBuffers.AddOrUpdate(number, segment, (_, __) => segment);
+                    _scratchBuffersByPager.AddOrUpdate(pager, segment, (_, __) => segment);
+                    _memorySegments.Add(segment);
+                }
+            }
+            catch (Exception e)
+            {
+                _options.ScratchMemoryBudget.Release(newSize - currentSize);
+                _memoryRetryAfter = Environment.TickCount64 + (long)TimeSpan.FromMinutes(1).TotalMilliseconds;
+
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Could not get more memory for the scratch buffers of {_env}, using scratch files instead for the next minute", e);
+                return false;
+            }
+
+            _scratchSpaceMonitor.Increase(newSize - currentSize);
+            return true;
+        }
+
+        private bool TryCloseDrainedSegment(LowLevelTransaction tx)
+        {
+            if (_memorySegments.Count < 2)
+                return false;
+
+            var segment = _memorySegments[^1];
+            if (IsDraining(segment) == false || segment.File.AllocatedPagesCount != 0 ||
+                segment.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(tx)))
+                return false;
+
+            _memorySegments.RemoveAt(_memorySegments.Count - 1);
+            if (_scratchBuffers.TryRemove(segment.Number, out var removed))
+                _scratchBuffersByPager.TryRemove(removed.File.Pager, out _);
+
+            var size = segment.File.Size;
+            segment.File.Dispose();
+            _options.ScratchMemoryBudget.Release(size);
+            _scratchSpaceMonitor.Decrease(size);
+            return true;
         }
 
         public void Free(LowLevelTransaction tx, in PageFromScratchBuffer page)
@@ -274,6 +400,17 @@ namespace Voron.Impl.Scratch
 
             }
 
+            if (scratch.File.Pager.IsAnonymous)
+            {
+                // memory is never recycled: a draining segment is closed, the others reset and keep their memory
+                if (IsDraining(scratch))
+                    TryCloseDrainedSegment(tx);
+                else if (scratch.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(tx)) == false)
+                    scratch.File.Reset();
+
+                return;
+            }
+
             if (scratch == _current)
             {
                 if (scratch.File.Size <= _options.MaxScratchBufferSize)
@@ -339,7 +476,8 @@ namespace Voron.Impl.Scratch
 
                 if (scratchBufferItem.File.HasActivelyUsedBytes(_env.PossibleOldestReadTransaction(null)) ||
                     scratchBufferItem == except ||
-                    scratchBufferItem == _current)
+                    scratchBufferItem == _current ||
+                    scratchBufferItem.File.Pager.IsAnonymous)
                     continue;
 
                 if (_scratchBuffers.TryRemove(scratchBufferItem.Number, out var removedFile) == false)
@@ -379,7 +517,8 @@ namespace Voron.Impl.Scratch
 
         public void Cleanup()
         {
-            if (_recycleArea.Count == 0 && _scratchBuffers.Count == 1)
+            if (_recycleArea.Count == 0 && _scratchBuffers.Count == 1 + _memorySegments.Count &&
+                (_memorySegments.Count < 2 || _options.ScratchMemoryBudget.UnderPressure == false))
                 return;
 
             long txIdAllowingToReleaseOldScratches = -1;
@@ -387,7 +526,8 @@ namespace Voron.Impl.Scratch
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var scratchBufferItem in _scratchBuffers)
             {
-                if (scratchBufferItem.Value == _current)
+                if (scratchBufferItem.Value == _current ||
+                    scratchBufferItem.Value.File.Pager.IsAnonymous && IsDraining(scratchBufferItem.Value) == false)
                     continue;
 
                 txIdAllowingToReleaseOldScratches = Math.Max(txIdAllowingToReleaseOldScratches,
@@ -442,6 +582,12 @@ namespace Voron.Impl.Scratch
                         var removedInactive = RemoveInactiveScratches(_current);
 
                         var removedInactiveRecycled = RemoveInactiveRecycledScratches();
+
+                        // an idle environment does not allocate, so the segments that drain are closed here, and once one
+                        // is closed the next one drains as well while the pressure lasts
+                        while (TryCloseDrainedSegment(null))
+                        {
+                        }
 
                         if (_logger.IsDebugEnabled)
                         {
@@ -562,7 +708,14 @@ namespace Voron.Impl.Scratch
                 CurrentFileNumber = currentFile.Number,
                 CurrentFileSizeInMB = currentFile.Size / 1024L / 1024L,
                 PerScratchFileSizeLimitInMB = _options.MaxScratchBufferSize / 1024L / 1024L,
-                CurrentUtcTime = DateTime.UtcNow
+                CurrentUtcTime = DateTime.UtcNow,
+                MemorySegments = _memorySegments.Count,
+                MemorySegmentSizeInMB = _memorySegmentSize / 1024L / 1024L,
+                MemorySizeInKB = MemoryReserved / 1024,
+                MemoryFailedRecently = Environment.TickCount64 < _memoryRetryAfter,
+                GlobalMemoryUsedInMB = _options.ScratchMemoryBudget.Used / 1024L / 1024L,
+                GlobalMemoryLimitInMB = _options.ScratchMemoryBudget.Limit / 1024L / 1024L,
+                GlobalMemoryUnderPressure = _options.ScratchMemoryBudget.UnderPressure
             };
 
             foreach (var scratchBufferItem in _scratchBuffers.Values.OrderBy(x => x.Number))
@@ -570,11 +723,15 @@ namespace Voron.Impl.Scratch
                 var current = _current;
                 var scratchFileUsage = new ScratchFileUsage
                 {
-                    Name = StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
+                    Name = scratchBufferItem.File.Pager.IsAnonymous
+                        ? StorageEnvironmentOptions.ScratchMemoryName(scratchBufferItem.File.Number)
+                        : StorageEnvironmentOptions.ScratchBufferName(scratchBufferItem.File.Number),
+                    IsMemory = scratchBufferItem.File.Pager.IsAnonymous,
+                    IsDraining = IsDraining(scratchBufferItem),
                     SizeInKB = scratchBufferItem.File.Size / 1024,
                     NumberOfAllocations = scratchBufferItem.File.NumberOfAllocations,
                     AllocatedPagesCount = scratchBufferItem.File.AllocatedPagesCount,
-                    CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
+                    CanBeDeleted = scratchBufferItem != current && scratchBufferItem.File.Pager.IsAnonymous == false && scratchBufferItem.File.HasActivelyUsedBytes(oldestActiveTransaction) == false,
                     TxIdAfterWhichLatestFreePagesBecomeAvailable = scratchBufferItem.File.TxIdAfterWhichLatestFreePagesBecomeAvailable,
                     IsInRecycleArea = _recycleArea.Contains(scratchBufferItem),
                     NumberOfResets = scratchBufferItem.File.DebugInfo.NumberOfResets,
@@ -617,6 +774,8 @@ namespace Voron.Impl.Scratch
         {
             _lowMemoryFlag.Lower();
         }
+
+        internal List<ScratchBufferFile> MemorySegmentsForTesting => _memorySegments.Select(x => x.File).ToList();
 
         public ScratchBufferFile GetScratchBufferFile(int number)
         {

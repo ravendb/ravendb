@@ -35,6 +35,8 @@ struct handle_global_state
 
     // slot in the write ring's file table, -1 when the file does not use the ring
     int32_t io_ring_file;
+    // OPEN_FILE_ANONYMOUS: the size the section was created with, no pager may map more
+    int64_t anonymous_max_size;
 };
 
 // This state represent a single handle to the pager on a file

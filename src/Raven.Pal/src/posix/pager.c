@@ -442,6 +442,155 @@ Error:
     return rc;
 }
 
+static int32_t
+_open_anonymous_pager(int fd,
+                      struct handle_global_state *global_state,
+                      int64_t req_size,
+                      void **handle,
+                      void **memory,
+                      void **writable_memory,
+                      int64_t *memory_size,
+                      int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+    void *mem = MAP_FAILED;
+    void *wmem = MAP_FAILED;
+    int64_t size = rvn_max(
+        (req_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1),
+        ALLOCATION_GRANULARITY);
+
+    struct handle *handle_ptr = calloc(1, sizeof(struct handle));
+    if (handle_ptr == NULL)
+    {
+        *detailed_error_code = ENOMEM;
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+    handle_ptr->global_state = global_state;
+
+    if (size > global_state->anonymous_max_size)
+    {
+        *detailed_error_code = ENOSPC;
+        rc = FAIL_ALLOC_FILE;
+        goto Error;
+    }
+
+    rc = _commit_anonymous_file(fd, size, detailed_error_code);
+    if (rc != SUCCESS)
+        goto Error;
+
+    mem = rvn_mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0L);
+    if (mem == MAP_FAILED)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
+    }
+    wmem = rvn_mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0L);
+    if (wmem == MAP_FAILED)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
+    }
+
+    // both views share the physical pages, so only one is locked
+    if ((global_state->open_flags & OPEN_FILE_LOCK_MEMORY) &&
+        rvn_lock_memory(handle_ptr, mem, size, detailed_error_code) != SUCCESS)
+    {
+        rc = FAIL_LOCK_MEMORY;
+        goto Error;
+    }
+
+    handle_ptr->file_fd = fd;
+    handle_ptr->read_address = mem;
+    handle_ptr->write_address = wmem;
+    handle_ptr->allocation_size = size;
+    *handle = handle_ptr;
+    *memory = mem;
+    *writable_memory = wmem;
+    *memory_size = size;
+    return SUCCESS;
+
+Error:
+    if (mem != MAP_FAILED)
+        munmap(mem, size);
+    if (wmem != MAP_FAILED)
+        munmap(wmem, size);
+    close(fd);
+    free(handle_ptr);
+    return rc;
+}
+
+EXPORT int32_t
+rvn_init_anonymous_pager(const char *name,
+                         int64_t initial_size,
+                         int64_t max_size,
+                         int32_t open_flags,
+                         void **handle,
+                         void **memory,
+                         void **writable_memory,
+                         int64_t *memory_size,
+                         int32_t *detailed_error_code)
+{
+    *memory_size = 0;
+    *memory = NULL;
+    *writable_memory = NULL;
+    *handle = NULL;
+    int32_t rc = SUCCESS;
+    int fd = -1;
+
+    assert(name);
+
+    if (max_size <= 0 || initial_size > max_size ||
+        (open_flags & OPEN_FILE_WRITABLE_MAP) == 0 ||
+        (open_flags & (OPEN_FILE_READ_ONLY | OPEN_FILE_COPY_ON_WRITE | OPEN_FILE_DO_NOT_MAP | OPEN_FILE_PREFETCH)))
+    {
+        *detailed_error_code = EINVAL;
+        return FAIL_INVALID_CONFIGURATION;
+    }
+
+    struct handle_global_state *global_state = calloc(1, sizeof(struct handle_global_state));
+    if (global_state == NULL)
+    {
+        *detailed_error_code = ENOMEM;
+        return FAIL_NOMEM;
+    }
+
+    global_state->open_flags = open_flags | OPEN_FILE_ANONYMOUS;
+    global_state->ref_count = 1;
+    global_state->io_ring_file = -1;
+    global_state->prefetch_ticket = -1;
+    global_state->prefetch_request_size = DEFAULT_PREFETCH_REQUEST_SIZE;
+    global_state->writes_arena = (struct arena){.eventfd = -1};
+    global_state->fsync_dir_arena = (struct arena){.eventfd = -1};
+    global_state->writes_arena.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    global_state->fsync_dir_arena.lock = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    global_state->anonymous_max_size = (max_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1);
+
+    global_state->file_path = strdup(name);
+    if (global_state->file_path == NULL)
+    {
+        *detailed_error_code = errno;
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+
+    rc = _create_anonymous_file(name, global_state->anonymous_max_size, &fd, detailed_error_code);
+    if (rc != SUCCESS)
+        goto Error;
+
+    rc = _open_anonymous_pager(fd, global_state, initial_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    if (rc != SUCCESS) // _open_anonymous_pager takes ownership of fd in all cases
+        goto Error;
+
+    return SUCCESS;
+
+Error:
+    delete_global_state(global_state);
+    return rc;
+}
+
 int32_t
 rvn_increase_pager_size(void *handle,
                         int64_t new_length,
@@ -470,8 +619,10 @@ rvn_increase_pager_size(void *handle,
         rc = FAIL_MUTEX_LOCK;
         goto error;
     }
-    rc = _open_pager_file(new_fd, handle_ptr->global_state, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
-    new_fd = -1; // _open_pager_file now owns new_fd 
+    rc = (handle_ptr->global_state->open_flags & OPEN_FILE_ANONYMOUS)
+        ? _open_anonymous_pager(new_fd, handle_ptr->global_state, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code)
+        : _open_pager_file(new_fd, handle_ptr->global_state, new_length, new_handle, memory, writable_memory, memory_size, detailed_error_code);
+    new_fd = -1; // both now own new_fd 
     if (rc == SUCCESS)
     {
         handle_ptr->global_state->ref_count++;
@@ -581,6 +732,13 @@ rvn_pager_get_file_size(void *handle,
                         int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
+    if (handle_ptr->global_state->open_flags & OPEN_FILE_ANONYMOUS)
+    {
+        // the object may be larger than what this pager maps (macOS creates it at its max size)
+        *total_size = (int64_t)handle_ptr->allocation_size;
+        *phyiscal_size = (int64_t)handle_ptr->allocation_size;
+        return SUCCESS;
+    }
     struct stat st;
     if (fstat(handle_ptr->file_fd, &st) == -1)
     {
