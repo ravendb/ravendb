@@ -189,21 +189,27 @@ public unsafe partial class Pager : IDisposable
     }
 
     /// <summary>
-    /// Reads ahead the pages the caller is about to read, also while memory is full. Adjacent pages go in one request,
-    /// recently hinted pages are skipped, and the device's read-ahead budget applies.
+    /// Reads ahead the pages the caller is about to read, also while memory is full or the device is busy: one request for
+    /// adjacent pages costs less than the faults it replaces. Pages hinted within the stale time, or requested a moment
+    /// ago, are skipped. Returns the pages requested.
     /// </summary>
-    public void MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
+    public int MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
     {
         if (!_canPrefetch)
-            return;
+            return 0;
 
         var recent = _recentHints ??= new int[1 << RecentHintsBits];
-        long runStart = 0, runPages = 0;
+        long runStart = 0, runPages = 0, requested = 0, skipped = 0;
         while (pagesToPrefetch.MoveNext())
         {
             var pageNumber = pagesToPrefetch.Current;
             if ((ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages)
                 continue; // a hint can carry -1 or a stale page number
+            if (_pageHints?.IsMarked(pageNumber) == true)
+            {
+                skipped++;
+                continue;
+            }
             ref var slot = ref RecentSlot(recent, pageNumber);
             var key = (int)(pageNumber + 1);
             if (Volatile.Read(ref slot) == key)
@@ -216,20 +222,22 @@ public unsafe partial class Pager : IDisposable
                 continue;
             }
             ReadRunAhead(state, runStart, runPages);
+            requested += runPages;
             runStart = pageNumber;
             runPages = 1;
         }
         ReadRunAhead(state, runStart, runPages);
+        requested += runPages;
+        if (skipped != 0)
+            ReadAheadPagesSkippedCount.Apply(skipped);
+        return (int)requested;
     }
 
     private void ReadRunAhead(State state, long firstPage, long pages)
     {
         if (pages == 0)
             return;
-        var bytes = pages * Constants.Storage.PageSize;
-        if (DeviceBudget?.TryStartReadAhead(bytes) == false)
-            return; // the device is busy
-        PrefetchRange(state, firstPage * Constants.Storage.PageSize, bytes);
+        PrefetchRange(state, firstPage * Constants.Storage.PageSize, pages * Constants.Storage.PageSize);
     }
 
     private void PrefetchRange(State state, long offset, long bytes)

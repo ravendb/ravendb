@@ -1,9 +1,12 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Platform;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 using Tests.Infrastructure;
@@ -189,8 +192,10 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
             return;
 
         var policy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false);
+        using var ring = new PrefetchRing(ringEntries: 8, maxFiles: 4, queueSize: 64);
         using (var options = CreateOptions(useEncryption: false, policy))
         {
+            options.PrefetchRing = ring;
             using (var env = new StorageEnvironment(options))
             {
                 var first = WritePages(env, 40);
@@ -204,12 +209,35 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
                     Pager.HintPage(state, first + 9);
                     Assert.Equal(6, Pager.ReadWindowAhead(state, first + 8, 8, onCallingThread: true)); // from the first page not hinted
 
+                    if (ring.IsAvailable)
+                    {
+                        var pager = tx.LowLevelTransaction.DataPager;
+                        Assert.Equal(0, pager.MaybePrefetchMemory(state, new PageRange(first, 16)));
+                        Assert.Equal(8, pager.MaybePrefetchMemory(state, new PageRange(first + 12, 12))); // pages 16 to 23
+                    }
+
                     policy.AddEvictions(evictedFilePages: 1, filePages: 2); // stale after 1 s
                     policy.Tick(freeBytes: 0);
                     Assert.Equal(8, Pager.ReadWindowAhead(state, first, 8, onCallingThread: true));
                 }
             }
         }
+    }
+
+    private struct PageRange(long first, int count) : IEnumerator<long>
+    {
+        private long _next = first;
+        public long Current { get; private set; }
+        object IEnumerator.Current => Current;
+        public bool MoveNext()
+        {
+            if (_next >= first + count)
+                return false;
+            Current = _next++;
+            return true;
+        }
+        public void Reset() => _next = first;
+        public void Dispose() { }
     }
 
     // a fault reads only the 4 KB it touches, so the major faults count what was not hinted
