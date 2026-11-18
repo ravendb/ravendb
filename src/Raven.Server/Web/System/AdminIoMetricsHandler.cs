@@ -54,6 +54,8 @@ namespace Raven.Server.Web.System
                     ["SegmentReadAheadWarmUp"] = PrefetchPolicy.Global.Generation,
                     [nameof(Pager.PagesHinted)] = Pager.PagesHinted,
                     [nameof(PrefetchPolicy.StaleAfterSeconds)] = PrefetchPolicy.Global.StaleAfterSeconds is var stale && stale != int.MaxValue ? stale : null,
+                    [nameof(Pager.PagesReadAhead)] = Pager.PagesReadAhead,
+                    [nameof(Pager.ReadAheadPagesSkipped)] = Pager.ReadAheadPagesSkipped,
                     ["Devices"] = new DynamicJsonArray(DeviceWriteBudget.Devices.Select(d => new DynamicJsonValue
                     {
                         [nameof(DeviceWriteBudget.PathOnDevice)] = d.PathOnDevice,

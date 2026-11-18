@@ -26,9 +26,19 @@ public unsafe partial class Pager
     private PageHints _pageHints;
 
     private static readonly PerCoreValue<PerCoreSum> PagesHintedCount = new();
+    private static readonly PerCoreValue<PerCoreSum> PagesReadAheadCount = new();
+    private static readonly PerCoreValue<PerCoreSum> ReadAheadPagesSkippedCount = new();
 
     /// <summary>Data file pages hinted on a read since the process started.</summary>
     public static long PagesHinted => PagesHintedCount.Value;
+
+    /// <summary>Data file pages read ahead of sequential reads since the process started.</summary>
+    public static long PagesReadAhead => PagesReadAheadCount.Value;
+
+    /// <summary>Data file pages not read ahead since the process started, because they were hinted within the stale time.</summary>
+    public static long ReadAheadPagesSkipped => ReadAheadPagesSkippedCount.Value;
+
+    internal bool HintsPages => _pageHints != null;
 
     /// <summary>Starts reading a data file page that was not hinted within the stale time.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,6 +52,32 @@ public unsafe partial class Pager
         PagesHintedCount.Apply(1);
     }
 
+    /// <summary>
+    /// Starts reading pages ahead of a sequential read, from the first one not hinted within the stale time: on this thread
+    /// with posix_fadvise when onCallingThread, else through the ring; neither waits for the reads. Returns the pages requested.
+    /// </summary>
+    internal static int ReadWindowAhead(State state, long firstPage, int numberOfPages, bool onCallingThread)
+    {
+        var hints = state.Pager._pageHints;
+        if (hints == null)
+            return 0;
+
+        var first = hints.Mark(firstPage, numberOfPages);
+        var skipped = first == -1 ? numberOfPages : (int)(first - firstPage);
+        if (skipped != 0)
+            ReadAheadPagesSkippedCount.Apply(skipped);
+        if (first == -1)
+            return 0;
+
+        var pages = numberOfPages - skipped;
+        var offset = first * Constants.Storage.PageSize;
+        var bytes = (long)pages * Constants.Storage.PageSize;
+        if (onCallingThread || Pal.rvn_pager_prefetch(state.Handle, offset, bytes) == 0) // 0: not queued, the ring is full
+            Pal.rvn_pager_will_need(state.Handle, offset, bytes);
+        PagesReadAheadCount.Apply(pages);
+        return pages;
+    }
+
     /// <summary>Starts reading the pages after the first page of an overflow value, from the first one not hinted within the stale time.</summary>
     public static void HintOverflowPages(State state, long pageNumber, int numberOfPages)
     {
@@ -49,6 +85,7 @@ public unsafe partial class Pager
         if (hints == null || numberOfPages <= 1 || pageNumber + numberOfPages > state.NumberOfAllocatedPages)
             return;
 
+        // a read-ahead window can hold the first pages of a value, not all of them
         var first = hints.Mark(pageNumber + 1, numberOfPages - 1);
         if (first == -1)
             return;

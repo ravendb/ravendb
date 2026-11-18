@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
@@ -110,6 +111,107 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ASequentialReadReadsAheadOfThePagesItReads()
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        using (var options = CreateOptions(useEncryption: false))
+        using (var env = new StorageEnvironment(options))
+        {
+            var first = WritePages(env, 64);
+            WithoutReadAround(env);
+            Evict(env);
+
+            using (var tx = env.ReadTransaction())
+            {
+                var faults = MajorFaultsOfThisThread();
+                for (var page = first; page < first + 4; page++)
+                {
+                    var read = tx.LowLevelTransaction.GetPage(page);
+                    Assert.Equal(0x42, Volatile.Read(ref read.Pointer[Constants.Storage.PageSize - 1]));
+                }
+                Assert.Equal(0, MajorFaultsOfThisThread() - faults); // the first window is requested before its pages are read
+
+                // the next window, past the pages read, comes in through the ring
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (ResidentPages(tx.LowLevelTransaction.DataPagerState, first + 6, 8) != 8 && DateTime.UtcNow < deadline)
+                    Thread.Sleep(10);
+                Assert.Equal(8, ResidentPages(tx.LowLevelTransaction.DataPagerState, first + 6, 8));
+                Assert.Equal(0, ResidentPages(tx.LowLevelTransaction.DataPagerState, first + 32, 32));
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ASequentialReadIntoALargeValueReadsAllOfIt()
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        const int valuePages = 16;
+        using (var options = CreateOptions(useEncryption: false))
+        using (var env = new StorageEnvironment(options))
+        {
+            var first = WritePages(env, 3);
+            long value;
+            using (var tx = env.WriteTransaction())
+            {
+                var page = tx.LowLevelTransaction.AllocateOverflowRawPage(valuePages * Constants.Storage.PageSize - PageHeader.SizeOf, out _, zeroPage: true);
+                value = page.PageNumber;
+                Assert.Equal(first + 3, value); // inside the first window of the run
+                tx.Commit();
+            }
+            env.FlushLogToDataFile();
+            using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(env.Journal.Applicator))
+                Assert.True(operation.SyncDataFile());
+            WithoutReadAround(env);
+            Evict(env);
+
+            using (var tx = env.ReadTransaction())
+            {
+                var faults = MajorFaultsOfThisThread();
+                for (var page = first; page < first + 3; page++)
+                    _ = tx.LowLevelTransaction.GetPage(page);
+                var read = tx.LowLevelTransaction.GetPage(value);
+                for (var offset = 0; offset < valuePages * Constants.Storage.PageSize; offset += 4096)
+                    _ = Volatile.Read(ref read.Pointer[offset]);
+                Assert.Equal(0, MajorFaultsOfThisThread() - faults);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ReadAheadSkipsPagesHintedWithinTheStaleTime()
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        var policy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false);
+        using (var options = CreateOptions(useEncryption: false, policy))
+        {
+            using (var env = new StorageEnvironment(options))
+            {
+                var first = WritePages(env, 40);
+                using (var tx = env.ReadTransaction())
+                {
+                    var state = tx.LowLevelTransaction.DataPagerState;
+                    Assert.Equal(8, Pager.ReadWindowAhead(state, first, 8, onCallingThread: true));
+                    Assert.Equal(0, Pager.ReadWindowAhead(state, first, 8, onCallingThread: false)); // most likely still in memory
+
+                    Pager.HintPage(state, first + 8);
+                    Pager.HintPage(state, first + 9);
+                    Assert.Equal(6, Pager.ReadWindowAhead(state, first + 8, 8, onCallingThread: true)); // from the first page not hinted
+
+                    policy.AddEvictions(evictedFilePages: 1, filePages: 2); // stale after 1 s
+                    policy.Tick(freeBytes: 0);
+                    Assert.Equal(8, Pager.ReadWindowAhead(state, first, 8, onCallingThread: true));
+                }
+            }
+        }
+    }
+
     // a fault reads only the 4 KB it touches, so the major faults count what was not hinted
     private static void WithoutReadAround(StorageEnvironment env)
     {
@@ -154,6 +256,25 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
         Assert.Equal(0x42, Volatile.Read(ref page.Pointer[Constants.Storage.PageSize - 1]));
         return MajorFaultsOfThisThread() - faults;
     }
+
+    // pages whose both 4 KB halves are in the page cache
+    private static int ResidentPages(Pager.State state, long firstPage, int count)
+    {
+        const int halves = Constants.Storage.PageSize / 4096;
+        var vector = new byte[count * halves];
+        fixed (byte* v = vector)
+            Assert.Equal(0, mincore(state.ReadAddress + firstPage * Constants.Storage.PageSize, (UIntPtr)(count * Constants.Storage.PageSize), v));
+        var resident = 0;
+        for (var i = 0; i < count; i++)
+        {
+            if ((vector[i * halves] & vector[i * halves + 1] & 1) != 0)
+                resident++;
+        }
+        return resident;
+    }
+
+    [DllImport("libc", SetLastError = true)]
+    private static extern int mincore(void* addr, UIntPtr length, byte* vec);
 
     // drops the data file from this process' mappings, then from the page cache
     private void Evict(StorageEnvironment env)
