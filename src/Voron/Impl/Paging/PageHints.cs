@@ -64,14 +64,6 @@ internal sealed class PageHints
         return firstUnmarked;
     }
 
-    /// <summary>True when the page is marked and its chunk is not stale.</summary>
-    public bool IsMarked(long pageNumber)
-    {
-        var index = pageNumber >> 6;
-        var bitmap = Use(index, index);
-        return (bitmap.Bits[index] & (1L << (int)(pageNumber & 63))) != 0;
-    }
-
     // the bitmap that holds the longs from first to last, with their stale chunks cleared
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Bitmap Use(long firstIndex, long lastIndex)

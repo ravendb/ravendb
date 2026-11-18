@@ -15,15 +15,11 @@ public unsafe partial class Pager
     // a hint reads a whole 8 KB page in one request; a fault uses the kernel's heuristics
     private static readonly bool WillNeedSupported = PlatformDetails.RunningOnLinux;
 
-    // Avoid repeated prefetching (syscall overhead only), slot is page num+1 (0 means empty)
-    // duplicates will override, so it automatically refresh. Optimization only, not correctness, so we can afford to miss
-    private const int RecentHintsBits = 12;
-    private int[] _recentHints;
-
     // above this, one wait on the ring costs less than a non-blocking read of each page on the caller's thread
     private const int CheckedReadAheadLimit = 16;
 
     private PageHints _pageHints;
+    private bool _hintsReads;
 
     /// <summary>An iterator reads ahead this many of the pages its next entries refer to.</summary>
     internal const int IteratorReadAheadPages = 8;
@@ -41,14 +37,14 @@ public unsafe partial class Pager
     /// <summary>Data file pages not read ahead since the process started, because they were hinted within the stale time.</summary>
     public static long ReadAheadPagesSkipped => ReadAheadPagesSkippedCount.Value;
 
-    internal bool HintsPages => _pageHints != null;
+    internal bool HintsPages => _hintsReads;
 
     /// <summary>Starts reading a data file page that was not hinted within the stale time.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void HintPage(State state, long pageNumber)
     {
-        var hints = state.Pager._pageHints;
-        if (hints == null || (ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages || hints.TryMark(pageNumber) == false)
+        var pager = state.Pager;
+        if (pager._hintsReads == false || (ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages || pager._pageHints.TryMark(pageNumber) == false)
             return;
 
         Pal.rvn_pager_will_need(state.Handle, pageNumber * Constants.Storage.PageSize, Constants.Storage.PageSize);
@@ -61,9 +57,9 @@ public unsafe partial class Pager
     /// </summary>
     internal static int ReadWindowAhead(State state, long firstPage, int numberOfPages, bool onCallingThread)
     {
-        var hints = state.Pager._pageHints;
-        if (hints == null)
+        if (state.Pager._hintsReads == false)
             return 0;
+        var hints = state.Pager._pageHints;
 
         var first = hints.Mark(firstPage, numberOfPages);
         var skipped = first == -1 ? numberOfPages : (int)(first - firstPage);
@@ -84,9 +80,9 @@ public unsafe partial class Pager
     /// <summary>Starts reading the pages after the first page of an overflow value, from the first one not hinted within the stale time.</summary>
     public static void HintOverflowPages(State state, long pageNumber, int numberOfPages)
     {
-        var hints = state.Pager._pageHints;
-        if (hints == null || numberOfPages <= 1 || pageNumber + numberOfPages > state.NumberOfAllocatedPages)
+        if (state.Pager._hintsReads == false || numberOfPages <= 1 || pageNumber + numberOfPages > state.NumberOfAllocatedPages)
             return;
+        var hints = state.Pager._pageHints;
 
         // a read-ahead window can hold the first pages of a value, not all of them
         var first = hints.Mark(pageNumber + 1, numberOfPages - 1);
@@ -100,14 +96,14 @@ public unsafe partial class Pager
     public static bool CanReadPagesAhead(StorageEnvironmentOptions options) =>
         WillNeedSupported && options.RunningOn32Bits == false && options.EnablePrefetching;
 
-    /// <summary>Completes once the pages are in the page cache. Recently requested pages are skipped.</summary>
+    /// <summary>Completes once the pages are in the page cache. Pages hinted or requested within the stale time are skipped.</summary>
     [SkipLocalsInit]
     public static ValueTask ReadPagesAhead(State state, ReadOnlySpan<long> pageNumbers)
     {
-        if (CanReadPagesAhead(state.Pager.Options) == false)
+        if (state.Pager._hintsReads == false)
             return ValueTask.CompletedTask;
 
-        var recent = state.Pager._recentHints ??= new int[1 << RecentHintsBits];
+        var hints = state.Pager._pageHints;
         long[] rented = null;
         Span<long> offsets = pageNumbers.Length <= 64 ? stackalloc long[pageNumbers.Length] : (rented = ArrayPool<long>.Shared.Rent(pageNumbers.Length));
         try
@@ -115,11 +111,8 @@ public unsafe partial class Pager
             var count = 0;
             foreach (var pageNumber in pageNumbers)
             {
-                ref var slot = ref RecentSlot(recent, pageNumber);
-                var key = (int)(pageNumber + 1);
-                if (Volatile.Read(ref slot) == key)
-                    continue; // asked for a moment ago, or earlier in this group
-                Volatile.Write(ref slot, key);
+                if ((ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages || hints.TryMark(pageNumber) == false)
+                    continue; // also a page earlier in this group
                 offsets[count++] = pageNumber * Constants.Storage.PageSize;
             }
             if (count == 0)
@@ -161,7 +154,4 @@ public unsafe partial class Pager
             .ContinueWith(rented => ring.WaitForPages(rented.Result, ticket, copy).AsTask(), TaskScheduler.Default)
             .Unwrap());
     }
-
-    private static ref int RecentSlot(int[] recent, long pageNumber) =>
-        ref recent[(int)(((ulong)pageNumber * 0x9E3779B97F4A7C15UL) >> (64 - RecentHintsBits))]; // Fibonacci hashing
 }

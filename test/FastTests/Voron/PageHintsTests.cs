@@ -23,7 +23,6 @@ public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 
         Assert.Equal(int.MaxValue, policy.StaleAfterSeconds);
         Assert.False(hints.TryMark(0));
-        Assert.True(hints.IsMarked(0));
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -77,7 +76,7 @@ public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 
         Assert.Equal(PagesPerChunk, hints.Mark(PagesPerChunk - 2, 4)); // across two chunks
         Assert.Equal(-1, hints.Mark(PagesPerChunk - 2, 4));
-        Assert.True(hints.IsMarked(PagesPerChunk + 1));
+        Assert.False(hints.TryMark(PagesPerChunk + 1));
     }
 
     [RavenFact(RavenTestCategory.Voron)]

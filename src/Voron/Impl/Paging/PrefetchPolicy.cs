@@ -25,6 +25,7 @@ public sealed class PrefetchPolicy : IDisposable
     private byte _lastGeneration;
     private int _clock;
     private int _staleAfterSeconds = int.MaxValue;
+    private const int StaleAfterSecondsWithoutEvictions = 60;
     private const int EvictionSamples = 10;
     private readonly long[] _evicted = new long[EvictionSamples];
     private int _evictedCount;
@@ -39,6 +40,8 @@ public sealed class PrefetchPolicy : IDisposable
             return;
 
         _evictions = PageCacheEvictions.TryCreate();
+        if (_evictions == null)
+            _staleAfterSeconds = StaleAfterSecondsWithoutEvictions; // Windows and macOS report no evictions
         // free memory reads as zero until the server's low-memory monitor runs: no warm-up without it
         _timer = new Timer(_ =>
         {
