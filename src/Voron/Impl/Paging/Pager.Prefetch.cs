@@ -25,6 +25,9 @@ public unsafe partial class Pager
 
     private PageHints _pageHints;
 
+    /// <summary>An iterator reads ahead this many of the pages its next entries refer to.</summary>
+    internal const int IteratorReadAheadPages = 8;
+
     private static readonly PerCoreValue<PerCoreSum> PagesHintedCount = new();
     private static readonly PerCoreValue<PerCoreSum> PagesReadAheadCount = new();
     private static readonly PerCoreValue<PerCoreSum> ReadAheadPagesSkippedCount = new();

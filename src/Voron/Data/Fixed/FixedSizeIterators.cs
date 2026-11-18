@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using Voron.Impl.Paging;
 using System.Collections;
 using System.Collections.Generic;
 using Sparrow.Server;
@@ -292,17 +293,22 @@ namespace Voron.Data.Fixed
             }
 
 
+            // the children of a branch page, from first, at most count of them
             private struct TreePagePrefetcher : IEnumerator<long>
             {
                 private readonly FixedSizeTreePage<TVal> _page;
+                private readonly int _first;
+                private readonly int _end;
                 private int _idx;
 
-                public TreePagePrefetcher(FixedSizeTreePage<TVal> page)
+                public TreePagePrefetcher(FixedSizeTreePage<TVal> page, int first, int count)
                 {
                     System.Diagnostics.Debug.Assert(page.IsBranch);
 
                     _page = page;
-                    _idx = -1;
+                    _first = first;
+                    _end = Math.Min(first + count, page.NumberOfEntries);
+                    _idx = first - 1;
                 }
 
                 long IEnumerator<long>.Current => _page.GetEntry(_idx)->PageNumber;
@@ -314,12 +320,12 @@ namespace Voron.Data.Fixed
                 bool IEnumerator.MoveNext()
                 {
                     _idx++;
-                    return _idx < _page.NumberOfEntries;
+                    return _idx < _end;
                 }
 
                 void IEnumerator.Reset()
                 {
-                    _idx = -1;
+                    _idx = _first - 1;
                 }
             }
 
@@ -340,7 +346,8 @@ namespace Voron.Data.Fixed
                             if (_prefetch)
                             {
                                 var pager = _parent._tx.DataPager;
-                                pager.MaybePrefetchMemory(_parent._tx.DataPagerState,new TreePagePrefetcher(_currentPage));
+                                pager.MaybePrefetchMemory(_parent._tx.DataPagerState,
+                                    new TreePagePrefetcher(_currentPage, _currentPage.LastSearchPosition + 1, Pager.IteratorReadAheadPages));
                             }
 
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
