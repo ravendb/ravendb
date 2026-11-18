@@ -31,6 +31,8 @@ public partial class Hnsw
                 set => _ = value;
             }
 
+            public long VectorComparisons => 0L;
+
             public bool ShouldContinueSearch(long filterDocsCount)
             {
                 return false;

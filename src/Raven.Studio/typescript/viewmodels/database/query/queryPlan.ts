@@ -92,8 +92,20 @@ class executionInfo {
             return "corax-phrase-query";
         } else if (operationName.startsWith("VectorSearchMatch")) {
             return "vector-search";
+        } else if (operationName === "CompiledQuery") {
+            return "corax-multi-term-match";
+        } else if (operationName === "Fill" || operationName === "DirectIterate") {
+            return "corax-term-match";
+        } else if (operationName === "AND" || operationName === "AND-Bitmaps" || operationName === "AND-Group") {
+            return "corax-operator-and";
+        } else if (operationName === "OR" || operationName === "OR-Bitmaps") {
+            return "corax-operator-or";
+        } else if (operationName === "ANDNOT" || operationName === "ANDNOT-Bitmaps") {
+            return "corax-operator-andnot";
+        } else if (operationName === "EntryScanCheck") {
+            return "corax-unary-match";
         } else {
-            return "corax-fallback"; 
+            return "corax-fallback";
         }
     }
     

@@ -56,9 +56,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
-                .Children[0]
-                .Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = FindSimilarityMethod((QueryInspectionNode)timings.QueryPlan);
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
     }
@@ -99,13 +97,11 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
-                .Children[0]
-                .Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = FindSimilarityMethod((QueryInspectionNode)timings.QueryPlan);
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
     }
-    
+
     [RavenMultiplatformFact(RavenTestCategory.Indexes | RavenTestCategory.Querying | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexAlreadyQuantizedVectorAndQueryItProperly_Int1()
     {
@@ -139,9 +135,7 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
-                .Children[0]
-                .Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = FindSimilarityMethod((QueryInspectionNode)timings.QueryPlan);
             Assert.Equal("HammingDistance", usedSimilarityMethod);
         }
     }
@@ -188,12 +182,26 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
                 .ToList();
             Assert.Equal(1, results.Count);
             Assert.NotNull(timings);
-            var usedSimilarityMethod = ((QueryInspectionNode)timings.QueryPlan)
-                .Children[0]
-                .Parameters["SimilarityMethod"];
+            var usedSimilarityMethod = FindSimilarityMethod((QueryInspectionNode)timings.QueryPlan);
             WaitForUserToContinueTheTest(store);
             Assert.Equal("CosineSimilarityI8", usedSimilarityMethod);
         }
+    }
+
+    private static string FindSimilarityMethod(QueryInspectionNode node)
+    {
+        if (node.Parameters != null && node.Parameters.TryGetValue("SimilarityMethod", out var value))
+            return value;
+        if (node.Children != null)
+        {
+            foreach (var child in node.Children)
+            {
+                var result = FindSimilarityMethod(child);
+                if (result != null)
+                    return result;
+            }
+        }
+        return null;
     }
 
     private class QuantizationInIndex : AbstractIndexCreationTask<Dto>

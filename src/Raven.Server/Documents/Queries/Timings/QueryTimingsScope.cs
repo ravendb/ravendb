@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string AggregateBy;
 
             public static string Execute;
+            public static string Score;
             public static string Cluster;
             public static string Reduce;
             public static string Paging;

@@ -32,8 +32,19 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
 
+    internal readonly global::Corax.Querying.Planning.PlanCache SharedPlanCache;
+
+    private const int MaxFieldsWithMultipleTermsToCache = 512;
+
     private static readonly ImmutableDictionary<Slice, HnswIndexCache> EmptyCaches = ImmutableDictionary.Create<Slice, HnswIndexCache>(SliceComparer.Instance);
     private ImmutableDictionary<Slice, HnswIndexCache> _hnswCaches;
+
+    // Snapshot of the fields that hold more than one term, keyed by field name. Refreshed on commit by
+    // UpdateIndexCache and read by CoraxIndexReadOperation to drive plan selection. The set only ever grows,
+    // so a Volatile read/write of the latest snapshot is enough - a reader that sees a slightly newer snapshot
+    // just picks a more conservative plan, which is always correct.
+    private HashSet<string> _fieldsWithMultipleTerms;
+
     internal IndexWriter ActiveWriter;
     internal Dictionary<Slice, HashSet<long>> PendingDirtyVectorSets;
 
@@ -41,6 +52,9 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     {
         _logger = RavenLogManager.Instance.GetLoggerForIndex<CoraxIndexPersistence>(index);
         _converter = CreateConverter(index);
+        SharedPlanCache = new global::Corax.Querying.Planning.PlanCache(
+            index.Configuration.CoraxMaxPlansPerQuery,
+            index.Configuration.CoraxMaxDistinctQueryPlans);
     }
 
     private int GetMaxNodesForVectorCache()
@@ -202,7 +216,8 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     {
         using (var tx = environment.WriteTransaction())
         {
-            // Warm the per-field HNSW node caches and publish them on the transaction client state.
+            // Warm the per-field HNSW node caches and the fields-with-multiple-terms snapshot, then publish
+            // them on the transaction client state (vector caches) / persistence instance (fields snapshot).
             WarmInitialCaches(tx);
             tx.LowLevelTransaction.UpdateClientState(UpdateIndexCache(tx));
 
@@ -218,8 +233,50 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         if (tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
             rec = IndexStateRecord.CreateEmpty();
 
+        // Refresh the multi-valued field snapshot (rebuilt only if the tree actually grew) and publish it on
+        // the persistence instance. If it changed, touch the plan cache so plans that depend on it recompute.
+        var previous = Volatile.Read(ref _fieldsWithMultipleTerms);
+        var fields = ReadFieldsWithMultipleTerms(tx, previous);
+        if (fields != previous)
+        {
+            Volatile.Write(ref _fieldsWithMultipleTerms, fields);
+            SharedPlanCache.TouchGeneration();
+        }
+
         var caches = Volatile.Read(ref _hnswCaches);
         return rec with { CoraxVectorState = caches is null ? CoraxVectorState.Empty : new CoraxVectorState(caches) };
+    }
+
+    // Snapshot of the caller's current fields-with-multiple-terms; read by CoraxIndexReadOperation at reader open.
+    internal HashSet<string> FieldsWithMultipleTerms => Volatile.Read(ref _fieldsWithMultipleTerms);
+
+    // Cache MultipleTermsInField tree into a set. Write side only ever adds, so count tells when it changed.
+    private static HashSet<string> ReadFieldsWithMultipleTerms(Transaction tx, HashSet<string> previous)
+    {
+        var tree = tx.ReadTree(global::Corax.Constants.IndexWriter.MultipleTermsInField);
+        long count = tree != null ? tree.ReadHeader().NumberOfEntries : 0;
+        if (count == 0)
+            return null;
+
+        // Unchanged since last build: the previous snapshot (or previous null, when over the cap) still holds.
+        if (previous != null && previous.Count == count)
+            return previous;
+        if (count > MaxFieldsWithMultipleTermsToCache)
+            return null;
+
+        var set = new HashSet<string>((int)count, StringComparer.Ordinal);
+        using (var it = tree!.Iterate(prefetch: false))
+        {
+            if (it.Seek(Slices.BeforeAllKeys))
+            {
+                do
+                {
+                    set.Add(it.CurrentKey.ToString());
+                } while (it.MoveNext());
+            }
+        }
+
+        return set;
     }
 
     internal override void RecreateSearcher(Transaction asOfTx)
@@ -234,6 +291,8 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         {
             // Cache turned off at runtime (CoraxVectorSearchCacheSize == 0): clear the caches. UpdateIndexCache
             // publishes the cleared state on commit, so new read transactions resolve vectors from disk.
+            // In-flight readers keep their captured snapshot; the dropped instances release their native
+            // memory via finalization once those transactions complete.
             Volatile.Write(ref _hnswCaches, null);
             return;
         }
@@ -281,7 +340,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
         ImmutableDictionary<Slice, HnswIndexCache>.Builder builder = null;
         foreach (var fieldName in vectorFieldNames)
         {
-            Debug.Assert(fieldName.HasValue && fieldName.Size > 0,
+            Debug.Assert(fieldName is { HasValue: true, Size: > 0 },
                 "Vector field name must be allocated and non-empty for cache keying");
             var cache = HnswIndexCache.WarmFromScratch(llt, fieldName, maxNodes);
             if (cache is null)

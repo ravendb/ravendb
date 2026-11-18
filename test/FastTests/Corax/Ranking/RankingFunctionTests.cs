@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Corax;
 using Corax.Analyzers;
-using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -82,10 +81,8 @@ public class RankingFunctionTests : StorageTest
         query.Score(ids.Slice(0, read), scores, 0);
     }
 
-    [RavenTheory(RavenTestCategory.Corax)]
-    [InlineData(BitmapAndFillMode.Off)]
-    [InlineData(BitmapAndFillMode.Force)]
-    public void TwoBoostingMatchesWithOr(BitmapAndFillMode bitmapAndFillMode)
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TwoBoostingMatchesWithOr()
     {
         var list = new List<EntryData>();
         {
@@ -95,31 +92,20 @@ public class RankingFunctionTests : StorageTest
             list.Add(new EntryData(idX++, "Jan"));
             list.Add(new EntryData(idX++, "Kaszebe"));
         }
-        
-        IndexEntries(list);
-        using var indexSearcher = new IndexSearcher(Env, _mapping) { BitmapAndFillMode = bitmapAndFillMode };
-        var q1 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
-        var q2 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "kaszebe");
 
-        var orMatch = indexSearcher.Or(q1, q2);
-        Span<float> scores = stackalloc float[10];
-        scores.Fill(0);
-        Span<long> ids = stackalloc long[10];
-        
-        var read = orMatch.Fill(ids);
-        orMatch.Score(ids.Slice(0, read), scores.Slice(0, read), 0);
-        
-        Assert.Equal(3, read);
-        
-        MemoryExtensions.Sort(ids.Slice(0, read), scores.Slice(0, read));
-        long id = ids[2];
-        Assert.Equal("3", indexSearcher.TermsReaderFor(indexSearcher.GetFirstIndexedFiledName()).GetTermFor(id));
+        IndexEntries(list);
+
+        // 3 matches: entries 0,1 (maciej) and 3 (kaszebe).
+        // kaszebe appears once vs maciej twice → higher BM25 IDF → entry 3 scores highest.
+        var results = ExecuteRQLQueryByScore(
+            "FROM RankingIndex WHERE Content = 'maciej' OR Content = 'kaszebe' ORDER BY score()");
+
+        Assert.Equal(3, results.Count);
+        Assert.Equal("3", results[0]); // kaszebe (highest IDF) scores first
     }
     
-    [RavenTheory(RavenTestCategory.Corax)]
-    [InlineData(BitmapAndFillMode.Off)]
-    [InlineData(BitmapAndFillMode.Force)]
-    public void TwoBoostingMatchesWithAnd(BitmapAndFillMode bitmapAndFillMode)
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TwoBoostingMatchesWithAnd()
     {
         var list = new List<EntryData>();
         {
@@ -129,25 +115,14 @@ public class RankingFunctionTests : StorageTest
             list.Add(new EntryData(idX++, "Jan"));
             list.Add(new EntryData(idX++, "Kaszebe Maciej Maciej Maciej"));
         }
-        
-        IndexEntries(list);
-        using var indexSearcher = new IndexSearcher(Env, _mapping) { BitmapAndFillMode = bitmapAndFillMode };
-        var q1 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "maciej");
-        var q2 = indexSearcher.TermQuery(_mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true), "kaszebe");
 
-        var andMatch = indexSearcher.And(q1, q2);
-        Span<float> scores = stackalloc float[10];
-        scores.Fill(0);
-        Span<long> ids = stackalloc long[10];
-        
-        var read = andMatch.Fill(ids);
-        andMatch.Score(ids.Slice(0, read), scores.Slice(0, read), 1f);
-        
-        Assert.Equal(2, read);
-        
-        MemoryExtensions.Sort(ids.Slice(0, read), scores.Slice(0, read));
-        
-       // Assert.Equal("id/3", indexSearcher.GetIdentityFor(ids[2]));
+        IndexEntries(list);
+
+        // AND of two terms: entries 0 (maciej+kaszebe) and 3 (kaszebe+maciej) match both.
+        var results = ExecuteRQLQueryByScore(
+            "FROM RankingIndex WHERE Content = 'maciej' AND Content = 'kaszebe' ORDER BY score()");
+
+        Assert.Equal(2, results.Count);
     }
 
 
@@ -184,6 +159,12 @@ public class RankingFunctionTests : StorageTest
         }
     }
     
+    private List<string> ExecuteRQLQueryByScore(string rqlQuery)
+    {
+        using var searcher = new IndexSearcher(Env, _mapping);
+        return CoraxRqlTestHelper.ExecuteRQLQueryByScore(searcher, Allocator, _mapping, rqlQuery);
+    }
+
     private void IndexEntries(IEnumerable<EntryData> entries)
     {
         using var indexWriter = new IndexWriter(Env, _mapping, SupportedFeatures.All);

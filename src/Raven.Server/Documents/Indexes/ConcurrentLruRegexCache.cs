@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes
             // of regex queries.
             if (_count > _halfCapacity)
                 UpdateTimestamp(result);
-            return result.RegexLazy.Value; 
+            return result.RegexLazy.Value;
         }
 
         private static void UpdateTimestamp(ConcurrentLruRegexCacheNode result)
@@ -67,7 +67,10 @@ namespace Raven.Server.Documents.Indexes
             // if we lost the race, the node (and its per-thread Regex it may have already built) we just
             // created is simply discarded - the GC reclaims it, no explicit cleanup is needed.
             if (res != result) // someone else created it
+            {
+                // we lost the race; our unused node owns a ThreadLocal, return the one from the cache
                 return res.RegexLazy.Value;
+            }
 
             //We have reached the capacity and we will now clear 25% of the cache
             var currentCount = Interlocked.Increment(ref _count);
@@ -103,7 +106,12 @@ namespace Raven.Server.Documents.Indexes
                 {
 
                     if (_regexCache.TryRemove(kv.Key, out _))
+                    {
                         countRemoved++;
+                        // the evicted node's ThreadLocal<Regex> is deliberately not disposed here: a concurrent Get()
+                        // may already hold this node and be about to read RegexLazy.Value, which would then throw
+                        // ObjectDisposedException. The GC releases the per-thread slots once the node is unreachable.
+                    }
                 }
                 Interlocked.Add(ref _count, -countRemoved);
 
@@ -117,7 +125,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    internal sealed class ConcurrentLruRegexCacheNode
+    internal sealed class ConcurrentLruRegexCacheNode 
     {
         public long Timestamp;
         public ThreadLocal<Regex> RegexLazy { get; }

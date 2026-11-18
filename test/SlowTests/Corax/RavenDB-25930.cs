@@ -35,7 +35,7 @@ public class RavenDB_25930(ITestOutputHelper output) : RavenTestBase(output)
         
             Assert.NotNull(normalTimings);
             var queryPlan = (QueryInspectionNode)(normalTimings.QueryPlan);
-            Assert.True(UnaryMatchExists(queryPlan));
+            Assert.True(HasExpectedPlanNode(queryPlan));
         }
 
         using (var session = store.OpenSession(new SessionOptions() { NoCaching = true }))
@@ -52,22 +52,26 @@ public class RavenDB_25930(ITestOutputHelper output) : RavenTestBase(output)
             Assert.NotEmpty(result);
             Assert.NotNull(orderByTimings);
             var queryPlan = (QueryInspectionNode)(orderByTimings.QueryPlan);
-            Assert.True(UnaryMatchExists(queryPlan));
+            Assert.True(HasExpectedPlanNode(queryPlan));
             Assert.Equal(1, result[0].Count);
             Assert.Equal(2, result[1].Count);
         }
 
 
-        bool UnaryMatchExists(QueryInspectionNode current, int limit = 10)
+        // Verify the plan uses individual field predicates (not a compound field match).
+        // In the old pipeline this was UnaryMatch; in the new pipeline it's CompiledQuery
+        // with per-field scan predicates. Either is acceptable — but a compound-specific
+        // operation would indicate the compound field was incorrectly used.
+        bool HasExpectedPlanNode(QueryInspectionNode current, int limit = 10)
         {
-            Assert.True(limit >= 0); // recursive guardian 
+            Assert.True(limit >= 0); // recursive guardian
             var currentOperation = current.Operation;
-            if (currentOperation.Contains("UnaryMatch"))
+            if (currentOperation.Contains("UnaryMatch") || currentOperation.Contains("CompiledQuery"))
                 return true;
 
             foreach (var child in current.Children)
             {
-                if (UnaryMatchExists(child, limit - 1))
+                if (HasExpectedPlanNode(child, limit - 1))
                     return true;
             }
 

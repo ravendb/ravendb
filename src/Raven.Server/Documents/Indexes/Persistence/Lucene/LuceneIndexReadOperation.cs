@@ -640,7 +640,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved == false || query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
-                AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved();
+                AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved(hasVectorSearch: false);
                 sort = SortByFieldScore;
                 return null;
             }
@@ -659,7 +659,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     string value = null;
                     if (field.Arguments != null && field.Arguments.Length > 0)
-                        value = field.Arguments[0].NameOrValue;
+                        value = field.Arguments[0].GetString(query.QueryParameters);
 
                     sortArray[sortIndex++] = new RandomSortField(value);
                     continue;

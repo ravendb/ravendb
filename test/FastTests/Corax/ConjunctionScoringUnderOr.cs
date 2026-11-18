@@ -20,6 +20,8 @@ public class ConjunctionScoringUnderOr(ITestOutputHelper output) : RavenTestBase
     [InlineData(RavenSearchEngineMode.Corax, "startsWith(Name, 'mar') and not Optional = 'x'")]
     [InlineData(RavenSearchEngineMode.Lucene, "Optional = 'y' and startsWith(Name, 'mar')")]
     [InlineData(RavenSearchEngineMode.Corax, "Optional = 'y' and startsWith(Name, 'mar')")]
+    [InlineData(RavenSearchEngineMode.Lucene, "Tag = 'b' and not startsWith(Name, 'mac')")]
+    [InlineData(RavenSearchEngineMode.Corax, "Tag = 'b' and not startsWith(Name, 'mac')")]
     public void ConjunctionUnderOrScoresOnlyItsOwnMatches(RavenSearchEngineMode engine, string conjunction)
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(engine, includeScoresAndDistances: true));

@@ -134,7 +134,6 @@ namespace SlowTests.Core.Querying
                             .Search(x => x.Title, "nosql", options: SearchOptions.Not)
                             .Search(x => x.Desc, "querying")
                             .ToList();
-                    WaitForUserToContinueTheTest(store);
                     Assert.Equal(2, notNosqlOrQuerying.Count);
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/1-A"));
                     Assert.NotNull(notNosqlOrQuerying.FirstOrDefault(x => x.Id == "posts/3-A"));

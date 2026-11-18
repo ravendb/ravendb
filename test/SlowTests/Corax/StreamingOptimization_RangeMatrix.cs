@@ -28,6 +28,6 @@ public class StreamingOptimization_RangeMatrix(ITestOutputHelper output) : Raven
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [MemberData(nameof(StreamingOptimization_DataTests.UnboundedRange), true, MemberType = typeof(StreamingOptimization_DataTests))]
-    public void DataUnboundedRangeQueries(UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value) =>
+    public void DataUnboundedRangeQueries(ComparisonOperator unaryMatchOperation, OrderingType fieldType, bool ascending, object value) =>
         StreamingOptimization_DataTests.AssertUnboundedRangeQuery(this, unaryMatchOperation, fieldType, ascending, value);
 }

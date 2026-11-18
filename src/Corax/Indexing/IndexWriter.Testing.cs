@@ -47,7 +47,7 @@ public partial class IndexWriter
                 }
 
 
-                Container.GetAll(writer._transaction.LowLevelTransaction, keysPtr[..read], containers, -1, writer._transaction.LowLevelTransaction.PageLocator);
+                Container.GetAll(writer._transaction.LowLevelTransaction, keysPtr[..read], containers, writer._transaction.LowLevelTransaction.PageLocator);
                 for (int i = 0; i < read; i++)
                 {
                     var currentKey = keys[i];

@@ -276,7 +276,6 @@ namespace SlowTests.Issues
                             .Execute();
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
-WaitForUserToContinueTheTest(store);
                         CheckFacetResultsMatchInMemoryData(facetResults, filteredData);
                     }
                 }
@@ -430,13 +429,13 @@ WaitForUserToContinueTheTest(store);
 
                     var queryAsString = query.ToString();
                     RavenTestHelper.AssertEqualRespectingNewLines(
-                        @"declare function output(user) {
-	var first = user.name;
-	var last = user.lastName;
-	var format = ()=>first+"" ""+last;
-	return { FullName : format() };
-}
-from 'Users' as user select output(user)", queryAsString);
+                        "declare function output(user) {\n" +
+                        "\tvar first = user.name;\n" +
+                        "\tvar last = user.lastName;\n" +
+                        "\tvar format = ()=>first+\" \"+last;\n" +
+                        "\treturn { FullName : format() };\n" +
+                        "}\n" +
+                        "from 'Users' as user select output(user)", queryAsString);
 
                     var queryResult = query.ToList();
 

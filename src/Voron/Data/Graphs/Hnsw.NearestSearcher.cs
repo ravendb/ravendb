@@ -41,6 +41,7 @@ public unsafe partial class Hnsw
             private bool _isDone;
             
             public long CandidatesProcessed { get => _vectorReadCounter; }
+            public long VectorComparisons => _vectorReadCounter;
             public int NumberOfCandidates { get; init; }
 
             private NearestSearcher(SearchState searchState, Memory<byte> vector,

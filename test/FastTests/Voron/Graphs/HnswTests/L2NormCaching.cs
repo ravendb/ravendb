@@ -129,7 +129,7 @@ public class L2NormCaching(ITestOutputHelper output) : StorageTest(output)
 
             Span<long> matches = stackalloc long[8];
             Span<float> distances = stackalloc float[8];
-            var read = retriever.Fill(matches, distances, filter: null);
+            var read = retriever.Fill(matches, distances);
             Assert.True(read >= 1);
             Assert.Equal(5L, matches[0]);
         }

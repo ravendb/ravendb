@@ -29,12 +29,19 @@ namespace Voron.Global
 
             public const int JournalPageSize = 4 * Size.Kilobyte;
 
+            // PageSize is a power of two, so id / PageSize == id >> PageSizeShift and
+            // id % PageSize == id & PageSizeMask. Used on hot paths that split a container/entry id
+            // into (page number, in-page offset) to avoid the 64-bit integer divide.
+            public const int PageSizeShift = 13;
+            public const long PageSizeMask = PageSize - 1;
+
             static Storage()
             {
                 GC.KeepAlive(new int[
                     // this is a way to have static assert
                     PageSize > ushort.MaxValue || PageSize < 4*Constants.Size.Kilobyte ||
-                    PageSize% Size.Sector != 0
+                    PageSize% Size.Sector != 0 ||
+                    (1 << PageSizeShift) != PageSize
                         ? -1
                         : 0
                     ]);

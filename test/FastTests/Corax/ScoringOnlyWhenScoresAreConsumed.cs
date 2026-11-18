@@ -22,10 +22,10 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         var byAge = Query(session, "where Tag = 'a' order by Age as long", out var plan);
 
         Assert.Equal(new[] { "docs/3", "docs/1", "docs/2" }, byAge.Select(x => x.Id));
-        Assert.DoesNotContain("True", IsBoostingValues(plan));
+        Assert.DoesNotContain(MatchDispatch, Dispatches(plan));
 
         Query(session, "where Tag = 'a' order by score()", out var scoredPlan);
-        Assert.Equal("True", FindTermMatch(scoredPlan).Parameters["IsBoosting"]);
+        Assert.Contains(MatchDispatch, Dispatches(scoredPlan));
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
@@ -38,30 +38,24 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         var results = Query(session, "where boost(startsWith(Name, 'maciej'), 2) and Tag = 'a' order by Age as long", out var plan);
 
         Assert.Equal(new[] { "docs/3", "docs/1", "docs/2" }, results.Select(x => x.Id));
-        Assert.DoesNotContain("True", IsBoostingValues(plan));
+        Assert.DoesNotContain(MatchDispatch, Dispatches(plan));
     }
 
-    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData("where Tag = 'a' and not Name = 'Maciej' order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    [RavenData("where Tag = 'a' and not boost(Name = 'Maciej', 2) order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    [RavenData("where Tag = 'b' or not Name = 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    [RavenData("where Name != 'Maciej' order by score()", 3, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    [RavenData("where Tag = 'a' and not startsWith(Name, 'maciej2') order by score()", 1, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    [RavenData("where Tag = 'a' and not Age between 25 and 35 order by score()", 2, SearchEngineMode = RavenSearchEngineMode.Corax)]
-    public void ExcludedSideOfNegationIsNotScored(Options options, string rql, int expectedCount)
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Facets)]
+    public void FacetOnTheSameWhereDoesNotDropImplicitScoreOrdering()
     {
-        using var store = GetStoreWithDocumentBoostedIndex(options);
+        using var store = GetStoreWithDocumentBoostedIndex(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances: true));
         using var session = store.OpenSession();
 
-        var results = Query(session, rql, out var plan);
+        session.Advanced
+            .RawQuery<Doc>($"from index '{new DocsIndex().IndexName}' where Tag = 'a' select facet(Name)")
+            .ExecuteAggregation();
 
-        Assert.Equal(expectedCount, results.Count);
-        var andNot = Find(plan, "BinaryMatch [AndNot]");
-        Assert.NotNull(andNot);
-        Assert.Equal("False", andNot.Children[1].Parameters["IsBoosting"]);
+        var results = Query(session, "where Tag = 'a'", out var plan);
 
-        Query(session, "where Name = 'Maciej' order by score()", out var positivePlan);
-        Assert.Equal("True", FindTermMatch(positivePlan).Parameters["IsBoosting"]);
+        Assert.Equal(3, results.Count);
+        Assert.Contains(MatchDispatch, Dispatches(plan));
+        Assert.All(results, x => Assert.True(session.Advanced.GetMetadataFor(x).ContainsKey(Raven.Client.Constants.Documents.Metadata.IndexScore)));
     }
 
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
@@ -71,6 +65,23 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
 
         Assert.All(HasIndexScore(store, "order by Age as long"), Assert.False);
         Assert.All(HasIndexScore(store, "order by Age as long, score()"), Assert.True);
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [InlineData("not Name = 'Maciej'")]
+    [InlineData("not boost(Name = 'Maciej', 2)")]
+    [InlineData("not startsWith(Name, 'maciej2')")]
+    [InlineData("not Age between 25 and 35")]
+    public void ExcludedSideOfNegationIsNotScored(string negation)
+    {
+        using var store = GetStoreWithDocumentBoostedIndex(Options.ForSearchEngine(RavenSearchEngineMode.Corax, includeScoresAndDistances: true));
+        using var session = store.OpenSession();
+
+        var expected = Scores(session, "where Tag = 'a' order by score()");
+        var actual = Scores(session, $"where Tag = 'a' and {negation} order by score()");
+
+        Assert.NotEmpty(actual);
+        Assert.All(actual, x => Assert.Equal(expected[x.Key], x.Value));
     }
 
     [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector | RavenTestCategory.Querying)]
@@ -89,17 +100,19 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         new VectorDocsIndex().Execute(store);
         Indexes.WaitForIndexing(store);
 
-        using (var session = store.OpenSession())
-        {
-            session.Advanced
-                .RawQuery<VectorDoc>($"from index '{new VectorDocsIndex().IndexName}' where Counter0 = 1 and Counter1 <= 3 and vector.search(Text, 'car') order by Counter0 include timings()")
-                .Timings(out QueryTimings timings)
-                .ToList();
+        Assert.DoesNotContain(MatchDispatch, Dispatches(VectorQueryPlan(store, "order by Counter0")));
+        Assert.Contains(MatchDispatch, Dispatches(VectorQueryPlan(store, "order by score()")));
+    }
 
-            var plan = (QueryInspectionNode)timings.QueryPlan;
-            Assert.DoesNotContain("True", IsBoostingValues(plan));
-            Assert.NotNull(Find(plan, "MultiUnaryMatch"));
-        }
+    private static QueryInspectionNode VectorQueryPlan(IDocumentStore store, string orderBy)
+    {
+        using var session = store.OpenSession();
+        session.Advanced
+            .RawQuery<VectorDoc>($"from index '{new VectorDocsIndex().IndexName}' where Counter0 = 1 and Counter1 <= 3 and vector.search(Text, 'car') {orderBy} include timings()")
+            .Timings(out QueryTimings timings)
+            .ToList();
+
+        return (QueryInspectionNode)timings.QueryPlan;
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Facets)]
@@ -135,6 +148,8 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         return store;
     }
 
+    private const string MatchDispatch = "Match";
+
     private static List<Doc> Query(IDocumentSession session, string rql, out QueryInspectionNode plan)
     {
         var results = session.Advanced
@@ -147,6 +162,21 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
         return results;
     }
 
+    private static IEnumerable<string> Dispatches(QueryInspectionNode node)
+    {
+        if (node.Parameters != null && node.Parameters.TryGetValue("Dispatch", out var dispatch))
+            yield return dispatch;
+
+        foreach (var child in node.Children ?? [])
+        foreach (var value in Dispatches(child))
+            yield return value;
+    }
+
+    private static Dictionary<string, double> Scores(IDocumentSession session, string rql)
+    {
+        return Query(session, rql, out _).ToDictionary(x => x.Id, x => session.Advanced.GetMetadataFor(x).GetDouble(Raven.Client.Constants.Documents.Metadata.IndexScore));
+    }
+
     private static bool[] HasIndexScore(IDocumentStore store, string orderBy)
     {
         using var session = store.OpenSession();
@@ -156,26 +186,6 @@ public class ScoringOnlyWhenScoresAreConsumed(ITestOutputHelper output) : RavenT
 
         Assert.NotEmpty(results);
         return results.Select(x => session.Advanced.GetMetadataFor(x).ContainsKey(Raven.Client.Constants.Documents.Metadata.IndexScore)).ToArray();
-    }
-
-    private static IEnumerable<string> IsBoostingValues(QueryInspectionNode node)
-    {
-        if (node.Parameters != null && node.Parameters.TryGetValue("IsBoosting", out var isBoosting))
-            yield return isBoosting;
-
-        foreach (var child in node.Children ?? new List<QueryInspectionNode>())
-        foreach (var value in IsBoostingValues(child))
-            yield return value;
-    }
-
-    private static QueryInspectionNode FindTermMatch(QueryInspectionNode node) => Find(node, "TermMatch");
-
-    private static QueryInspectionNode Find(QueryInspectionNode node, string operation)
-    {
-        if (node.Operation.StartsWith(operation))
-            return node;
-
-        return (node.Children ?? new List<QueryInspectionNode>()).Select(child => Find(child, operation)).FirstOrDefault(found => found != null);
     }
 
     private class DocsIndex : AbstractIndexCreationTask<Doc>

@@ -1,13 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Corax;
-using Corax.Querying;
 using Corax.Mappings;
-using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
 using Sparrow;
@@ -54,10 +52,10 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            var match0 = searcher.AllEntries();
-            var match1 = searcher.CreateMultiUnaryMatch(match0, [(new MultiUnaryItem(searcher, _longItemFieldMetadata, "3", UnaryMatchOperation.GreaterThan))]);
+            using var searcher = new IndexSearcher(Env, _knownFields);
+            // String greater-than comparison: entries where the stored LongItem term > "3" lexicographically.
+            // GreaterThanQuery(fieldMeta, "3") performs a CompactTree range scan.
+            var match1 = searcher.GreaterThanQuery(_longItemFieldMetadata, "3");
             var expectedList = GetExpectedResult("3");
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -72,11 +70,10 @@ namespace FastTests.Corax
         {
             PrepareData(1);
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            Slice.From(ctx, "entries/0", out var id);
-            var match0 = searcher.AllEntries();
-            var match1 = searcher.CreateMultiUnaryMatch(match0, [(new MultiUnaryItem(searcher, searcher.FieldMetadataBuilder("Id", IndexId), "entries/0", UnaryMatchOperation.LessThan))]);
+            using var searcher = new IndexSearcher(Env, _knownFields);
+            // LessThanQuery on "Id" field: entries where Id < 'entries/0' lexicographically.
+            // Only one entry exists ("entries/0"), so nothing is less than it.
+            var match1 = searcher.LessThanQuery(searcher.FieldMetadataBuilder("Id", IndexId), "entries/0");
             var ids = new long[16];
             int read = match1.Fill(ids);
             Assert.Equal(0, read);
@@ -159,11 +156,8 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-
-            var match0 = searcher.AllEntries();
-            var match1 = searcher.CreateMultiUnaryMatch(match0, new[] { new MultiUnaryItem(_longItemFieldMetadata, 3L, UnaryMatchOperation.GreaterThan) });
+            using var searcher = new IndexSearcher(Env, _knownFields);
+            var match1 = searcher.GreaterThanQuery<long>(_longItemFieldMetadata, 3);
             var expectedList = _entries.Where(x => x.LongValue > 3).Select(x => x.Id).ToList();
             expectedList.Sort();
             var outputList = FetchFromCorax(ref match1);
@@ -178,15 +172,9 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            
-            var match0 = searcher.AllEntries();
-            var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 3L, UnaryMatchOperation.GreaterThan), new(_doubleItemFieldMetadata, 20.5, UnaryMatchOperation.LessThan)};
-            var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
             var expectedList = _entries.Where(x => x.LongValue > 3 && x.DoubleValue < 20.5).Select(x => x.Id).ToList();
             expectedList.Sort();
-            var outputList = FetchFromCorax(ref match1);
+            var outputList = ExecuteRQLQuery("FROM TestIndex WHERE LongItem > 3 AND DoubleItem < 20.5");
             outputList.Sort();
             Assert.Equal(expectedList.Count, outputList.Count);
             for (int i = 0; i < expectedList.Count; ++i)
@@ -201,20 +189,11 @@ namespace FastTests.Corax
                 _entries.Add(new Entry() {Id = $"entries/0", LongValue = idX + 1, DoubleValue = 0.0, TextualValue = "abc" });
             
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
-            
-            var match0 = searcher.TermQuery(_textualItemFieldMetadata, "abc"); //should return list [1, n]
-            
-            var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 18, UnaryMatchOperation.GreaterThan)};
-            var match1 = searcher.CreateMultiUnaryMatch(match0, comparers);
-            
+
             var expectedList = _entries.Where(x => x.LongValue > 18).Select(x => x.Id).ToList();
             expectedList.Sort();
-            
-            //Batch size must be small, since we expect Fill to return at least 1 element in the first call, otherwise it may affect the correctness of the result.
-            var outputList = FetchFromCorax(ref match1, batchSize: 8);
+
+            var outputList = ExecuteRQLQuery("FROM TestIndex WHERE TextualItem = 'abc' AND LongItem > 18");
             outputList.Sort();
             Assert.Equal(expectedList.Count, outputList.Count);
             for (int i = 0; i < expectedList.Count; ++i)
@@ -229,21 +208,8 @@ namespace FastTests.Corax
                 _entries.Add(new Entry() {Id = $"entries/0", LongValue = idX + 1, DoubleValue = 0.0, TextualValue = $"abc{idX}" });
             
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
-            var match0 = searcher.ExistsQuery(_textualItemFieldMetadata); //should return list [1, n]
-            var comparers = new MultiUnaryItem[] {new(_longItemFieldMetadata, 18, UnaryMatchOperation.GreaterThan)};
-            var match1 = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), comparers);
-
-            Span<long> ids = stackalloc long[16];
-            var totalResults = 0;
-            while (match0.Fill(ids) is var read and > 0)
-            {
-                totalResults += match1.AndWith(ids, read);
-            }
-            
+            var totalResults = ExecuteRQLQuery("FROM TestIndex WHERE LongItem > 18").Count;
             Assert.Equal(_entries.Count(x => x.LongValue > 18), totalResults);
         }
         
@@ -271,28 +237,19 @@ namespace FastTests.Corax
             Assert.Equal(1, match3.Fill(ids)); //match one doc
         }
         
-        [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-        [InlineData(BitmapAndFillMode.Off)]
-        [InlineData(BitmapAndFillMode.Force)]
-        public void MultiTermMatchWithTermMatch(BitmapAndFillMode bitmapAndFillMode)
+        [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+        public void MultiTermMatchWithTermMatch()
         {
             PrepareData();
             IndexEntries();
-            using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator)) { BitmapAndFillMode = bitmapAndFillMode };
 
-            var match0 = searcher.TermQuery(_longItemFieldMetadata, "1");
-            var match1 = searcher.StartWithQuery("Id", "ent");
-            var multiTermTerm = searcher.And(match1, match0);
-            var first = FetchFromCorax(ref multiTermTerm);
+            // Both orderings of AND must return the same single result.
+            // entry 1 has LongValue=1 (odd → "cde"), so both conditions match only entries/1.
+            var first = ExecuteRQLQuery("FROM TestIndex WHERE LongItem = 1 AND TextualItem = 'cde'");
             Assert.Equal(1, first.Count);
 
-            match0 = searcher.TermQuery(_longItemFieldMetadata, "1");
-            match1 = searcher.StartWithQuery("Id", "ent");
-            var termMultiTerm = searcher.And(match0, match1);
-            var second = FetchFromCorax(ref termMultiTerm);
+            var second = ExecuteRQLQuery("FROM TestIndex WHERE TextualItem = 'cde' AND LongItem = 1");
             Assert.Equal(1, second.Count);
-
 
             Assert.True(first.SequenceEqual(second));
         }
@@ -306,15 +263,9 @@ namespace FastTests.Corax
         {
             PrepareData();
             IndexEntries();
-            using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
 
-            // AndNot(TermMatch("cde"), TermMatch(LongValue=1))
-            // Should return entries where TextualValue == "cde" AND LongValue != 1
-            var termCde = searcher.TermQuery(_textualItemFieldMetadata, "cde");
-            var term1 = searcher.TermQuery(_longItemFieldMetadata, 1L);
-            var andNot = searcher.AndNot(termCde, term1);
-
-            var results = FetchFromCorax(ref andNot);
+            // Entries where TextualValue == "cde" AND LongValue != 1
+            var results = ExecuteRQLQuery("FROM TestIndex WHERE TextualItem = 'cde' AND NOT LongItem = 1");
             var expected = _entries.Where(e => e.TextualValue == "cde" && e.LongValue != 1).Select(e => e.Id).ToList();
 
             results.Sort();
@@ -322,6 +273,12 @@ namespace FastTests.Corax
 
             Assert.Equal(expected.Count, results.Count);
             Assert.True(expected.SequenceEqual(results));
+        }
+
+        private List<string> ExecuteRQLQuery(string rqlQuery)
+        {
+            using var searcher = new IndexSearcher(Env, _knownFields);
+            return CoraxRqlTestHelper.ExecuteRQLQueryAsDocumentIds(searcher, Allocator, _knownFields, rqlQuery);
         }
 
         private List<string> FetchFromCorax<TMatch>(ref TMatch match, int batchSize = 256)

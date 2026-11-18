@@ -31,6 +31,13 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract long Version { get; }
 
+        private long? _compoundFieldNumericXorMask;
+
+        // RavenDB-26831: order-preserving XOR mask for raw signed-long compound-field members. long.MinValue
+        // flips the sign bit so signed longs sort in unsigned byte order (negatives below positives); 0 keeps
+        // the legacy (non-order-preserving) encoding for indexes built before the fix. 
+        public long CompoundFieldNumericXorMask => _compoundFieldNumericXorMask ??= Version >= IndexVersion.CoraxOrderPreservingCompoundNumericEncoding ? long.MinValue : 0L;
+
         public HashSet<string> Collections { get; protected set; }
 
         public IndexLockMode LockMode { get; set; }
@@ -216,10 +223,19 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxPerEntryMultipleTermsMarker_72 = 72_004; // RavenDB-27565
             public const long CoraxCharAsString_72 = 72_005; // RavenDB-27596
 
+            public const long Base80Version = 80_000;
+            public const long CoraxPerEntryMultipleTermsMarker_80 = Base80Version; // RavenDB-27565
+
+            // RavenDB-25281: Corax rejects a compound field whose first source field is tokenized/non-keyword
+            // (it cannot produce the order-preserving prefix a compound field needs). Gated by version so indexes
+            // created before this validation existed keep working after an upgrade; only indexes at this version
+            // or higher are validated.
+            public const long CoraxCompoundFieldFirstFieldValidation = Base80Version; // RavenDB-25281
+
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxCharAsString_72;
+            public const long CurrentVersion = CoraxCompoundFieldFirstFieldValidation;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
@@ -280,7 +296,7 @@ namespace Raven.Server.Documents.Indexes
 
             public static bool IsPerEntryMultipleTermsMarkerSupported(long indexVersion)
             {
-                return indexVersion >= CoraxPerEntryMultipleTermsMarker_72;
+                return indexVersion >= CoraxPerEntryMultipleTermsMarker_80;
             }
 
             public static bool IsCoraxCharAsStringSupported(long indexVersion)
