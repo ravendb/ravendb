@@ -434,7 +434,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                     if (ring.IsAvailable)
                         Assert.Equal(enablePrefetching, info.Ticket != -1);
                     if (PlatformDetails.RunningOnLinux)
-                        Assert.Equal(enablePrefetching, HasRandomReadAdvice(state.ReadAddress));
+                        Assert.False(HasRandomReadAdvice(state.ReadAddress)); // reclaim would ignore the accesses through the mapping
                     Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).IsCompleted);
                 }
             }

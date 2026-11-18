@@ -163,6 +163,10 @@ int32_t _open_pager_file(int fd,
     // a file read from start to end (journal recovery): a larger read-ahead window than the device's (advisory)
     if (global_state->open_flags & OPEN_FILE_SEQUENTIAL_SCAN)
         (void)posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+    // reads through the descriptor (the prefetch ring, rvn_pager_start_reads) read only what they ask for; the advice is on
+    // the open file, and it does not change the read-around of its mapping
+    else if (global_state->open_flags & (OPEN_FILE_PREFETCH | OPEN_FILE_RANDOM_ACCESS))
+        (void)posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM);
 #endif
 
     if ((global_state->open_flags & OPEN_FILE_DO_NOT_MAP))
@@ -186,10 +190,6 @@ int32_t _open_pager_file(int fd,
         // a fault reads only the pages it touches, instead of the device's read-ahead window
         // (advisory: a failure leaves the default read-around)
         (void)madvise(mem, st.st_size, MADV_RANDOM);
-#if !__APPLE__
-        // the same for reads through the descriptor (the prefetch ring, rvn_pager_start_reads): madvise covers only the mapping
-        (void)posix_fadvise(fd, 0, 0, POSIX_FADV_RANDOM);
-#endif
     }
 
     if (global_state->open_flags & OPEN_FILE_WRITABLE_MAP)
