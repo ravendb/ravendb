@@ -76,8 +76,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         [ThreadStatic]
         private static (object Value, PresentMembers Present) _lastPresentMembers;
 
-        private static readonly MethodInfo _addToCollectionMethod = typeof(RavenJsonTypeInfoResolver).GetMethod(nameof(AddToCollection), BindingFlags.NonPublic | BindingFlags.Static);
-
         private static readonly object[] _callbackArguments = { new StreamingContext(StreamingContextStates.All) };
 
         private readonly SystemTextJsonSerializationConventions _conventions;
@@ -1791,40 +1789,76 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (items is not IEnumerable source)
                 return;
 
-            switch (target)
-            {
-                case IDictionary dictionary:
-                    if (dictionary.IsReadOnly || items is not IDictionary sourceDictionary)
-                        return;
-
-                    foreach (DictionaryEntry entry in sourceDictionary)
-                        dictionary[entry.Key] = entry.Value;
-                    return;
-
-                case IList list:
-                    if (list.IsReadOnly || list.IsFixedSize)
-                        return;
-
-                    foreach (object item in source)
-                        list.Add(item);
-                    return;
-            }
-
             _collectionAdders.GetOrAdd(target.GetType(), CreateCollectionAdder)?.Invoke(target, source);
         }
 
         private static Action<object, IEnumerable> CreateCollectionAdder(Type type)
         {
+            Type definition = type.IsGenericType ? type.GetGenericTypeDefinition() : null;
+
+            if (typeof(IDictionary).IsAssignableFrom(type))
+                return definition == typeof(Dictionary<,>) ? CreateAdder(nameof(AddToGenericDictionary), type.GetGenericArguments()) : AddToDictionary;
+
+            if (typeof(IList).IsAssignableFrom(type))
+                return definition == typeof(List<>) ? CreateAdder(nameof(AddToGenericList), type.GetGenericArguments()) : AddToList;
+
             foreach (Type @interface in type.GetInterfaces())
             {
                 if (@interface.IsGenericType && @interface.GetGenericTypeDefinition() == typeof(ICollection<>))
-                {
-                    MethodInfo method = _addToCollectionMethod.MakeGenericMethod(@interface.GetGenericArguments());
-                    return (Action<object, IEnumerable>)method.CreateDelegate(typeof(Action<object, IEnumerable>));
-                }
+                    return CreateAdder(nameof(AddToCollection), @interface.GetGenericArguments());
             }
 
             return null;
+        }
+
+        private static Action<object, IEnumerable> CreateAdder(string methodName, Type[] typeArguments)
+        {
+            MethodInfo method = typeof(RavenJsonTypeInfoResolver).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(typeArguments);
+            return (Action<object, IEnumerable>)method.CreateDelegate(typeof(Action<object, IEnumerable>));
+        }
+
+        private static void AddToDictionary(object target, IEnumerable items)
+        {
+            var dictionary = (IDictionary)target;
+            if (dictionary.IsReadOnly || items is not IDictionary source)
+                return;
+
+            foreach (DictionaryEntry entry in source)
+                dictionary[entry.Key] = entry.Value;
+        }
+
+        private static void AddToGenericDictionary<TKey, TValue>(object target, IEnumerable items)
+        {
+            if (items is not Dictionary<TKey, TValue> source)
+            {
+                AddToDictionary(target, items);
+                return;
+            }
+
+            var dictionary = (Dictionary<TKey, TValue>)target;
+#if NET8_0_OR_GREATER
+            dictionary.EnsureCapacity(dictionary.Count + source.Count);
+#endif
+            foreach (KeyValuePair<TKey, TValue> entry in source)
+                dictionary[entry.Key] = entry.Value;
+        }
+
+        private static void AddToList(object target, IEnumerable items)
+        {
+            var list = (IList)target;
+            if (list.IsReadOnly || list.IsFixedSize)
+                return;
+
+            foreach (object item in items)
+                list.Add(item);
+        }
+
+        private static void AddToGenericList<T>(object target, IEnumerable items)
+        {
+            if (items is IEnumerable<T> source)
+                ((List<T>)target).AddRange(source);
+            else
+                AddToList(target, items);
         }
 
         private static void AddToCollection<T>(object target, IEnumerable items)
@@ -1833,8 +1867,30 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (collection.IsReadOnly)
                 return;
 
-            foreach (object item in items)
-                collection.Add((T)item);
+#if NET8_0_OR_GREATER
+            if (collection is HashSet<T> existing && items is ICollection<T> counted)
+                existing.EnsureCapacity(existing.Count + counted.Count);
+#endif
+
+            switch (items)
+            {
+                case List<T> list:
+                    foreach (T item in list)
+                        collection.Add(item);
+                    break;
+                case HashSet<T> set:
+                    foreach (T item in set)
+                        collection.Add(item);
+                    break;
+                case IEnumerable<T> source:
+                    foreach (T item in source)
+                        collection.Add(item);
+                    break;
+                default:
+                    foreach (object item in items)
+                        collection.Add((T)item);
+                    break;
+            }
         }
 
         private void ApplyTypeNameHandling(JsonTypeInfo typeInfo)
