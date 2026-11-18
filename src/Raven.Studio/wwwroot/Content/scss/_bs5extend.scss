@@ -815,5 +815,9 @@ table {
 }
 
 .dropdown-toggle::after {
-    vertical-align: 0.125rem !important;
+    vertical-align: 0.125em !important;
+}
+
+.dropend .dropdown-toggle::after {
+    vertical-align: 0 !important;
 }

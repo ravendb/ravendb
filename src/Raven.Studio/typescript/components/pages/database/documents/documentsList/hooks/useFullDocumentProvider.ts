@@ -85,14 +85,17 @@ function fetchOnce<T>(cache: Map<string, Promise<T>>, id: string, fetch: () => P
 
 function fetchAndDropFailures<T>(cache: Map<string, Promise<T>>, id: string, fetch: () => Promise<T>): Promise<T> {
     const fetched = fetch();
-    fetched.then(
-        (result) => {
-            if (result == null) {
-                cache.delete(id);
-            }
-        },
-        () => cache.delete(id)
-    );
+    const drop = () => {
+        if (cache.get(id) === fetched) {
+            cache.delete(id);
+        }
+    };
+
+    fetched.then((result) => {
+        if (result == null) {
+            drop();
+        }
+    }, drop);
     return fetched;
 }
 

@@ -1,7 +1,6 @@
 @use "Content/scss/bs5variables";
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
-@use "../linkHoverLine";
 
 $row-bg-selected: color-mix(in srgb, colors.$primary-var 20%, colors.$row-bg-var);
 $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$row-bg-var);
@@ -220,17 +219,25 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
 
                 .cell-link-text {
                     position: relative;
-                    @include linkHoverLine.link-hover-line(
-                        colors.$border-color-light-var,
-                        sizes.$border-width,
-                        sizes.$gutter-xxs * -0.25,
-                        sizes.$global-easing
-                    );
+
+                    &::after {
+                        content: "";
+                        position: absolute;
+                        right: 7.5%;
+                        bottom: sizes.$gutter-xxs * -0.25;
+                        left: 7.5%;
+                        border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+                        transform: scaleX(0);
+                        transition: transform 0.2s sizes.$global-easing 0.05s;
+                        pointer-events: none;
+                    }
                 }
 
-                .cell-link:hover .cell-link-text,
-                .cell-link:focus .cell-link-text {
-                    @include linkHoverLine.link-hover-line-shown(colors.$primary-var);
+                .cell-link:hover .cell-link-text::after,
+                .cell-link:focus .cell-link-text::after {
+                    border-bottom-color: colors.$primary-var;
+                    transform: scaleX(1);
+                    transition: transform 0.35s cubic-bezier(0, 1.7, 0.4, 0.8);
                 }
 
                 .value-string {

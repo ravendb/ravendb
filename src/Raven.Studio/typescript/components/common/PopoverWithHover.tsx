@@ -56,6 +56,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     const cancelHandle = useRef<ReturnType<typeof setTimeout>>(null);
     const showHandle = useRef<ReturnType<typeof setTimeout>>(null);
     const prepareHandle = useRef<ReturnType<typeof setTimeout>>(null);
+    const hoverCount = useRef(0);
 
     const scheduleHide = useCallback(() => {
         cancelHandle.current = setTimeout(() => {
@@ -96,6 +97,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
     }, [scheduleHide]);
 
     const scheduleShow = useEffectEvent(() => {
+        const hover = ++hoverCount.current;
         const opensWhenPrepared = prepare != null && openDelayInMs == null;
 
         const show = () => {
@@ -104,7 +106,8 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
         };
 
         const showWhenPrepared = () => {
-            if (opensWhenPrepared && overElement.current) {
+            const isLatestHover = hover === hoverCount.current;
+            if (opensWhenPrepared && overElement.current && isLatestHover) {
                 show();
             }
         };

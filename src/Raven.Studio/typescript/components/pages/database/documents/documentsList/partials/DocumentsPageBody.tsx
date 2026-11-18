@@ -7,6 +7,7 @@ import { useLazyTableSelection } from "components/common/virtualTable/hooks/useL
 import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
 import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import useBoolean from "components/hooks/useBoolean";
 import { useResizeObserver } from "components/hooks/useResizeObserver";
 import { useServices } from "components/hooks/useServices";
 import { useCollectionRemovalRedirect } from "components/pages/database/documents/documentsList/hooks/useCollectionRemovalRedirect";
@@ -50,7 +51,9 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         getDocumentPreviewSource,
         clearCache: clearFullDocumentCache,
     } = useFullDocumentProvider(databaseName);
-    const [isDocumentPreviewEnabled, setIsDocumentPreviewEnabled] = useState(() => documentPreviewStorage.isEnabled());
+    const { value: isDocumentPreviewEnabled, setValue: setIsDocumentPreviewEnabled } = useBoolean(() =>
+        documentPreviewStorage.isEnabled()
+    );
     const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
     const bodyRef = useRef<HTMLDivElement>(null);
