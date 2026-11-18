@@ -75,6 +75,12 @@ internal static partial class QueryPlanBuilder
                     exec.StrategyGateReason = "the sort field's value tree may not reach every document (a direct scan could drop some)";
                     goto default;
                 }
+                // the two-key walk puts a document into the group of the first value it meets, not where the bitmap sorts it
+                if (forced is null && isFullScan && orderByFields.Length == 2 && ctx.PlanParams.IndexSearcher.HasMultipleTermsInField(orderByFields[0].Field))
+                {
+                    exec.StrategyGateReason = "the first sort field holds multiple values per document, so a two-key walk can't place a document by them";
+                    goto default;
+                }
                 string directScanReason = forced is not null ? "forced via $rvn_corax_strategy" : null;
                 bool directScanEffective = forced is not null || DirectScanCostEffective(ref ctx, isFullScan, out directScanReason);
                 exec.StrategyGateReason = directScanReason;
