@@ -49,24 +49,89 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
         private static void ThrowUnparseable(string value, Type type) =>
             throw new JsonException($"The JSON value '{value}' could not be converted to {type}.");
 
-        private static bool TryReadWithoutOffset(ref Utf8JsonReader reader, out DateTime value)
+        private const int OffsetLength = 6;
+
+        private const int MaxOffsetHours = 13;
+
+        private const int MinYearWithOffset = 2;
+
+        private const int MaxYearWithOffset = 9998;
+
+        private enum Zone
+        {
+            None,
+            Utc,
+            Offset
+        }
+
+        private static bool TryRead(ref Utf8JsonReader reader, out DateTime value)
+        {
+            if (TryRead(ref reader, out value, out Zone zone, out int offsetMinutes) == false)
+                return false;
+
+            switch (zone)
+            {
+                case Zone.Utc:
+                    value = DateTime.SpecifyKind(value, DateTimeKind.Utc);
+                    return true;
+                case Zone.Offset:
+                    value = new DateTime(value.Ticks - offsetMinutes * TimeSpan.TicksPerMinute, DateTimeKind.Utc);
+                    if (offsetMinutes != 0)
+                        value = value.ToLocalTime();
+                    return true;
+                default:
+                    return true;
+            }
+        }
+
+        private static bool TryRead(ref Utf8JsonReader reader, out DateTimeOffset value)
         {
             value = default;
+            if (TryRead(ref reader, out DateTime dateTime, out Zone zone, out int offsetMinutes) == false || zone == Zone.None)
+                return false;
+
+            value = new DateTimeOffset(dateTime.Ticks, new TimeSpan(offsetMinutes * TimeSpan.TicksPerMinute));
+            return true;
+        }
+
+        private static bool TryRead(ref Utf8JsonReader reader, out DateTime value, out Zone zone, out int offsetMinutes)
+        {
+            value = default;
+            zone = Zone.None;
+            offsetMinutes = 0;
             if (reader.TokenType != JsonTokenType.String || reader.HasValueSequence)
                 return false;
 
             ReadOnlySpan<byte> s = reader.ValueSpan;
-            if (s.Length < SecondsPrecisionLength || s.Length > DefaultRavenFormatUtcLength)
+            if (s.Length < SecondsPrecisionLength || s.Length > RoundtripDateTimeOffsetLength)
                 return false;
 
-            DateTimeKind kind = DateTimeKind.Unspecified;
             if (s[s.Length - 1] == (byte)'Z')
             {
-                kind = DateTimeKind.Utc;
+                zone = Zone.Utc;
                 s = s.Slice(0, s.Length - 1);
             }
+            else if (s.Length >= SecondsPrecisionLength + OffsetLength && s[s.Length - 3] == (byte)':' && s[s.Length - OffsetLength] is (byte)'+' or (byte)'-')
+            {
+                ReadOnlySpan<byte> offset = s.Slice(s.Length - OffsetLength);
+                if (TryReadDigits(offset.Slice(1, 2), out int offsetHours) == false || TryReadDigits(offset.Slice(4, 2), out int offsetMinutesPart) == false ||
+                    offsetHours > MaxOffsetHours || offsetMinutesPart > 59)
+                    return false;
 
-            if (s.Length < SecondsPrecisionLength)
+                offsetMinutes = offsetHours * 60 + offsetMinutesPart;
+                if (offset[0] == (byte)'-')
+                {
+                    if (offsetMinutes == 0)
+                        return false;
+
+                    offsetMinutes = -offsetMinutes;
+                }
+
+                zone = Zone.Offset;
+                s = s.Slice(0, s.Length - OffsetLength);
+            }
+
+            if (s.Length < SecondsPrecisionLength || s.Length > SecondsPrecisionLength + 1 + MaxFractionDigits)
                 return false;
 
             if (s[4] != (byte)'-' || s[7] != (byte)'-' || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':')
@@ -95,7 +160,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (year == 0 || month == 0 || month > 12 || day == 0 || day > DateTime.DaysInMonth(year, month) || hour > 23 || minute > 59 || second > 59)
                 return false;
 
-            value = new DateTime(year, month, day, hour, minute, second, kind).AddTicks(fraction);
+            if (zone == Zone.Offset && year is < MinYearWithOffset or > MaxYearWithOffset)
+                return false;
+
+            value = new DateTime(year, month, day, hour, minute, second, DateTimeKind.Unspecified).AddTicks(fraction);
             return true;
         }
 
@@ -151,7 +219,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                if (TryReadWithoutOffset(ref reader, out DateTime value))
+                if (TryRead(ref reader, out DateTime value))
                     return value;
 
                 string s = reader.GetString();
@@ -198,6 +266,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override DateTimeOffset Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
+                if (TryRead(ref reader, out DateTimeOffset value))
+                    return value;
+
                 string s = reader.GetString();
                 if (s != null)
                 {

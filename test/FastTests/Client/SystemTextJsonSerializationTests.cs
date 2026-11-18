@@ -290,6 +290,50 @@ namespace FastTests.Client
             yield return ["2026-04-11T12:34:56.1234567Z "];
             yield return ["2026-04-11"];
             yield return ["Sat, 11 Apr 2026 12:34:56 GMT"];
+
+            foreach (string offset in new[] { "-00:00", "+13:59", "-13:59", "+14:00", "-14:00", "+14:01", "+15:00", "+02:60", "+2:00", "+02", "+0200", "+02:0", "+a2:00", "+02-00" })
+                yield return ["2026-04-11T12:34:56.1234567" + offset];
+
+            foreach (string hour in new[] { "00:30:00", "01:30:00", "02:30:00" })
+            foreach (string day in new[] { "2026-03-29", "2026-10-25", "2026-03-08", "2026-11-01" })
+            foreach (string offset in new[] { "+00:00", "+01:00", "+02:00", "-05:00", "-04:00" })
+                yield return [day + "T" + hour + offset];
+
+            yield return ["0001-01-01T00:00:00+02:00"];
+            yield return ["0001-12-31T23:59:59-02:00"];
+            yield return ["0002-01-01T00:00:00+02:00"];
+            yield return ["9998-12-31T23:59:59.9999999-13:59"];
+            yield return ["9999-12-31T23:59:59.9999999-02:00"];
+            yield return ["9999-01-01T00:00:00+02:00"];
+        }
+
+        private class WithDateOffset
+        {
+            public DateTimeOffset Value { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [MemberData(nameof(DateTimeTexts))]
+        public void SystemTextJsonReadsDateTimeOffsetLikeTheSupportedFormats(string text)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            bool parsed = DateTimeOffset.TryParseExact(text, DateTimeFormatsToRead, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out DateTimeOffset expected);
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.ReadObject(new DynamicJsonValue { [nameof(WithDateOffset.Value)] = text }, "date"))
+            {
+                if (parsed == false)
+                {
+                    Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<WithDateOffset>(json, "dates/1"));
+                    return;
+                }
+
+                DateTimeOffset actual = conventions.Serialization.DefaultConverter.FromBlittable<WithDateOffset>(json, "dates/1").Value;
+
+                Assert.Equal(expected.Ticks, actual.Ticks);
+                Assert.Equal(expected.Offset, actual.Offset);
+            }
         }
 
         [RavenTheory(RavenTestCategory.ClientApi)]
