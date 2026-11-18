@@ -135,6 +135,26 @@ describe("PopoverWithHover with content to prepare", () => {
         expect(await screen.findByRole("tooltip")).toHaveTextContent("Five order lines");
     });
 
+    it("waits for a new rest when the pointer comes back while its content is still being prepared", async () => {
+        const { prepare, finishPreparing } = holdPreparation();
+        const { screen } = rtlRender(<PreparedValueCell prepare={prepare} />);
+        const cell = screen.getByText("[...]5");
+
+        fireEvent.mouseEnter(cell);
+        await advanceBy(400);
+        fireEvent.mouseLeave(cell);
+        fireEvent.mouseEnter(cell);
+        await advanceBy(100);
+        await finishPreparing();
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+        await advanceBy(300);
+        await finishPreparing();
+
+        expect(prepare).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole("tooltip")).toHaveTextContent("Five order lines");
+    });
+
     it("keeps listening to the pointer when it gets a new prepare function", () => {
         const { screen, rerender } = rtlRender(<PreparedValueCell prepare={() => Promise.resolve()} />);
         const addEventListener = jest.spyOn(screen.getByText("[...]5"), "addEventListener");

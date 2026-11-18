@@ -46,4 +46,21 @@ describe("useFullDocumentProvider", () => {
         expect(getDocument()).toHaveBeenCalledTimes(1);
         expect(getDocument()).toHaveBeenCalledWith("orders/2-A", DATABASE_NAME, true);
     });
+
+    it("keeps a newer document when an older request for it fails later", async () => {
+        let failFirstRequest: (error: Error) => void;
+        getDocument().mockClear();
+        getDocument().mockImplementationOnce(() => new Promise((_, reject) => (failFirstRequest = reject)));
+        const provider = renderProvider();
+
+        const firstPreview = previewDocuments(provider, "orders/1-A");
+        provider.clearCache();
+        await previewDocuments(provider, "orders/1-A");
+        failFirstRequest(new Error("The server is down"));
+        await expect(firstPreview).rejects.toThrow("The server is down");
+
+        await previewDocuments(provider, "orders/1-A");
+
+        expect(getDocument()).toHaveBeenCalledTimes(2);
+    });
 });

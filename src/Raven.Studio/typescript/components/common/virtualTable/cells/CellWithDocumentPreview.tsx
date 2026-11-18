@@ -8,7 +8,7 @@ import { PopoverWithHover } from "components/common/PopoverWithHover";
 import { PreviewLine, getDocumentPreviewLines } from "components/common/virtualTable/utils/documentPreviewLines";
 import document from "models/database/documents/document";
 import documentMetadata from "models/database/documents/documentMetadata";
-import { PropsWithChildren, useState } from "react";
+import { PropsWithChildren, useMemo, useState } from "react";
 import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import IconName from "typings/server/icons";
@@ -104,8 +104,11 @@ function DocumentPreviewBody({ asyncLoadPreview }: { asyncLoadPreview: UseAsyncR
 }
 
 function DocumentPreviewContent({ preview }: { preview: DocumentPreview }) {
-    const { lines, hiddenLineCount } = getDocumentPreviewLines(toEditorDto(preview.document), MAX_VISIBLE_LINES);
-    const badges = getBadges(preview);
+    const { lines, hiddenLineCount } = useMemo(
+        () => getDocumentPreviewLines(toEditorDto(preview.document), MAX_VISIBLE_LINES),
+        [preview]
+    );
+    const badges = useMemo(() => getBadges(preview), [preview]);
 
     return (
         <div className="document-preview-body">
