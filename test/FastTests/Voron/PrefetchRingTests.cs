@@ -19,6 +19,8 @@ namespace FastTests.Voron;
 
 public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
+    private static readonly PrefetchPolicy NoClock = new(totalMemoryBytes: 0, startTimer: false); // the stale time never passes
+
     private const int PosixFadviseDontNeed = 4;
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -34,6 +36,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         {
             using var options = StorageEnvironmentOptions.ForPathForTests(path);
             options.PrefetchRing = ring;
+            options.PrefetchPolicy = NoClock;
             for (var i = 0; i < 3; i++)
             {
                 var (pager, state) = Pager.Create(options, Path.Combine(path, $"{i}.voron"), 64 * 1024, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
@@ -63,6 +66,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 (Pager, Pager.State) Open(int i) => Pager.Create(options, Path.Combine(path, $"{i}.voron"), 64 * 1024, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 void Close((Pager Pager, Pager.State State) p)
                 {
@@ -124,6 +128,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -184,6 +189,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -231,6 +237,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var reads = new List<Task>();
                 for (var i = 0; i < 20; i++)
                 {
@@ -265,7 +272,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
-                options.PrefetchPolicy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false); // the stale time never passes
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -331,6 +338,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         using (var options = StorageEnvironmentOptions.ForPathForTests(path))
         {
             options.PrefetchRing = ring;
+            options.PrefetchPolicy = NoClock;
             var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
             using (pager)
             using (state)
@@ -383,7 +391,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
-                options.PrefetchPolicy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false); // the stale time never passes
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -426,6 +434,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             {
                 options.EnablePrefetching = enablePrefetching;
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 Assert.Equal(enablePrefetching && PlatformDetails.RunningOnLinux, Pager.CanReadPagesAhead(options));
 
                 var (pager, state) = options.InitializeDataPager();
@@ -536,8 +545,9 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     [RavenFact(RavenTestCategory.Voron)]
     public void ReadAheadWithoutARingReadsOnlyThePagesNotInMemory()
     {
-        // no prefetch flag: the file has no ring to wait on, so the pages are read ahead without waiting
-        WithPage5InMemory(nameof(ReadAheadWithoutARingReadsOnlyThePagesNotInMemory), Pal.OpenFileFlags.RandomAccess, (state, page) =>
+        // a ring with no files: the file has no ring to wait on, so the pages are read ahead without waiting
+        using var noRing = new PrefetchRing(ringEntries: 8, maxFiles: 0, queueSize: 64);
+        WithPage5InMemory(nameof(ReadAheadWithoutARingReadsOnlyThePagesNotInMemory), Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch, (state, page) =>
         {
             Assert.True(Pager.ReadPagesAhead(state, new long[] { 3, 5, 7 }).IsCompletedSuccessfully);
 
@@ -546,13 +556,13 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             Assert.Equal(expected, WaitForResident((byte*)page(7), expected));
             Assert.Equal(0, ResidentPages((byte*)page(4), Constants.Storage.PageSize));
             Assert.Equal(0, ResidentPages((byte*)page(6), Constants.Storage.PageSize));
-        });
+        }, noRing);
     }
 
     private delegate void PagesTest(Pager.State state, Func<long, IntPtr> page);
 
     // a 16 page data file out of the page cache, but for page 5
-    private void WithPage5InMemory(string name, Pal.OpenFileFlags flags, PagesTest test)
+    private void WithPage5InMemory(string name, Pal.OpenFileFlags flags, PagesTest test, PrefetchRing ring = null)
     {
         if (PlatformDetails.RunningOnLinux == false)
             return;
@@ -566,6 +576,8 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             File.WriteAllBytes(file, content);
 
             using var options = StorageEnvironmentOptions.ForPathForTests(path);
+            options.PrefetchPolicy = NoClock;
+            options.PrefetchRing = ring;
             var (pager, state) = Pager.Create(options, file, content.Length, flags);
             using (pager)
             using (state)
@@ -606,6 +618,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -650,6 +663,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -699,6 +713,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -756,6 +771,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -801,6 +817,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.PrefetchRing = ring;
+                options.PrefetchPolicy = NoClock;
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -944,6 +961,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
             File.WriteAllBytes(file, new byte[64 * Constants.Storage.PageSize]);
             using var options = StorageEnvironmentOptions.ForPathForTests(path);
             options.PrefetchRing = ring;
+            options.PrefetchPolicy = NoClock;
             var (pager, state) = Pager.Create(options, file, 64 * Constants.Storage.PageSize, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
             using (pager)
             using (state)
@@ -1014,6 +1032,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
             using var options = StorageEnvironmentOptions.ForPathForTests(path);
             options.PrefetchRing = ring;
+            options.PrefetchPolicy = NoClock;
             var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
             using (pager)
             using (state)

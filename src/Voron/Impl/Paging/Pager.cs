@@ -160,8 +160,11 @@ public unsafe partial class Pager : IDisposable
     {
         var policy = Options.PrefetchPolicy ?? PrefetchPolicy.Global;
         _prefetchTable = new SegmentPrefetchTable(policy, DeviceBudget, Options.PrefetchSegmentSize, initialSize);
-        if (_flags.HasFlag(Pal.OpenFileFlags.Prefetch) && CanReadPagesAhead(Options))
+        if (_flags.HasFlag(Pal.OpenFileFlags.Prefetch))
+        {
             _pageHints = new PageHints(policy, initialSize / Constants.Storage.PageSize);
+            _hintsReads = CanReadPagesAhead(Options);
+        }
     }
 
     public void DiscardWholeFile(State state)
@@ -190,31 +193,26 @@ public unsafe partial class Pager : IDisposable
 
     /// <summary>
     /// Reads ahead the pages the caller is about to read, also while memory is full or the device is busy: one request for
-    /// adjacent pages costs less than the faults it replaces. Pages hinted within the stale time, or requested a moment
-    /// ago, are skipped. Returns the pages requested.
+    /// adjacent pages costs less than the faults it replaces. Pages hinted or requested within the stale time are skipped.
+    /// Returns the pages requested.
     /// </summary>
     public int MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
     {
-        if (!_canPrefetch)
+        var hints = _pageHints;
+        if (_canPrefetch == false || hints == null)
             return 0;
 
-        var recent = _recentHints ??= new int[1 << RecentHintsBits];
         long runStart = 0, runPages = 0, requested = 0, skipped = 0;
         while (pagesToPrefetch.MoveNext())
         {
             var pageNumber = pagesToPrefetch.Current;
             if ((ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages)
                 continue; // a hint can carry -1 or a stale page number
-            if (_pageHints?.IsMarked(pageNumber) == true)
+            if (hints.TryMark(pageNumber) == false)
             {
                 skipped++;
                 continue;
             }
-            ref var slot = ref RecentSlot(recent, pageNumber);
-            var key = (int)(pageNumber + 1);
-            if (Volatile.Read(ref slot) == key)
-                continue;
-            Volatile.Write(ref slot, key);
 
             if (runPages != 0 && pageNumber == runStart + runPages)
             {

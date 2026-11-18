@@ -214,6 +214,7 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
                         var pager = tx.LowLevelTransaction.DataPager;
                         Assert.Equal(0, pager.MaybePrefetchMemory(state, new PageRange(first, 16)));
                         Assert.Equal(8, pager.MaybePrefetchMemory(state, new PageRange(first + 12, 12))); // pages 16 to 23
+                        Assert.Equal(0, pager.MaybePrefetchMemory(state, new PageRange(first + 16, 8))); // requested a moment ago
                     }
 
                     policy.AddEvictions(evictedFilePages: 1, filePages: 2); // stale after 1 s
