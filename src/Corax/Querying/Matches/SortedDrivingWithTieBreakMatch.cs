@@ -103,6 +103,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         FieldMetadata secondaryField,
         MatchCompareFieldType secondaryType,
         bool secondaryDescending,
+        bool includeNoValue,
         bool nullFirst,
         bool nullIsSmallest,
         int take)
@@ -159,10 +160,10 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         }
         _secondaryLookup = searcher.EntriesToTermsReader(secondaryLookupName);
 
-        _hasNullPostingList = searcher.TryGetPostingListForNull(in primaryField, out _nullPostingListId);
+        _hasNullPostingList = includeNoValue && searcher.TryGetPostingListForNull(in primaryField, out _nullPostingListId);
         _nullExhausted = !_hasNullPostingList;
 
-        _hasNonExistingPostingList = searcher.TryGetPostingListForNonExisting(in primaryField, out _nonExistingPostingListId);
+        _hasNonExistingPostingList = includeNoValue && searcher.TryGetPostingListForNonExisting(in primaryField, out _nonExistingPostingListId);
         _nonExistingExhausted = !_hasNonExistingPostingList;
 
         // Allocate all persistent buffers up front — avoids 7 IsValid branches per Fill call.
