@@ -93,6 +93,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
 
     // Null/non-existing docs get the same per-group secondary sort as regular terms; tracks that load.
     private bool _nullGroupPrepared;
+    // Set while the null list drains after the non-existing one: the group then holds two runs of entry ids
+    private bool _nullGroupHasTwoRuns;
 
     public SortedDrivingWithTieBreakMatch(
         ITermsProvider provider,
@@ -424,6 +426,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
     /// <summary>Keep only the top N entries of the current group by secondary value, discarding the rest.</summary>
     private void TruncateGroupToTopTake()
     {
+        if (_nullGroupHasTwoRuns)
+            _groupEntries.ToSpan().Sort(); // the secondary lookup and the ties by index need the group in id order
         int n = _groupEntries.Count;
         if (n <= _take)
             return;
@@ -622,13 +626,15 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         int countAfterNonExisting = _groupEntries.Count;
         if (hasNull)
         {
+            _nullGroupHasTwoRuns = countAfterNonExisting > 0;
             DrainSpecialIntoGroup(_nullPostingListId, entryBuffer);
+            _nullGroupHasTwoRuns = false;
             _nullExhausted = true;
         }
 
         if (_groupEntries.Count <= 0) return;
 
-        if (countAfterNonExisting > 0 && _groupEntries.Count > countAfterNonExisting) 
+        if (countAfterNonExisting > 0 && hasNull)
             _groupEntries.ToSpan().Sort(); // both contributed (each separately sorted), so we have to sort
 
         SortGroupBySecondary();

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -196,6 +197,37 @@ public class RavenDB_27814 : RavenTestBase
         var page = RunRql(store, query);
         Assert.Equal("BitmapPipeline", page.Hint);
         Assert.Equal(RunRql(store, query, "BitmapPipeline").Ids, page.Ids);
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void FullTwoKeyWalkTruncatesTheNullGroupInEntryIdOrder(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition { Name = "Items/ByP", Maps = { "from d in docs.Items select new { d.P, d.S }" } }));
+        using (var bulk = store.BulkInsert())
+        {
+            for (int i = 0; i < 4000; i++)
+            {
+                var doc = new Dictionary<string, object> { ["S"] = $"s{i * 7919 % 997:D3}" };
+                if (i >= 3000)
+                    doc["P"] = $"p{i % 5}";
+                else if (i % 2 == 1)
+                    doc["P"] = null;
+                bulk.Store(doc, $"items/{i}", new MetadataAsDictionary { ["@collection"] = "Items" });
+            }
+        }
+        Indexes.WaitForIndexing(store);
+
+        // null and missing P form one group that drains two posting lists, and the walk truncates it while it holds both
+        foreach (string order in new[] { "P, S", "P, S desc" })
+        {
+            string query = $"from index 'Items/ByP' order by {order} limit 10";
+            var scan = RunRql(store, query, "FieldSortedScan");
+            RavenTestHelper.AssertAll(() => query,
+                () => Assert.Equal("FieldSortedScan", scan.Hint),
+                () => Assert.Equal(RunRql(store, query, "BitmapPipeline").Ids, scan.Ids));
+        }
     }
 
     private static void AssertTwoKeyWalkMatchesBitmap(IDocumentStore store, string index, string order)
