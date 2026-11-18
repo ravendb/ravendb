@@ -26,7 +26,7 @@ public enum PlanOpKind : byte
     /// <summary>Intersect bitmap with an IQueryMatch leaf. <see cref="AndFromPostingSource"/> semantics.</summary>
     AndFromMatch,
 
-    /// <summary>Union a posting-list leaf into a bitmap. When the target is slot 0, stop once the page limit is reached.</summary>
+    /// <summary>Union a posting-list leaf into a bitmap.</summary>
     OrFromPostingSource,
 
     /// <summary>Union a tree-scan leaf into a bitmap. <see cref="OrFromPostingSource"/> semantics.</summary>

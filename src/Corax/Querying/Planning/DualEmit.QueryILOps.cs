@@ -57,19 +57,9 @@ internal ref partial struct DualEmit
         CsLine($"if (ctx.Bitmaps[{slot}].IsEmpty) goto {done.Name};");
     }
 
-    public void EmitLimitReachedGoto(LabelPair done)
-    {
-        IlLoadBitmapRef(0);
-        Il.Emit(OpCodes.Call, IlEmitterShared.ComputeCountMethod);
-        Il.Emit(OpCodes.Ldarg_0);
-        Il.Emit(OpCodes.Ldfld, IlEmitterShared.CtxLimit);
-        Il.Emit(OpCodes.Bge, done.Il);
-        CsLine($"if (ctx.Bitmaps[0].ComputeCount() >= ctx.Limit) goto {done.Name};");
-    }
-
-    /// <summary>Arm the per-op truncation budget: ctx.OpLimit = ctx.Limit. Emitted only before the first op
-    /// that grows slot 0 monotonically to the result, so every fill/AND upstream of a narrowing op (which read
-    /// the default unlimited OpLimit) materialize their full posting list instead of a limit-truncated prefix.</summary>
+    /// <summary>Arm the per-op truncation budget: ctx.OpLimit = ctx.Limit. Emitted only before the first op whose
+    /// output no later op narrows, so every fill/AND upstream of a narrowing op (which read the default unlimited
+    /// OpLimit) materialize their full posting list instead of a limit-truncated prefix.</summary>
     public void EmitArmOpLimit()
     {
         Il.Emit(OpCodes.Ldarg_0);

@@ -40,7 +40,8 @@ internal static partial class QueryPlanBuilder
 
         // Only the full scan adds the documents without a sort value; a driving clause that gets this far matches neither null nor missing
         IQueryMatch drivingMatch = hasTieBreak
-            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, includeNoValue: isFullScan, nullFirst, take)
+            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, includeNoValue: isFullScan, nullFirst, take,
+                hasResidual ? ctx.Plan.DirectScanResidualSet.Compiled : null)
             : isFullScan
                 ? new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator, indexSearcher, ctx.OrderByFields[0].Field, nullFirst)
                 : new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator);

@@ -55,6 +55,7 @@ public class CompiledQueryMatch(
     private RoaringBitmapIterator _iterator;
     private bool _executed;
     private long _count = -1;
+    private long _emitted;
 
     public RoaringBitmap[] Bitmaps;
 
@@ -65,11 +66,14 @@ public class CompiledQueryMatch(
     public int Limit = int.MaxValue;
 
     /// <summary>
-    /// Per-op truncation budget for fill/OR/AND primitives, "unlimited" by default, allows to abort queries midway when we have enough results.
+    /// Per-op truncation budget for fill/OR/AND primitives, "unlimited" by default.
     /// </summary>
     
     // ReSharper disable once FieldCanBeMadeReadOnly.Global - This is being set by generated IL, see: DualEmit.EmitArmOpLimit
     public long OpLimit = long.MaxValue;
+
+    /// <summary>An op dropped matches past the limit: the result holds its first <see cref="Limit"/> ids, not every match.</summary>
+    public bool CutAtLimit;
 
     public int ForcedEntryScanGate = Primitives.QueryPrimitives.EntryScanGateUnset;
 
@@ -153,7 +157,11 @@ public class CompiledQueryMatch(
     public int Fill(Span<long> matches)
     {
         EnsureExecuted();
-        return _iterator.Fill(ref _bitmapData, matches);
+        // A cut result holds its first Limit ids but may miss later ones, so it hands out no more; a reader that needs more runs it again with a bigger limit
+        int room = CutAtLimit ? (int)Math.Min(matches.Length, Limit - _emitted) : matches.Length;
+        int read = _iterator.Fill(ref _bitmapData, matches[..room]);
+        _emitted += read;
+        return read;
     }
 
     public void Score(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor, sorted: false);
