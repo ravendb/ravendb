@@ -715,14 +715,82 @@ public class RavenDB_27802 : RavenTestBase
                 () => Assert.Equal("FieldSortedScan", scan.Hint),
                 () => Assert.Equal(RunRql(store, query, "BitmapPipeline").Ids, scan.Ids));
         }
+
+        const string gate = "from index 'Products/ByCatPrice' where Cat >= 'a' and Price < 1500 order by Cat, Price as long desc limit 10";
+        var walk = RunRql(store, gate);
+        RavenTestHelper.AssertAll(() => gate,
+            () => Assert.Equal("FieldSortedScan", walk.Hint),
+            () => Assert.Equal(RunRql(store, gate, "BitmapPipeline").Ids, walk.Ids));
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TwoKeyCostGatePricesTheGroupsTheWalkReaches(Options options)
+    {
+        var index = new IndexDefinition { Name = "Products/ByCatPrice", Maps = { "from p in docs.Products select new { p.Cat, p.Rank, p.Price, p.Grp, p.Tier }" } };
+
+        // the walk starts in the group of Cat 'a' (Rank 1000 when walked down), which holds 3000 of the 3300 entries, and truncates it in rounds;
+        // the 300 groups after it make the average group small
+        using (var store = GetDocumentStore(options))
+        {
+            store.Maintenance.Send(new PutIndexesOperation(index));
+            using (var bulk = store.BulkInsert())
+            {
+                for (int i = 0; i < 3000; i++)
+                    bulk.Store(new Product { Cat = "a", Rank = 1000, Price = i }, $"products/{i}");
+                for (int i = 0; i < 300; i++)
+                    bulk.Store(new Product { Cat = $"b{i:D3}", Rank = i, Price = 3000 + i }, $"products/{3000 + i}");
+            }
+            Indexes.WaitForIndexing(store);
+
+            foreach (string query in new[]
+                     {
+                         "from index 'Products/ByCatPrice' where Cat >= 'a' and Price < 360 order by Cat, Price as long desc limit 10",
+                         "from index 'Products/ByCatPrice' where Rank >= 0 and Price < 360 order by Rank as long desc, Price as long desc limit 10"
+                     })
+            {
+                var page = RunRql(store, query);
+                RavenTestHelper.AssertAll(() => query,
+                    () => Assert.Equal("BitmapPipeline", page.Hint),
+                    () => Assert.Equal(Enumerable.Range(350, 10).Reverse().Select(i => $"products/{i}"), page.Ids),
+                    () => Assert.Equal(page.Ids, RunRql(store, query, "FieldSortedScan").Ids));
+            }
+        }
+
+        // ten small groups of Cat 'a00'..'a09' come before the group of Cat 'z', which makes the average group large; Price does not follow the id
+        using (var store = GetDocumentStore(options))
+        {
+            store.Maintenance.Send(new PutIndexesOperation(index));
+            using (var bulk = store.BulkInsert())
+            {
+                for (int i = 0; i < 16_500; i++)
+                    bulk.Store(new Product { Cat = i < 500 ? $"a{i / 50:D2}" : "z", Price = i * 7919L % 16_500, Grp = i % 10 == 0 ? "x" : "y", Tier = i % 5 == 0 ? "x" : "y" }, $"products/{i}");
+            }
+            Indexes.WaitForIndexing(store);
+
+            // the small groups fill the page before the walk reaches Cat 'z', or they leave two rows to it, and every round of 'z' checks the whole take again
+            foreach (var (query, hint) in new[]
+                     {
+                         ("from index 'Products/ByCatPrice' where Cat >= 'a' and Grp = 'x' order by Cat, Price as long limit 50", "FieldSortedScan"),
+                         ("from index 'Products/ByCatPrice' where Cat >= 'a' and Tier = 'x' order by Cat, Price as long limit 102", "BitmapPipeline")
+                     })
+            {
+                var page = RunRql(store, query);
+                RavenTestHelper.AssertAll(() => query,
+                    () => Assert.Equal(hint, page.Hint),
+                    () => Assert.Equal(RunRql(store, query, hint == "BitmapPipeline" ? "FieldSortedScan" : "BitmapPipeline").Ids, page.Ids));
+            }
+        }
     }
 
     private class Product
     {
         public string Id { get; set; }
         public string Cat { get; set; }
+        public long Rank { get; set; }
         public long Price { get; set; }
         public string Grp { get; set; }
+        public string Tier { get; set; }
     }
 
     private static (string[] Ids, string Hint, QueryInspectionNode Plan) RunRql(IDocumentStore store, string rql, string strategy = null, long? entryScanGate = null)
