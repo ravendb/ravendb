@@ -1,10 +1,12 @@
 using System;
+using System.Runtime.CompilerServices;
 using Sparrow;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
 public static unsafe class CompactKeyComparer
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int Compare(UnmanagedSpan xItem, UnmanagedSpan yItem, int nullResult)
     {
         if (yItem.Address == null)

@@ -139,6 +139,44 @@ public class RavenDB_27814 : RavenTestBase
             AssertTwoKeyWalkMatchesBitmap(store, "Items/ByCat", order);
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TwoKeyWalkPlacesNullStringSecondariesLikeTheBitmap(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        SeedTwoKeys(store);
+
+        foreach (var order in new[] { "Cat, S nulls last", "Cat, S desc nulls first", "Cat desc, S nulls last" })
+            AssertTwoKeyWalkMatchesBitmap(store, "Items/ByCat", order);
+        foreach (var order in new[] { "Cat, S", "Cat, S desc" })
+            AssertTwoKeyWalkMatchesBitmap(store, "Items/ByCatNullsLargest", order);
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void SecondaryNullsMustFollowTheNullsClause(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Item2 { Age = 1, Name = "b" });
+            session.Store(new Item2 { Age = 1, Name = null });
+            session.Store(new Item2 { Age = 1, Name = "a" });
+            session.SaveChanges();
+        }
+
+        new Items_Index2().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        using var querySession = store.OpenSession();
+        var results = querySession.Query<Item2, Items_Index2>()
+            .OrderBy(x => x.Age)
+            .ThenBy(x => x.Name, NullsOrdering.Last)
+            .ToList();
+
+        Assert.Equal(new[] { "a", "b", null }, results.Select(x => x.Name));
+    }
+
     private static void AssertTwoKeyWalkMatchesBitmap(IDocumentStore store, string index, string order)
     {
         foreach (var filter in new[] { "", " and R != 3" })
@@ -261,6 +299,22 @@ public class RavenDB_27814 : RavenTestBase
         {
             Map = items => from i in items
                 select new { i.Name };
+        }
+    }
+
+    private class Item2
+    {
+        public string Id { get; set; }
+        public long Age { get; set; }
+        public string Name { get; set; }
+    }
+
+    private class Items_Index2 : AbstractIndexCreationTask<Item2>
+    {
+        public Items_Index2()
+        {
+            Map = items => from i in items
+                select new { i.Age, i.Name };
         }
     }
 }
