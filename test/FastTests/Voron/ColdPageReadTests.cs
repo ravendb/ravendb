@@ -21,7 +21,6 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
 
     private readonly byte[] _masterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
-    // data files are opened with random-access advice: without read-ahead, each 4 KB of a cold page is a major fault of its own
     [RavenTheory(RavenTestCategory.Voron | RavenTestCategory.Encryption)]
     [InlineData(false)]
     [InlineData(true)]
@@ -50,6 +49,7 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
         using (var options = CreateOptions(useEncryption))
         using (var env = new StorageEnvironment(options))
         {
+            WithoutReadAround(env);
             DropFromPageCache(Path.Combine(DataDir, Constants.DatabaseFilename));
             using (var tx = env.ReadTransaction())
             {
@@ -61,6 +61,14 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
                 Assert.True(faults <= 1, $"{faults} major faults for {pages} pages"); // read ahead: the copy waits for reads already started
             }
         }
+    }
+
+    // a fault reads only the 4 KB it touches, so the major faults count what was not hinted
+    private static void WithoutReadAround(StorageEnvironment env)
+    {
+        using var tx = env.ReadTransaction();
+        var state = tx.LowLevelTransaction.DataPagerState;
+        Assert.Equal(0, Syscall.madvise((IntPtr)state.ReadAddress, (UIntPtr)state.TotalAllocatedSize, MAdvFlags.MADV_RANDOM));
     }
 
     private StorageEnvironmentOptions CreateOptions(bool useEncryption)

@@ -11,8 +11,7 @@ namespace Voron.Impl.Paging;
 
 public unsafe partial class Pager
 {
-    // Data files on Linux are opened with `MADV_RANDOM`, faulting at 4 KB at a time (vs. Voron's 8kb pages)
-    // This help us avoid separate faults
+    // a hint reads a whole 8 KB page in one request; a fault uses the kernel's heuristics
     private static readonly bool WillNeedSupported = PlatformDetails.RunningOnLinux;
 
     // Avoid repeated prefetching (syscall overhead only), slot is page num+1 (0 means empty)
