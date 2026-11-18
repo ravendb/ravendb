@@ -352,6 +352,53 @@ namespace FastTests.Client
             }
         }
 
+        private class WithIdAndNestedTypedCollections
+        {
+            public string Id { get; set; }
+
+            public List<WithTypedCollection> List { get; set; }
+
+            public WithTypedCollection Member { get; set; }
+
+            public List<object> Polymorphic { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SystemTextJsonDefaultConverterSimplifiesTypedCollectionsNestedInListsAndMembers()
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var entity = new WithIdAndNestedTypedCollections
+                {
+                    Id = "items/1",
+                    List = new List<WithTypedCollection> { new WithTypedCollection { Items = new object[] { 1, "two" } } },
+                    Member = new WithTypedCollection { Items = new object[] { 3 } },
+                    Polymorphic = new List<object> { new WithTypedCollection() }
+                };
+
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(entity, context))
+                {
+                    var list = Assert.IsType<BlittableJsonReaderArray>(json[nameof(WithIdAndNestedTypedCollections.List)]);
+                    var listItem = Assert.IsType<BlittableJsonReaderObject>(list[0]);
+                    Assert.Equal(2, Assert.IsType<BlittableJsonReaderArray>(listItem[nameof(WithTypedCollection.Items)]).Length);
+
+                    var member = Assert.IsType<BlittableJsonReaderObject>(json[nameof(WithIdAndNestedTypedCollections.Member)]);
+                    Assert.Equal(1, Assert.IsType<BlittableJsonReaderArray>(member[nameof(WithTypedCollection.Items)]).Length);
+
+                    var polymorphic = Assert.IsType<BlittableJsonReaderArray>(json[nameof(WithIdAndNestedTypedCollections.Polymorphic)]);
+                    Assert.True(Assert.IsType<BlittableJsonReaderObject>(polymorphic[0]).TryGet(Raven.Client.Constants.Json.Fields.Type, out string _));
+                }
+
+                using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(new WithIdAndNestedTypedCollections { Id = "items/2", Polymorphic = new List<object> { new WithTypedCollection() } }, context))
+                {
+                    var polymorphic = Assert.IsType<BlittableJsonReaderArray>(json[nameof(WithIdAndNestedTypedCollections.Polymorphic)]);
+                    Assert.True(Assert.IsType<BlittableJsonReaderObject>(polymorphic[0]).TryGet(Raven.Client.Constants.Json.Fields.Type, out string _));
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(BlittableJsonDocumentBuilder.UsageMode.None)]
         [InlineData(BlittableJsonDocumentBuilder.UsageMode.CompressStrings)]
