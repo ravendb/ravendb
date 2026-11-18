@@ -19,6 +19,7 @@ public class RavenDB_22973 : StorageTest
 
     protected override void Configure(StorageEnvironmentOptions options)
     {
+        options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
         base.Configure(options);
 
         options.ManualFlushing = true;

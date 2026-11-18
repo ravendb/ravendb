@@ -42,6 +42,55 @@ _flush_file(int32_t fd)
 
 #define SMB2_MAGIC_NUMBER 0xfe534d42
 
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
+#endif
+
+PRIVATE int32_t
+_create_anonymous_file(const char *name, int64_t max_size, int *fd, int32_t *detailed_error_code)
+{
+    (void)max_size; // a memfd grows with each commit, nothing to reserve up front
+
+    // the kernel limits the name to 249 bytes, it is only shown in /proc/<pid>/maps
+    char memfd_name[200];
+    const char *base = strrchr(name, '/');
+    snprintf(memfd_name, sizeof(memfd_name), "%s", base != NULL ? base + 1 : name);
+
+    // the syscall and not the glibc wrapper, which needs glibc 2.27
+    int rc = (int)syscall(SYS_memfd_create, memfd_name, MFD_CLOEXEC);
+    if (rc == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_OPEN_FILE;
+    }
+    *fd = rc;
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_commit_anonymous_file(int fd, int64_t size, int32_t *detailed_error_code)
+{
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+    if (st.st_size >= size)
+        return SUCCESS;
+
+    // fallocate allocates the pages now and charges them to the memory cgroup, so running out of memory
+    // fails here and not with SIGBUS on a later page fault
+    while (fallocate(fd, 0, st.st_size, size - st.st_size) == -1)
+    {
+        if (errno == EINTR)
+            continue;
+        *detailed_error_code = errno;
+        return FAIL_ALLOC_FILE;
+    }
+    return SUCCESS;
+}
+
 PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {

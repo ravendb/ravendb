@@ -3,6 +3,7 @@ using FastTests.Voron;
 using Voron;
 using Xunit;
 using Tests.Infrastructure;
+using Voron.Impl.Scratch;
 
 namespace SlowTests.Voron.Issues
 {
@@ -14,6 +15,7 @@ namespace SlowTests.Voron.Issues
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             options.ManualFlushing = true;
             options.ManualSyncing = true;
             options.MaxScratchBufferSize = 64 * 1024 * 4;

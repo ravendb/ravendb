@@ -85,6 +85,8 @@ struct handle_global_state
     int64_t prefetch_ticket;
     // the largest WILLNEED request the file's device reads whole
     int64_t prefetch_request_size;
+    // OPEN_FILE_ANONYMOUS: the size the object was created with, no pager may map more
+    int64_t anonymous_max_size;
 };
 
 struct handle
@@ -166,6 +168,12 @@ _flush_file(int32_t fd);
 
 PRIVATE int32_t /* different impl for linux and mac */
 _sync_directory_allowed(int32_t dir_fd);
+
+PRIVATE int32_t /* different impl for linux and mac */
+_create_anonymous_file(const char *name, int64_t max_size, int *fd, int32_t *detailed_error_code);
+
+PRIVATE int32_t /* different impl for linux and mac */
+_commit_anonymous_file(int fd, int64_t size, int32_t *detailed_error_code);
 
 PRIVATE int32_t /* different impl for linux and mac */
 _finish_open_file_with_odirect(int32_t fd);

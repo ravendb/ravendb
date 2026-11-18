@@ -32,6 +32,9 @@ struct handle_global_state
     size_t arena_size;
 
     struct dirty_bitmap* dirty_bitmap;
+
+    // OPEN_FILE_ANONYMOUS: the size the section was created with, no pager may map more
+    int64_t anonymous_max_size;
 };
 
 // This state represent a single handle to the pager on a file

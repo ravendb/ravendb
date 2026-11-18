@@ -7,6 +7,7 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
+using Voron.Impl.Scratch;
 
 namespace SlowTests.Voron.Issues
 {
@@ -18,6 +19,7 @@ namespace SlowTests.Voron.Issues
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             options.MaxScratchBufferSize = 65536 - 1; // to make ShouldReduceSizeOfCompressionPager() return true
         }
 

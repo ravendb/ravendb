@@ -2,6 +2,7 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Impl;
 using Xunit;
+using Voron.Impl.Scratch;
 
 namespace FastTests.Voron.ScratchBuffer
 {
@@ -13,6 +14,7 @@ namespace FastTests.Voron.ScratchBuffer
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             // the shared scratch pages table only shrinks when the journal is applied to the data file,
             // so manual flushing lets the test hold it at a known size
             options.ManualFlushing = true;

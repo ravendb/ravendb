@@ -1,6 +1,7 @@
 using Tests.Infrastructure;
 using Xunit;
 using Voron;
+using Voron.Impl.Scratch;
 
 namespace FastTests.Voron.ScratchBuffer
 {
@@ -12,6 +13,7 @@ namespace FastTests.Voron.ScratchBuffer
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             options.ManualFlushing = true;
             base.Configure(options);
         }
