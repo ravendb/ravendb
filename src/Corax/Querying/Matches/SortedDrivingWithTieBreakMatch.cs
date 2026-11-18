@@ -543,7 +543,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
                 Container.GetAllSortedByPage(_llt, secondarySpan[..n], termsSpan[..n], _llt.PageLocator);
                 fixed (UnmanagedSpan* termsPtr = termsSpan)
                 {
-                    idxs.Sort(new SliceComparer(termsPtr, _secondaryDescending));
+                    idxs.Sort(new SliceComparer(termsPtr, _nullIsSmallest ? 1 : -1, _secondaryDescending));
                 }
                 break;
             default:
@@ -573,32 +573,13 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         }
     }
 
-    private readonly struct SliceComparer(UnmanagedSpan* terms, bool descending) : IComparer<int>
+    private readonly struct SliceComparer(UnmanagedSpan* terms, int nullResult, bool descending) : IComparer<int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(int x, int y)
         {
-            int cmp = descending ? CompareTerms(y, x) : CompareTerms(x, y);
+            int cmp = descending ? CompactKeyComparer.Compare(terms[y], terms[x], nullResult) : CompactKeyComparer.Compare(terms[x], terms[y], nullResult);
             return cmp != 0 ? cmp : x - y;
-        }
-
-        private int CompareTerms(int x, int y)
-        {
-            ref var xItem = ref terms[x];
-            ref var yItem = ref terms[y];
-
-            if (yItem.Address == null)
-                return xItem.Address == null ? 0 : 1;
-            if (xItem.Address == null)
-                return -1;
-
-            var cmp = Memory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
-            if (cmp != 0)
-                return cmp;
-
-            var xBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
-            var yBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
-            return xBits - yBits;
         }
     }
 
