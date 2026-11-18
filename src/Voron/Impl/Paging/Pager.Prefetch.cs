@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
+using Sparrow.Server.Threading;
 using Voron.Global;
 
 namespace Voron.Impl.Paging;
@@ -22,7 +23,40 @@ public unsafe partial class Pager
     // above this, one wait on the ring costs less than a non-blocking read of each page on the caller's thread
     private const int CheckedReadAheadLimit = 16;
 
-    /// <summary>False where <see cref="ReadPagesAhead"/> and <see cref="WillNeedPages"/> do nothing: callers can skip finding the pages.</summary>
+    private PageHints _pageHints;
+
+    private static readonly PerCoreValue<PerCoreSum> PagesHintedCount = new();
+
+    /// <summary>Data file pages hinted on a read since the process started.</summary>
+    public static long PagesHinted => PagesHintedCount.Value;
+
+    /// <summary>Starts reading a data file page that was not hinted within the stale time.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void HintPage(State state, long pageNumber)
+    {
+        var hints = state.Pager._pageHints;
+        if (hints == null || (ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages || hints.TryMark(pageNumber) == false)
+            return;
+
+        Pal.rvn_pager_will_need(state.Handle, pageNumber * Constants.Storage.PageSize, Constants.Storage.PageSize);
+        PagesHintedCount.Apply(1);
+    }
+
+    /// <summary>Starts reading the pages after the first page of an overflow value, from the first one not hinted within the stale time.</summary>
+    public static void HintOverflowPages(State state, long pageNumber, int numberOfPages)
+    {
+        var hints = state.Pager._pageHints;
+        if (hints == null || numberOfPages <= 1 || pageNumber + numberOfPages > state.NumberOfAllocatedPages)
+            return;
+
+        var first = hints.Mark(pageNumber + 1, numberOfPages - 1);
+        if (first == -1)
+            return;
+        Pal.rvn_pager_will_need(state.Handle, first * Constants.Storage.PageSize, (pageNumber + numberOfPages - first) * Constants.Storage.PageSize);
+        PagesHintedCount.Apply(pageNumber + numberOfPages - first);
+    }
+
+    /// <summary>False where <see cref="ReadPagesAhead"/> and <see cref="HintPage"/> do nothing: callers can skip finding the pages.</summary>
     public static bool CanReadPagesAhead(StorageEnvironmentOptions options) =>
         WillNeedSupported && options.RunningOn32Bits == false && options.EnablePrefetching;
 
@@ -90,19 +124,4 @@ public unsafe partial class Pager
 
     private static ref int RecentSlot(int[] recent, long pageNumber) =>
         ref recent[(int)(((ulong)pageNumber * 0x9E3779B97F4A7C15UL) >> (64 - RecentHintsBits))]; // Fibonacci hashing
-
-    public static void WillNeedPages(State state, long pageNumber, int numberOfPages = 1)
-    {
-        if (CanReadPagesAhead(state.Pager.Options) == false)
-            return;
-
-        var recent = state.Pager._recentHints ??= new int[1 << RecentHintsBits];
-        ref var slot = ref RecentSlot(recent, pageNumber);
-        var key = (int)(pageNumber + 1);
-        if (Volatile.Read(ref slot) == key)
-            return;
-        Volatile.Write(ref slot, key);
-
-        Pal.rvn_pager_will_need(state.Handle, pageNumber * Constants.Storage.PageSize, (long)numberOfPages * Constants.Storage.PageSize);
-    }
 }

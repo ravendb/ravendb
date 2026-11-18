@@ -52,6 +52,8 @@ namespace Raven.Server.Web.System
                     [nameof(PrefetchRingStats.Reads)] = stats?.Reads,
                     [nameof(PrefetchRingStats.UsesIoUring)] = stats?.UsesIoUring,
                     ["SegmentReadAheadWarmUp"] = PrefetchPolicy.Global.Generation,
+                    [nameof(Pager.PagesHinted)] = Pager.PagesHinted,
+                    [nameof(PrefetchPolicy.StaleAfterSeconds)] = PrefetchPolicy.Global.StaleAfterSeconds is var stale && stale != int.MaxValue ? stale : null,
                     ["Devices"] = new DynamicJsonArray(DeviceWriteBudget.Devices.Select(d => new DynamicJsonValue
                     {
                         [nameof(DeviceWriteBudget.PathOnDevice)] = d.PathOnDevice,

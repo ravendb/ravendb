@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
@@ -63,6 +64,52 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
         }
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void AColdPageIsReadInOneRequest(bool writeTransaction, bool headerFirst)
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        using (var options = CreateOptions(useEncryption: false))
+        using (var env = new StorageEnvironment(options))
+        {
+            var pageNumber = WriteOnePage(env); // after the load: beyond the pages the environment validates
+            WithoutReadAround(env);
+            Evict(env);
+
+            Assert.Equal(0, MajorFaultsReading(env, pageNumber, writeTransaction, headerFirst));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void AnEvictedPageIsHintedAgainOnceItsHintIsStale()
+    {
+        if (PlatformDetails.RunningOnLinux == false)
+            return;
+
+        var policy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false);
+        using (var options = CreateOptions(useEncryption: false, policy))
+        using (var env = new StorageEnvironment(options))
+        {
+            var pageNumber = WriteOnePage(env);
+            WithoutReadAround(env);
+
+            Evict(env);
+            Assert.Equal(0, MajorFaultsReading(env, pageNumber));
+
+            Evict(env);
+            Assert.NotEqual(0, MajorFaultsReading(env, pageNumber)); // hinted already: each 4 KB is a fault of its own
+
+            policy.AddEvictions(evictedFilePages: 1, filePages: 2); // the page cache turns over in 2 s: stale after 1 s
+            policy.Tick(freeBytes: 0);
+            Evict(env);
+            Assert.Equal(0, MajorFaultsReading(env, pageNumber));
+        }
+    }
+
     // a fault reads only the 4 KB it touches, so the major faults count what was not hinted
     private static void WithoutReadAround(StorageEnvironment env)
     {
@@ -71,11 +118,61 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
         Assert.Equal(0, Syscall.madvise((IntPtr)state.ReadAddress, (UIntPtr)state.TotalAllocatedSize, MAdvFlags.MADV_RANDOM));
     }
 
-    private StorageEnvironmentOptions CreateOptions(bool useEncryption)
+    private static long WriteOnePage(StorageEnvironment env) => WritePages(env, 1);
+
+    // adjacent single pages; returns the first
+    private static long WritePages(StorageEnvironment env, int count)
+    {
+        long pageNumber = -1;
+        using (var tx = env.WriteTransaction())
+        {
+            for (var i = 0; i < count; i++)
+            {
+                var page = tx.LowLevelTransaction.AllocatePage(1);
+                new Span<byte>(page.DataPointer, Constants.Storage.PageSize - PageHeader.SizeOf).Fill(0x42);
+                if (i == 0)
+                    pageNumber = page.PageNumber;
+                Assert.Equal(pageNumber + i, page.PageNumber);
+            }
+            tx.Commit();
+        }
+
+        env.FlushLogToDataFile();
+        using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(env.Journal.Applicator))
+            Assert.True(operation.SyncDataFile());
+        return pageNumber;
+    }
+
+    // the major faults of reading the whole page
+    private static long MajorFaultsReading(StorageEnvironment env, long pageNumber, bool writeTransaction = false, bool headerFirst = false)
+    {
+        using var tx = writeTransaction ? env.WriteTransaction() : env.ReadTransaction();
+        var faults = MajorFaultsOfThisThread();
+        if (headerFirst)
+            Assert.Equal(pageNumber, tx.LowLevelTransaction.GetPageHeader<PageHeader>(pageNumber).PageNumber);
+        var page = tx.LowLevelTransaction.GetPage(pageNumber);
+        Assert.Equal(0x42, Volatile.Read(ref page.Pointer[Constants.Storage.PageSize - 1]));
+        return MajorFaultsOfThisThread() - faults;
+    }
+
+    // drops the data file from this process' mappings, then from the page cache
+    private void Evict(StorageEnvironment env)
+    {
+        using (var tx = env.ReadTransaction())
+        {
+            var state = tx.LowLevelTransaction.DataPagerState;
+            Assert.Equal(0, Syscall.madvise((IntPtr)state.ReadAddress, (UIntPtr)state.TotalAllocatedSize, MAdvFlags.MADV_DONTNEED));
+            if (state.WriteAddress != null)
+                Assert.Equal(0, Syscall.madvise((IntPtr)state.WriteAddress, (UIntPtr)state.TotalAllocatedSize, MAdvFlags.MADV_DONTNEED));
+        }
+        DropFromPageCache(Path.Combine(DataDir, Constants.DatabaseFilename));
+    }
+
+    private StorageEnvironmentOptions CreateOptions(bool useEncryption, PrefetchPolicy policy = null)
     {
         var options = StorageEnvironmentOptions.ForPathForTests(DataDir);
         options.ManualFlushing = true;
-        options.PrefetchPolicy = MemoryIsFull; // no segment warm-up: it would read the page ahead on its own
+        options.PrefetchPolicy = policy ?? MemoryIsFull; // no segment warm-up: it would read the page ahead on its own
         if (useEncryption)
             options.Encryption.MasterKey = _masterKey.ToArray();
         return options;
