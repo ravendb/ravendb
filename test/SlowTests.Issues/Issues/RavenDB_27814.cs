@@ -177,6 +177,27 @@ public class RavenDB_27814 : RavenTestBase
         Assert.Equal(new[] { "a", "b", null }, results.Select(x => x.Name));
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void FullTwoKeyWalkLeavesAMultiValuedFirstKeyToTheBitmap(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition { Name = "Items/ByTags", Maps = { "from d in docs.Items select new { d.Tags, d.S }" } }));
+        using (var commands = store.Commands())
+        {
+            var meta = new Dictionary<string, object> { ["@collection"] = "Items" };
+            for (int i = 0; i < 64; i++)
+                commands.Put($"items/{i}", null, new Dictionary<string, object> { ["Tags"] = new[] { $"t{i % 4}", $"t{i / 4 % 4}" }, ["S"] = $"s{i % 7}" }, meta);
+        }
+        Indexes.WaitForIndexing(store);
+
+        // the walk puts a document into the group of the first of its Tags it meets, which is not where the bitmap sorts it
+        const string query = "from index 'Items/ByTags' order by Tags desc, S limit 10";
+        var page = RunRql(store, query);
+        Assert.Equal("BitmapPipeline", page.Hint);
+        Assert.Equal(RunRql(store, query, "BitmapPipeline").Ids, page.Ids);
+    }
+
     private static void AssertTwoKeyWalkMatchesBitmap(IDocumentStore store, string index, string order)
     {
         foreach (var filter in new[] { "", " and R != 3" })
