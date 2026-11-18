@@ -29,6 +29,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static readonly ConcurrentDictionary<string, Type> _types = new();
 
+        private static readonly ConcurrentDictionary<ulong, Utf8TypeName> _typesByUtf8Name = new();
+
         private static readonly ConcurrentDictionary<Type, byte[]> _typeNamePrefixes = new();
 
         private static readonly ConcurrentDictionary<Type, DictionaryKey> _dictionaryKeys = new();
@@ -412,13 +414,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         private static Type ResolveType(string typeName, Type expectedType)
         {
-            Type type = _types.GetOrAdd(typeName, static name => Type.GetType(name, throwOnError: true));
+            Type type = ResolveType(typeName);
+            EnsureAllowed(type, expectedType);
+            return type;
+        }
+
+        private static Type ResolveType(string typeName)
+        {
+            return _types.GetOrAdd(typeName, static name => Type.GetType(name, throwOnError: true));
+        }
+
+        private static void EnsureAllowed(Type type, Type expectedType)
+        {
             RavenSerializationBinder.Instance.ValidateType(type);
 
             if (expectedType.IsAssignableFrom(type) == false)
                 throw new JsonException($"Type specified in JSON '{type.AssemblyQualifiedName}' is not compatible with '{expectedType.AssemblyQualifiedName}'.");
-
-            return type;
         }
 
         internal static object ReadItem(ref Utf8JsonReader reader, Type declaredType, TypeNameHandling typeNameHandling, JsonSerializerOptions options)
@@ -713,7 +724,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 if (TryGetDictionaryTypes(declaredType, out Type keyType, out Type valueType))
                     return ReadDictionary(ref reader, declaredType, keyType, valueType, options);
 
-                return JsonSerializer.Deserialize(ref reader, GetTypeInfo(declaredType, options));
+                return ReadTyped(ref reader, declaredType, options);
             }
 
             if (reader.TokenType == JsonTokenType.StartArray && declaredType != typeof(object))
@@ -724,15 +735,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         internal static bool TryReadTypedObject(ref Utf8JsonReader reader, Type declaredType, JsonSerializerOptions options, out object value)
         {
-            if (reader.TokenType != JsonTokenType.StartObject || TryPeekTypeName(reader, out string typeName) == false)
+            Utf8JsonReader peek = reader;
+            if (reader.TokenType != JsonTokenType.StartObject || TryPeekType(ref peek, declaredType, out Type type) == false)
             {
                 value = null;
                 return false;
             }
 
-            Type type = ResolveType(typeName, declaredType);
-
-            if (TryReadWrappedValue(ref reader, type, options, out value))
+            if (TryReadWrappedValue(ref reader, ref peek, type, options, out value))
                 return true;
 
             if (TryGetDictionaryTypes(type, out Type keyType, out Type valueType))
@@ -741,18 +751,68 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 value = ReadWrappedCollection(ref reader, type, options);
             else
             {
-                value = JsonSerializer.Deserialize(ref reader, GetTypeInfo(type, options));
+                value = ReadTyped(ref reader, type, options);
                 RemoveTypeNameFromExtensionData(value, options);
             }
 
             return true;
         }
 
-        private static bool TryReadWrappedValue(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options, out object value)
+        private static bool TryPeekType(ref Utf8JsonReader reader, Type declaredType, out Type type)
         {
-            Utf8JsonReader peek = reader;
-            peek.Read();
-            peek.Read();
+            type = null;
+            if (reader.Read() == false || reader.TokenType != JsonTokenType.PropertyName || reader.ValueTextEquals(TypePropertyName) == false)
+                return false;
+
+            if (reader.Read() == false || reader.TokenType != JsonTokenType.String)
+                return false;
+
+            if (reader.ValueIsEscaped || reader.HasValueSequence)
+            {
+                type = ResolveType(reader.GetString(), declaredType);
+                return true;
+            }
+
+            ReadOnlySpan<byte> name = reader.ValueSpan;
+            ulong hash = Sparrow.Hashing.XXHash64.CalculateInline(name);
+            if (_typesByUtf8Name.TryGetValue(hash, out Utf8TypeName entry))
+            {
+                for (; entry != null; entry = entry.Next)
+                {
+                    if (name.SequenceEqual(entry.Utf8))
+                    {
+                        type = entry.Type;
+                        break;
+                    }
+                }
+            }
+
+            if (type == null)
+            {
+                type = ResolveType(reader.GetString());
+                RememberUtf8TypeName(hash, name.ToArray(), type);
+            }
+
+            EnsureAllowed(type, declaredType);
+            return true;
+        }
+
+        private static void RememberUtf8TypeName(ulong hash, byte[] utf8, Type type)
+        {
+            _typesByUtf8Name.AddOrUpdate(hash, _ => new Utf8TypeName(utf8, type, null), (_, existing) => new Utf8TypeName(utf8, type, existing));
+        }
+
+        private sealed class Utf8TypeName(byte[] utf8, Type type, Utf8TypeName next)
+        {
+            public readonly byte[] Utf8 = utf8;
+
+            public readonly Type Type = type;
+
+            public readonly Utf8TypeName Next = next;
+        }
+
+        private static bool TryReadWrappedValue(ref Utf8JsonReader reader, ref Utf8JsonReader peek, Type type, JsonSerializerOptions options, out object value)
+        {
             if (peek.Read() == false || peek.TokenType != JsonTokenType.PropertyName || peek.ValueTextEquals(ValuePropertyName) == false)
             {
                 value = null;
