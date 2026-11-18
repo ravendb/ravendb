@@ -104,7 +104,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         Assert.True(log.TryGetLatest(out var latest));
         Assert.Equal("detail 4", latest.Detail);
 
-        Assert.Equal(new[] { "detail 4" }, log.GetMatchingDecisions(afterEtag: 5, new BackupDecisionLogFilter(), take: 10, out _).Select(x => x.Detail));
+        Assert.Equal(new[] { "detail 4" }, log.GetMatchingDecisions(afterEtag: 5, upToEtag: long.MaxValue, new BackupDecisionLogFilter(), take: 10, out _).Select(x => x.Detail));
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
@@ -432,6 +432,53 @@ public class ServerBackupRunnerTests : ClusterTestBase
                 $"The update that delivered the Completed entry should count it in its summary (before: {completedBefore}, in the update: {completedCount}).");
             break;
         }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task DecisionLogWatchMustSendEachDecisionOnce()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        using var webSocket = new ClientWebSocket();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await webSocket.ConnectAsync(new Uri($"{server.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?database={store.Database}&take=10"), cts.Token);
+
+        using (await ReceiveJsonAsync(webSocket, cts.Token))
+        {
+        }
+
+        var added = 0;
+        runner.ForTestingPurposesOnly().BeforeReadingDecisionLogs = () =>
+        {
+            if (Interlocked.Exchange(ref added, 1) == 0)
+                state.AddToDecisionLog(BackupDecisionCategory.Waiting, "AddedWhileReading", reason: null, DateTime.UtcNow);
+        };
+
+        state.AddToDecisionLog(BackupDecisionCategory.Waiting, "Trigger", reason: null, DateTime.UtcNow);
+
+        var timesSent = 0;
+        using var readCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token);
+        readCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        try
+        {
+            while (true)
+            {
+                using var update = await ReceiveJsonAsync(webSocket, readCts.Token);
+                timesSent += update.RootElement.GetProperty("Entries").EnumerateArray().Count(x => x.GetProperty("Detail").GetString() == "AddedWhileReading");
+            }
+        }
+        catch (Exception) when (readCts.IsCancellationRequested)
+        {
+        }
+
+        Assert.Equal(1, timesSent);
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport)]

@@ -41,11 +41,11 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
         var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
         var receive = webSocket.ReceiveAsync(receiveBuffer, token.Token);
 
-        var lastEtag = decisions.LastDecisionEtag;
         var lastSummaryVersion = decisions.SummaryVersion;
         var lastDecisionId = decisions.LastDecisionId;
 
         var snapshot = decisions.GetDecisionLogDetails(filter, afterEtag: null);
+        var lastEtag = snapshot.LastEtag;
         var totalResults = snapshot.TotalResults;
         lastDecisionId = Math.Max(lastDecisionId, GetMaxId(snapshot.Entries));
 
@@ -65,12 +65,11 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
                 continue;
             }
 
-            var currentEtag = decisions.LastDecisionEtag;
             var currentSummaryVersion = decisions.SummaryVersion;
             var details = decisions.GetDecisionLogDetails(filter, afterEtag: lastEtag);
 
             var summaryChanged = currentSummaryVersion != lastSummaryVersion;
-            lastEtag = currentEtag;
+            lastEtag = details.LastEtag;
             lastSummaryVersion = currentSummaryVersion;
 
             if (details.Entries.Count == 0 && summaryChanged == false)
