@@ -80,13 +80,14 @@ namespace Voron.Data.Containers
         public static bool operator !=(ContainerEntryId left, ContainerEntryId right) => left._id != right._id;
     }
 
-    public readonly unsafe ref struct Container
+    public readonly unsafe ref partial struct Container
     {
         public const int InvalidId = -1;
         private const int MinimumAdditionalFreeSpaceToConsider = 64;
         private const int NumberOfReservedEntries = 4; // all pages, free pages, number of entries, next free page
+        private const int MaxItemsPerPage = 1024;
 
-        public class TransactionState
+        public partial class TransactionState
         {
             // page -> page-level-metadata
             public Dictionary<long, long> FreeListAdditions = new();
@@ -794,7 +795,7 @@ namespace Voron.Data.Containers
             bool pageMatch = PageMetadataMatch(container, pageLevelMetadata) &&
                              // we limit the number of entries per page to ensure we always
                              // have the bottom 3 bits free, see also IndexToOffset
-                             pos < 1024;
+                             pos < MaxItemsPerPage;
 
             if (pageMatch == false || 
                 container.HasEnoughSpaceFor(reqSize) == false)
@@ -814,7 +815,7 @@ namespace Voron.Data.Containers
                     container = MoveToNextPage(llt, containerId, pageLevelMetadata, container, size);
                 
                 (reqSize, pos) = container.GetRequiredSizeAndPosition(size);
-                Debug.Assert(pos < 1024, "pos < 1024");
+                Debug.Assert(pos < MaxItemsPerPage, "pos < MaxItemsPerPage");
             }
 
             if (container.HasEnoughSpaceFor(reqSize) == false)
@@ -831,7 +832,7 @@ namespace Voron.Data.Containers
 
         private ContainerEntryId Allocate(int size, int pos, out Span<byte> allocatedSpace)
         {
-            Debug.Assert(pos < 1024, "pos < 1024");
+            Debug.Assert(pos < MaxItemsPerPage, "pos < MaxItemsPerPage");
             var reqSize = ComputeRequiredSize(size);
             Debug.Assert(HasEnoughSpaceFor(reqSize));
 
@@ -906,6 +907,12 @@ namespace Voron.Data.Containers
                 var maybe = new Container(page);
                 if (maybe.HasEnoughSpaceFor(size + MinimumAdditionalFreeSpaceToConsider))
                     return maybe;
+            }
+
+            if (TryReclaimPendingFreesPage(llt, containerId, rootContainer, txState, pageLevelMetadata, size, out Container reclaimedPage))
+            {
+                txState.LastFreePageByPageLevelMetadata[pageLevelMetadata] = reclaimedPage._page.PageNumber;
+                return reclaimedPage;
             }
 
             if (SearchForFreeListPage(llt, rootContainer, txState, pageLevelMetadata, size, out Container nextPage))
@@ -1068,6 +1075,7 @@ namespace Voron.Data.Containers
                     //need read to the end of page
                 } while (itemsLeftOnCurrentPage > 0);
             }
+            txState.ExcludePendingFrees(llt, list);
             return list;
         }
 
@@ -1172,7 +1180,7 @@ namespace Voron.Data.Containers
             int nextCeiling = (Header.CeilingOfOffsets + reqSize + 3) & ContainerPageHeader.Ensure4BytesAlignmentMask;
             return nextCeiling < Header.FloorOfData &&
                    // we have a max of 1K items per page, so we ensure we have at least one offset
-                   Header.NumberOfOffsets < 1023;
+                   Header.NumberOfOffsets < MaxItemsPerPage - 1;
         }
 
         private (int Size, int Position) GetRequiredSizeAndPosition(int size)

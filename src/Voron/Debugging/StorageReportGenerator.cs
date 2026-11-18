@@ -542,16 +542,18 @@ namespace Voron.Debugging
             
             // cannot use GetPageHeader since we are reading not just from the header
             var root = new Container(_tx.GetPage((long)page));
+            var pendingFrees = Container.GetPendingFreesState(_tx, page);
             double density = pageDensities?.Average() ?? -1;
-            long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount;
+            long totalPages = allPages.State.NumberOfEntries + root.Header.NumberOfOverflowPages + freePages.State.PageCount + allPages.State.PageCount +
+                              pendingFrees.LeafPages + pendingFrees.BranchPages;
             var treeReport = new TreeReport
             {
                 Type = RootObjectType.Set,
                 Name = name.ToString(),
-                NumberOfEntries = root.GetNumberOfEntries(),
-                LeafPages = allPages.State.NumberOfEntries + allPages.State.LeafPages + freePages.State.LeafPages,
+                NumberOfEntries = root.GetNumberOfEntries() - pendingFrees.NumberOfEntries,
+                LeafPages = allPages.State.NumberOfEntries + allPages.State.LeafPages + freePages.State.LeafPages + pendingFrees.LeafPages,
                 OverflowPages = root.Header.NumberOfOverflowPages,
-                BranchPages = +freePages.State.BranchPages + allPages.State.BranchPages,
+                BranchPages = +freePages.State.BranchPages + allPages.State.BranchPages + pendingFrees.BranchPages,
                 PageCount = totalPages ,
                 Density = density,
                 AllocatedSpaceInBytes = PagesToBytes(totalPages),

@@ -239,16 +239,17 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         private void DecrementTermReferenceCount(LowLevelTransaction llt, ContainerEntryId keyContainerId, ref LookupState state)
         {
-            var term = Container.GetMutable(llt, keyContainerId);
-            int termRefCount = term[0] & 0xF;
+            Container.Get(llt, keyContainerId, out var item);
+            int termRefCount = item.Address[0] & 0xF;
             if (termRefCount == 0)
                 throw new VoronErrorException("A term exists without any references? That should be impossible");
             if (termRefCount == 1) // no more references, can delete
             {
-                Container.Delete(llt, state.TermsContainerId, keyContainerId);
+                Container.DeleteOrDefer(llt, state.TermsContainerId, keyContainerId);
                 return;
             }
 
+            var term = Container.GetMutable(llt, keyContainerId);
             term[0] = (byte)((term[0] & 0xF0) | (termRefCount - 1));
         }
 

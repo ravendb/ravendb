@@ -641,7 +641,7 @@ namespace Corax.Indexing
                     vectorIndexer.Remove((long)entryToDelete, reader.StoredField.Value.ToSpan());
                 }
 
-                Container.Delete(llt, _storedFieldsContainerId, new ContainerEntryId(reader.TermId));
+                Container.DeleteOrDefer(llt, _storedFieldsContainerId, new ContainerEntryId(reader.TermId));
             }
 
             reader.Reset();
@@ -1270,7 +1270,7 @@ namespace Corax.Indexing
                         continue;
                     }
 
-                    Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)previousLocation);
+                    Container.DeleteOrDefer(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)previousLocation);
                 }
 
                 ContainerEntryId entryTermsId = Container.Allocate(_transaction.LowLevelTransaction, _entriesTermsContainerId, size, out var space);
@@ -1289,7 +1289,7 @@ namespace Corax.Indexing
 
             foreach (var entryId in _deletedEntriesTermsLocations.Keys)
             {
-                Container.Delete(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)_deletedEntriesTermsLocations[entryId]);
+                Container.DeleteOrDefer(_transaction.LowLevelTransaction, _entriesTermsContainerId, (ContainerEntryId)_deletedEntriesTermsLocations[entryId]);
                 bool removed = _entryIdToLocation.TryRemove(entryId);
                 Debug.Assert(removed, "The location of a deleted entry must exist until it is released.");
             }

@@ -85,14 +85,17 @@ namespace Voron.Data.PostingLists
             }
         }
 
-        public List<long> DumpAllValues()
+        public HashSet<long> DumpAllValues()
         {
             var iterator = Iterate();
             Span<long> buffer = stackalloc long[1024];
-            var results = new List<long>();
+            var results = new HashSet<long>();
             while (iterator.Fill(buffer, out var read) && read != 0)
             {
-                results.AddRange(buffer[0..read].ToArray());
+                foreach (var id in buffer.Slice(0, read))
+                {
+                    results.Add(id);
+                }
             }
 
             return results;
