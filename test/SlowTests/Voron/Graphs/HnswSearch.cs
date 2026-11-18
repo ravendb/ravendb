@@ -58,7 +58,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
             filter.Count = totalEntries;
 
             using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
-                numberOfCandidates: totalEntries, qV.ToArray(), minimumSimilarity: 0f, filter);
+                numberOfCandidates: totalEntries, qV.ToArray(), minimumSimilarity: 0f);
 
             var matches = new long[128];
             var distances = new float[128];
@@ -113,7 +113,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
             filter.Count = entriesWithSameVector;
 
             using var nearest = Hnsw.ExactNearest(rTx.LowLevelTransaction, treeName,
-                numberOfCandidates: 100, qV.ToArray(), minimumSimilarity: 0f, filter);
+                numberOfCandidates: 100, qV.ToArray(), minimumSimilarity: 0f);
 
             var matches = new long[matchesBufferSize];
             var distances = new float[matchesBufferSize];

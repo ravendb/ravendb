@@ -202,7 +202,7 @@ public readonly unsafe struct PostingListLeafPage
             
             var buffer = stackalloc long[MinimumSizeOfBuffer];
             // we *copy* the reader to do the search without modifying 
-            //  the original position
+            //  the original position; the copy only reads, which does not replace the buffers it shares
             var innerReader = _reader.Decoder;
             while (true)
             {

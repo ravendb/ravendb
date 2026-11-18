@@ -317,7 +317,8 @@ namespace Corax.Querying.Matches
                 if (matchesCount == 0)
                     return 0;
                 
-                var it = term._set;
+                // A copy that reaches another page can replace the buffers it shares with term._set, which term._set then releases again.
+                ref var it = ref term._set;
                 // There is no element equal to or greater than `min(matches)-1`. No matches possible anyway.
                 if (it.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0] - 1)) == false)
                     return 0;
