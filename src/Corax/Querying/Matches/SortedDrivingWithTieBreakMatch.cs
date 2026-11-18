@@ -532,10 +532,10 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         switch (_secondaryType)
         {
             case MatchCompareFieldType.Integer:
-                secondarySpan[..n].Sort(idxs);
+                SortByKeyThenEntry(secondarySpan[..n], idxs);
                 break;
             case MatchCompareFieldType.Floating:
-                MemoryMarshal.Cast<long, double>(secondarySpan[..n]).Sort(idxs);
+                SortByKeyThenEntry(MemoryMarshal.Cast<long, double>(secondarySpan[..n]), idxs);
                 break;
             case MatchCompareFieldType.Sequence:
                 Debug.Assert(termsSpan.Length >= n);
@@ -543,7 +543,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
                 Container.GetAllSortedByPage(_llt, secondarySpan[..n], termsSpan[..n], _llt.PageLocator);
                 fixed (UnmanagedSpan* termsPtr = termsSpan)
                 {
-                    idxs.Sort(new SliceComparer(termsPtr));
+                    idxs.Sort(new SliceComparer(termsPtr, _secondaryDescending));
                 }
                 break;
             default:
@@ -551,10 +551,38 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         }
     }
     
-    private readonly struct SliceComparer(UnmanagedSpan* terms) : IComparer<int>
+    // The bitmap orders equal keys by entry id in either direction; the group holds its entries in id order, so an index is its entry's rank
+    private void SortByKeyThenEntry<T>(Span<T> keys, Span<int> idxs) where T : IComparable<T>
+    {
+        keys.Sort(idxs);
+        if (_secondaryDescending)
+        {
+            keys.Reverse();
+            idxs.Reverse();
+        }
+
+        for (int start = 0; start < keys.Length;)
+        {
+            int end = start + 1;
+            while (end < keys.Length && keys[end].CompareTo(keys[start]) == 0)
+                end++;
+
+            if (end - start > 1)
+                idxs[start..end].Sort();
+            start = end;
+        }
+    }
+
+    private readonly struct SliceComparer(UnmanagedSpan* terms, bool descending) : IComparer<int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(int x, int y)
+        {
+            int cmp = descending ? CompareTerms(y, x) : CompareTerms(x, y);
+            return cmp != 0 ? cmp : x - y;
+        }
+
+        private int CompareTerms(int x, int y)
         {
             ref var xItem = ref terms[x];
             ref var yItem = ref terms[y];
@@ -580,9 +608,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         var indexes = _groupSortedIndexes.RawItems;
         int remaining = _groupEntries.Count - _groupEmitIdx;
         int toEmit = Math.Min(remaining, matches.Length);
-        var (pos, step) = _secondaryDescending ? ( _groupEntries.Count - 1 - _groupEmitIdx, -1) : (_groupEmitIdx, 1);
-        for (int i = 0; i < toEmit; i++, pos += step)
-            matches[i] = entries[indexes[pos]];
+        for (int i = 0; i < toEmit; i++)
+            matches[i] = entries[indexes[_groupEmitIdx + i]];
         _groupEmitIdx += toEmit;
         if (_groupEmitIdx >=  _groupEntries.Count)
             _groupEntries.Count = 0;

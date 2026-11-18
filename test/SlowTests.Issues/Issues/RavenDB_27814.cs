@@ -128,6 +128,61 @@ public class RavenDB_27814 : RavenTestBase
         Assert.Equal(new[] { "n011", "n012", "n013" }, page.Select(x => x.Name));
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void TwoKeyWalkOrdersEqualKeysLikeTheBitmap(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        SeedTwoKeys(store);
+
+        foreach (var order in new[] { "Cat, N as long", "Cat, N as long desc", "Cat, D as double desc", "Cat, S", "Cat, S desc", "Cat desc, N as long desc" })
+            AssertTwoKeyWalkMatchesBitmap(store, "Items/ByCat", order);
+    }
+
+    private static void AssertTwoKeyWalkMatchesBitmap(IDocumentStore store, string index, string order)
+    {
+        foreach (var filter in new[] { "", " and R != 3" })
+        foreach (var page in new[] { "", " limit 7 offset 13" })
+        {
+            string query = $"from index '{index}' where Cat >= 'a'{filter} order by {order}{page}";
+            var scan = RunRql(store, query, "FieldSortedScan");
+            RavenTestHelper.AssertAll(() => query,
+                () => Assert.Equal("FieldSortedScan", scan.Hint),
+                () => Assert.Equal(RunRql(store, query, "BitmapPipeline").Ids, scan.Ids));
+        }
+    }
+
+    private void SeedTwoKeys(IDocumentStore store)
+    {
+        const string map = "from d in docs.Items select new { d.Cat, d.N, d.D, d.S, d.R }";
+        store.Maintenance.Send(new PutIndexesOperation(
+            new IndexDefinition { Name = "Items/ByCat", Maps = { map } },
+            new IndexDefinition { Name = "Items/ByCatNullsLargest", Maps = { map }, Configuration = new IndexConfiguration { ["Indexing.Querying.Corax.NullsSortMode"] = "NullsLargest" } }));
+
+        using (var commands = store.Commands())
+        {
+            var meta = new Dictionary<string, object> { ["@collection"] = "Items" };
+            for (int i = 0; i < 600; i++)
+            {
+                var doc = new Dictionary<string, object>
+                {
+                    ["Cat"] = "abc"[i % 3].ToString(),
+                    ["N"] = i % 29 == 0 ? null : (long)(i / 3 % 5),
+                    ["D"] = i / 3 % 3 + 0.5,
+                    ["S"] = i % 23 == 0 ? null : $"s{i / 3 % 4}",
+                    ["R"] = (long)(i % 7)
+                };
+                if (i % 31 == 0)
+                    doc.Remove("N");
+                if (i % 19 == 0)
+                    doc.Remove("S");
+                commands.Put($"items/{i}", null, doc, meta);
+            }
+        }
+
+        Indexes.WaitForIndexing(store);
+    }
+
     private void Seed(IDocumentStore store)
     {
         store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
