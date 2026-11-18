@@ -214,7 +214,8 @@ public sealed class BackupDecisionTracker
         {
             NodeTag = nodeTag,
             RunnerStartTime = _runnerStartTime,
-            Summary = GetSummary(now)
+            Summary = GetSummary(now),
+            LastEtag = LastDecisionEtag
         };
 
         var includeFilterOptions = afterEtag == null;
@@ -223,7 +224,9 @@ public sealed class BackupDecisionTracker
         var databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var tasks = new Dictionary<(string Database, long TaskId), BackupDecisionLogTask>();
 
-        var serverDecisions = _serverDecisionLog.GetMatchingDecisions(afterEtag, filter, take, out var totalResults);
+        _runner._forTestingPurposes?.BeforeReadingDecisionLogs?.Invoke();
+
+        var serverDecisions = _serverDecisionLog.GetMatchingDecisions(afterEtag, details.LastEtag, filter, take, out var totalResults);
         foreach (var decision in serverDecisions)
             matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag));
 
@@ -245,7 +248,7 @@ public sealed class BackupDecisionTracker
                 if (filter.MatchesTask(backupState.OriginalDatabaseName, taskId) == false)
                     continue;
 
-                var taskDecisions = backupState.GetMatchingDecisions(afterEtag, filter, take, out var taskMatches);
+                var taskDecisions = backupState.GetMatchingDecisions(afterEtag, details.LastEtag, filter, take, out var taskMatches);
                 foreach (var decision in taskDecisions)
                     matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag, backupState));
 

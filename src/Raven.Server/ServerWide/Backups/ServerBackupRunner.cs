@@ -1645,6 +1645,8 @@ public class ServerBackupRunner : IDisposable
 
         internal ConcurrentDictionary<string, TestingStuffInternal> DatabaseTestingStuffInternals { get; set; }
 
+        internal Action BeforeReadingDecisionLogs;
+
         internal int CountInQueue(DatabaseBackupState backupState) => _runner._backupQueue.Count(x => ReferenceEquals(x, backupState));
     }
 
