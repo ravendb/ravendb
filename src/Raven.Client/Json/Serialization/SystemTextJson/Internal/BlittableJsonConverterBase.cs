@@ -206,7 +206,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (useResolver == false || hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
             {
                 var changes = removeIdentityProperty && BlittableJsonConverterHelper.TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);
-                changes |= reader.HasPropertyNameInDocument(TypePropertyName) && BlittableJsonConverterHelper.TrySimplifyJson(reader, type, ShouldSkipSimplification);
+                changes |= reader.HasPropertyNameInDocument(TypePropertyName) && HasTypedObjectMember(reader.AsView()) &&
+                           BlittableJsonConverterHelper.TrySimplifyJson(reader, type, ShouldSkipSimplification);
 
                 if (changes)
                 {
@@ -218,6 +219,53 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             }
 
             return reader;
+        }
+
+        private static bool HasTypedObjectMember(in BlittableJsonReaderObject.ObjectView json)
+        {
+            for (int i = 0; i < json.Count; i++)
+            {
+                json.GetPropertyName(i, out BlittableJsonToken token, out int position);
+                switch (token & BlittableJsonReaderBase.TypesMask)
+                {
+                    case BlittableJsonToken.StartObject:
+                        BlittableJsonReaderObject.ObjectView member = json.Owner.GetObjectView(token, position);
+                        if (member.GetPropertyIndex(TypePropertyName) >= 0 || HasTypedObjectMember(member))
+                            return true;
+                        break;
+                    case BlittableJsonToken.StartArray:
+                        if (HasTypedObjectMember(json.Owner.GetArrayView(token, position)))
+                            return true;
+                        break;
+                    case BlittableJsonToken.EmbeddedBlittable:
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasTypedObjectMember(in BlittableJsonReaderObject.ArrayView items)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                BlittableJsonToken token = items.GetItem(i, out int position);
+                switch (token & BlittableJsonReaderBase.TypesMask)
+                {
+                    case BlittableJsonToken.StartObject:
+                        if (HasTypedObjectMember(items.Owner.GetObjectView(token, position)))
+                            return true;
+                        break;
+                    case BlittableJsonToken.StartArray:
+                        if (HasTypedObjectMember(items.Owner.GetArrayView(token, position)))
+                            return true;
+                        break;
+                    case BlittableJsonToken.EmbeddedBlittable:
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool ShouldSkipSimplification(Type propertyType)
