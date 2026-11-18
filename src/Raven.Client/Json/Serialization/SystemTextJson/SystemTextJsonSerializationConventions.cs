@@ -240,12 +240,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             bool hasIdentityProperty = Conventions.GetIdentityProperty(type) != null;
 
             using (RavenJsonTypeInfoResolver.EnterRoot(entity, removeIdentityProperty: true, hasIdentityProperty))
-            using (ContextMemoryBufferWriter buffer = stjSerializer.SerializeToBuffer(entity, type, context))
+            using (ContextMemoryBufferWriter buffer = stjSerializer.SerializeToBuffer(entity, type, metadata, documentInfo: null, context))
             {
                 if (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false)
                     return false;
 
-                SystemTextJsonJsonSerializer.AppendMetadata(buffer, type, metadata);
                 stream.Write(buffer.WrittenSpan);
             }
 
