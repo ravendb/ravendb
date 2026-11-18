@@ -711,10 +711,17 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Page GetPageInternalFromDataFile(long pageNumber)
         {
-            if (Flags == TransactionFlags.Read)
-                _env.HintFirstTouch(DataPagerState, pageNumber);
+            Pager.HintPage(DataPagerState, pageNumber);
             var page = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
-            _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer, DataPagerState);
+            var numberOfPages = 1;
+            if (page.IsOverflow)
+            {
+                numberOfPages = Paging.Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                // an encrypted value was read whole for its decryption copy
+                if (_env.Options.Encryption.IsEnabled == false)
+                    Pager.HintOverflowPages(DataPagerState, pageNumber, numberOfPages);
+            }
+            _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
             return page;
         }
 
@@ -730,6 +737,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T GetPageHeaderFromDataFile<T>(long pageNumber) where T : unmanaged
         {
+            Pager.HintPage(DataPagerState, pageNumber);
             return *(T*)DataPager.AcquireRawPagePointer(DataPagerState, ref PagerTransactionState, pageNumber);
         }
 

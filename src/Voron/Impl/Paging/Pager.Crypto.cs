@@ -68,8 +68,7 @@ public unsafe partial class Pager
             var pageHeader = (PageHeader*)pagePointer;
 
             int numberOfPages = Paging.GetNumberOfPages(pageHeader);
-            if (numberOfPages > 1 && pager._canPrefetch)
-                WillNeedPages(state, pageNumber + 1, numberOfPages - 1); // the copy below would fault them in one at a time
+            HintOverflowPages(state, pageNumber, numberOfPages); // the copy below would fault them in one at a time
 
             buffer = GetBufferAndAddToTxState(pager, pageNumber, cryptoState, numberOfPages);
 

@@ -1635,7 +1635,7 @@ namespace Voron
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current, Pager.State dataPagerState)
+        public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
         {
             // If the page is beyond the initial size of the file we don't validate it. 
             // We assume that it is valid since we wrote it in this run.
@@ -1649,38 +1649,19 @@ namespace Voron
             if ((old & bitToSet) != 0)
                 return;
 
-            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet, dataPagerState);
+            UnlikelyValidatePage(pageNumber, current, index, old, bitToSet);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void HintFirstTouch(Pager.State dataPagerState, long pageNumber)
-        {
-            if ((ulong)pageNumber >= (ulong)_lastValidPageAfterLoad)
-                return; 
-            var bit = 1L << (int)(pageNumber % (8 * sizeof(long)));
-            if ((Volatile.Read(ref _validPagesAfterLoad[pageNumber / (8 * sizeof(long))]) & bit) != 0)
-                return;
-            Pager.WillNeedPages(dataPagerState, pageNumber);
-        }
-
-        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet, Pager.State dataPagerState)
+        private unsafe void UnlikelyValidatePage(long pageNumber, PageHeader* current, long index, long old, long bitToSet)
         {
             // No need to call EnsureMapped here. ValidatePageChecksum is only called for pages in the datafile, 
             // which we already got using AcquirePagePointerWithOverflowHandling()
             if (pageNumber != current->PageNumber)
                 ThrowInvalidPageNumber(pageNumber, current);
 
-            // an encrypted page was checked by its MAC when it was decrypted, and its overflow pages were read ahead before
-            // the decryption copy (Pager.Crypto.AcquirePagePointer): here they would only be hinted after they were read
+            // an encrypted page was checked by its MAC when it was decrypted
             if (Options.Encryption.IsEnabled == false)
             {
-                if ((current->Flags & PageFlags.Overflow) == PageFlags.Overflow)
-                {
-                    var pages = Paging.GetNumberOfOverflowPages(current->OverflowSize);
-                    if (pages > 1)
-                        Pager.WillNeedPages(dataPagerState, pageNumber + 1, pages - 1);
-                }
-
                 ulong checksum = CalculatePageChecksum((byte*)current, current->PageNumber, current->Flags, current->OverflowSize);
 
                 if (checksum != current->Checksum)

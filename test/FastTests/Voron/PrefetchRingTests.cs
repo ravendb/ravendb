@@ -265,6 +265,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
+                options.PrefetchPolicy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false); // the stale time never passes
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -278,17 +279,17 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                         return;
                     }
 
-                    Pager.WillNeedPages(state, 5);
+                    Pager.HintPage(state, 5);
                     Assert.Equal(expected, WaitForResident(page, expected));
 
-                    // asked for a moment ago: skipped, so it stays out of memory after we drop it
+                    // hinted a moment ago: skipped, so it stays out of memory after we drop it
                     DropFromPageCache(file);
-                    Pager.WillNeedPages(state, 5);
+                    Pager.HintPage(state, 5);
                     Thread.Sleep(200);
                     Assert.Equal(0, ResidentPages(page, Constants.Storage.PageSize));
 
                     // another page is not affected
-                    Pager.WillNeedPages(state, 6);
+                    Pager.HintPage(state, 6);
                     Assert.Equal(expected, WaitForResident(state.ReadAddress + 6 * Constants.Storage.PageSize, expected));
                 }
             }
@@ -366,13 +367,13 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void WillNeedPagesReadsTheWholePageBeforeItIsTouched()
+    public void AHintReadsTheWholePageBeforeItIsTouched()
     {
         if (PlatformDetails.RunningOnLinux == false)
             return;
 
         const int pages = 16;
-        var path = RavenTestHelper.NewDataPath(nameof(WillNeedPagesReadsTheWholePageBeforeItIsTouched), 0, forceCreateDir: true);
+        var path = RavenTestHelper.NewDataPath(nameof(AHintReadsTheWholePageBeforeItIsTouched), 0, forceCreateDir: true);
         try
         {
             var file = Path.Combine(path, Constants.DatabaseFilename);
@@ -382,6 +383,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
 
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
+                options.PrefetchPolicy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false); // the stale time never passes
                 var (pager, state) = Pager.Create(options, file, content.Length, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
@@ -395,7 +397,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                         return;
                     }
 
-                    Pager.WillNeedPages(state, 5);
+                    Pager.HintPage(state, 5);
 
                     var sw = Stopwatch.StartNew();
                     int resident;

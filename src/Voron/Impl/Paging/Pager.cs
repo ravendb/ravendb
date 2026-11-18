@@ -158,7 +158,10 @@ public unsafe partial class Pager : IDisposable
 
     private void Initialize(long initialSize)
     {
-        _prefetchTable = new SegmentPrefetchTable(Options.PrefetchPolicy ?? PrefetchPolicy.Global, DeviceBudget, Options.PrefetchSegmentSize, initialSize);
+        var policy = Options.PrefetchPolicy ?? PrefetchPolicy.Global;
+        _prefetchTable = new SegmentPrefetchTable(policy, DeviceBudget, Options.PrefetchSegmentSize, initialSize);
+        if (_flags.HasFlag(Pal.OpenFileFlags.Prefetch) && CanReadPagesAhead(Options))
+            _pageHints = new PageHints(policy, initialSize / Constants.Storage.PageSize);
     }
 
     public void DiscardWholeFile(State state)
