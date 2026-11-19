@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Timings;
+using Raven.Server.Config;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
@@ -14,13 +16,13 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace FastTests.Corax
+namespace SlowTests.Issues
 {
-    public class BetweenFoldingInAndChains : RavenTestBase
+    public class RavenDB_27571 : RavenTestBase
     {
         private readonly ITestOutputHelper _output;
 
-        public BetweenFoldingInAndChains(ITestOutputHelper output) : base(output)
+        public RavenDB_27571(ITestOutputHelper output) : base(output)
         {
             _output = output;
         }
@@ -277,7 +279,7 @@ namespace FastTests.Corax
         }
 
         // a long bound queries the long term of the field and a double bound its double term, so neither can replace the
-        // other and both are applied; the probes in BetweenFoldingProbes show where the two disagree
+        // other and both are applied; the probes below show where the two disagree
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData("Amount > $a and Amount > $b", 3, 6.5, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData("Amount > $a and Amount > $b", 6.5, 3, "coins/1,coins/3,coins/4,coins/5", SearchEngineMode = RavenSearchEngineMode.All)]
@@ -878,6 +880,447 @@ namespace FastTests.Corax
                 OperatorType.LessThanEqual => "<=",
                 _ => type.ToString()
             };
+        }
+
+        // Shapes from the review rounds, each asserting what the unfolded chain returned before the fold existed. A "twin" writes
+        // one bound as '(F < b or F < b)': the fold never descends into 'or', so the twin stays unfolded.
+
+        private class Item
+        {
+            public string Id { get; set; }
+            public string Tag { get; set; }
+            public DateTime At { get; set; }
+            public double Price { get; set; }
+            public long[] Values { get; set; }
+        }
+
+        private class Items_ByTag : AbstractIndexCreationTask<Item>
+        {
+            public Items_ByTag()
+            {
+                Map = items => from item in items
+                               select new
+                               {
+                                   item.Tag,
+                                   item.At,
+                                   item.Price,
+                                   item.Values
+                               };
+            }
+        }
+
+        // Lucene splits date ranges into day segments only when the query clause cache is on, and it is off by default
+        private class Items_ByTagWithClauseCache : Items_ByTag
+        {
+            public Items_ByTagWithClauseCache()
+            {
+                Configuration[RavenConfiguration.GetKey(x => x.Indexing.QueryClauseCacheDisabled)] = "false";
+            }
+        }
+
+        private class Shipment
+        {
+            public string Id { get; set; }
+            public string Tag { get; set; }
+            public Point Origin { get; set; }
+            public Point Destination { get; set; }
+        }
+
+        private class Point
+        {
+            public long X { get; set; }
+        }
+
+        private class User
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Age { get; set; }
+        }
+
+        // B1 (query clause cache on): 'from' mid-day, 'to' on the next midnight, '<' must exclude the document sitting on 'to'
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void HalfOpenDateRangeEndingOnTheNextMidnight(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 11, 0, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/inside", Tag = "t", At = from.AddHours(1) },
+                new Item { Id = "items/on-upper", Tag = "t", At = to });
+
+            using var session = store.OpenSession();
+            var linq = session.Query<Item, Items_ByTagWithClauseCache>()
+                .Where(x => x.Tag == "t" && x.At >= from && x.At < to);
+
+            Output.WriteLine(linq.ToString());
+            Assert.Equal(new[] { "items/inside" }, linq.ToList().Select(x => x.Id).OrderBy(x => x).ToArray());
+        }
+
+        // B2 (query clause cache on): 'from' after 'to', on different days, nothing can match
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void InvertedDateRangeMatchesNothing(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 5, 12, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/after-from", Tag = "t", At = from.AddHours(1) },
+                new Item { Id = "items/before-to", Tag = "t", At = to.AddHours(-6) });
+
+            Assert.Empty(Query(store, "from index 'Items/ByTagWithClauseCache' where (Tag = 't' and At >= $from) and At < $to", ("from", from), ("to", to)));
+        }
+
+        // a range spanning several days with both ends mid-day: head, cached middle days and tail, the documents on the
+        // day boundaries must be counted exactly once each and the one sitting on 'to' must be excluded
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DateRangeAcrossSeveralDaysWithUnalignedEnds(Options options)
+        {
+            var from = new DateTime(2024, 1, 10, 12, 0, 0, DateTimeKind.Utc);
+            var to = new DateTime(2024, 1, 13, 6, 0, 0, DateTimeKind.Utc);
+
+            using var store = Seed(options, new Items_ByTagWithClauseCache(),
+                new Item { Id = "items/before", Tag = "t", At = from.AddHours(-1) },
+                new Item { Id = "items/on-from", Tag = "t", At = from },
+                new Item { Id = "items/first-midnight", Tag = "t", At = new DateTime(2024, 1, 11, 0, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/middle", Tag = "t", At = new DateTime(2024, 1, 12, 15, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/last-midnight", Tag = "t", At = new DateTime(2024, 1, 13, 0, 0, 0, DateTimeKind.Utc) },
+                new Item { Id = "items/on-to", Tag = "t", At = to },
+                new Item { Id = "items/after", Tag = "t", At = to.AddHours(1) });
+
+            Assert.Equal(new[] { "items/first-midnight", "items/last-midnight", "items/middle", "items/on-from" },
+                Query(store, "from index 'Items/ByTagWithClauseCache' where (Tag = 't' and At >= $from) and At < $to", ("from", from), ("to", to)));
+        }
+
+        // B3: an integer lower bound and a fractional upper bound on the same field
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void MixedIntegerAndFractionalBounds(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/cheap", Tag = "t", Price = 12.5 },
+                new Item { Id = "items/pricey", Tag = "t", Price = 25 });
+
+            Assert.Equal(new[] { "items/cheap" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Price >= 10) and Price < 20.5"));
+
+            // the same through parameters, typed the way a JSON client sends 10 and 20.5
+            Assert.Equal(new[] { "items/cheap" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Price >= $lo) and Price < $hi", ("lo", 10), ("hi", 20.5)));
+        }
+
+        // B4: two different nested fields that share the last path segment
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangeOnDifferentNestedFieldsWithTheSameLeaf(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Shipment { Id = "shipments/1", Tag = "t", Origin = new Point { X = 1 }, Destination = new Point { X = 100 } });
+                session.SaveChanges();
+            }
+
+            // Destination.X = 100 fails 'Destination.X < 5'
+            Assert.Empty(QueryDynamic<Shipment>(store, "from Shipments where (Tag = 't' and Origin.X >= 0) and (Destination.X < 5 or Destination.X < 5)"));
+            Assert.Empty(QueryDynamic<Shipment>(store, "from Shipments where (Tag = 't' and Origin.X >= 0) and Destination.X < 5"));
+        }
+
+        // B5: exact() range pair on an auto index, 'Bob' is in ['A', 'M') case-sensitively, 'alice' is not
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ExactRangePairOnAutoIndex(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Id = "users/1", Name = "Bob", Age = 30 });
+                session.Store(new User { Id = "users/2", Name = "alice", Age = 30 });
+                session.SaveChanges();
+            }
+
+            Assert.Equal(new[] { "users/1" }, QueryDynamic<User>(store, "from Users where exact((Age >= 0 and Name >= 'A') and (Name < 'M' or Name < 'M'))"));
+            Assert.Equal(new[] { "users/1" }, QueryDynamic<User>(store, "from Users where exact((Age >= 0 and Name >= 'A') and Name < 'M')"));
+        }
+
+        // B6: multi-valued field, one value above the lower bound and another below the upper bound. As two clauses this
+        // matched; folded it means one element inside the range, as a hand-written between already did
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangePairOnMultiValuedField(Options options)
+        {
+            // the extra documents give each term two entries, a single-entry term trips an unrelated Corax range issue
+            using var store = Seed(options,
+                new Item { Id = "items/1", Tag = "t", Values = new long[] { 0, 10 } },
+                new Item { Id = "items/in-range", Tag = "t", Values = new long[] { 0, 3 } },
+                new Item { Id = "items/zero", Tag = "x", Values = new long[] { 0 } },
+                new Item { Id = "items/ten", Tag = "x", Values = new long[] { 10 } });
+
+            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Values >= 1) and Values < 5"));
+            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Values between 1 and 4"));
+        }
+
+        // N1: on a sharded database a query with skip > 0 is re-rendered from the cached AST and sent to the shards; the
+        // exclusive bounds of '>' and '<' must survive that
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void ExclusiveBoundsSurviveTheShardedRewrite(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            const string rql = "from index 'Items/ByTag' where Tag = 't' and Price > 10 and Price < 20 order by Price";
+
+            using var session = store.OpenSession();
+            Assert.Equal(new[] { "items/12", "items/15" }, session.Advanced.RawQuery<Item>(rql).ToList().Select(x => x.Id).ToArray());
+            Assert.Equal(new[] { "items/15" }, session.Advanced.RawQuery<Item>(rql).Skip(1).ToList().Select(x => x.Id).ToArray());
+        }
+
+        // N4: an inclusive pair of mixed kinds folds into a between a hand-written between is not allowed to be. Re-rendered
+        // for the shards it must print as the comparisons the user wrote, or the shard rejects it
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData("Price >= 10 and Price <= 15.5", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData("Price >= $lo and Price <= $hi", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void InclusiveBoundsOfMixedKindsSurviveTheShardedRewrite(Options options, string where)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            using var session = store.OpenSession();
+            Assert.Equal(new[] { "items/10", "items/12", "items/15" }, Query(0));
+            Assert.Equal(new[] { "items/12", "items/15" }, Query(skip: 1));
+
+            string[] Query(int skip) => session.Advanced.RawQuery<Item>($"from index 'Items/ByTag' where Tag = 't' and {where} order by Price")
+                .AddParameter("lo", 10)
+                .AddParameter("hi", 15.5)
+                .Skip(skip)
+                .ToList()
+                .Select(x => x.Id)
+                .ToArray();
+        }
+
+        // N5: a hand-written between with a null side is an open-ended range on Corax; it must not be taken apart into a
+        // comparison against null, which the unary path rejects. Lucene never translated this shape and is not covered.
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+        [RavenData("Price between $lo and $hi", SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData("Price >= $lo and Price <= $hi", SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void BetweenWithANullSideIsOpenEndedOnCorax(Options options, string where)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/5", Tag = "t", Price = 5 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/20", Tag = "t", Price = 20 });
+
+            Assert.Equal(new[] { "items/12", "items/5" }, Query(store, $"from index 'Items/ByTag' where {where}", ("lo", null), ("hi", 12)));
+            Assert.Equal(new[] { "items/12", "items/20" }, Query(store, $"from index 'Items/ByTag' where {where}", ("lo", 12), ("hi", null)));
+        }
+
+        // N2: same-direction literal bounds of mixed numeric kinds on one field; a long literal compares against the long
+        // term, so 10.5 fails 'Price > 10' even though it passes 'Price > 10.1'
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SameDirectionLongAndDoubleLiteralBoundsKeepBothComparisons(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/11.5", Tag = "t", Price = 11.5 });
+
+            Assert.Equal(new[] { "items/11.5" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Price > 10 and Price > 10.1"));
+        }
+
+        // N3: the same through parameters, a JSON client sends 10 as an integer and 10.1 as a double
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SameDirectionLongAndDoubleParameterBoundsKeepBothComparisons(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/11.5", Tag = "t", Price = 11.5 });
+
+            Assert.Equal(new[] { "items/11.5" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Price > $a and Price > $b", ("a", 10), ("b", 10.1)));
+        }
+
+        private IDocumentStore Seed(Options options, params Item[] items) => Seed(options, new Items_ByTag(), items);
+
+        private IDocumentStore Seed(Options options, Items_ByTag index, params Item[] items)
+        {
+            var store = GetDocumentStore(options);
+            index.Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                foreach (var item in items)
+                    session.Store(item);
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store);
+            return store;
+        }
+
+        private static string[] Query(IDocumentStore store, string rql, params (string Name, object Value)[] parameters)
+        {
+            using var session = store.OpenSession();
+            var query = session.Advanced.RawQuery<Item>(rql);
+            foreach (var (name, value) in parameters)
+                query = query.AddParameter(name, value);
+
+            return query.ToList().Select(x => x.Id).OrderBy(x => x).ToArray();
+        }
+
+        private static string[] QueryDynamic<T>(IDocumentStore store, string rql)
+        {
+            using var session = store.OpenSession();
+            var results = session.Advanced.RawQuery<T>(rql).WaitForNonStaleResults().ToList();
+            return results.Select(x => session.Advanced.GetDocumentId(x)).OrderBy(x => x).ToArray();
+        }
+
+        // Review cases on auto indexes: a folded between must never change what either bound meant on its own.
+
+        private class Money
+        {
+            public int Amount { get; set; }
+        }
+
+        private class Product
+        {
+            public string Id { get; set; }
+            public string Supplier { get; set; }
+            public Money Price { get; set; }
+            public Money Cost { get; set; }
+        }
+
+        private class Order
+        {
+            public string Id { get; set; }
+            public string Company { get; set; }
+            public double Freight { get; set; }
+            public DateTime OrderedAt { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("Supplier = 'suppliers/1' and Price.Amount > 10 and Cost.Amount < 20", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void RangesOnDifferentNestedFieldsWithTheSameLeafNameStaySeparate(Options options, string where)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new Product { Id = "products/1", Supplier = "suppliers/1", Price = new Money { Amount = 15 }, Cost = new Money { Amount = 25 } },
+                new Product { Id = "products/2", Supplier = "suppliers/1", Price = new Money { Amount = 15 }, Cost = new Money { Amount = 5 } });
+
+            Assert.Equal(new[] { "products/2" }, QueryIds<Product>(store, $"from Products where {where}"));
+        }
+
+        // a string lower bound and a numeric upper bound, or a long and a double: each bound keeps its own translation
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
+        [RavenData("Company = 'companies/1' and Freight >= $min and Freight < $max", 10, 20.5, "orders/2", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData("Company = 'companies/1' and Freight >= $min and Freight < $max", "*", 30, "orders/1,orders/2", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void LuceneRangeBoundsOfDifferentTypesAreTranslatedIndependently(Options options, string where, object min, object max, string expectedIds)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new Order { Id = "orders/1", Company = "companies/1", Freight = 5 },
+                new Order { Id = "orders/2", Company = "companies/1", Freight = 15 },
+                new Order { Id = "orders/3", Company = "companies/1", Freight = 100 });
+
+            Assert.Equal(expectedIds.Split(','), QueryIds<Order>(store, $"from Orders where {where}", ("min", min), ("max", max)));
+        }
+
+        // a long literal compares against the long term of a double field, which truncates 10.2 to 10
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax)]
+        [RavenData("Company = 'companies/1' and Freight > 10 and Freight < 20.5", SearchEngineMode = RavenSearchEngineMode.Corax)]
+        public void CoraxLongBoundPairedWithDoubleBoundKeepsTheLongComparison(Options options, string where)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new Order { Id = "orders/1", Company = "companies/1", Freight = 10.2 },
+                new Order { Id = "orders/2", Company = "companies/1", Freight = 15 });
+
+            Assert.Equal(new[] { "orders/2" }, QueryIds<Order>(store, $"from Orders where {where}"));
+        }
+
+        // the pair folds inside exact() too, and the between it becomes queries the exact field, so the lower-case name
+        // stays outside the upper-case range
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("exact(Age = 30 and Name >= 'A' and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("exact((Age = 30 and Name >= 'A') and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Age = 30 and exact(Name >= 'A' and Name < 'C')", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ExactStringRangeOnAutoIndexUsesTheExactField(Options options, string where)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new User { Id = "users/1", Name = "Alice", Age = 30 },
+                new User { Id = "users/2", Name = "Bob", Age = 30 },
+                new User { Id = "users/3", Name = "Carl", Age = 30 },
+                new User { Id = "users/4", Name = "alice", Age = 30 });
+
+            Assert.Equal(new[] { "users/1", "users/2" }, QueryIds<User>(store, $"from Users where {where}"));
+        }
+
+        // a hand-written between inside exact() queries the exact field of the auto index, as the comparisons do; the
+        // lower-case name falls outside an upper-case range only there
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("exact(Age = 30 and Name between 'A' and 'C')", "users/1,users/2", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("exact(Name between 'A' and 'M')", "users/1,users/2,users/3", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Name between 'A' and 'M'", "users/1,users/2,users/3,users/4", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ExactBetweenOnAutoIndexUsesTheExactField(Options options, string where, string expectedIds)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new User { Id = "users/1", Name = "Alice", Age = 30 },
+                new User { Id = "users/2", Name = "Bob", Age = 30 },
+                new User { Id = "users/3", Name = "Carl", Age = 30 },
+                new User { Id = "users/4", Name = "alice", Age = 30 });
+
+            Assert.Equal(expectedIds.Split(','), QueryIds<User>(store, $"from Users where {where}"));
+        }
+
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
+        [RavenData("Company = 'companies/1' and OrderedAt >= $from and OrderedAt < $to", "2020-01-01T12:00:00.0000000", "2020-01-02T00:00:00.0000000", "orders/1", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData("Company = 'companies/1' and OrderedAt >= $from and OrderedAt < $to", "2020-01-03T05:00:00.0000000", "2020-01-01T03:00:00.0000000", "", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void LuceneSegmentedDateRangeMatchesTheAndOfBothBounds(Options options, string where, string from, string to, string expectedIds)
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    options.ModifyDatabaseRecord?.Invoke(record);
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.QueryClauseCacheDisabled)] = "false";
+                }
+            });
+            Store(store,
+                new Order { Id = "orders/1", Company = "companies/1", OrderedAt = new DateTime(2020, 1, 1, 13, 0, 0) },
+                new Order { Id = "orders/2", Company = "companies/1", OrderedAt = new DateTime(2020, 1, 2) },
+                new Order { Id = "orders/3", Company = "companies/1", OrderedAt = new DateTime(2020, 1, 1, 1, 0, 0) },
+                new Order { Id = "orders/4", Company = "companies/1", OrderedAt = new DateTime(2020, 1, 3, 10, 0, 0) });
+
+            Assert.Equal(expectedIds.Split(',', StringSplitOptions.RemoveEmptyEntries), QueryIds<Order>(store, $"from Orders where {where}", ("from", from), ("to", to)));
+        }
+
+        private static void Store(IDocumentStore store, params object[] documents)
+        {
+            using (var session = store.OpenSession())
+            {
+                foreach (var document in documents)
+                    session.Store(document);
+                session.SaveChanges();
+            }
+        }
+
+        private static string[] QueryIds<T>(IDocumentStore store, string rql, params (string Name, object Value)[] parameters)
+        {
+            using var session = store.OpenSession();
+            Raven.Client.Documents.Session.IRawDocumentQuery<T> query = session.Advanced.RawQuery<T>(rql).WaitForNonStaleResults();
+            foreach (var (name, value) in parameters)
+                query = query.AddParameter(name, value);
+
+            return query.ToList().Select(x => session.Advanced.GetDocumentId(x)).OrderBy(x => x).ToArray();
         }
     }
 }
