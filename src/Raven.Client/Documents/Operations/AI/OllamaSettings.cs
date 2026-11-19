@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -8,17 +7,15 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// The configuration for the Ollama API client.
 /// </summary>
-public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
+public sealed class OllamaSettings : OpenAiChatApiSettings
 {
     /// <summary>
     /// Initializes a new instance of <see cref="OllamaSettings"/> with the specified URI and model.
     /// </summary>
     /// <param name="uri">The URI of the Ollama API.</param>
     /// <param name="model">The model to be used.</param>
-    public OllamaSettings(string uri, string model)
+    public OllamaSettings(string uri, string model) : base(apiKey: null, endpoint: uri, model: model)
     {
-        Uri = uri;
-        Model = model;
     }
 
     public OllamaSettings()
@@ -27,14 +24,13 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
     }
 
     /// <summary>
-    /// The URI of the Ollama API.
+    /// The URI of the Ollama API (the <see cref="OpenAiBaseSettings.Endpoint"/>); stored as <c>"Uri"</c>.
     /// </summary>
-    public string Uri { get; set; }
-
-    /// <summary>
-    /// The model that should be used.
-    /// </summary>
-    public string Model { get; set; }
+    public string Uri
+    {
+        get => Endpoint;
+        set => Endpoint = value;
+    }
 
     /// <summary>
     /// Controls whether thinking models engage their reasoning process before responding.
@@ -45,25 +41,21 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
     /// </summary>
     public bool? Think { get; set; } = null;
 
-    /// <summary>
-    /// Controls randomness of the model output. Range typically [0.0, 2.0].
-    /// Higher values (e.g., 1.0+) make output more creative and diverse; lower values (e.g., 0.2) make it more deterministic.
-    /// When null, the parameter is not sent.
-    /// </summary>
-    public double? Temperature { get; set; } = null;
+    // existing Ollama connection strings keep Chat Completions
+    internal override OpenAiChatApi GetDefaultChatApi() => OpenAiChatApi.ChatCompletions;
 
+    // No API key rule: local Ollama deployments usually have no key. When set, it is sent as a Bearer token on chat
+    // requests (for an Ollama behind an authenticating proxy); embeddings requests do not send it.
     public override void ValidateFields(List<string> errors)
     {
-        base.ValidateFields(errors);
+        CoreValidateFields(errors);
 
         if (string.IsNullOrWhiteSpace(Uri))
             errors.Add($"Value of `{nameof(Uri)}` field cannot be empty.");
 
-        if (string.IsNullOrWhiteSpace(Model))
-            errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
-        
-        if (Temperature is < 0d)
-            errors.Add($"Value of `{nameof(Temperature)}` field must be non-negative.");
+        // Ollama embeddings are created from Uri and Model only (AiExtensions.cs), so a value would be ignored
+        if (Dimensions.HasValue)
+            errors.Add($"`{nameof(Dimensions)}` is not supported for Ollama.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -71,19 +63,9 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
         if (other is not OllamaSettings ollamaSettings)
             return AiSettingsCompareDifferences.All;
 
-        var differences = AiSettingsCompareDifferences.None;
-
-        if (Model != ollamaSettings.Model)
-            differences |= AiSettingsCompareDifferences.ModelArchitecture;
-
-        if (Uri != ollamaSettings.Uri)
-            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+        var differences = base.Compare(other);
 
         if (Think != ollamaSettings.Think)
-            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
-        
-        if (Temperature.HasValue != ollamaSettings.Temperature.HasValue ||
-            (Temperature.HasValue && ollamaSettings.Temperature.HasValue && Temperature.Value.AlmostEquals(ollamaSettings.Temperature.Value) == false))
             differences |= AiSettingsCompareDifferences.EndpointConfiguration;
 
         return differences;
@@ -95,25 +77,12 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
-        json[nameof(Model)] = Model;
-        json[nameof(Uri)] = Uri;
+        json[nameof(Uri)] = Uri; // the name older versions read
         json[nameof(Think)] = Think;
-        json[nameof(Temperature)] = Temperature;
 
         return json;
     }
 
-    /// <summary>
-    /// Returns <see langword="null"/> as Ollama typically does not require an API key for local deployments.
-    /// </summary>
-    public string ApiKey => null;
-
-    /// <summary>
-    /// The endpoint URI for the Ollama service.
-    /// </summary>
-    public string Endpoint => Uri;
-    public Uri GetBaseEndpointUri() => new Uri(Endpoint);
-
-    // Ollama has no prompt cache setting, so it always follows the default.
-    bool? IAiSettings.EnablePromptCache => null;
+    // No trailing '/' is added: the provider appends "v1/..." to the address as it is stored.
+    public override Uri GetBaseEndpointUri() => new Uri(Endpoint);
 }

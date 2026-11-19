@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// Configuration for Azure OpenAI deployments.
 /// </summary>
-public sealed class AzureOpenAiSettings : OpenAiBaseSettings
+public sealed class AzureOpenAiSettings : OpenAiChatApiSettings
 {
     public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
@@ -23,6 +23,8 @@ public sealed class AzureOpenAiSettings : OpenAiBaseSettings
     /// <see href="https://learn.microsoft.com/azure/cognitive-services/openai/how-to/create-resource">Learn more</see>
     /// </summary>
     public string DeploymentName { get; set; }
+
+    internal override OpenAiChatApi GetDefaultChatApi() => OpenAiChatApi.Responses;
 
     public override void ValidateFields(List<string> errors)
     {

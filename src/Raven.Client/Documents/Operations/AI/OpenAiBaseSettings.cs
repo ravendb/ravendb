@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.Documents.Operations.AI;
 
 /// <summary>
-/// Base configuration for OpenAI-compatible providers (OpenAI, Azure OpenAI),
+/// Base configuration for the OpenAI-family providers,
 /// including common fields like API key, endpoint, model and embedding dimensions.
 /// </summary>
 public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
@@ -72,10 +72,16 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 
     public override void ValidateFields(List<string> errors)
     {
-        base.ValidateFields(errors);
+        CoreValidateFields(errors);
 
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+    }
+
+    // every rule except the API key; Ollama runs without one
+    protected void CoreValidateFields(List<string> errors)
+    {
+        base.ValidateFields(errors); // AbstractAiSettings: EmbeddingsMaxConcurrentBatches
 
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
