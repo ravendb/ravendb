@@ -1806,18 +1806,19 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         Debug.Assert(state.Header->IsLeaf, $"Got {state.Header->PageFlags} flag instead of {nameof(LookupPageFlags.Leaf)}");
 
-        SearchInCurrentPage(ref key, ref state);
-        if (state.LastSearchPosition >= 0) // found it, yeah!
+        // all the keys in this page are smaller than the next separator of the parent, a key past it cannot be here
+        // checking that first avoids searching the page (and reading its keys) when we just need to move on
+        var limit = CurrentPageLimit();
+        if (limit == null || key.CompareTo(this, limit.Value) < 0)
         {
-            value = GetValue(ref state, state.LastSearchPosition);
-            return true;
-        }
+            SearchInCurrentPage(ref key, ref state);
+            if (state.LastSearchPosition >= 0) // found it, yeah!
+            {
+                value = GetValue(ref state, state.LastSearchPosition);
+                return true;
+            }
 
-        if (KeyShouldBeInCurrentPage(ref key, ref state))
-        {
-            // we didn't find the key, but we found a _greater_ key in the page
-            // therefore, we don't have it (we know the previous key was in this page
-            // so if there is a greater key in this page, we didn't find it
+            // we know the previous key was in this page and this one is before the next page, so we don't have it
             value = -1;
             return false;
         }
@@ -1851,43 +1852,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
         // if we go to here, we are at the root, so operate normally
         return TryGetValue(ref key, out value);
-    }
-
-    private bool KeyShouldBeInCurrentPage(ref TLookupKey key, ref CursorState state)
-    {
-        var pos = ~state.LastSearchPosition;
-        var shouldBeInCurrentPage = pos < state.Header->NumberOfEntries;
-        if (shouldBeInCurrentPage)
-        {
-            var curKey = GetKeyData(ref state, pos);
-            var match = key.CompareTo(this, curKey);
-
-            shouldBeInCurrentPage = match < 0;
-        }
-
-        if (shouldBeInCurrentPage == false)
-        {
-            // if this isn't in this page, it may be in the _next_ one, but we 
-            // now need to check the parent page to see that
-            shouldBeInCurrentPage = true;
-
-            for (int i = _internalCursor._pos - 1; i >= 0; i--)
-            {
-                ref var cur = ref _internalCursor._stk[i];
-                if (cur.LastSearchPosition + 1 >= cur.Header->NumberOfEntries)
-                    continue;
-
-                var curKey = GetKeyData(ref cur, cur.LastSearchPosition + 1);
-                var match = key.CompareTo(this, curKey);
-                if (match < 0)
-                    continue;
-
-                shouldBeInCurrentPage = false;
-                break;
-            }
-        }
-
-        return shouldBeInCurrentPage;
     }
 
     public void VerifyStructure()
