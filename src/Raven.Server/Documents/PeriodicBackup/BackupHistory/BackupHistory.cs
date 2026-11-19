@@ -4,7 +4,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
@@ -48,7 +48,7 @@ public class BackupHistory
         }
     }
     
-    public void UpdateTaskNames(DatabaseRecord databaseRecord, Logger logger)
+    public void UpdateTaskNames(DatabaseRecord databaseRecord, RavenLogger logger)
     {
         foreach (var backupGroup in Groups)
         {

@@ -8,11 +8,13 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -27,7 +29,7 @@ public class BackupHistoryStorage
     private StorageEnvironment _environment;
     private TransactionContextPool _contextPool;
 
-    private readonly Logger _logger = LoggingSource.Instance.GetLogger<BackupHistoryStorage>("Server");
+    private readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<BackupHistoryStorage>();
 
     private static readonly TableSchema BackupHistoryTableSchema = new();
     private static readonly TableSchema BackupResultDetailsTableSchema = new();
@@ -227,7 +229,7 @@ public class BackupHistoryStorage
         PeriodicBackupStatus status,
         BackupResult backupResult,
         Action<IOperationProgress> onProgress,
-        Logger logger,
+        RavenLogger logger,
         OperationCancelToken operationCancelToken)
     {
         var retries = 0;
@@ -273,8 +275,8 @@ public class BackupHistoryStorage
                 if (++retries < maxRetries)
                     continue;
 
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(message, e);
+                if (logger.IsErrorEnabled)
+                    logger.Error(message, e);
 
                 return;
             }
@@ -284,7 +286,7 @@ public class BackupHistoryStorage
     public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
         DatabaseRecord databaseRecord,
         bool includeIncrementals,
-        Logger logger,
+        RavenLogger logger,
         long? requestedTaskId = null,
         long? requestedFullBackupCreatedAtTicks = null)
     {
