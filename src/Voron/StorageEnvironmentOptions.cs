@@ -1805,14 +1805,9 @@ namespace Voron
 
         public (Pager Pager, Pager.State State) CreateScratchMemoryPager(long number, long initialSize, long maxSize)
         {
-            var flags = Pal.OpenFileFlags.None;
-            if (Encryption.IsEnabled)
-            {
-                // stored encrypted, as in a scratch file: journal writes and flushes copy the raw pages
-                flags |= Pal.OpenFileFlags.Encrypted | Pal.OpenFileFlags.LockMemory;
-                if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
-                    flags |= Pal.OpenFileFlags.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-            }
+            // stored encrypted, as in a scratch file: journal writes and flushes copy the raw pages. The memory holds no
+            // plain text, so it is not locked: every segment would count against RLIMIT_MEMLOCK (often 8 MB) on Linux.
+            var flags = Encryption.IsEnabled ? Pal.OpenFileFlags.Encrypted : Pal.OpenFileFlags.None;
 
             return Pager.CreateAnonymous(this, TempPath.Combine(ScratchMemoryName(number)).FullPath, initialSize, maxSize, flags);
         }
