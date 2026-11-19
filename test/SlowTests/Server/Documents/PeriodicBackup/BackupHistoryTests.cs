@@ -1030,7 +1030,7 @@ public class BackupHistoryTests : ClusterTestBase
             LastIncrementalBackupInternal = DateTime.UtcNow,
             DurationInMs = 10
         };
-        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, incremental, new BackupResult(), DateTime.MinValue)]));
+        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, incremental.TaskId, new BackupHistoryEntry(incremental, "RavenDB-19358", BackupTrigger.Scheduled, skipped: false), new BackupResult(), DateTime.MinValue)]));
 
         using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {

@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly PeriodicBackupStatus _previousBackupStatus;
         internal readonly bool _isFullBackup;
-        private readonly bool _isOneTimeBackup;
+        private readonly BackupTrigger _trigger;
         protected readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _operationId = backupParameters.OperationId;
             _previousBackupStatus = backupParameters.BackupStatus;
             _startTimeUtc = backupParameters.StartTimeUtc;
-            _isOneTimeBackup = backupParameters.IsOneTimeBackup;
+            _trigger = backupParameters.Trigger;
             _isFullBackup = backupParameters.IsFullBackup;
             _backupToLocalFolder = backupParameters.BackupToLocalFolder;
             _tempBackupPath = backupParameters.TempBackupPath;
@@ -112,6 +113,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var totalSw = Stopwatch.StartNew();
             var operationCanceled = false;
+            var skipped = false;
 
             try
             {
@@ -163,6 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         SmugglerBase.EnsureProcessed(BackupResult);
                         AddInfo(message);
+                        skipped = true;
 
                         return BackupResult;
                     }
@@ -285,7 +288,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
                     UpdateOperationId(runningBackupStatus);
 
-                    if (_isOneTimeBackup == false)
+                    if (_trigger != BackupTrigger.OneTime)
                     {
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
@@ -293,6 +296,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                         var status = runningBackupStatus;
                         BackupUtils.SaveBackupStatus(status, Database.Name, Database.ServerStore, _logger, BackupResult, _onProgress, TaskCancelToken);
                     }
+
+                    var historyEntry = new BackupHistoryEntry(runningBackupStatus, _taskName, _trigger, skipped);
+                    BackupHistoryStorage.UpdateBackupHistory(Database.Name, Database.ServerStore, runningBackupStatus.TaskId, historyEntry, BackupResult, _onProgress, _logger, TaskCancelToken);
 
                     if (_forTestingPurposes != null &&
                         _forTestingPurposes.DatabaseTestingStuffInternals != null &&

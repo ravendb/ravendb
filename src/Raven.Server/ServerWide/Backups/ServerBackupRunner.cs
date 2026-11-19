@@ -237,7 +237,7 @@ public class ServerBackupRunner : IDisposable
             }
             catch (Exception e)
             {
-                OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, e);
+                OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, BackupTrigger.Scheduled, e);
                 FinishRunning(backupState, BackupDecisionCategory.Failed, detail: null, e.AllInnerMessages(), reschedule: true);
                 return;
             }
@@ -248,6 +248,8 @@ public class ServerBackupRunner : IDisposable
 
     private bool StartBackup(DocumentDatabase database, DatabaseBackupState backupState, bool isFullBackup, DateTime startTimeInUtc, long operationId, bool isBackupNow)
     {
+        var trigger = isBackupNow ? BackupTrigger.BackupNow : BackupTrigger.Scheduled;
+
         try
         {
             if (TryGetTestingStuff(backupState.DatabaseName, out var startFailureTestingStuff) && startFailureTestingStuff.SimulateFailedBackupStart)
@@ -267,7 +269,7 @@ public class ServerBackupRunner : IDisposable
                 RetentionPolicy = backupState.Configuration.RetentionPolicy,
                 StartTimeUtc = backupState.StartTimeInUtc,
                 BackupStatus = backupState.BackupStatus,
-                IsOneTimeBackup = false,
+                Trigger = trigger,
                 IsFullBackup = isFullBackup,
                 BackupToLocalFolder = backupToLocalFolder,
                 TempBackupPath = BackupUtils.GetBackupTempPath(database.Configuration, "PeriodicBackupTemp", out _),
@@ -304,7 +306,7 @@ public class ServerBackupRunner : IDisposable
         }
         catch (Exception e)
         {
-            OnBackupStartFailure(backupState, isFullBackup, startTimeInUtc, e);
+            OnBackupStartFailure(backupState, isFullBackup, startTimeInUtc, trigger, e);
             FinishRunning(backupState, BackupDecisionCategory.Failed, detail: null, e.AllInnerMessages(), reschedule: true);
 
             if (isBackupNow)
@@ -314,7 +316,7 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    private void OnBackupStartFailure(DatabaseBackupState backupState, bool isFullBackup, DateTime startTimeInUtc, Exception e)
+    private void OnBackupStartFailure(DatabaseBackupState backupState, bool isFullBackup, DateTime startTimeInUtc, BackupTrigger trigger, Exception e)
     {
         if (_logger.IsErrorEnabled)
             _logger.Error($"Could not start backup for {backupState}.", e);
@@ -332,6 +334,9 @@ public class ServerBackupRunner : IDisposable
                 backupState.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
 
             BackupUtils.SaveBackupStatus(backupState.BackupStatus, backupState.DatabaseName, _serverStore, _logger);
+
+            var historyEntry = new BackupHistoryEntry(backupState.BackupStatus, backupState.Configuration.Name, trigger, skipped: false);
+            BackupHistoryStorage.UpdateBackupHistory(backupState.DatabaseName, _serverStore, backupState.Configuration.TaskId, historyEntry, backupResult: null, onProgress: null, _logger, operationCancelToken: null);
 
             AddDatabaseAlert(backupState.DatabaseName, AlertRaised.Create(
                 backupState.DatabaseName,
@@ -1263,7 +1268,7 @@ public class ServerBackupRunner : IDisposable
                 break;
         }
 
-        OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, exception);
+        OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, BackupTrigger.Scheduled, exception);
         FinishRunning(backupState, BackupDecisionCategory.Failed, detail: null, exception.AllInnerMessages(), reschedule: true);
     }
 
@@ -1401,8 +1406,8 @@ public class ServerBackupRunner : IDisposable
                         else
                             await SaveBackupStatusesOneByOneAsync(updates);
 
-                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore,
-                            updates.Select(update => BackupHistoryStorage.CreateUpdate(_serverStore, update.BackupState.DatabaseName, update.BackupStatus, backupResult: null)).ToList());
+                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore, updates.Select(update => BackupHistoryStorage.CreateUpdate(_serverStore, update.BackupState.DatabaseName, update.BackupStatus.TaskId,
+                            new BackupHistoryEntry(update.BackupStatus, update.BackupState.Configuration.Name, BackupTrigger.Scheduled, skipped: true), backupResult: null)).ToList());
                     }
                     catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
                     {

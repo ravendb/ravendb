@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             {
                 RetentionPolicy = null,
                 StartTimeUtc = startTime,
-                IsOneTimeBackup = true,
+                Trigger = BackupTrigger.OneTime,
                 BackupStatus = new PeriodicBackupStatus { TaskId = -1 },
                 OperationId = operationId,
                 BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),

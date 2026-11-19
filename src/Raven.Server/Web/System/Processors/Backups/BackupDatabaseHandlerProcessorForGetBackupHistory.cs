@@ -2,19 +2,14 @@ using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
-using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
-using Sparrow.Server.Logging;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
 internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : AbstractBackupHistoryHandlerProcessor
 {
-    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<BackupDatabaseHandlerProcessorForGetBackupHistory>();
-
     public BackupDatabaseHandlerProcessorForGetBackupHistory([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
     }
@@ -34,7 +29,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupHistory));
-            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, includeIncrementals, Logger, requestedTaskId, fullBackupTicks));
+            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, includeIncrementals, requestedTaskId, fullBackupTicks));
             writer.WriteEndObject();
         }
     }

@@ -18,6 +18,7 @@ public class BackupGroup
     public BackupGroup(BackupHistoryEntry entry, long taskId)
     {
         TaskId = taskId;
+        TaskName = entry.TaskName;
 
         switch (entry.BackupKind)
         {

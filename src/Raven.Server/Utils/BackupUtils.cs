@@ -17,9 +17,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -519,10 +517,6 @@ public static class BackupUtils
                 logger.Error(message, fullException);
 
             backupResult?.AddError($"{message}{Environment.NewLine}{fullException}");
-        }
-        finally
-        {
-            BackupHistoryStorage.UpdateBackupHistory(databaseName, serverStore, status, backupResult, onProgress, logger, operationCancelToken);
         }
     }
 

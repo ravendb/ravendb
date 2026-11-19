@@ -17,11 +17,10 @@ public sealed class UpdateBackupHistoryCommand : MergedTransactionCommand<Cluste
     {
         foreach (var update in _updates)
         {
-            var entry = new BackupHistoryEntry(update.Status);
-            BackupHistoryStorage.StoreBackupStatus(context, update.DatabaseName, update.Status.TaskId, entry, update.CutoffTime);
+            BackupHistoryStorage.StoreBackupStatus(context, update.DatabaseName, update.TaskId, update.Entry, update.CutoffTime);
 
             if (update.Result != null)
-                BackupHistoryStorage.StoreBackupResultDetails(context, update.DatabaseName, update.Status.TaskId, entry, update.Result);
+                BackupHistoryStorage.StoreBackupResultDetails(context, update.DatabaseName, update.TaskId, update.Entry, update.Result);
         }
 
         return _updates.Count;

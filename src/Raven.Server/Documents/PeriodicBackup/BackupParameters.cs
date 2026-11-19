@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public RetentionPolicy RetentionPolicy { get; set; }
         public DateTime StartTimeUtc { get; set; }
 
-        public bool IsOneTimeBackup { get; set; }
+        public BackupTrigger Trigger { get; set; }
         public bool IsFullBackup { get; set; }
         public bool BackupToLocalFolder { get; set; }
 

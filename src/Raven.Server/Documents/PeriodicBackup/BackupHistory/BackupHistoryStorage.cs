@@ -222,16 +222,16 @@ public class BackupHistoryStorage
             return table.ReadByKey(slice, out tvr);
     }
 
-    internal static void UpdateBackupHistory(string databaseName, ServerStore serverStore, PeriodicBackupStatus status, BackupResult backupResult,
+    internal static void UpdateBackupHistory(string databaseName, ServerStore serverStore, long taskId, BackupHistoryEntry entry, BackupResult backupResult,
         Action<IOperationProgress> onProgress, RavenLogger logger, OperationCancelToken operationCancelToken)
     {
         try
         {
-            AsyncHelpers.RunSync(() => UpdateBackupHistoryAsync(serverStore, [CreateUpdate(serverStore, databaseName, status, backupResult)], backupResult, onProgress, operationCancelToken));
+            AsyncHelpers.RunSync(() => UpdateBackupHistoryAsync(serverStore, [CreateUpdate(serverStore, databaseName, taskId, entry, backupResult)], backupResult, onProgress, operationCancelToken));
         }
         catch (Exception e)
         {
-            var message = $"Failed to update the backup history of task {status.TaskId} of database '{databaseName}'";
+            var message = $"Failed to update the backup history of task {taskId} of database '{databaseName}'";
             backupResult?.AddError($"{message}{Environment.NewLine}{e}");
             onProgress?.Invoke(backupResult?.Progress);
 
@@ -240,8 +240,8 @@ public class BackupHistoryStorage
         }
     }
 
-    internal static BackupHistoryUpdate CreateUpdate(ServerStore serverStore, string databaseName, PeriodicBackupStatus status, BackupResult backupResult) =>
-        new(databaseName, status, backupResult, DateTime.UtcNow - GetRetentionPeriod(serverStore, databaseName));
+    internal static BackupHistoryUpdate CreateUpdate(ServerStore serverStore, string databaseName, long taskId, BackupHistoryEntry entry, BackupResult backupResult) =>
+        new(databaseName, taskId, entry, backupResult, DateTime.UtcNow - GetRetentionPeriod(serverStore, databaseName));
 
     internal static Task UpdateBackupHistoryAsync(ServerStore serverStore, IReadOnlyList<BackupHistoryUpdate> updates, BackupResult backupResult = default,
         Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
@@ -277,21 +277,52 @@ public class BackupHistoryStorage
     public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
         RawDatabaseRecord databaseRecord,
         bool includeIncrementals,
-        RavenLogger logger,
         long? requestedTaskId = null,
         long? requestedFullBackupCreatedAtTicks = null)
     {
         var backupHistory = new BackupHistory(databaseRecord.DatabaseName);
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
         var taskIds = requestedTaskId.HasValue
             ? [requestedTaskId.Value]
-            : databaseRecord.PeriodicBackups.Select(configuration => configuration.TaskId);
+            : GetTaskIds(context, table, databaseRecord.DatabaseName);
 
-        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
         foreach (var taskId in taskIds)
             PopulateBackupHistory(backupHistory, context, table, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
 
-        backupHistory.UpdateTaskNames(databaseRecord, logger);
+        backupHistory.UpdateTaskNames(databaseRecord);
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
+    }
+
+    private static List<long> GetTaskIds(TransactionOperationContext context, Table table, string databaseName)
+    {
+        var taskIds = new List<long>();
+
+        using (BackupHistorySchema.GetDatabaseKeyPrefix(context.Allocator, databaseName, out Slice databasePrefixSlice))
+        {
+            var fromTaskId = 0L;
+            while (TryGetNextTaskId(context, table, databasePrefixSlice, databaseName, fromTaskId, out var taskId))
+            {
+                taskIds.Add(taskId);
+                fromTaskId = taskId + 1;
+            }
+        }
+
+        return taskIds;
+    }
+
+    private static unsafe bool TryGetNextTaskId(TransactionOperationContext context, Table table, Slice databasePrefixSlice, string databaseName, long fromTaskId, out long taskId)
+    {
+        using (BackupHistorySchema.GetPrimaryKeyPrefix(context.Allocator, databaseName, fromTaskId, fullBackupCreatedAtTicks: null, out Slice fromTaskSlice))
+        {
+            foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(databasePrefixSlice, fromTaskSlice, skip: 0))
+            {
+                taskId = Bits.SwapBytes(*(long*)(key.Content.Ptr + databasePrefixSlice.Size));
+                return true;
+            }
+        }
+
+        taskId = default;
+        return false;
     }
 
     private static void PopulateBackupHistory(BackupHistory backupHistory, TransactionOperationContext context, Table table, bool includeIncrementals, long taskId, long? fullBackupCreatedAtTicks)
@@ -404,6 +435,13 @@ public class BackupHistoryStorage
             return fullBackupCreatedAtTicks.HasValue
                 ? GetKey(allocator, databaseName, taskId, fullBackupCreatedAtTicks.Value, out keySlice)
                 : GetKey(allocator, databaseName, taskId, out keySlice);
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseKeyPrefix(ByteStringContext allocator, string databaseName, out Slice keySlice)
+        {
+            var scope = GetKey(allocator, databaseName, taskId: 0, out keySlice);
+            keySlice.Content.Truncate(keySlice.Size - sizeof(long));
+            return scope;
         }
 
         /// <summary>

@@ -4,7 +4,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
@@ -48,7 +47,7 @@ public class BackupHistory
         }
     }
     
-    public void UpdateTaskNames(RawDatabaseRecord databaseRecord, RavenLogger logger)
+    public void UpdateTaskNames(RawDatabaseRecord databaseRecord)
     {
         foreach (var backupGroup in Groups)
         {
@@ -56,17 +55,6 @@ public class BackupHistory
             if (taskNameFromDbRecord == null)
             {
                 // task was removed from the database record
-                if (backupGroup.TaskName == null)
-                {
-                    // we don't have a task name in the backup group, this is an inconsistent state
-                    if (logger.IsInfoEnabled)
-                        logger.Info($"Task name for backup group with task ID '{backupGroup.TaskId}' could not be determined. " +
-                                  $"It was not found in the database record for '{DatabaseName}' and was not previously set in the backup history. " +
-                                  "Assigning a placeholder name '<Unknown Task>'.");
-
-                    backupGroup.TaskName = "<Unknown Task>";
-                }
-
                 // we keep the existing task name in the backup group
                 continue;
             }
