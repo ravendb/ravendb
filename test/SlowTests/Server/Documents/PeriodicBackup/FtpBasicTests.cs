@@ -66,6 +66,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackup()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var services = new ServiceCollection();
             services.Configure<InMemoryFileSystemOptions>(opt => opt.KeepAnonymousFileSystem = true);
             services.AddFtpServer(builder => builder.UseInMemoryFileSystem().EnableAnonymousAuthentication());
@@ -88,7 +90,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Password = "itay@ravendb.net"
                     };
                     using (var client = new RavenFtpClient(settings))
-                    using (var store = GetDocumentStore())
+                    using (var store = GetDocumentStore(new Options { Server = server }))
                     {
                         using (var session = store.OpenSession())
                         {
@@ -98,7 +100,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest");
                         var backupId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                         var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                        var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag);
+                        var status = await Backup.RunBackupAndReturnStatusAsync(server, backupId, store, expectedEtag: lastEtag);
                         var backupResult = (BackupResult)store.Maintenance.Send(new GetOperationStateOperation(await Backup.GetBackupOperationIdAsync(store, backupId))).Result;
                         var isExist = CheckBackupFile(settings.Url, status.FolderName, client);
                         Assert.NotNull(backupResult);
@@ -116,6 +118,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanUploadBackupsWithDeletion()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
             {
                 var services = new ServiceCollection();
@@ -140,7 +144,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Password = "itay@ravendb.net"
                         };
                         using (var client = new RavenFtpClient(settings))
-                        using (var store = GetDocumentStore())
+                        using (var store = GetDocumentStore(new Options { Server = server }))
                         {
                             var config = Backup.CreateBackupConfiguration(ftpSettings: settings, name: "ftpBackupTest",
                                 retentionPolicy: new RetentionPolicy { MinimumBackupAgeToKeep = TimeSpan.FromSeconds(15) });
@@ -154,7 +158,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 }
 
                                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                                await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
+                                await Backup.RunBackupAndReturnStatusAsync(server, backupId, store, expectedEtag: lastEtag, timeout: 120000);
                             }
                             await Task.Delay(TimeSpan.FromSeconds(15) + TimeSpan.FromSeconds(3));
                             using (var session = store.OpenAsyncSession())
@@ -163,7 +167,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                 await session.SaveChangesAsync();
                             }
                             var etag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                            await Backup.RunBackupAndReturnStatusAsync(Server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
+                            await Backup.RunBackupAndReturnStatusAsync(server, backupId, store, isFullBackup: true, expectedEtag: etag, timeout: 120000);
                             var folders = client.GetFolders();
                             var foundFolders = 0;
                             for (int i = 0; i < folders.Count; i++)
@@ -234,6 +238,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenMultiplatformFact(RavenTestCategory.BackupExportImport, RavenPlatform.Windows)]
         public async Task CanUploadBackupOnEncrypted()
         {
+            DoNotReuseServer();
             var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();
             var setupCert = Certificates.SetupServerAuthentication(certificates: generatedCert);
             var services = new ServiceCollection();
@@ -293,6 +298,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenMultiplatformFact(RavenTestCategory.BackupExportImport, RavenPlatform.Windows)]
         public async Task CanUploadBackupsWithDeletionOnEncrypted()
         {
+            DoNotReuseServer();
             using (await Retention.SkipMinimumBackupAgeToKeepValidationAsync())
             {
                 var generatedCert = Certificates.GenerateAndSaveSelfSignedCertificate();

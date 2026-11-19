@@ -250,6 +250,7 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteSubscriptionCommand)] = GenerateJsonDeserializationRoutine<DeleteSubscriptionCommand>(),
             [nameof(UpdatePeriodicBackupCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupCommand>(),
             [nameof(UpdatePeriodicBackupStatusCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusCommand>(),
+            [nameof(UpdatePeriodicBackupStatusBatchCommand)] = GenerateJsonDeserializationRoutine<UpdatePeriodicBackupStatusBatchCommand>(),
             [nameof(AddRavenEtlCommand)] = GenerateJsonDeserializationRoutine<AddRavenEtlCommand>(),
             [nameof(AddSqlEtlCommand)] = GenerateJsonDeserializationRoutine<AddSqlEtlCommand>(),
             [nameof(AddOlapEtlCommand)] = GenerateJsonDeserializationRoutine<AddOlapEtlCommand>(),

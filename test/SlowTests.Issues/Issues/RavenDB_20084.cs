@@ -50,9 +50,6 @@ public class RavenDB_20084 : ClusterTestBase
             leaderStore.Initialize();
             var debugInfo = new List<string> { $"Started at: {DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.ffffffZ}" };
 
-            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().OnFailedRescheduleNextScheduledActivity = (exception, erroredDatabaseName) =>
-                debugInfo.Add($"Failed to schedule the next activity for the idle database '{erroredDatabaseName}': {exception}");
-
             // Populating the database and forcibly transitioning it to an idle state
             await Backup.FillClusterDatabaseWithRandomDataAsync(databaseSizeInMb: 1, leaderStore, clusterSize);
 
@@ -65,7 +62,6 @@ public class RavenDB_20084 : ClusterTestBase
             var expectedTime = onGoingTaskBackup.NextBackup.DateTime;
 
             leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
-            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
@@ -79,7 +75,6 @@ public class RavenDB_20084 : ClusterTestBase
 
                 // No longer forcing the idle state for the database
                 leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
-                leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
 
                 // Awaiting the next backup event to verify that the '/database' endpoint provides an updated value for the last incremental backup timestamp
                 using var client = new HttpClient().WithConventions(leaderStore.Conventions);

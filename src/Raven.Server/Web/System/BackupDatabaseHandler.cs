@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Backups;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System
@@ -34,17 +32,8 @@ namespace Raven.Server.Web.System
             {
                 var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse();
 
-                foreach ((StringSegment _, Task<DocumentDatabase> task) in ServerStore.DatabasesLandlord.DatabasesCache)
-                {
-                    if (task.Status != TaskStatus.RanToCompletion)
-                        continue;
-
-                    var database = await task;
-
-                    var backups = database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
-
-                    result.Timers.AddRange(backups);
-                }
+                foreach (var databaseName in ServerStore.ServerBackupRunner.BackupsPerDatabasePerTaskId.Keys)
+                    result.Timers.AddRange(ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(databaseName));
 
                 result.Count = result.Timers.Count;
 
@@ -52,6 +41,13 @@ namespace Raven.Server.Web.System
 
                 context.Write(writer, json);
             }
+        }
+
+        [RavenAction("/admin/periodic-backup/decision-log/watch", "GET", AuthorizationStatus.Operator)]
+        public async Task WatchBackupDecisionLog()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForWatchDecisionLog(this))
+                await processor.ExecuteAsync();
         }
     }
 }

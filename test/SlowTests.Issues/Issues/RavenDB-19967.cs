@@ -480,7 +480,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 await documentDatabase.TombstoneCleaner.ExecuteCleanup();
 
                 Assert.True(documentDatabase.NotificationCenter.Exists(_notificationId));

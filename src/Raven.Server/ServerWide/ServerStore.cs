@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
-using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
@@ -25,7 +24,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -37,7 +35,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -45,7 +42,6 @@ using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
@@ -61,7 +57,6 @@ using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.Monitoring;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -69,6 +64,7 @@ using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.AI;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -153,6 +149,7 @@ namespace Raven.Server.ServerWide
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
+        public readonly ServerBackupRunner ServerBackupRunner;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -221,6 +218,8 @@ namespace Raven.Server.ServerWide
             DatabaseInfoCache = new DatabaseInfoCache(this);
 
             Secrets = new SecretProtection(configuration.Security);
+
+            ServerBackupRunner = new ServerBackupRunner(this);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
@@ -908,6 +907,8 @@ namespace Raven.Server.ServerWide
 
             RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
 
+            ServerBackupRunner.Initialize();
+
             Initialized = true;
             InitializationCompleted.Set();
         }
@@ -1010,9 +1011,12 @@ namespace Raven.Server.ServerWide
 
         public void TriggerDatabases()
         {
+            _engine.StateMachine.Changes.DatabaseChanged += ServerBackupRunner.OnClusterDatabaseChanged;
             _engine.StateMachine.Changes.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.Changes.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.Changes.ValueChanged += OnValueChanged;
+
+            ServerBackupRunner.RegisterAllDatabases();
 
             _engine.TopologyChanged += (_, __) => NotifyAboutClusterTopologyAndConnectivityChanges();
             _engine.StateChanged += OnStateChanged;
@@ -1279,12 +1283,6 @@ namespace Raven.Server.ServerWide
                 case nameof(RemoveNodeFromDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.RemoveNode));
                     break;
-                case nameof(PutServerWideBackupConfigurationCommand):
-                    RescheduleTimerIfDatabaseIdle(databaseName, state);
-                    break;
-                case nameof(UpdateResponsibleNodeForTasksCommand):
-                    RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(databaseName, state);
-                    break;
             }
 
             return Task.CompletedTask;
@@ -1354,88 +1352,6 @@ namespace Raven.Server.ServerWide
         }
 
         public PublishedServerUrls PublishedServerUrls;
-
-        private void RescheduleTimerIfDatabaseIdle(string db, object state)
-        {
-            if (IdleDatabases.ContainsKey(db) == false)
-                return;
-
-            if (state is long taskId == false)
-            {
-                Debug.Assert(state == null,
-                    $"This is probably a bug. This method should be called only for {nameof(PutServerWideBackupConfigurationCommand)} and the state should be the database periodic backup task id.");
-                //The database is excluded from the server-wide backup.
-                return;
-            }
-
-            PeriodicBackupConfiguration backupConfig;
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, db))
-            {
-                backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
-
-                if (backupConfig == null)
-                {
-                    //`indexPerDatabase` was collected from the previous transaction. The database can be excluded in the meantime. 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Could not reschedule the wakeup timer for idle database '{db}', because there is no backup task with id '{taskId}'.");
-                    return;
-                }
-            }
-
-            var tag = BackupUtils.GetResponsibleNodeTag(Server.ServerStore, db, backupConfig.TaskId);
-            if (Engine.Tag != tag)
-            {
-                if (Logger.IsErrorEnabled && tag != null)
-                    Logger.Error($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
-                return;
-            }
-
-            if (backupConfig.Disabled || backupConfig.FullBackupFrequency == null && backupConfig.IncrementalBackupFrequency == null)
-                return;
-
-            var now = SystemTime.UtcNow;
-            DateTime wakeup;
-            if (backupConfig.FullBackupFrequency == null)
-            {
-                wakeup = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
-            }
-            else
-            {
-                wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(now);
-                if (backupConfig.IncrementalBackupFrequency != null)
-                {
-                    var incremental = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
-                    wakeup = new DateTime(Math.Min(wakeup.Ticks, incremental.Ticks));
-                }
-            }
-
-            wakeup = DateTime.SpecifyKind(wakeup, DateTimeKind.Utc);
-            var nextIdleDatabaseActivity = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, wakeup);
-            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{nextIdleDatabaseActivity.DateTime}', with dueTime: {nextIdleDatabaseActivity.DueTime} ms.");
-
-        }
-
-        private void RescheduleTimerIfDatabaseIdleOnUpdatedResponsibleNode(string db, object state)
-        {
-            if (IdleDatabases.ContainsKey(db) == false)
-                return;
-
-            var nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters()
-            {
-                DatabaseName = db,
-                NotificationCenter = NotificationCenter,
-                Logger = Logger,
-                ServerStore = Server.ServerStore,
-                IsIdle = true
-            });
-
-            DatabasesLandlord.RescheduleNextIdleDatabaseActivity(db, nextIdleDatabaseActivity);
-        }
 
         private void ConfirmCertificateReplacedValueChanged(long index, string type)
         {
@@ -2846,6 +2762,8 @@ namespace Raven.Server.ServerWide
 
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
+                    exceptionAggregator.Execute(() => ServerBackupRunner?.Dispose());
+
                     exceptionAggregator.Execute(() =>
                     {
                         try
@@ -2958,7 +2876,7 @@ namespace Raven.Server.ServerWide
                                     stats[databaseKvp.Key] = statistics = new DatabasesDebugHandler.IdleDatabaseStatistics();
                             }
 
-                            if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: statistics, out DocumentDatabase database) == false)
+                            if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics, out DocumentDatabase database, out var idleSnapshot) == false)
                                 continue;
 
                             var dbIdEtagDictionary = new Dictionary<string, long>();
@@ -2969,8 +2887,17 @@ namespace Raven.Server.ServerWide
                                     dbIdEtagDictionary[kvp.Key] = kvp.Value;
                             }
 
-                            if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
+                            if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key))
+                            {
                                 IdleDatabases[database.Name] = dbIdEtagDictionary;
+
+                                if (idleSnapshot is { } snapshot &&
+                                    database.LastAccessTime == snapshot.LastAccessTime &&
+                                    DatabasesLandlord.DatabasesCache.TryGetValue(database.Name, out _) == false)
+                                    ServerBackupRunner.OnIdleDatabaseUnloaded(database, snapshot);
+                                else
+                                    ServerBackupRunner.OnIdleDatabaseChangedWhileUnloading(database);
+                            }
                         }
                         catch (OperationCanceledException)
                         {
@@ -3001,9 +2928,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database)
+        internal bool CanUnloadDatabase(StringSegment databaseName, DateTime lastRecentlyUsed, DatabasesDebugHandler.IdleDatabaseStatistics statistics, out DocumentDatabase database,
+            out ServerBackupRunner.IdleDatabaseSnapshot? idleSnapshot)
         {
             database = null;
+            idleSnapshot = null;
             var now = SystemTime.UtcNow;
 
             if (statistics != null)
@@ -3140,10 +3069,32 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            if (ShouldKeepLoadedForBackup(database, out idleSnapshot))
+            {
+                if (statistics == null)
+                    return false;
+
+                statistics.Explanations.Add($"Cannot unload database because a backup of it is due within '{Configuration.Backup.KeepIdleDatabaseLoadedBeforeBackup}'.");
+            }
+
             if (statistics != null)
                 return statistics.Explanations.Count == 0;
 
             return true;
+        }
+
+        private bool ShouldKeepLoadedForBackup(DocumentDatabase database, out ServerBackupRunner.IdleDatabaseSnapshot? idleSnapshot)
+        {
+            idleSnapshot = null;
+
+            if (ServerBackupRunner.HasBackupTasks(database) == false)
+                return false;
+
+            var lastAccessTime = database.LastAccessTime;
+            var (lastEtag, lastChangeVector) = database.ReadLastEtagAndChangeVector();
+            idleSnapshot = new ServerBackupRunner.IdleDatabaseSnapshot(lastAccessTime, lastEtag, lastChangeVector);
+
+            return ServerBackupRunner.ShouldKeepLoadedForBackup(database, lastEtag, lastChangeVector);
         }
 
         private bool DatabaseNeedsToRunIdleOperations(DocumentDatabase database, out DatabaseCleanupMode mode)
@@ -3946,6 +3897,7 @@ namespace Raven.Server.ServerWide
             internal Action<string, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>> BeforeExecuteClusterTransactionBatch;
             internal Action<ClusterObserver.CompareExchangeTombstonesCleanupState> AfterCompareExchangeTombstonesResult;
             internal bool IgnoreClusterTransactionIndexInCompareExchangeCleaner;
+            internal bool IgnoreHealthChecksBeforeBackup;
         }
 
 #if DEBUG

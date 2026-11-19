@@ -328,9 +328,11 @@ namespace SlowTests.Server.Documents.Replication
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideExternalReplication1()
         {
+            DoNotReuseServer();
+            using var primaryServer = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = primaryServer }))
             {
                 var putConfiguration1 = new ServerWideExternalReplication
                 {
@@ -363,7 +365,7 @@ namespace SlowTests.Server.Documents.Replication
                     }
                 };
 
-                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(primaryServer, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -417,9 +419,11 @@ namespace SlowTests.Server.Documents.Replication
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideExternalReplication2()
         {
+            DoNotReuseServer();
+            using var primaryServer = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = primaryServer }))
             {
                 var putConfiguration1 = new ServerWideExternalReplication
                 {
@@ -470,7 +474,7 @@ namespace SlowTests.Server.Documents.Replication
                     }
                 };
 
-                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(primaryServer, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 

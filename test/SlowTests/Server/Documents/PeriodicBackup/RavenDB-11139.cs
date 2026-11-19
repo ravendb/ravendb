@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -20,12 +19,13 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -41,8 +41,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchange()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options{Server = server}))
             {
                 var user = new User
                 {
@@ -56,7 +58,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(operationResult.Successful, "Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -66,7 +68,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 operationResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
                 Assert.True(operationResult.Successful, "Failing early because the test will fail anyways - the PutCompareExchangeValueOperation failed...");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
 
@@ -88,6 +90,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -114,8 +117,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncremental()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -124,7 +129,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -132,7 +137,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -157,6 +162,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -179,8 +185,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncrementalBackups()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -191,7 +199,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(user.Name == val.Value.Name, "val.Value.Name = 'emojis/poo'");
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -202,7 +210,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(user2.Name == val2.Value.Name, "val.Value.Name = 'emojis/clown'");
 
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user3 = new User
                 {
@@ -212,7 +220,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val3 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/goblin"));
                 Assert.True(user3.Name == val3.Value.Name, "val.Value.Name = 'emojis/goblin'");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user4 = new User
                 {
@@ -222,7 +230,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val4 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/ghost"));
                 Assert.True(user4.Name == val4.Value.Name, "val.Value.Name = 'emojis/ghost'");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user5 = new User
                 {
@@ -235,7 +243,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var emojisNum = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation()).CountOfCompareExchange;
                 Assert.True(emojisNum == 5, "CountOfCompareExchange == 5");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -263,6 +271,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -293,8 +302,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetween()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -306,7 +317,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -315,12 +326,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var clownResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🤡", user2, 0));
                 Assert.True(clownResult.Successful);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete poo
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/💩", pooResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -343,6 +354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -365,8 +377,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetweenBackups()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -377,7 +391,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -385,12 +399,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var clownResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🤡", user2, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete poo
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/💩", pooResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user3 = new User
                 {
@@ -398,12 +412,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var pirateFlagResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🏴‍☠️", user3, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete clown
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/🤡", clownResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -426,6 +440,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -448,13 +463,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeleteBetween()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔"});
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var count = 0;
                 foreach (var e in list)
@@ -502,7 +519,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 for (var i = 0; i < list.Count; i++)
                 {
@@ -516,7 +533,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(count, stats.CountOfCompareExchange);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -539,6 +556,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -552,13 +570,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeletePlusAddBetween()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔" });
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var count = 0;
 
@@ -607,7 +627,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 for (var i = 0; i < list.Count; i++)
                 {
@@ -632,7 +652,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(count, stats.CountOfCompareExchange);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -655,6 +675,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -668,8 +689,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentity()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -681,7 +704,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -692,7 +715,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -715,6 +738,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -749,8 +773,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentityAndRestoreOnlyIncremental()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -763,7 +789,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -774,7 +800,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -799,6 +825,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -874,6 +901,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotBackupWithCompareExchangeAndIdentity()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -945,6 +973,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotAndIncrementalBackupWithCompareExchangeAndIdentity()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -1038,6 +1067,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotAndIncrementalBackupsWithCompareExchangeAndIdentityAndDeleteBetween()
         {
+            DoNotReuseServer();
             var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
@@ -1185,6 +1215,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithoutBackupTasks()
         {
+            DoNotReuseServer();
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
             {
@@ -1210,6 +1241,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithBackupTask_TombstonesCreatedBeforeBackupTaskCreation()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
@@ -1240,6 +1272,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithBackupTask_TombstonesCreatedAfterBackupTaskCreation()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
@@ -1269,6 +1302,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_WithBackupTask_TaskDisabled()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
@@ -1298,6 +1332,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_FirstBackup_IsFaulted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
@@ -1329,7 +1364,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 .SetMentorNodeTo(server, store);
 
             await nextBackupWaiter
-                .TriggerNextFaultedOccurenceNowAsync(BackupKind.Full);
+                .TriggerNextFaultedOccurenceNowAsync(store.Database, BackupKind.Full);
 
             await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
@@ -1338,6 +1373,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_FirstBackup_IsSuccessful_ThenSecondBackup_IsFaulted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
             var serverCreationOptions = new ServerCreationOptions
@@ -1375,7 +1411,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 2, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup after successful full backup", diagnosticLogBuilder);
 
             await nextBackupWaiter
-                .TriggerNextFaultedOccurenceNowAsync(BackupKind.Full);
+                .TriggerNextFaultedOccurenceNowAsync(store.Database, BackupKind.Full);
 
             await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
@@ -1384,6 +1420,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task IncrementalBackupWithCompareExchangeTombstones()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var config = Backup.CreateBackupConfiguration(backupPath);
@@ -1542,12 +1579,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 });
             }
 
-            public async Task TriggerNextFaultedOccurenceNowAsync(BackupKind backupKind)
+            public async Task TriggerNextFaultedOccurenceNowAsync(string databaseName, BackupKind backupKind)
             {
                 Expect(backupKind);
 
                 var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
-                database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
+                var testingStuffInternals = database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals;
+                if (testingStuffInternals.TryGetValue(database.Name, out var testingStuff) == false)
+                    testingStuff = new TestingStuffInternal();
+                testingStuff.SimulateFailedBackup = true;
+                testingStuffInternals[database.Name] = testingStuff;
 
                 try
                 {
@@ -1559,7 +1600,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = false;
+                    testingStuff.SimulateFailedBackup = false;
+                    database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
                 }
             }
 
@@ -1610,7 +1652,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                var ts = database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly();
+                if (ts.DatabaseTestingStuffInternals.ContainsKey(database.Name) == false)
+                    ts.DatabaseTestingStuffInternals[database.Name] = new ServerBackupRunner.TestingStuffInternal();
+
+                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, ts, async () =>
                 {
                     await ChangeMentorNodeIfNeededAsync();
 
@@ -1661,7 +1707,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` " +
                     $"to return status code {HttpStatusCode.OK}, but it is {command.StatusCode}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
 
-                await _parent.Backup.CheckBackupOperationStatus(expectedOperationStatus, command, _store, _backupConfiguration.TaskId, operationId, periodicBackupRunner: null);
+                await _parent.Backup.CheckBackupOperationStatus(expectedOperationStatus, command, _store, _backupConfiguration.TaskId, operationId, serverBackupRunner: null);
                 Assert.True(expectedOperationStatus == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` to be {expectedOperationStatus}, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
                 _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Backup operation with ID `{operationId}` {command.Result.Status} for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
             }

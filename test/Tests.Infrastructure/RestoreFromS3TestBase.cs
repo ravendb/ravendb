@@ -33,6 +33,7 @@ namespace Tests.Infrastructure
 
         protected async Task can_backup_and_restore_internal(string dbName = null, BackupUploadMode backupUploadMode = BackupUploadMode.Default)
         {
+            DoNotReuseServer();
             var s3Settings = GetS3Settings();
             Options options = null;
             if (dbName != null)
@@ -107,6 +108,7 @@ namespace Tests.Infrastructure
 
         protected async Task can_backup_and_restore_snapshot_internal(BackupUploadMode backupUploadMode)
         {
+            DoNotReuseServer();
             var s3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
@@ -192,6 +194,7 @@ namespace Tests.Infrastructure
 
         protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_database_key_internal(BackupUploadMode backupUploadMode)
         {
+            DoNotReuseServer();
             var s3Settings = GetS3Settings();
             var result = await Encryption.EncryptedServerAsync();
 
@@ -259,6 +262,7 @@ namespace Tests.Infrastructure
 
         protected async Task incremental_and_full_check_last_file_for_backup_internal()
         {
+            DoNotReuseServer();
             var s3Settings = GetS3Settings();
 
             using (var store = GetDocumentStore())
@@ -327,6 +331,7 @@ namespace Tests.Infrastructure
 
         protected async Task incremental_and_full_backup_encrypted_db_and_restore_to_encrypted_DB_with_provided_key_internal()
         {
+            DoNotReuseServer();
             var s3Settings = GetS3Settings();
             var result = await Encryption.EncryptedServerAsync();
 
@@ -395,6 +400,7 @@ namespace Tests.Infrastructure
 
         protected async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_internal(BackupUploadMode backupUploadMode)
         {
+            DoNotReuseServer();
             var result = await Encryption.EncryptedServerAsync();
 
             var s3Settings = GetS3Settings();

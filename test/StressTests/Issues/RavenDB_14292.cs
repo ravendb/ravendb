@@ -44,9 +44,6 @@ namespace StressTests.Issues
                     [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
                 }
             });
-            using var dispose = new DisposableAction(() => server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false);
-            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
-
             var dbName = GetDatabaseName();
             var controlgroupDbName = GetDatabaseName() + "controlgroup";
             var baseBackupPath = NewDataPath(suffix: "BackupFolder");

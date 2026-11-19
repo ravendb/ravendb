@@ -216,6 +216,14 @@ public static class ThreadNames
         };
     }
 
+    public static ThreadInfo ForServerBackupRunner()
+    {
+        return new ThreadInfo("Server Backup Runner")
+        {
+            Details = new ThreadDetails.ServerBackupRunner()
+        };
+    }
+
     public sealed class ThreadDetails
     {
         public interface IThreadDetails
@@ -615,6 +623,18 @@ public static class ThreadNames
             public string GetShortName()
             {
                 return $"ClstrTx {_db}";
+            }
+        }
+
+        public class ServerBackupRunner : IThreadDetails
+        {
+            public ServerBackupRunner()
+            {
+            }
+
+            public string GetShortName()
+            {
+                return "SrvBkpRnr";
             }
         }
     }

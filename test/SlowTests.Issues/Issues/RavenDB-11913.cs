@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Smuggler)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task can_restore_legacy_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

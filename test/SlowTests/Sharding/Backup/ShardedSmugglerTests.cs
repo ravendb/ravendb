@@ -430,8 +430,7 @@ namespace SlowTests.Sharding.Backup
                     , file2);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
-                    var backups = periodicBackupRunner.PeriodicBackups;
+                    var backups = BackupTestBase.GetBackupStates(Server.ServerStore.ServerBackupRunner, store2.Database);
 
                     Assert.Equal("Backup", backups.First().Configuration.Name);
                     Assert.Equal(true, backups.First().Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));

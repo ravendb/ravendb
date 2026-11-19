@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                         dbIdEtagDictionary[kvp.Key] = kvp.Value;
                 }
 
-                Assert.True(server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)),
+                Assert.True(server.ServerStore.DatabasesLandlord.UnloadDirectly(database.Name),
                     $"didn't unload on node {server.ServerStore.NodeTag}");
                 server.ServerStore.IdleDatabases[database.Name] = dbIdEtagDictionary;
 

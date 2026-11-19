@@ -180,7 +180,7 @@ namespace SlowTests.Issues
                 var databaseName = $"{store.Database}_restore";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration { DataDirectory = path2, BackupLocation = backupDirectory, DatabaseName = databaseName }))
                 {
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store, databaseName);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store, databaseName);
                     Assert.Equal(databaseName, database.Name);
 
                     var index = database.IndexStore.GetIndex(new Products_ByName().IndexName);

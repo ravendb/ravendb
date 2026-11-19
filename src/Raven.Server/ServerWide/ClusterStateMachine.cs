@@ -346,6 +346,10 @@ namespace Raven.Server.ServerWide
                         ClusterStateCleanUp(context, cmd, index);
                         break;
 
+                    case nameof(UpdatePeriodicBackupStatusBatchCommand):
+                        ExecuteUpdatePeriodicBackupStatusBatch(context, cmd, index, type);
+                        break;
+
                     case nameof(PutSubscriptionBatchCommand):
                         ExecutePutSubscriptionBatch<PutSubscriptionCommand>(context, cmd, index, type, serverStore);
                         break;
@@ -826,6 +830,52 @@ namespace Raven.Server.ServerWide
 
                 ExecuteManyOnDispose(context, index, type, actions);
 
+            }
+            catch (Exception e)
+            {
+                exception = e;
+                throw;
+            }
+            finally
+            {
+                LogCommand(type, index, exception, updateCommand);
+            }
+        }
+
+        private void ExecuteUpdatePeriodicBackupStatusBatch(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index, string type)
+        {
+            if (cmd.TryGet(nameof(UpdatePeriodicBackupStatusBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
+                throw new RachisApplyException($"'{nameof(UpdatePeriodicBackupStatusBatchCommand.Commands)}' is missing in '{type}'.");
+
+            UpdatePeriodicBackupStatusCommand updateCommand = null;
+            Exception exception = null;
+            var actions = new List<Func<Task>>();
+            var databases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            try
+            {
+                foreach (BlittableJsonReaderObject command in commands)
+                {
+                    updateCommand = (UpdatePeriodicBackupStatusCommand)JsonDeserializationCluster.Commands[nameof(UpdatePeriodicBackupStatusCommand)](command);
+
+                    using (var databaseRecord = ReadRawDatabaseRecord(context, updateCommand.DatabaseName))
+                    {
+                        if (databaseRecord == null || databaseRecord.GetPeriodicBackupConfiguration(updateCommand.PeriodicBackupStatus.TaskId) == null)
+                            continue;
+
+                        updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out _);
+                    }
+
+                    var databaseName = updateCommand.DatabaseName;
+                    if (databases.Add(databaseName))
+                    {
+                        actions.Add(() =>
+                            Changes.OnDatabaseChanges(databaseName, index, nameof(UpdatePeriodicBackupStatusCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
+                    }
+                }
+
+                ExecuteManyOnDispose(context, index, type, actions);
             }
             catch (Exception e)
             {

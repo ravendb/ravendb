@@ -21,10 +21,10 @@ using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -36,12 +36,10 @@ namespace Raven.Server.Utils;
 
 public static class BackupUtils
 {
-    internal static bool IgnoreHealthChecksBeforeBackup = false;
-
-    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null)
     {
         return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
-            ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes) 
+            ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes)
             : new BackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes);
     }
 
@@ -89,7 +87,7 @@ public static class BackupUtils
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, taskId: 0L);
 
-        if (parameters.PeriodicBackups.Count == 0 && oneTimeBackupStatus == null)
+        if ((parameters.DatabaseBackupStates == null || parameters.DatabaseBackupStates.Count == 0) && oneTimeBackupStatus == null)
             return null;
 
         var lastBackup = 0L;
@@ -101,7 +99,7 @@ public static class BackupUtils
             lastBackupStatus = oneTimeBackupStatus;
         }
 
-        foreach (var periodicBackup in parameters.PeriodicBackups)
+        foreach (var periodicBackup in parameters.DatabaseBackupStates ?? [])
         {
             // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
@@ -216,7 +214,7 @@ public static class BackupUtils
         // we must wait here to ensure that the task was actually created on this node
         await database.ServerStore.Cluster.WaitForIndexNotification(taskId);
 
-        var nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+        var nodeTag = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
         if (nodeTag == null)
         {
             // this can happen if the database was just created or if a new task that was just created
@@ -232,7 +230,7 @@ public static class BackupUtils
                     throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
                 }
 
-                nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                nodeTag = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
                 if (nodeTag != null)
                     break;
             }
@@ -285,8 +283,8 @@ public static class BackupUtils
     {
         var nowUtc = DateTime.UtcNow;
 
-        var lastFullBackupUtc = parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? parameters.Configuration.CreatedAt ?? nowUtc;
-        var lastIncrementalBackupUtc = parameters.BackupStatus?.LastIncrementalBackupInternal ?? parameters.BackupStatus?.LastFullBackupInternal ?? parameters.DatabaseWakeUpTimeUtc ?? nowUtc;
+        var lastFullBackupUtc = parameters.BackupStatus?.LastFullBackupInternal ?? parameters.Configuration.CreatedAt ?? nowUtc;
+        var lastIncrementalBackupUtc = parameters.BackupStatus?.LastIncrementalBackupInternal ?? parameters.BackupStatus?.LastFullBackupInternal ?? nowUtc;
         var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
         {
             BackupFrequency = parameters.Configuration.FullBackupFrequency,
@@ -410,9 +408,26 @@ public static class BackupUtils
                (nextIncrementalBackup == null || nextFullBackup <= nextIncrementalBackup);
     }
 
+    internal static bool IsFullBackupRequired(PeriodicBackupStatus backupStatus, PeriodicBackupConfiguration configuration)
+    {
+        // check if we need to do a new full backup
+        return backupStatus.LastFullBackup == null || // no full backup was previously performed
+               backupStatus.BackupType != configuration.BackupType || // the backup type has changed
+               backupStatus.LastEtag == null || // last document etag wasn't updated
+               BackupConfiguration.CanBackupUsing(configuration.LocalSettings) &&
+               BackupTask.DirectoryContainsBackupFiles(backupStatus.LocalBackup?.BackupDirectory, Raven.Client.Documents.Smuggler.BackupUtils.IsFullBackupOrSnapshot) == false; // the local folder already includes a full backup or snapshot
+    }
+
+    internal static bool HasChangesSinceLastBackup(PeriodicBackupStatus backupStatus, long lastEtag, string lastChangeVector, long etagForBackup)
+    {
+        return lastEtag != backupStatus.LastEtag ||
+               lastChangeVector != backupStatus.LastDatabaseChangeVector ||
+               etagForBackup != backupStatus.LastRaftIndex?.LastEtag;
+    }
+
     internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
     {
-        if (IgnoreHealthChecksBeforeBackup)
+        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
             return;
 
         if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
@@ -440,168 +455,10 @@ public static class BackupUtils
         }
     }
 
-    public static bool CanServerRunBackup(ServerStore serverStore)
-    {
-        try
-        {
-            CheckServerHealthBeforeBackup(serverStore, name: null);
-            return true;
-        }
-        catch (BackupDelayException)
-        {
-            return false;
-        }
-    }
-
     public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)
     {
         basePath = configuration.Backup.TempPath ?? configuration.Storage.TempPath ?? configuration.Core.DataDirectory;
         return basePath.Combine(dir);
-    }
-
-    public static IdleDatabaseActivity GetEarliestIdleDatabaseActivity(EarliestIdleDatabaseActivityParameters parameters)
-    {
-        IdleDatabaseActivity earliestAction = null;
-        using (parameters.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            var rawDatabaseRecord = parameters.ServerStore.Cluster.ReadRawDatabaseRecord(context, parameters.DatabaseName);
-
-            foreach (var backup in rawDatabaseRecord.PeriodicBackups)
-            {
-                var nextAction = GetNextIdleDatabaseActivity(new NextIdleDatabaseActivityParameters(parameters, backup, context));
-
-                if (nextAction == null)
-                    continue;
-
-                earliestAction =
-                    earliestAction == null || nextAction.DateTime < earliestAction.DateTime
-                        ? nextAction
-                        : earliestAction;
-            }
-        }
-        return earliestAction;
-    }
-
-    private static IdleDatabaseActivity GetNextIdleDatabaseActivity(NextIdleDatabaseActivityParameters parameters)
-    {
-        // we will always wake up the database for a full backup.
-        // but for incremental we will wake the database only if there were changes made.
-
-        if (parameters.Configuration.Disabled ||
-            parameters.Configuration.IncrementalBackupFrequency == null && parameters.Configuration.FullBackupFrequency == null ||
-            parameters.Configuration.HasBackup() == false)
-            return null;
-
-        // we can't start the backup until we know the responsible node, if it is not set now we should do nothing
-        // when responsible node is set this triggers a rescheduling for the wakeup timer
-        var responsibleNodeTag = GetResponsibleNodeTag(parameters.ServerStore, parameters.DatabaseName, parameters.Configuration.TaskId);
-        if (responsibleNodeTag == null)
-        {
-            // cluster is down
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Could not find the responsible node for backup task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}'.");
-
-            if (parameters.IsIdle == false)
-            {
-                // the db is awake and we probably reached here from a place planning to unload it,
-                // since the responsible node is supposed to be chosen quickly, we prevent the db from unloading for now
-                return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
-            }
-
-            return null;
-        }
-        
-        if (responsibleNodeTag != parameters.ServerStore.NodeTag)
-        {
-            // not responsible for this backup task
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Current server '{parameters.ServerStore.NodeTag}' is not responsible node for backup task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}'. Backup Task responsible node is '{responsibleNodeTag}'.");
-
-            return null;
-        }
-        
-        // the local node is responsible for the backup
-        var backupStatus = BackupStatusStorage.GetBackupStatus(parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
-        if (parameters.IsIdle == false)
-        {
-            if (backupStatus == null)
-            {
-                // we might reach here from periodic backup runner that check whether due time is far enough in the future to justify unloading the db
-                // if we never backed up the db then we want to do it now. returning the time now will prevent the unloading
-
-                if (parameters.Logger.IsInfoEnabled)
-                    parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is never backed up yet.");
-
-                return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
-            }
-        }
-        
-        // The database is awake and a backup status exists, calculate the next backup occurence so we know when it should wake up
-        var nextBackup = GetNextBackupDetails(new NextBackupDetailsParameters
-        {
-            OnParsingError = parameters.OnParsingError,
-            Configuration = parameters.Configuration,
-            BackupStatus = backupStatus,
-            DatabaseWakeUpTimeUtc = parameters.DatabaseWakeUpTimeUtc,
-            NodeTag = parameters.ServerStore.NodeTag,
-            OnMissingNextBackupInfo = parameters.OnMissingNextBackupInfo
-        });
-
-        if (nextBackup == null)
-        {
-            if (parameters.Logger.IsErrorEnabled)
-                parameters.Logger.Error($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have next backup. Should not happen and likely a bug.");
-            return null;
-        }
-
-        var nowUtc = DateTime.UtcNow;
-        if (nextBackup.DateTime < nowUtc)
-        {
-            // this backup is delayed
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' is delayed.");
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
-        }
-
-        if (backupStatus?.LastEtag != parameters.LastEtag)
-        {
-            // we have changes since last backup
-            var type = nextBackup.IsFull ? "full" : "incremental";
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' have changes since last backup. Wakeup timer will be set to the next {type} backup at '{nextBackup.DateTime}'.");
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, nextBackup.DateTime);
-        }
-
-        if (nextBackup.IsFull)
-        {
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have changes since last backup. Wakeup timer will be set to the next full backup at '{nextBackup.DateTime}'.");
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, nextBackup.DateTime);
-        }
-
-        // we don't have changes since the last backup and the next backup are incremental
-        var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
-        var nextFullBackup = GetNextBackupOccurrence(new NextBackupOccurrenceParameters
-        {
-            BackupFrequency = parameters.Configuration.FullBackupFrequency,
-            LastBackupUtc = lastFullBackup,
-            Configuration = parameters.Configuration,
-            OnParsingError = parameters.OnParsingError
-        });
-
-        if (nextFullBackup < nowUtc)
-        {
-            if (parameters.Logger.IsInfoEnabled)
-                parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have changes since last backup but has delayed backup.");
-            // this backup is delayed
-            return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
-        }
-
-        if (parameters.Logger.IsInfoEnabled)
-            parameters.Logger.Info($"Backup Task '{parameters.Configuration.TaskId}' of database '{parameters.DatabaseName}' doesn't have changes since last backup. Wakeup timer set to next full backup at {nextFullBackup}, and will skip the incremental backups.");
-
-        return new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, nextBackup.DateTime, parameters.Configuration.TaskId, parameters.LastEtag);
     }
 
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, RavenLogger logger,
@@ -686,8 +543,6 @@ public static class BackupUtils
 
         public PeriodicBackupStatus BackupStatus { get; set; }
 
-        public DateTime? DatabaseWakeUpTimeUtc { get; set; }
-
         public string NodeTag { get; set; }
 
         public Action<OnParsingErrorParameters> OnParsingError { get; set; }
@@ -698,50 +553,8 @@ public static class BackupUtils
     public sealed class BackupInfoParameters
     {
         public ClusterOperationContext Context { get; set; }
-        public List<PeriodicBackup> PeriodicBackups { get; set; }
+        public List<DatabaseBackupState> DatabaseBackupStates { get; set; }
         public string DatabaseName { get; set; }
     }
 
-    public class EarliestIdleDatabaseActivityParameters
-    {
-        public string DatabaseName { get; set; }
-
-        public bool IsIdle { get; set; }
-
-        public DateTime? DatabaseWakeUpTimeUtc { get; set; }
-
-        public long LastEtag { get; set; }
-
-        public RavenLogger Logger { get; set; }
-
-        public AbstractNotificationCenter NotificationCenter { get; set; }
-
-        public Action<OnParsingErrorParameters> OnParsingError { get; set; }
-
-        public Action<PeriodicBackupConfiguration> OnMissingNextBackupInfo { get; set; }
-
-        public ServerStore ServerStore { get; set; }
-    }
-
-    public sealed class NextIdleDatabaseActivityParameters : EarliestIdleDatabaseActivityParameters
-    {
-        public PeriodicBackupConfiguration Configuration { get; set; }
-
-        public ClusterOperationContext Context { get; set; }
-
-        public NextIdleDatabaseActivityParameters(EarliestIdleDatabaseActivityParameters parameters, PeriodicBackupConfiguration configuration, ClusterOperationContext context)
-        {
-            Context = context;
-            Configuration = configuration;
-            DatabaseName = parameters.DatabaseName;
-            DatabaseWakeUpTimeUtc = parameters.DatabaseWakeUpTimeUtc;
-            LastEtag = parameters.LastEtag;
-            Logger = parameters.Logger;
-            NotificationCenter = parameters.NotificationCenter;
-            OnParsingError = parameters.OnParsingError;
-            OnMissingNextBackupInfo = parameters.OnMissingNextBackupInfo;
-            ServerStore = parameters.ServerStore;
-            IsIdle = parameters.IsIdle;
-        }
-    }
 }

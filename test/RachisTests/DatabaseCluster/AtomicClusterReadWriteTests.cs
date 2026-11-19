@@ -22,6 +22,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Extensions;
@@ -30,6 +31,7 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Directory = System.IO.Directory;
 
@@ -283,10 +285,13 @@ namespace RachisTests.DatabaseCluster
             await LoadAndDeleteWhileUpdated(nodes, documentStore.Database, entity.Id);
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CallingStartBackupOperationWhileBackupRunningShouldThrow(Options options)
         {
+            DoNotReuseServer();
+            var server = GetNewServer();
+            options.Server = server;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
@@ -295,33 +300,43 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 // hold backup from finishing
                 var mre = new ManualResetEvent(false);
-                database.PeriodicBackupRunner.ForTestingPurposesOnly().HoldBackupFromFinishing = mre;
+                database.ServerStore.ServerBackupRunner._forTestingPurposes ??= new ServerBackupRunner.TestingStuff();
+                var testingStuffInternal = new ServerBackupRunner.TestingStuffInternal { HoldBackupFromFinishing = mre };
+                database.ServerStore.ServerBackupRunner._forTestingPurposes.DatabaseTestingStuffInternals[database.Name] = testingStuffInternal;
 
-                // start backup
-                var backupPath = NewDataPath(suffix: "BackupFolder");
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
-                long taskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store, opStatus: OperationStatus.InProgress);
+                try
+                {
+                    // start backup
+                    var backupPath = NewDataPath(suffix: "BackupFolder");
+                    var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
+                    long taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
-                var backup = database.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
-                Assert.NotNull(backup);
+                    var backupState = database.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
+                    Assert.NotNull(backupState);
 
-                // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
-                var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
-                Assert.Equal(error.OperationId, backup.RunningTask.Id);
-                
-                mre.Set();
+                    // call StartBackupOperation - this will not start a new backup task for that id since we already have one running
+                    var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                    Assert.Equal(error.OperationId, backupState.OperationId);
+                }
+                finally
+                {
+                    mre.Set();
+                }
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CallingStartBackupOperationWhileBackupRunningShouldThrow_sharded(Options options)
         {
+            DoNotReuseServer();
             options.ReplicationFactor = 1;
+            var server = GetNewServer();
+            options.Server = server;
             using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenAsyncSession())
@@ -330,8 +345,8 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
-                var database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, 0));
-
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourceStore(ShardHelper.ToShardName(store.Database, 0));
+               
                 //make sure replication factor is 1 for all shards
                 var record = await GetDatabaseRecordAsync(store);
                 foreach (var (_, shardTopology) in record.Sharding.Shards)
@@ -341,31 +356,38 @@ namespace RachisTests.DatabaseCluster
                 
                 // hold backup from finishing
                 var mreShard0 = new ManualResetEvent(false);
-                database.PeriodicBackupRunner.ForTestingPurposesOnly().HoldBackupFromFinishing = mreShard0;
+                var testingStuff = new TestingStuffInternal() { HoldBackupFromFinishing = mreShard0 };
+                database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
 
-                // start backup
-                var backupPath = NewDataPath(suffix: "BackupFolder");
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
-                var (taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config, isFullBackup: true);
-
-                var backupShard0 = database.PeriodicBackupRunner.PeriodicBackups.Single(x => x.Configuration.TaskId == taskId);
-                
-                // wait for the backup to finish on 2 of the shards
-                var shardDatabases = await Sharding.GetShardsDocumentDatabaseInstancesFor(store.Database).ToListAsync();
-                foreach (var shard in shardDatabases)
+                try
                 {
-                    if (shard.ShardNumber == 0)
-                        continue;
+                    // start backup
+                    var backupPath = NewDataPath(suffix: "BackupFolder");
+                    var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
+                    var (taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config, isFullBackup: true);
 
-                    // wait for completed
-                    WaitForValue(() => shard.Operations.Completed.ContainsKey(backupShard0.RunningTask.Id), true);
+                    var backupShard0 = server.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
+
+                    // wait for the backup to finish on 2 of the shards
+                    var shardDatabases = server.ServerStore.DatabasesLandlord.TryGetOrCreateShardedResourcesStore(store.Database).ToList();
+                    foreach (var shard in shardDatabases)
+                    {
+                        var s = await shard;
+                        if (s.ShardNumber == 0)
+                            continue;
+
+                        // wait for completed
+                        WaitForValue(() => s.Operations.Completed.ContainsKey(backupShard0.RunningTask.Id), true);
+                    }
+
+                    // call StartBackupOperation - this should throw since we the backup is still running on shard 0
+                    var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
+                    Assert.Equal(error.OperationId, backupShard0.RunningTask.Id);
                 }
-
-                // call StartBackupOperation - this should throw since we the backup is still running on shard 0
-                var error = await Assert.ThrowsAnyAsync<BackupAlreadyRunningException>(() => store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId)));
-                Assert.Equal(error.OperationId, backupShard0.RunningTask.Id);
-
-                mreShard0.Set();
+                finally
+                {
+                    mreShard0.Set();
+                }
             }
         }
 
