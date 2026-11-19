@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
@@ -42,12 +41,11 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
         var receive = webSocket.ReceiveAsync(receiveBuffer, token.Token);
 
         var lastSummaryVersion = decisions.SummaryVersion;
-        var lastDecisionId = decisions.LastDecisionId;
 
         var snapshot = decisions.GetDecisionLogDetails(filter, afterEtag: null);
         var lastEtag = snapshot.LastEtag;
+        var lastId = snapshot.LastId;
         var totalResults = snapshot.TotalResults;
-        lastDecisionId = Math.Max(lastDecisionId, GetMaxId(snapshot.Entries));
 
         await SendAsync(webSocket, "Snapshot", snapshot, token);
 
@@ -66,25 +64,17 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
             }
 
             var currentSummaryVersion = decisions.SummaryVersion;
-            var details = decisions.GetDecisionLogDetails(filter, afterEtag: lastEtag);
+            var details = decisions.GetDecisionLogDetails(filter, afterEtag: lastEtag, afterId: lastId);
 
             var summaryChanged = currentSummaryVersion != lastSummaryVersion;
             lastEtag = details.LastEtag;
+            lastId = details.LastId;
             lastSummaryVersion = currentSummaryVersion;
+            totalResults += details.TotalResults;
 
             if (details.Entries.Count == 0 && summaryChanged == false)
                 continue;
 
-            var maxId = lastDecisionId;
-            foreach (var entry in details.Entries)
-            {
-                if (entry.Id > lastDecisionId)
-                    totalResults++;
-
-                maxId = Math.Max(maxId, entry.Id);
-            }
-
-            lastDecisionId = maxId;
             details.TotalResults = totalResults;
 
             await SendAsync(webSocket, "Update", details, token);
@@ -103,16 +93,6 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
             To = RequestHandler.GetDateTimeQueryString("to", required: false),
             Take = Math.Clamp(RequestHandler.GetIntValueQueryString("take", required: false) ?? DefaultPageSize, 0, MaxPageSize)
         };
-    }
-
-    private static long GetMaxId(List<BackupDecisionLogEntry> entries)
-    {
-        long maxId = 0;
-
-        foreach (var entry in entries)
-            maxId = Math.Max(maxId, entry.Id);
-
-        return maxId;
     }
 
     private async Task SendAsync(WebSocket webSocket, string type, BackupDecisionLogDetails details, OperationCancelToken token)

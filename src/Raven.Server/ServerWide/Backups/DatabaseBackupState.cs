@@ -219,9 +219,9 @@ namespace Raven.Server.ServerWide.Backups
             return _decisionLog.GetDecisions();
         }
 
-        internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, long upToEtag, BackupDecisionLogFilter filter, int take, out int totalMatches)
+        internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, long upToEtag, long afterId, long upToId, BackupDecisionLogFilter filter, int take, out int totalMatches)
         {
-            return _decisionLog.GetMatchingDecisions(afterEtag, upToEtag, filter, take, out totalMatches);
+            return _decisionLog.GetMatchingDecisions(afterEtag, upToEtag, afterId, upToId, filter, take, out totalMatches);
         }
 
         public bool TryGetLatestDecision(out BackupDecision decision)

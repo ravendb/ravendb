@@ -112,7 +112,7 @@ public sealed class BackupDecisionLog
         }
     }
 
-    internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, long upToEtag, BackupDecisionLogFilter filter, int take, out int totalMatches)
+    internal List<BackupDecision> GetMatchingDecisions(long? afterEtag, long upToEtag, long afterId, long upToId, BackupDecisionLogFilter filter, int take, out int totalMatches)
     {
         var decisions = new List<BackupDecision>();
         totalMatches = 0;
@@ -122,16 +122,17 @@ public sealed class BackupDecisionLog
             for (var i = 0; i < _count; i++)
             {
                 var decision = GetNewest(i);
-                if (decision.Etag > upToEtag)
-                    continue;
-
                 if (afterEtag != null && decision.Etag <= afterEtag)
                     break;
 
                 if (filter.Matches(decision) == false)
                     continue;
 
-                totalMatches++;
+                if (decision.Id > afterId && decision.Id <= upToId)
+                    totalMatches++;
+
+                if (decision.Etag > upToEtag)
+                    continue;
 
                 if (decisions.Count < take)
                     decisions.Add(Copy(decision));
@@ -250,6 +251,8 @@ public sealed class BackupDecisionLogDetails : IDynamicJson
     public List<BackupDecisionLogTask> Tasks { get; set; } = new();
 
     internal long LastEtag { get; set; }
+
+    internal long LastId { get; set; }
 
     public DynamicJsonValue ToJson()
     {
