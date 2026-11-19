@@ -39,12 +39,8 @@ public readonly unsafe ref partial struct Container
         txState.EnsureDeferredFreesHook(llt.Transaction);
     }
 
-    internal static PostingListState GetPendingFreesState(LowLevelTransaction llt, ContainerId containerId)
-    {
-        return llt.Transaction.GetContainerState(containerId).GetPendingFrees(llt, create: false)?.State ?? default;
-    }
-
-    internal static long GetNumberOfPendingFrees(LowLevelTransaction llt, ContainerId containerId) => GetPendingFreesState(llt, containerId).NumberOfEntries;
+    internal static long GetNumberOfPendingFrees(LowLevelTransaction llt, ContainerId containerId) =>
+        llt.Transaction.GetContainerState(containerId).GetPendingFrees(llt, create: false)?.State.NumberOfEntries ?? 0;
 
     private static bool TryReclaimPendingFreesPage(LowLevelTransaction llt, ContainerId containerId, Container rootContainer, TransactionState txState,
         long pageLevelMetadata, int size, out Container reclaimed)
