@@ -203,8 +203,7 @@ public class BackupHistoryStorage
 
     public static unsafe BlittableJsonReaderObject GetBackupResult(TransactionOperationContext context, string databaseName, long taskId, long createdAtTicks)
     {
-        using var tx = context.OpenReadTransaction();
-        if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, createdAtTicks, out var tvr) == false)
+        if (TryGetBackupResultDetailsReader(context.Transaction, databaseName, taskId, createdAtTicks, out var tvr) == false)
             return null;
 
         var jsonPointer = tvr.Read((int)BackupResultDetailsSchema.BackupResultDetailsColumns.Data, out var size);
@@ -284,7 +283,7 @@ public class BackupHistoryStorage
     }
 
     public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
-        DatabaseRecord databaseRecord,
+        RawDatabaseRecord databaseRecord,
         bool includeIncrementals,
         RavenLogger logger,
         long? requestedTaskId = null,
@@ -295,12 +294,9 @@ public class BackupHistoryStorage
             ? [requestedTaskId.Value]
             : databaseRecord.PeriodicBackups.Select(configuration => configuration.TaskId);
 
-        using (var tx = context.OpenReadTransaction())
-        {
-            var table = tx.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
-            foreach (var taskId in taskIds)
-                PopulateBackupHistory(backupHistory, context, table, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
-        }
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+        foreach (var taskId in taskIds)
+            PopulateBackupHistory(backupHistory, context, table, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
 
         backupHistory.UpdateTaskNames(databaseRecord, logger);
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));

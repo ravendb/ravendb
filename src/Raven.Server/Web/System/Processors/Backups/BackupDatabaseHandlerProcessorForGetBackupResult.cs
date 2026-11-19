@@ -1,35 +1,33 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
-internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : AbstractHandlerProcessor<RequestHandler>
+internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : AbstractBackupHistoryHandlerProcessor
 {
     public BackupDatabaseHandlerProcessorForGetBackupResult([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    public override async ValueTask ExecuteAsync()
-    {
-        var databaseName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("database");
+    protected override bool ShardNumberRequired => true;
 
+    protected override async ValueTask WriteResponseAsync(TransactionOperationContext context, RawDatabaseRecord databaseRecord, int? shardNumber)
+    {
         var taskId = RequestHandler.GetLongQueryString("taskId");
         var backupTicks = RequestHandler.GetLongQueryString("backupTicks");
+        var databaseName = shardNumber.HasValue ? ShardHelper.ToShardName(databaseRecord.DatabaseName, shardNumber.Value) : databaseRecord.DatabaseName;
 
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupResult));
-
-            var json = BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, backupTicks);
-            writer.WriteObject(json);
-
+            writer.WriteObject(BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, backupTicks));
             writer.WriteEndObject();
         }
     }

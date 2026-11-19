@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.ServerWide;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -48,7 +48,7 @@ public class BackupHistory
         }
     }
     
-    public void UpdateTaskNames(DatabaseRecord databaseRecord, RavenLogger logger)
+    public void UpdateTaskNames(RawDatabaseRecord databaseRecord, RavenLogger logger)
     {
         foreach (var backupGroup in Groups)
         {

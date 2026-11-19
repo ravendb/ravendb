@@ -1,24 +1,28 @@
 using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Logging;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
-internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : AbstractHandlerProcessor<RequestHandler>
+internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : AbstractBackupHistoryHandlerProcessor
 {
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<BackupDatabaseHandlerProcessorForGetBackupHistory>();
+
     public BackupDatabaseHandlerProcessorForGetBackupHistory([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
     }
 
-    public override async ValueTask ExecuteAsync()
+    protected override bool ShardNumberRequired => false;
+
+    protected override async ValueTask WriteResponseAsync(TransactionOperationContext context, RawDatabaseRecord databaseRecord, int? shardNumber)
     {
-        var databaseName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("database");
         var includeIncrementals = RequestHandler.GetBoolValueQueryString("includeIncrementals", required: false) ?? true;
         var requestedTaskId = RequestHandler.GetLongQueryString("taskId", required: false);
         var fullBackupTicks = RequestHandler.GetLongQueryString("fullBackupTicks", required: false);
@@ -26,18 +30,11 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         if (fullBackupTicks.HasValue && requestedTaskId.HasValue == false)
             throw new ArgumentException($"When requesting specific backup ({nameof(fullBackupTicks)}), `taskId` must be specified", nameof(requestedTaskId));
 
-        var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupHistory));
-
-            var logger = RavenLogManager.Instance.GetLoggerForDatabase<BackupDatabaseHandlerProcessorForGetBackupHistory>(database);
-            var json = BackupHistoryStorage.GetBackupHistory(context, database.ReadDatabaseRecord(), includeIncrementals, logger, requestedTaskId, fullBackupTicks);
-            writer.WriteObject(json);
-
+            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, includeIncrementals, Logger, requestedTaskId, fullBackupTicks));
             writer.WriteEndObject();
         }
     }
