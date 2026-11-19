@@ -73,7 +73,7 @@ internal static class RavenLogManagerServerExtensions
     {
         RuleName = Constants.Logging.Names.PipeRuleName,
         LoggerNamePattern = "*",
-        Targets = { StreamTarget.Instance }
+        Targets = { new AsyncTargetWrapper(StreamTarget.Instance) { QueueLimit = 4096, OverflowAction = AsyncTargetWrapperOverflowAction.Discard } }
     };
 #endif
 
