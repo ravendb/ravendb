@@ -40,7 +40,7 @@ public unsafe partial class Pager : IDisposable
     private readonly ConcurrentSet<WeakReference<State>> _states = [];
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
-    private SegmentPrefetchTable _prefetchTable;
+    private SegmentPrefetchTable _prefetchTable = null!;
     internal DeviceWriteBudget? DeviceBudget { get; private set; }
     private long _prefetchRequestSize;
     private PrefetchRing? _prefetchRing;
