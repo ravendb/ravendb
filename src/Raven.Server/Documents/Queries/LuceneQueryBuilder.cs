@@ -512,9 +512,10 @@ namespace Raven.Server.Documents.Queries
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
             var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
-            var (valueSecond, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
+            var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
 
-            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
+            var valueType = valueFirstType == ValueTokenType.Long && valueSecondType == ValueTokenType.Double ? ValueTokenType.Double : valueFirstType;
+            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
             Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)

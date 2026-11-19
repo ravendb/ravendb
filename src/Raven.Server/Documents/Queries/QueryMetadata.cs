@@ -103,6 +103,7 @@ namespace Raven.Server.Documents.Queries
 
             // once, since the metadata is cached and shared by every request with the same query text, and after Build,
             // so the clause is validated as the user wrote it
+            Query.WhereAsWritten ??= Query.Where;
             Query.Where = WhereClauseNormalizer.Normalize(Query.Where);
 
             CanCache = cacheKey != 0 && AddSpatialProperties == false;

@@ -121,6 +121,14 @@ public static class WhereClauseNormalizer
             var current = pending.Pop();
             if (current is BinaryExpression { Operator: OperatorType.And } and)
             {
+                if (IsBound(and.Left, out var left) && IsBound(and.Right, out var right) && OnSameField(left, right) && left.IsGreaterThan != right.IsGreaterThan &&
+                    MayDifferInKind((ValueExpression)left.Right, (ValueExpression)right.Right))
+                {
+                    operands.Add(Fold(left, right, siblings: true));
+                    changed = true;
+                    continue;
+                }
+
                 pending.Push(and.Right);
                 pending.Push(and.Left);
                 continue;
@@ -198,14 +206,7 @@ public static class WhereClauseNormalizer
                 if (IsBound(operands[j], out var second) == false || OnSameField(first, second) == false || first.IsGreaterThan == second.IsGreaterThan)
                     continue;
 
-                var (greater, less) = first.IsGreaterThan ? (first, second) : (second, first);
-
-                operands[i] = new BetweenExpression(first.Left, (ValueExpression)greater.Right, (ValueExpression)less.Right)
-                {
-                    MinInclusive = greater.Operator == OperatorType.GreaterThanEqual,
-                    MaxInclusive = less.Operator == OperatorType.LessThanEqual,
-                    Folded = true
-                };
+                operands[i] = Fold(first, second, siblings: false);
                 operands.RemoveAt(j);
                 changed = true;
                 break;
@@ -213,6 +214,24 @@ public static class WhereClauseNormalizer
         }
 
         return changed;
+    }
+
+    private static bool MayDifferInKind(ValueExpression first, ValueExpression second)
+    {
+        return first.Value != second.Value || first.Value == ValueTokenType.Parameter;
+    }
+
+    private static BetweenExpression Fold(BinaryExpression first, BinaryExpression second, bool siblings)
+    {
+        var (greater, less) = first.IsGreaterThan ? (first, second) : (second, first);
+
+        return new BetweenExpression(first.Left, (ValueExpression)greater.Right, (ValueExpression)less.Right)
+        {
+            MinInclusive = greater.Operator == OperatorType.GreaterThanEqual,
+            MaxInclusive = less.Operator == OperatorType.LessThanEqual,
+            Folded = true,
+            FoldedFromSiblings = siblings
+        };
     }
 
     // a bound gathers the same-direction bounds on its field behind it, a folded between the bounds of either direction and

@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Queries.AST
         public bool MaxInclusive = true;
 
         public bool Folded;
+        public bool FoldedFromSiblings;
 
         public BetweenExpression(QueryExpression source, ValueExpression min, ValueExpression max)
         {

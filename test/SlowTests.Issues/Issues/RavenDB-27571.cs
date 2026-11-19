@@ -1154,6 +1154,70 @@ namespace SlowTests.Issues
             Assert.Equal(new[] { "items/12", "items/20" }, Query(store, $"from index 'Items/ByTag' where {where}", ("lo", 12), ("hi", null)));
         }
 
+        // N6: a long and a double bound written as the two sides of one 'and' compare as doubles, as they always did on Corax;
+        // the same pair apart keeps the long comparison against the truncated value
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("Price > 10 and Price <= 10.5", "items/10.5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Price > $lo and Price <= $hi", "items/10.5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Price >= 10.5 and Price <= 15", "items/10.5,items/12,items/15", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Price >= 10.5 and Price <= 15 and Tag = 't'", "items/10.5,items/12,items/15", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("(Tag = 't' and Price > 10) and Price <= 10.5", "", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("(Tag = 't' and Price >= 10.5) and Price <= 15", "items/10.5,items/12,items/15,items/15.5", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void SiblingPairOfALongAndADoubleBoundComparesAsDoubles(Options options, string where, string expectedIds)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/15.5", Tag = "t", Price = 15.5 });
+
+            Assert.Equal(expectedIds.Split(',', StringSplitOptions.RemoveEmptyEntries), Query(store, $"from index 'Items/ByTag' where {where}", ("lo", 10), ("hi", 10.5)));
+        }
+
+        // N7: with a long and a double literal on a multi-valued field the result does not depend on the order of the clauses
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("Values > 1 and Values < 7 and Values < 2.5", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Values > 1 and Values < 2.5 and Values < 7", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ClauseOrderOfMixedLiteralsOnMultiValuedField(Options options, string where)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/apart", Tag = "t", Values = new long[] { 0, 10 } },
+                new Item { Id = "items/two", Tag = "t", Values = new long[] { 2 } },
+                new Item { Id = "items/zero", Tag = "t", Values = new long[] { 0 } },
+                new Item { Id = "items/ten", Tag = "t", Values = new long[] { 10 } },
+                new Item { Id = "items/two-again", Tag = "t", Values = new long[] { 2 } });
+
+            Assert.Equal(new[] { "items/two", "items/two-again" }, Query(store, $"from index 'Items/ByTag' where {where}"));
+        }
+
+        // N8: a sharded query is re-rendered for its shards from the where clause as written, so a pair keeps the shape, and
+        // with it the comparison, it has on a single node
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+        [RavenData("Tag = 't' and Price >= 10.5 and Price <= 15", "items/10.5,items/12,items/15,items/15.5", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        [RavenData("Price >= 10.5 and Price <= 15", "items/10.5,items/12,items/15", SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void ShardsGetTheWhereClauseAsWritten(Options options, string where, string expectedIds)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/10", Tag = "t", Price = 10 },
+                new Item { Id = "items/10.5", Tag = "t", Price = 10.5 },
+                new Item { Id = "items/12", Tag = "t", Price = 12 },
+                new Item { Id = "items/15", Tag = "t", Price = 15 },
+                new Item { Id = "items/15.5", Tag = "t", Price = 15.5 });
+
+            var expected = expectedIds.Split(',');
+
+            using var session = store.OpenSession();
+            Assert.Equal(expected, Page(0));
+            Assert.Equal(expected.Skip(1), Page(skip: 1));
+
+            string[] Page(int skip) => session.Advanced.RawQuery<Item>($"from index 'Items/ByTag' where {where} order by Price")
+                .Skip(skip)
+                .ToList()
+                .Select(x => x.Id)
+                .ToArray();
+        }
+
         // N2: same-direction literal bounds of mixed numeric kinds on one field; a long literal compares against the long
         // term, so 10.5 fails 'Price > 10' even though it passes 'Price > 10.1'
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
