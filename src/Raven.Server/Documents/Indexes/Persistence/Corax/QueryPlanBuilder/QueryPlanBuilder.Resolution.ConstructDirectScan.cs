@@ -38,9 +38,12 @@ internal static partial class QueryPlanBuilder
         long knownTotal = hasResidual ? -1 : TryResolveDirectScanKnownTotal(ref ctx, walkerCtx, drivingClause, isFullScan, forward, out probeTicks, out probeTerms);
         int take = ResolveSortedScanTake(ctx.BuilderParams, knownTotal);
 
+        // Only the full scan adds the documents without a sort value; a driving clause that gets this far matches neither null nor missing
         IQueryMatch drivingMatch = hasTieBreak
-            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, nullFirst, take)
-            : new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator, indexSearcher, ctx.OrderByFields[0].Field, nullFirst);
+            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, includeNoValue: isFullScan, nullFirst, take)
+            : isFullScan
+                ? new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator, indexSearcher, ctx.OrderByFields[0].Field, nullFirst)
+                : new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator);
 
         DirectScanMatchBase ds;
         if (hasResidual)
@@ -86,6 +89,7 @@ internal static partial class QueryPlanBuilder
             {
                 PackedParam.TypeLong => indexSearcher.BetweenQuery(fieldMeta, queryExec.LongValues[packed.Param1], queryExec.LongValues[packed.Param1], forward: forward),
                 PackedParam.TypeDouble => indexSearcher.BetweenQuery(fieldMeta, queryExec.DoubleValues[packed.Param1], queryExec.DoubleValues[packed.Param1], forward: forward),
+                _ when queryExec.StringValues[packed.Param1] is null => null, // = null is the null posting list, which the walk cannot produce
                 _ => indexSearcher.BetweenQuery(fieldMeta, queryExec.StringValues[packed.Param1], queryExec.StringValues[packed.Param1], forward: forward)
             };
         }
@@ -100,7 +104,7 @@ internal static partial class QueryPlanBuilder
             {
                 ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual or ClauseType.LessThan or ClauseType.LessThanOrEqual
                     => packed.RangeQuery(drivingExec.ClauseType, fieldMeta, indexSearcher, queryExec, forward),
-                ClauseType.Between when drivingExec.SentinelRewriteType == ClauseType.Exists => null, // SortedDrivingMatch would add the entries without the field
+                ClauseType.Between when drivingExec.SentinelRewriteType == ClauseType.Exists => null, // exists() also matches null, which ExistsQuery yields first in either direction
                 ClauseType.Between when drivingExec.SentinelRewriteType != null =>
                     ResolveSentinelRewrittenBetween(drivingExec, fieldMeta, indexSearcher, queryExec, forward),
                 ClauseType.Between => packed.BetweenQuery(fieldMeta, indexSearcher, queryExec, forward),

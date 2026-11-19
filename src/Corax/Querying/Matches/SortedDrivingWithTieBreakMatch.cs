@@ -93,6 +93,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
 
     // Null/non-existing docs get the same per-group secondary sort as regular terms; tracks that load.
     private bool _nullGroupPrepared;
+    // Set while the null list drains after the non-existing one: the group then holds two runs of entry ids
+    private bool _nullGroupHasTwoRuns;
 
     public SortedDrivingWithTieBreakMatch(
         ITermsProvider provider,
@@ -103,6 +105,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         FieldMetadata secondaryField,
         MatchCompareFieldType secondaryType,
         bool secondaryDescending,
+        bool includeNoValue,
         bool nullFirst,
         bool nullIsSmallest,
         int take)
@@ -159,10 +162,10 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         }
         _secondaryLookup = searcher.EntriesToTermsReader(secondaryLookupName);
 
-        _hasNullPostingList = searcher.TryGetPostingListForNull(in primaryField, out _nullPostingListId);
+        _hasNullPostingList = includeNoValue && searcher.TryGetPostingListForNull(in primaryField, out _nullPostingListId);
         _nullExhausted = !_hasNullPostingList;
 
-        _hasNonExistingPostingList = searcher.TryGetPostingListForNonExisting(in primaryField, out _nonExistingPostingListId);
+        _hasNonExistingPostingList = includeNoValue && searcher.TryGetPostingListForNonExisting(in primaryField, out _nonExistingPostingListId);
         _nonExistingExhausted = !_hasNonExistingPostingList;
 
         // Allocate all persistent buffers up front — avoids 7 IsValid branches per Fill call.
@@ -423,6 +426,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
     /// <summary>Keep only the top N entries of the current group by secondary value, discarding the rest.</summary>
     private void TruncateGroupToTopTake()
     {
+        if (_nullGroupHasTwoRuns)
+            _groupEntries.ToSpan().Sort(); // the secondary lookup and the ties by index need the group in id order
         int n = _groupEntries.Count;
         if (n <= _take)
             return;
@@ -531,10 +536,10 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         switch (_secondaryType)
         {
             case MatchCompareFieldType.Integer:
-                secondarySpan[..n].Sort(idxs);
+                SortByKeyThenEntry(secondarySpan[..n], idxs);
                 break;
             case MatchCompareFieldType.Floating:
-                MemoryMarshal.Cast<long, double>(secondarySpan[..n]).Sort(idxs);
+                SortByKeyThenEntry(MemoryMarshal.Cast<long, double>(secondarySpan[..n]), idxs);
                 break;
             case MatchCompareFieldType.Sequence:
                 Debug.Assert(termsSpan.Length >= n);
@@ -542,7 +547,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
                 Container.GetAllSortedByPage(_llt, secondarySpan[..n], termsSpan[..n], _llt.PageLocator);
                 fixed (UnmanagedSpan* termsPtr = termsSpan)
                 {
-                    idxs.Sort(new SliceComparer(termsPtr));
+                    idxs.Sort(new SliceComparer(termsPtr, _nullIsSmallest ? 1 : -1, _secondaryDescending));
                 }
                 break;
             default:
@@ -550,26 +555,35 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         }
     }
     
-    private readonly struct SliceComparer(UnmanagedSpan* terms) : IComparer<int>
+    // The bitmap orders equal keys by entry id in either direction; the group holds its entries in id order, so an index is its entry's rank
+    private void SortByKeyThenEntry<T>(Span<T> keys, Span<int> idxs) where T : IComparable<T>
+    {
+        keys.Sort(idxs);
+        if (_secondaryDescending)
+        {
+            keys.Reverse();
+            idxs.Reverse();
+        }
+
+        for (int start = 0; start < keys.Length;)
+        {
+            int end = start + 1;
+            while (end < keys.Length && keys[end].CompareTo(keys[start]) == 0)
+                end++;
+
+            if (end - start > 1)
+                idxs[start..end].Sort();
+            start = end;
+        }
+    }
+
+    private readonly struct SliceComparer(UnmanagedSpan* terms, int nullResult, bool descending) : IComparer<int>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(int x, int y)
         {
-            ref var xItem = ref terms[x];
-            ref var yItem = ref terms[y];
-
-            if (yItem.Address == null)
-                return xItem.Address == null ? 0 : 1;
-            if (xItem.Address == null)
-                return -1;
-
-            var cmp = Memory.Compare(xItem.Address + 1, yItem.Address + 1, Math.Min(xItem.Length - 1, yItem.Length - 1));
-            if (cmp != 0)
-                return cmp;
-
-            var xBits = (xItem.Length - 1) * 8 - (xItem.Address[0] >> 4);
-            var yBits = (yItem.Length - 1) * 8 - (yItem.Address[0] >> 4);
-            return xBits - yBits;
+            int cmp = descending ? CompactKeyComparer.Compare(terms[y], terms[x], nullResult) : CompactKeyComparer.Compare(terms[x], terms[y], nullResult);
+            return cmp != 0 ? cmp : x - y;
         }
     }
 
@@ -579,9 +593,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         var indexes = _groupSortedIndexes.RawItems;
         int remaining = _groupEntries.Count - _groupEmitIdx;
         int toEmit = Math.Min(remaining, matches.Length);
-        var (pos, step) = _secondaryDescending ? ( _groupEntries.Count - 1 - _groupEmitIdx, -1) : (_groupEmitIdx, 1);
-        for (int i = 0; i < toEmit; i++, pos += step)
-            matches[i] = entries[indexes[pos]];
+        for (int i = 0; i < toEmit; i++)
+            matches[i] = entries[indexes[_groupEmitIdx + i]];
         _groupEmitIdx += toEmit;
         if (_groupEmitIdx >=  _groupEntries.Count)
             _groupEntries.Count = 0;
@@ -613,13 +626,15 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         int countAfterNonExisting = _groupEntries.Count;
         if (hasNull)
         {
+            _nullGroupHasTwoRuns = countAfterNonExisting > 0;
             DrainSpecialIntoGroup(_nullPostingListId, entryBuffer);
+            _nullGroupHasTwoRuns = false;
             _nullExhausted = true;
         }
 
         if (_groupEntries.Count <= 0) return;
 
-        if (countAfterNonExisting > 0 && _groupEntries.Count > countAfterNonExisting) 
+        if (countAfterNonExisting > 0 && hasNull)
             _groupEntries.ToSpan().Sort(); // both contributed (each separately sorted), so we have to sort
 
         SortGroupBySecondary();
