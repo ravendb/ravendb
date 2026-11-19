@@ -11,24 +11,41 @@ namespace Raven.Server.Documents.Queries;
 /// </summary>
 public static class WhereClauseNormalizer
 {
-    public static QueryExpression Normalize(QueryExpression expression)
+    public static QueryExpression Normalize(QueryExpression expression, string alias = null, bool pairsOnly = false)
     {
-        return TryNormalize(expression, out var normalized) ? normalized : expression;
+        return TryNormalize(expression, new Mode(alias, pairsOnly), out var normalized) ? normalized : expression;
     }
 
     public static bool TryNormalize(QueryExpression expression, out QueryExpression normalized)
+    {
+        return TryNormalize(expression, default, out normalized);
+    }
+
+    private readonly struct Mode
+    {
+        public readonly string Alias;
+        public readonly bool PairsOnly;
+
+        public Mode(string alias, bool pairsOnly)
+        {
+            Alias = alias;
+            PairsOnly = pairsOnly;
+        }
+    }
+
+    private static bool TryNormalize(QueryExpression expression, Mode mode, out QueryExpression normalized)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
         switch (expression)
         {
             case BinaryExpression { Operator: OperatorType.And } and:
-                return TryNormalizeAndChain(and, out normalized);
+                return mode.PairsOnly ? TryFoldPairsInPlace(and, mode, out normalized) : TryNormalizeAndChain(and, mode, out normalized);
 
             case BinaryExpression { Operator: OperatorType.Or } or:
             {
-                var leftChanged = TryNormalize(or.Left, out var left);
-                var rightChanged = TryNormalize(or.Right, out var right);
+                var leftChanged = TryNormalize(or.Left, mode, out var left);
+                var rightChanged = TryNormalize(or.Right, mode, out var right);
                 if (leftChanged == false && rightChanged == false)
                 {
                     normalized = or;
@@ -41,7 +58,7 @@ public static class WhereClauseNormalizer
 
             case NegatedExpression not:
             {
-                if (TryNormalize(not.Expression, out var inner) == false)
+                if (TryNormalize(not.Expression, mode, out var inner) == false)
                 {
                     normalized = not;
                     return false;
@@ -51,18 +68,8 @@ public static class WhereClauseNormalizer
                 return true;
             }
 
-            case MethodExpression method when TryGetWrappedWhereClause(method, out var argument):
-            {
-                if (TryNormalize(method.Arguments[argument], out var inner) == false)
-                {
-                    normalized = method;
-                    return false;
-                }
-
-                var arguments = new List<QueryExpression>(method.Arguments) { [argument] = inner };
-                normalized = new MethodExpression(method.Name, arguments) { Alias = method.Alias };
-                return true;
-            }
+            case MethodExpression method:
+                return TryNormalizeArguments(method, mode, out normalized);
 
             default:
                 normalized = expression;
@@ -70,28 +77,84 @@ public static class WhereClauseNormalizer
         }
     }
 
-    private static bool TryGetWrappedWhereClause(MethodExpression method, out int argument)
+    private static bool TryNormalizeArguments(MethodExpression method, Mode mode, out QueryExpression normalized)
     {
-        argument = QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) switch
+        var (first, count) = QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) switch
         {
             // exact() and boost() wrap a where clause of their own
-            MethodType.Exact or MethodType.Boost => 0,
-            MethodType.When => 1,
-            _ => -1
+            MethodType.Exact or MethodType.Boost => (0, 1),
+            MethodType.When => (1, 1),
+            MethodType.Intersect => (0, method.Arguments.Count),
+            _ => (0, 0)
         };
 
-        return argument >= 0 && argument < method.Arguments.Count;
+        List<QueryExpression> arguments = null;
+        for (var i = first; i < first + count && i < method.Arguments.Count; i++)
+        {
+            if (TryNormalize(method.Arguments[i], mode, out var argument) == false)
+                continue;
+
+            arguments ??= new List<QueryExpression>(method.Arguments);
+            arguments[i] = argument;
+        }
+
+        if (arguments == null)
+        {
+            normalized = method;
+            return false;
+        }
+
+        normalized = new MethodExpression(method.Name, arguments) { Alias = method.Alias };
+        return true;
     }
 
-    private static bool TryNormalizeAndChain(BinaryExpression root, out QueryExpression normalized)
+    private static bool TryFoldPairsInPlace(BinaryExpression root, Mode mode, out QueryExpression normalized)
+    {
+        var spine = new Stack<BinaryExpression>();
+        QueryExpression current = root;
+        while (current is BinaryExpression { Operator: OperatorType.And } and && IsPair(and, mode.Alias, out _, out _) == false)
+        {
+            spine.Push(and);
+            current = and.Left;
+        }
+
+        bool changed;
+        if (current is BinaryExpression { Operator: OperatorType.And } pair && IsPair(pair, mode.Alias, out var lower, out var upper))
+        {
+            normalized = Fold(lower, upper, siblings: true);
+            changed = true;
+        }
+        else
+        {
+            changed = TryNormalize(current, mode, out normalized);
+        }
+
+        while (spine.Count > 0)
+        {
+            var node = spine.Pop();
+            var rightChanged = TryNormalize(node.Right, mode, out var right);
+            if (changed == false && rightChanged == false)
+            {
+                normalized = node;
+                continue;
+            }
+
+            normalized = new BinaryExpression(normalized, right, OperatorType.And) { Parenthesis = node.Parenthesis };
+            changed = true;
+        }
+
+        return changed;
+    }
+
+    private static bool TryNormalizeAndChain(BinaryExpression root, Mode mode, out QueryExpression normalized)
     {
         var operands = new List<QueryExpression>();
-        var changed = Flatten(root, operands);
+        var changed = Flatten(root, operands, mode);
 
-        changed |= DropDuplicateBounds(operands);
-        changed |= MergeLiteralBoundsInTheSameDirection(operands);
-        changed |= FoldOppositeBoundsIntoBetween(operands);
-        changed |= GroupBoundsOnTheSameField(operands);
+        changed |= DropDuplicateBounds(operands, mode.Alias);
+        changed |= MergeLiteralBoundsInTheSameDirection(operands, mode.Alias);
+        changed |= FoldOppositeBoundsIntoBetween(operands, mode.Alias);
+        changed |= GroupBoundsOnTheSameField(operands, mode.Alias);
 
         if (changed == false)
         {
@@ -110,7 +173,7 @@ public static class WhereClauseNormalizer
     }
 
     // iterative on purpose: a chain of thousands of clauses must not cost one stack frame per clause
-    private static bool Flatten(BinaryExpression root, List<QueryExpression> operands)
+    private static bool Flatten(BinaryExpression root, List<QueryExpression> operands, Mode mode)
     {
         var changed = false;
         var pending = new Stack<QueryExpression>();
@@ -121,10 +184,9 @@ public static class WhereClauseNormalizer
             var current = pending.Pop();
             if (current is BinaryExpression { Operator: OperatorType.And } and)
             {
-                if (IsBound(and.Left, out var left) && IsBound(and.Right, out var right) && OnSameField(left, right) && left.IsGreaterThan != right.IsGreaterThan &&
-                    MayDifferInKind((ValueExpression)left.Right, (ValueExpression)right.Right))
+                if (IsPair(and, mode.Alias, out var lower, out var upper))
                 {
-                    operands.Add(Fold(left, right, siblings: true));
+                    operands.Add(Fold(lower, upper, siblings: true));
                     changed = true;
                     continue;
                 }
@@ -134,7 +196,7 @@ public static class WhereClauseNormalizer
                 continue;
             }
 
-            changed |= TryNormalize(current, out var operand);
+            changed |= TryNormalize(current, mode, out var operand);
             operands.Add(operand);
         }
 
@@ -142,7 +204,7 @@ public static class WhereClauseNormalizer
     }
 
     // 'Foo > $a and Foo > $a' is the same bound twice, whatever $a turns out to be
-    private static bool DropDuplicateBounds(List<QueryExpression> operands)
+    private static bool DropDuplicateBounds(List<QueryExpression> operands, string alias)
     {
         var changed = false;
         for (var i = 0; i < operands.Count; i++)
@@ -152,7 +214,7 @@ public static class WhereClauseNormalizer
 
             for (var j = operands.Count - 1; j > i; j--)
             {
-                if (IsBound(operands[j], out var second) && first.Operator == second.Operator && OnSameField(first, second) && first.Right.Equals(second.Right))
+                if (IsBound(operands[j], out var second) && first.Operator == second.Operator && IsSameField(first.Left, second.Left, alias) && first.Right.Equals(second.Right))
                 {
                     operands.RemoveAt(j);
                     changed = true;
@@ -165,7 +227,7 @@ public static class WhereClauseNormalizer
 
     // 'Foo > 1 and Foo > 2' is 'Foo > 2'; parameters and string literals are left to the builders, which know the values,
     // the analyzer and whether the field holds dates
-    private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands)
+    private static bool MergeLiteralBoundsInTheSameDirection(List<QueryExpression> operands, string alias)
     {
         var changed = false;
         for (var i = 0; i < operands.Count; i++)
@@ -175,7 +237,7 @@ public static class WhereClauseNormalizer
 
             for (var j = i + 1; j < operands.Count; j++)
             {
-                if (IsBound(operands[j], out var second) == false || OnSameField(first, second) == false || first.IsGreaterThan != second.IsGreaterThan)
+                if (IsBound(operands[j], out var second) == false || IsSameField(first.Left, second.Left, alias) == false || first.IsGreaterThan != second.IsGreaterThan)
                     continue;
 
                 if (TryCompareNumericLiterals((ValueExpression)first.Right, (ValueExpression)second.Right, out var comparison) == false)
@@ -193,7 +255,7 @@ public static class WhereClauseNormalizer
     }
 
     // 'Foo >= $a and ... and Foo < $b' is one bounded range scan instead of two open-ended ones
-    private static bool FoldOppositeBoundsIntoBetween(List<QueryExpression> operands)
+    private static bool FoldOppositeBoundsIntoBetween(List<QueryExpression> operands, string alias)
     {
         var changed = false;
         for (var i = 0; i < operands.Count; i++)
@@ -203,7 +265,7 @@ public static class WhereClauseNormalizer
 
             for (var j = i + 1; j < operands.Count; j++)
             {
-                if (IsBound(operands[j], out var second) == false || OnSameField(first, second) == false || first.IsGreaterThan == second.IsGreaterThan)
+                if (IsBound(operands[j], out var second) == false || IsSameField(first.Left, second.Left, alias) == false || first.IsGreaterThan == second.IsGreaterThan)
                     continue;
 
                 operands[i] = Fold(first, second, siblings: false);
@@ -214,11 +276,6 @@ public static class WhereClauseNormalizer
         }
 
         return changed;
-    }
-
-    private static bool MayDifferInKind(ValueExpression first, ValueExpression second)
-    {
-        return first.Value != second.Value || first.Value == ValueTokenType.Parameter;
     }
 
     private static BetweenExpression Fold(BinaryExpression first, BinaryExpression second, bool siblings)
@@ -236,7 +293,7 @@ public static class WhereClauseNormalizer
 
     // a bound gathers the same-direction bounds on its field behind it, a folded between the bounds of either direction and
     // the other betweens, so the builders find what they must compare as adjacent siblings
-    private static bool GroupBoundsOnTheSameField(List<QueryExpression> operands)
+    private static bool GroupBoundsOnTheSameField(List<QueryExpression> operands, string alias)
     {
         var changed = false;
         for (var i = 0; i < operands.Count; i++)
@@ -247,7 +304,7 @@ public static class WhereClauseNormalizer
             var insertAt = i + 1;
             for (var j = i + 1; j < operands.Count; j++)
             {
-                if (Gathers(field, direction, operands[j]) == false)
+                if (Gathers(field, direction, operands[j], alias) == false)
                     continue;
 
                 if (j != insertAt)
@@ -284,17 +341,23 @@ public static class WhereClauseNormalizer
         }
     }
 
-    private static bool Gathers(QueryExpression field, bool? isGreaterThan, QueryExpression candidate)
+    private static bool Gathers(QueryExpression field, bool? isGreaterThan, QueryExpression candidate, string alias)
     {
         switch (candidate)
         {
             case BinaryExpression bound when QueryBuilderHelper.IsRangeBound(bound):
-                return QueryBuilderHelper.IsSameField(field, bound.Left) && (isGreaterThan == null || isGreaterThan == bound.IsGreaterThan);
+                return IsSameField(field, bound.Left, alias) && (isGreaterThan == null || isGreaterThan == bound.IsGreaterThan);
             case BetweenExpression { Folded: true } between:
-                return isGreaterThan == null && QueryBuilderHelper.IsSameField(field, between.Source);
+                return isGreaterThan == null && IsSameField(field, between.Source, alias);
             default:
                 return false;
         }
+    }
+
+    private static bool IsPair(BinaryExpression and, string alias, out BinaryExpression left, out BinaryExpression right)
+    {
+        right = null;
+        return IsBound(and.Left, out left) && IsBound(and.Right, out right) && left.IsGreaterThan != right.IsGreaterThan && IsSameField(left.Left, right.Left, alias);
     }
 
     private static bool IsBound(QueryExpression expression, out BinaryExpression bound)
@@ -303,9 +366,17 @@ public static class WhereClauseNormalizer
         return bound != null && QueryBuilderHelper.IsRangeBound(bound);
     }
 
-    private static bool OnSameField(BinaryExpression first, BinaryExpression second)
+    private static bool IsSameField(QueryExpression first, QueryExpression second, string alias)
     {
-        return QueryBuilderHelper.IsSameField(first.Left, second.Left);
+        if (first is FieldExpression firstField && second is FieldExpression secondField)
+            return PathOf(firstField, alias) == PathOf(secondField, alias);
+
+        return first.Equals(second);
+    }
+
+    private static string PathOf(FieldExpression field, string alias)
+    {
+        return alias != null && field.Compound.Count > 1 && field.Compound[0] == alias ? field.FieldValueWithoutAlias : field.FieldValue;
     }
 
     // a long bound queries the long term of the field and a double bound the double term, so only bounds of one kind are

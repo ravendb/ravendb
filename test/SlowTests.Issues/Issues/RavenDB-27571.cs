@@ -210,7 +210,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Querying)]
         public void MergedLiteralBoundsKeepTheirInclusivity()
         {
-            var query = Parse("Amount > 1 and Amount >= 2 and Amount <= 5 and Amount < 7");
+            var query = Parse("(Amount > 1 and Amount >= 2) and (Amount <= 5 and Amount < 7)");
 
             Assert.True(WhereClauseNormalizer.TryNormalize(query.Where, out var rewritten));
 
@@ -485,7 +485,6 @@ namespace SlowTests.Issues
         [RavenData(NegatedOperandShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(UnderOrShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(InsideExactShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
-        [RavenData(InsideBoostShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(InsideWhenShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CoraxRunsOneBoundedScanOnCreatedAtRegardlessOfShape(Options options, string where)
         {
@@ -568,6 +567,34 @@ namespace SlowTests.Issues
                     Assert.Equal(expectedIds.Split(','), results.Select(x => x.Id).OrderBy(x => x).ToArray());
                 }
             }
+        }
+
+        // when the score decides the order every clause must score as it did, so only a pair is folded and nothing moves
+        [RavenTheory(RavenTestCategory.Querying)]
+        [InlineData("(CustomerId = 'x' and Amount >= 1) and Amount < 5", "AND[ AND[ CustomerId = 'x' , Amount >= 1 ] , Amount < 5 ]")]
+        [InlineData("CustomerId = 'x' and (Amount >= 1 and Amount < 5)", "AND[ CustomerId = 'x' , Amount between 1 and 5 ]")]
+        [InlineData("Amount > 1 and CustomerId = 'x' and Amount > 2", "AND[ AND[ Amount > 1 , CustomerId = 'x' ] , Amount > 2 ]")]
+        [InlineData("CustomerId = 'x' or (Amount > 3 and (Amount >= 1 and Amount < 5))", "OR[ CustomerId = 'x' , AND[ Amount > 3 , Amount between 1 and 5 ] ]")]
+        public void QueryOrderedByScoreFoldsOnlyAPair(string where, string expectedTree)
+        {
+            var metadata = new QueryMetadata($"from index 'CoinIndex' where {where} order by score()", null, cacheKey: 1);
+
+            Assert.True(metadata.ScoresMayOrderResults(index: null));
+            Assert.Equal(expectedTree, Dump(metadata.WhereFor(index: null)));
+
+            var unordered = new QueryMetadata($"from index 'CoinIndex' where {where}", null, cacheKey: 1);
+            Assert.False(unordered.ScoresMayOrderResults(index: null));
+            Assert.Same(unordered.Query.Where, unordered.WhereFor(index: null));
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void PairWrittenWithAndWithoutTheAliasIsOnePair()
+        {
+            var metadata = new QueryMetadata("from index 'CoinIndex' as c where c.CustomerId = 'x' and (c.Amount >= 1 and Amount < 5)", null, cacheKey: 1);
+            Assert.Equal(1, CountNodes(metadata.Query.Where, x => x is BetweenExpression { FoldedFromSiblings: true }));
+
+            var nested = new QueryMetadata("from index 'CoinIndex' as c where c.CustomerId = 'x' and (c.Origin.X >= 1 and c.Destination.X < 5)", null, cacheKey: 1);
+            Assert.Equal(0, CountNodes(nested.Query.Where, x => x is BetweenExpression));
         }
 
         // 'or' mixed into the chain. The fold must never pair range clauses across an 'or' boundary.
@@ -923,6 +950,23 @@ namespace SlowTests.Issues
             public DateTime At { get; set; }
             public double Price { get; set; }
             public long[] Values { get; set; }
+            public string Name { get; set; }
+        }
+
+        private class Items_WithSeveralTerms : AbstractIndexCreationTask<Item>
+        {
+            public Items_WithSeveralTerms()
+            {
+                Map = items => from item in items
+                               select new
+                               {
+                                   item.Tag,
+                                   Words = item.Name,
+                                   _ = item.Values.Select(value => CreateField("Sizes", value))
+                               };
+
+                Index("Words", FieldIndexing.Search);
+            }
         }
 
         private class Items_ByTag : AbstractIndexCreationTask<Item>
@@ -1075,8 +1119,8 @@ namespace SlowTests.Issues
             Assert.Equal(new[] { "users/1" }, QueryDynamic<User>(store, "from Users where exact((Age >= 0 and Name >= 'A') and Name < 'M')"));
         }
 
-        // B6: multi-valued field, one value above the lower bound and another below the upper bound. As two clauses this
-        // matched; folded it means one element inside the range, as a hand-written between already did
+        // B6: multi-valued field, one value above the lower bound and another below the upper bound. Bounds written apart may
+        // each hold for a different element; only the two sides of one 'and', or a between, ask for one element in the range
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void RangePairOnMultiValuedField(Options options)
@@ -1086,11 +1130,116 @@ namespace SlowTests.Issues
                 new Item { Id = "items/1", Tag = "t", Values = new long[] { 0, 10 } },
                 new Item { Id = "items/in-range", Tag = "t", Values = new long[] { 0, 3 } },
                 new Item { Id = "items/zero", Tag = "x", Values = new long[] { 0 } },
-                new Item { Id = "items/ten", Tag = "x", Values = new long[] { 10 } });
+                new Item { Id = "items/ten", Tag = "x", Values = new long[] { 10 } },
+                new Item { Id = "items/three", Tag = "x", Values = new long[] { 3 } });
 
-            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Values >= 1) and Values < 5"));
+            Assert.Equal(new[] { "items/1", "items/in-range" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Values >= 1) and Values < 5"));
+            Assert.Equal(new[] { "items/1", "items/in-range" }, Query(store, "from index 'Items/ByTag' where when($flag != null, (Tag = 't' and Values >= 1) and Values < 5)", ("flag", 1)));
+            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and (Values >= 1 and Values < 5)"));
             Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Values between 1 and 4"));
-            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where when($flag != null, (Tag = 't' and Values >= 1) and Values < 5)", ("flag", 1)));
+        }
+
+        // B7: a third bound on a multi-valued field. 2 is in [1, 5) and 7 >= 3, so 'items/apart' matches although none of its
+        // elements is in [3, 5); written as one pair the two bounds ask for a single element
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("Tag = 't' and Values >= 1 and Values < 5 and Values >= 3", "items/apart,items/inside", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and Values >= $a and Values < $b and Values >= $c", "items/apart,items/inside", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and Values >= 3 and Values < 5", "items/apart,items/inside", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and (Values >= 1 and Values < 5) and Values >= 3", "items/apart,items/inside", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and (Values >= 3 and Values < 5)", "items/inside", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void BoundsWrittenApartOnMultiValuedFieldMayHoldForDifferentElements(Options options, string where, string expectedIds)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/apart", Tag = "t", Values = new long[] { 2, 7 } },
+                new Item { Id = "items/inside", Tag = "t", Values = new long[] { 2, 4 } },
+                new Item { Id = "items/two", Tag = "x", Values = new long[] { 2 } },
+                new Item { Id = "items/four", Tag = "x", Values = new long[] { 4 } },
+                new Item { Id = "items/seven", Tag = "x", Values = new long[] { 7 } });
+
+            Assert.Equal(expectedIds.Split(','), Query(store, $"from index 'Items/ByTag' where {where}", ("a", 1), ("b", 5), ("c", 3)));
+        }
+
+        // B8: two Any() calls on a collection are two predicates, each free to hold for a different element; the LINQ provider
+        // writes them apart, and one Any() with both bounds as a pair
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TwoAnyOnACollectionMayHoldForDifferentElements(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/mixed", Tag = "t", Values = new long[] { 2, 150 } },
+                new Item { Id = "items/small", Tag = "t", Values = new long[] { 2, 3 } },
+                new Item { Id = "items/large", Tag = "t", Values = new long[] { 150, 200 } },
+                new Item { Id = "items/other", Tag = "x", Values = new long[] { 3, 200 } });
+
+            using var session = store.OpenSession();
+
+            var twoAny = session.Query<Item, Items_ByTag>().Where(x => x.Tag == "t" && x.Values.Any(v => v >= 100) && x.Values.Any(v => v < 5));
+            Output.WriteLine(twoAny.ToString());
+            Assert.Equal(new[] { "items/mixed" }, twoAny.ToList().Select(x => x.Id).ToArray());
+
+            var oneAny = session.Query<Item, Items_ByTag>().Where(x => x.Tag == "t" && x.Values.Any(v => v >= 3 && v < 100));
+            Output.WriteLine(oneAny.ToString());
+            Assert.Equal(new[] { "items/small" }, oneAny.ToList().Select(x => x.Id).ToArray());
+        }
+
+        // B9: the same on a nested collection through an auto index: an order with a line of 100 or more and a line under 5
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void TwoAnyOnOrderLinesMayHoldForDifferentLines(Options options)
+        {
+            using var store = GetDocumentStore(options);
+            Store(store,
+                new Order { Id = "orders/mixed", Company = "companies/1", Lines = Lines(2, 150) },
+                new Order { Id = "orders/small", Company = "companies/1", Lines = Lines(2, 3) },
+                new Order { Id = "orders/large", Company = "companies/1", Lines = Lines(150, 200) },
+                new Order { Id = "orders/other", Company = "companies/2", Lines = Lines(3, 200) });
+
+            using var session = store.OpenSession();
+            var query = session.Query<Order>().Customize(x => x.WaitForNonStaleResults())
+                .Where(x => x.Company == "companies/1" && x.Lines.Any(l => l.Quantity >= 100) && x.Lines.Any(l => l.Quantity < 5));
+
+            Output.WriteLine(query.ToString());
+            Assert.Equal(new[] { "orders/mixed" }, query.ToList().Select(x => x.Id).ToArray());
+
+            static List<OrderLine> Lines(params long[] quantities) => quantities.Select(q => new OrderLine { Quantity = q }).ToList();
+        }
+
+        // B10: a field written through CreateField and a tokenized text field hold several terms too
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("(Tag = 't' and Sizes >= 100) and Sizes < 5", "items/mixed", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and (Sizes >= 3 and Sizes < 100)", "items/small", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("(Tag = 't' and Words >= 'b') and Words < 'c'", "items/mixed,items/small", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("Tag = 't' and (Words >= 'b' and Words < 'c')", "items/small", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void DynamicAndTokenizedFieldsHoldSeveralTerms(Options options, string where, string expectedIds)
+        {
+            var store = GetDocumentStore(options);
+            new Items_WithSeveralTerms().Execute(store);
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item { Id = "items/mixed", Tag = "t", Name = "alice zed", Values = new long[] { 2, 150 } });
+                session.Store(new Item { Id = "items/small", Tag = "t", Name = "bob bill", Values = new long[] { 2, 3 } });
+                session.Store(new Item { Id = "items/large", Tag = "t", Name = "dan zed", Values = new long[] { 150, 200 } });
+                session.Store(new Item { Id = "items/other", Tag = "x", Name = "alice bill", Values = new long[] { 3, 200 } });
+                session.SaveChanges();
+            }
+
+            Indexes.WaitForIndexing(store);
+
+            Assert.Equal(expectedIds.Split(','), Query(store, $"from index 'Items/WithSeveralTerms' where {where}"));
+        }
+
+        // B11: the arguments of intersect() are where clauses of their own, and a pair in one keeps asking for one element
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        public void PairInsideIntersectAsksForOneElement(Options options)
+        {
+            using var store = Seed(options,
+                new Item { Id = "items/mixed", Tag = "t", Values = new long[] { 2, 150 } },
+                new Item { Id = "items/inside", Tag = "t", Values = new long[] { 2, 50 } },
+                new Item { Id = "items/other", Tag = "x", Values = new long[] { 50, 150 } });
+
+            Assert.Equal(new[] { "items/inside" }, Query(store, "from index 'Items/ByTag' where intersect(Values >= 10 and Values < 100, Tag = 't')"));
         }
 
         // N1: on a sharded database a query with skip > 0 is re-rendered from the cached AST and sent to the shards; the
@@ -1299,6 +1448,12 @@ namespace SlowTests.Issues
             public string Company { get; set; }
             public double Freight { get; set; }
             public DateTime OrderedAt { get; set; }
+            public List<OrderLine> Lines { get; set; }
+        }
+
+        private class OrderLine
+        {
+            public long Quantity { get; set; }
         }
 
         [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]

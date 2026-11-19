@@ -191,7 +191,7 @@ public static partial class CoraxQueryBuilder
             
             if (metadata.Query.Where is not null)
             {
-                coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
+                coraxQuery = ToCoraxQuery(builderParameters, metadata.WhereFor(builderParameters.Index), ref streamingOptimization);
                 coraxQuery = coraxQuery is CoraxWhenQuery 
                     ? builderParameters.AllEntries.Replay() 
                     : MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
@@ -318,7 +318,8 @@ public static partial class CoraxQueryBuilder
                         IQueryMatch right = null;
 
                         // keep only the tighter of adjacent bounds on one field, whose values are known only here
-                        if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, out var tighterBound, out var remainder))
+                        if (metadata.ScoresMayOrderResults(index) == false &&
+                            QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, new FieldProbe(builderParameters), out var tighterBound, out var remainder))
                         {
                             var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
                             builderParameters.BuildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
@@ -482,9 +483,9 @@ public static partial class CoraxQueryBuilder
 
         if (expression is BetweenExpression be)
         {
-            if (QueryBuilderHelper.TryUnfoldBetweenOfMixedKinds(metadata.Query, metadata, queryParameters, be, out var lower, out var upper))
+            if (QueryBuilderHelper.TryTranslateAsComparisons(metadata.Query, metadata, queryParameters, be, new FieldProbe(builderParameters), out var lower, out var upper))
             {
-                builderParameters.BuildSteps?.Add($"Between of mixed value kinds, translated as the two comparisons it came from: {be}");
+                builderParameters.BuildSteps?.Add($"Between translated as the two comparisons it came from: {be}");
 
                 return ToCoraxQuery(builderParameters, new BinaryExpression(lower, upper, OperatorType.And), ref leftOnlyOptimization, exact);
             }
@@ -722,6 +723,30 @@ public static partial class CoraxQueryBuilder
         
         merged = CoraxAndQueries.And(parameters, lhs, rhs);
         return true;
+    }
+
+    private readonly struct FieldProbe : QueryBuilderHelper.IFieldProbe
+    {
+        private readonly Parameters _parameters;
+
+        public FieldProbe(Parameters parameters)
+        {
+            _parameters = parameters;
+        }
+
+        public bool HoldsSeveralValues(QueryExpression field)
+        {
+            if (_parameters.HasDynamics && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(_parameters.Index.Definition.Version) == false)
+                return true;
+
+            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(_parameters.Metadata.Query, _parameters.QueryParameters, field, _parameters.Metadata);
+            return _parameters.IndexSearcher.HasMultipleTermsInField(fieldName.Value);
+        }
+
+        public bool TranslatesPairAsBetween(ValueTokenType min, ValueTokenType max)
+        {
+            return min == max || QueryBuilderHelper.IsLongAndDouble(min, max);
+        }
     }
 
     private static IQueryMatch HandleExact(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingConfiguration)
