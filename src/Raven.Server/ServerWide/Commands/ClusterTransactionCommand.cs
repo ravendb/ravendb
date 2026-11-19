@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
