@@ -44,6 +44,23 @@ namespace Raven.Client.Util
             _stream = stream;
             _abort = abort;
             _abortState = abortState;
+
+            // a transport with timeouts of its own (the TCP stream of a subscription) keeps them,
+            // the transport itself never applies them, we never call its synchronous Read or Write
+            if (stream.CanTimeout)
+            {
+                try
+                {
+                    if (stream.CanRead && stream.ReadTimeout > 0)
+                        _readTimeout = stream.ReadTimeout;
+                    if (stream.CanWrite && stream.WriteTimeout > 0)
+                        _writeTimeout = stream.WriteTimeout;
+                }
+                catch
+                {
+                    // the stream can time out, but doesn't tell us its timeouts, we keep the defaults
+                }
+            }
         }
 
         public override int ReadTimeout
