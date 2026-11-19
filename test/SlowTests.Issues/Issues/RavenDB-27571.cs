@@ -539,6 +539,32 @@ namespace SlowTests.Issues
             }
         }
 
+        // 'not (...)' around a chain the normalizer rewrites: without its parentheses the builders read it as '(not A) and B'
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Lucene)]
+        [RavenData("EntityType = 'Deposit' and not (Amount > 3 and Amount < 8 and CustomerId = 'customers/1')", "coins/1,coins/3,coins/4,coins/5,coins/6", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("EntityType = 'Deposit' and not (Amount > 3 and Amount > 3 and CustomerId = 'customers/1')", "coins/3,coins/4,coins/5,coins/6", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("EntityType = 'Deposit' and not (Amount > 3 and Amount > 6 and CustomerId = 'customers/1')", "coins/2,coins/3,coins/4,coins/5,coins/6", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("EntityType = 'Deposit' and not (Amount > $a and CustomerId = 'customers/1' and Amount > $b)", "coins/2,coins/3,coins/4,coins/5,coins/6", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData("EntityType = 'Withdrawal' or not (Amount > 3 and Amount < 8 and CustomerId = 'customers/1')", "coins/1,coins/3,coins/4,coins/5,coins/6,coins/7", SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NegatedChainKeepsItsParentheses(Options options, string where, string expectedIds)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                Seed(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced
+                        .RawQuery<Coin>($"from index 'CoinIndex' where {where}")
+                        .AddParameter("a", 3)
+                        .AddParameter("b", 6)
+                        .ToList();
+
+                    Assert.Equal(expectedIds.Split(','), results.Select(x => x.Id).OrderBy(x => x).ToArray());
+                }
+            }
+        }
+
         // 'or' mixed into the chain. The fold must never pair range clauses across an 'or' boundary.
 
         // Both range clauses sit inside one 'or': a disjunction, not a range.

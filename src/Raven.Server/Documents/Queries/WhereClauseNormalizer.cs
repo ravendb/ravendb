@@ -96,6 +96,9 @@ public static class WhereClauseNormalizer
         for (var i = 1; i < operands.Count; i++)
             normalized = new BinaryExpression(normalized, operands[i], OperatorType.And);
 
+        if (operands.Count > 1)
+            ((BinaryExpression)normalized).Parenthesis = root.Parenthesis;
+
         return true;
     }
 
