@@ -499,6 +499,7 @@ public unsafe partial class IndexWriter
 
                 ref var entries = ref indexedField.Storage.GetAsRef(termsIndexes[i]);
                 entries.Prepare(_writer._entriesAllocator);
+                buffers.Keys[i].KnownContainerId = entries.TermContainerId;
             }
 
             keys = new Span<CompactTree.CompactKeyLookup>(buffers.Keys, 0, max);

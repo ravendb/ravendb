@@ -1393,7 +1393,29 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
     private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state)
     {
+        if (key.TryGetKnownKeyData(out long keyData) && state.Header->IsLeaf && TrySearchByKeyData(ref key, ref state, keyData, 0))
+            return;
+
         SearchInCurrentPage(ref key, ref state, 0, state.Header->NumberOfEntries);
+    }
+
+
+    private bool TrySearchByKeyData(ref TLookupKey key, ref CursorState state, long keyData, int from)
+    {
+        for (int pos = from; pos < state.Header->NumberOfEntries; pos++)
+        {
+            if (GetKeyData(ref state, pos) != keyData)
+                continue;
+
+            if (key.CompareTo(this, keyData) != 0)
+                return false;
+
+            state.LastMatch = 0;
+            state.LastSearchPosition = pos;
+            return true;
+        }
+
+        return false;
     }
 
     private void SearchInCurrentPage(ref TLookupKey key, ref CursorState state, int bot, int length)
@@ -1617,8 +1639,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
                 continue;
             } 
 
-            var (start, end) = ExponentialSearchPlacement(ref curKey, ref state, pos);
-            SearchInCurrentPage(ref curKey, ref state, start, end - start);
+            if (curKey.TryGetKnownKeyData(out long keyData) == false || TrySearchByKeyData(ref curKey, ref state, keyData, pos) == false)
+            {
+                var (start, end) = ExponentialSearchPlacement(ref curKey, ref state, pos);
+                SearchInCurrentPage(ref curKey, ref state, start, end - start);
+            }
             values[index] = state.LastSearchPosition < 0 ? -1 : GetValue(ref state, state.LastSearchPosition);
             offsets[index] = state.LastSearchPosition;
         }

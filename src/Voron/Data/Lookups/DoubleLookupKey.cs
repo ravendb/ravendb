@@ -101,6 +101,12 @@ public struct DoubleLookupKey : ILookupKey
         return (T)(object)new DoubleLookupKey(Value);
     }
 
+    public bool TryGetKnownKeyData(out long keyData)
+    {
+        keyData = 0;
+        return false;
+    }
+
     public int CompareTo<T>(T l) where T : ILookupKey
     {
         if (typeof(T) != typeof(DoubleLookupKey))

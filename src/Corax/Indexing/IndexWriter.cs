@@ -686,6 +686,7 @@ namespace Corax.Indexing
 
                 ref var term = ref field.Storage.GetAsRef(termLocation);
                 term.Removal(_entriesAllocator, entryToDelete, termsPerEntryIndex, reader.Frequency, InserterMode.ExactInsert);
+                term.TermContainerId = new ContainerEntryId(reader.TermId);
                 scope.Dispose();
 
                 if (reader.HasNumeric == false)

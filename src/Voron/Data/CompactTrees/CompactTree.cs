@@ -40,6 +40,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         public CompactKey Key;
         public ContainerEntryId ContainerId;
+        public ContainerEntryId KnownContainerId;
 
         public bool IsValid => ContainerId.IsValid;
         public bool IsEmpty => ContainerId.IsEmpty;
@@ -159,6 +160,12 @@ public sealed partial class CompactTree : IPrepareForCommit
             }
 
             return match;
+        }
+
+        public bool TryGetKnownKeyData(out long keyData)
+        {
+            keyData = (long)KnownContainerId;
+            return KnownContainerId.IsValid;
         }
 
         private static void GetEncodedKey(LowLevelTransaction llt, ContainerEntryId entryId, out int encodedKeyLengthInBits, out byte* encodedKeyPtr)
