@@ -46,7 +46,11 @@ public sealed class BackupHistoryCleaner : BackgroundWorkBase
 
             try
             {
-                deleted += await DeleteExpiredEntriesAsync(database);
+                var deletedFromDatabase = await DeleteExpiredEntriesAsync(database);
+                deleted += deletedFromDatabase;
+
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Removed {deletedFromDatabase} backup history entries of '{database.DatabaseName}' that are older than {database.CutoffTime:O}.");
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

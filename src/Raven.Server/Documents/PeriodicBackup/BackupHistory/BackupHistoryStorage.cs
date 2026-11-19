@@ -7,12 +7,10 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
-using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
@@ -29,8 +27,6 @@ public class BackupHistoryStorage
 
     private StorageEnvironment _environment;
     private TransactionContextPool _contextPool;
-
-    private readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<BackupHistoryStorage>();
 
     private static readonly TableSchema BackupHistoryTableSchema = new();
     private static readonly TableSchema BackupResultDetailsTableSchema = new();

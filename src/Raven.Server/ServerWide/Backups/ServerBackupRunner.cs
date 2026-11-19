@@ -1407,8 +1407,7 @@ public class ServerBackupRunner : IDisposable
                         else
                             await SaveBackupStatusesOneByOneAsync(updates);
 
-                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore, updates.Select(update => new BackupHistoryUpdate(update.BackupState.DatabaseName, update.BackupStatus.TaskId,
-                            new BackupHistoryEntry(update.BackupStatus, update.BackupState.Configuration.Name, BackupTrigger.Scheduled, skipped: true), Result: null)).ToList());
+                        await UpdateSkippedIncrementalBackupsHistoryAsync(updates);
                     }
                     catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
                     {
@@ -1434,6 +1433,20 @@ public class ServerBackupRunner : IDisposable
                     backupStates[i].StatusUpdateInProgress.Lower();
             }
         });
+    }
+
+    private async Task UpdateSkippedIncrementalBackupsHistoryAsync(List<(DatabaseBackupState BackupState, PeriodicBackupStatus BackupStatus)> updates)
+    {
+        try
+        {
+            await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore, updates.Select(update => new BackupHistoryUpdate(update.BackupState.DatabaseName, update.BackupStatus.TaskId,
+                new BackupHistoryEntry(update.BackupStatus, update.BackupState.Configuration.Name, BackupTrigger.Scheduled, skipped: true), Result: null)).ToList());
+        }
+        catch (Exception e) when (_serverStore.ServerShutdown.IsCancellationRequested == false)
+        {
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Failed to update the backup history of {updates.Count} skipped incremental backups.", e);
+        }
     }
 
     private List<(DatabaseBackupState BackupState, PeriodicBackupStatus BackupStatus)> GetSkippedIncrementalBackupStatuses(DatabaseBackupState[] backupStates)
