@@ -34,6 +34,7 @@ using Voron;
 using Voron.Data.Graphs;
 using Voron.Exceptions;
 using Voron.Impl;
+using Voron.Impl.Scratch;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Raven.Server
@@ -182,6 +183,7 @@ namespace Raven.Server
                 _ = PrefetchRing.Default; // a ring that cannot be created stops the server here, not at the first database
 
             GlobalFlushingBehavior.NumberOfConcurrentSyncs = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            ScratchMemoryBudget.Global.Limit = configuration.Storage.GlobalScratchMemoryLimit?.GetValue(SizeUnit.Bytes) ?? -1;
 
             EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
 

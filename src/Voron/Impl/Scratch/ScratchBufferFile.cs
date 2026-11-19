@@ -83,7 +83,8 @@ namespace Voron.Impl.Scratch
 
         public void Reset()
         {
-            _scratchPager.DiscardWholeFile(_scratchPagerState);
+            if (_scratchPager.IsAnonymous == false) // for anonymous files, there is not point to discard
+                _scratchPager.DiscardWholeFile(_scratchPagerState);
 
             ClearDictionaries();
             _txIdAfterWhichLatestFreePagesBecomeAvailable = -1;
@@ -124,6 +125,13 @@ namespace Voron.Impl.Scratch
             _lastUsedPage += sizeToAllocate;
 
             return result;
+        }
+
+        public void Grow(long size)
+        {
+            if (size <= Size)
+                return;
+            _scratchPager.EnsureContinuous(ref _scratchPagerState, 0, checked((int)(size / Constants.Storage.PageSize)));
         }
 
         public bool TryGettingFromAllocatedBuffer(LowLevelTransaction tx, int numberOfPages, int size, long pageNumber, Page previousVersion, out PageFromScratchBuffer result)

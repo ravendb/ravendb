@@ -60,6 +60,7 @@ namespace FastTests.Issues
             [nameof(StorageEnvironmentOptions.RootJournal)] = "per-environment: shared-journals wiring",
             [nameof(StorageEnvironmentOptions.OwnsPagers)] = "infrastructure: pager ownership, not a tunable",
             [nameof(StorageEnvironmentOptions.IoMetrics)] = "infrastructure: metrics wiring, not a tunable",
+            [nameof(StorageEnvironmentOptions.ScratchMemoryBudget)] = "infrastructure: the process budget (sized by Storage.GlobalScratchMemoryLimitInMb), tests set their own",
             [nameof(StorageEnvironmentOptions.PrefetchRing)] = "infrastructure: the process prefetch ring (sized by Storage.PrefetchRing*), tests set their own",
             [nameof(StorageEnvironmentOptions.ManualFlushing)] = "test/tooling hook",
             [nameof(StorageEnvironmentOptions.EnableJournalPoolPrewarming)] = "test hook: disabled by exact-journal-count tests",

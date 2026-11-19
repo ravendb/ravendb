@@ -35,7 +35,8 @@ enum
     OPEN_FILE_COPY_ON_WRITE = (1 << 8),
     OPEN_FILE_DO_NOT_MAP = (1<<9),
     OPEN_FILE_RANDOM_ACCESS = (1<<10),
-    OPEN_FILE_PREFETCH = (1<<11)
+    OPEN_FILE_PREFETCH = (1<<11),
+    OPEN_FILE_ANONYMOUS = (1<<12)
 };
 
 enum
@@ -145,6 +146,20 @@ rvn_init_pager(const char* filename,
     int64_t initial_file_size,
     int32_t open_flags,
     void* prefetch_ring,
+    void** handle,
+    void** memory,
+    void** writable_memory,
+    int64_t *memory_size,
+    int32_t* detailed_error_code);
+
+/* A pager over memory that has no file on disk (memfd on Linux, unlinked POSIX shared memory on macOS,
+   a page-file section on Windows). The object is created at max_size, a pager maps and commits only its
+   own size, and rvn_increase_pager_size commits more up to max_size. */
+EXPORT int32_t
+rvn_init_anonymous_pager(const char* name,
+    int64_t initial_size,
+    int64_t max_size,
+    int32_t open_flags,
     void** handle,
     void** memory,
     void** writable_memory,

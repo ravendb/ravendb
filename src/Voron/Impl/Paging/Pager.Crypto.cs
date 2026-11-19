@@ -234,7 +234,7 @@ public unsafe partial class Pager
                     // Encrypt the local buffer, then copy the encrypted value to the pager
                     var pageHeader = (PageHeader*)buffer.Value.Pointer;
                     var dataSize = EncryptPage(pager._masterKey, pageHeader);
-                    var numPages = Paging.GetNumberOfOverflowPages(dataSize);
+                    var numPages = dataSize / Constants.Storage.PageSize; // whole pages, the header is already counted
 
                     pager.EnsureContinuous(ref state, buffer.Key, numPages);
                     pager.EnsureMapped(state, ref txState, buffer.Key, numPages);

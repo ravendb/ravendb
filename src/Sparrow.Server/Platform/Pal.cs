@@ -11,7 +11,7 @@ namespace Sparrow.Server.Platform
 {
     public static unsafe class Pal
     {
-        public const int PAL_VER = 70922; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
+        public const int PAL_VER = 70923; // Should match auto generated rc from rvn_get_pal_ver() @ src/rvngetpalver.c
 
         static Pal()
         {
@@ -107,6 +107,7 @@ namespace Sparrow.Server.Platform
             DoNotMap = 1 << 9,
             RandomAccess = 1 << 10,
             Prefetch = 1 << 11,
+            Anonymous = 1 << 12,
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -267,6 +268,34 @@ namespace Sparrow.Server.Platform
             return rvn_init_pager(convert.Pointer, initialFileSize, flags, prefetchRing,
                 out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
         }
+
+        public static PalFlags.FailCodes rvn_init_anonymous_pager(
+            string name,
+            Int64 initialSize,
+            Int64 maxSize,
+            OpenFileFlags flags,
+            out void* handle,
+            out byte* readAddress,
+            out byte* writeAddress,
+            out Int64 memorySize,
+            out Int32 errorCode)
+        {
+            using var convert = new Converter(name);
+            return rvn_init_anonymous_pager(convert.Pointer, initialSize, maxSize, flags,
+                out handle, out readAddress, out writeAddress, out memorySize, out errorCode);
+        }
+
+        [DllImport(LIBRVNPAL, SetLastError = true)]
+        public static extern PalFlags.FailCodes rvn_init_anonymous_pager(
+            byte* name,
+            Int64 initialSize,
+            Int64 maxSize,
+            OpenFileFlags flags,
+            out void* handle,
+            out byte* readAddress,
+            out byte* writeAddress,
+            out Int64 memorySize,
+            out Int32 errorCode);
 
         [DllImport(LIBRVNPAL, SetLastError = true, CharSet = CharSet.Ansi)]
         public static extern PalFlags.FailCodes rvn_sync_directories(

@@ -55,7 +55,8 @@ public class RavenDB_23116(ITestOutputHelper output) : RavenTestBase(output)
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         var env = database.IndexStore.GetIndex(index.IndexName)._environment;
 
-        var scratchFile = env.ScratchBufferPool._current.File;
+        // the index pages are in scratch memory if there is any, which grows the same way
+        var scratchFile = env.ScratchBufferPool.MemorySegmentsForTesting.FirstOrDefault() ?? env.ScratchBufferPool._current.File;
         var path = scratchFile.Pager.FileName;
 
         // the idle index gets flushed in the background, after that no transaction needs the smaller mappings anymore
