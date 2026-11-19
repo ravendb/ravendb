@@ -107,8 +107,7 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
             Evict(env);
             Assert.NotEqual(0, MajorFaultsReading(env, pageNumber)); // hinted already: each 4 KB is a fault of its own
 
-            policy.AddEvictions(evictedFilePages: 1, filePages: 2); // the page cache turns over in 2 s: stale after 1 s
-            policy.Tick(freeBytes: 0);
+            policy.AddEvictions(evictedFilePages: 500, filePages: 1000); // half the page cache replaced: the hint is stale
             Evict(env);
             Assert.Equal(0, MajorFaultsReading(env, pageNumber));
         }
@@ -217,8 +216,7 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
                         Assert.Equal(0, pager.MaybePrefetchMemory(state, new PageRange(first + 16, 8))); // requested a moment ago
                     }
 
-                    policy.AddEvictions(evictedFilePages: 1, filePages: 2); // stale after 1 s
-                    policy.Tick(freeBytes: 0);
+                    policy.AddEvictions(evictedFilePages: 500, filePages: 1000); // half the page cache replaced
                     Assert.Equal(8, Pager.ReadWindowAhead(state, first, 8, onCallingThread: true));
                 }
             }

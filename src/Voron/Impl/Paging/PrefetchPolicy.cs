@@ -23,12 +23,10 @@ public sealed class PrefetchPolicy : IDisposable
     private readonly long _startWarmUpAboveBytes;
     private volatile byte _generation;
     private byte _lastGeneration;
-    private int _clock;
-    private int _staleAfterSeconds = int.MaxValue;
-    private const int StaleAfterSecondsWithoutEvictions = 60;
-    private const int EvictionSamples = 10;
-    private readonly long[] _evicted = new long[EvictionSamples];
-    private int _evictedCount;
+    private long _epoch;
+    private long _evictedInEpoch;
+    private const int TicksPerEpochWithoutEvictions = 8;
+    private int _ticksWithoutEvictions;
     private readonly PageCacheEvictions _evictions;
     private readonly Timer _timer;
 
@@ -40,14 +38,19 @@ public sealed class PrefetchPolicy : IDisposable
             return;
 
         _evictions = PageCacheEvictions.TryCreate();
-        if (_evictions == null)
-            _staleAfterSeconds = StaleAfterSecondsWithoutEvictions; // Windows and macOS report no evictions
         // free memory reads as zero until the server's low-memory monitor runs: no warm-up without it
         _timer = new Timer(_ =>
         {
             Tick(LowMemoryNotification.Instance.LastMemoryInfo.AvailableMemory.GetValue(SizeUnit.Bytes));
-            if (_evictions?.TryRead(out var evicted, out var filePages) == true)
+            if (_evictions == null)
+            {
+                if (++_ticksWithoutEvictions % TicksPerEpochWithoutEvictions == 0)
+                    Interlocked.Increment(ref _epoch); // Windows and macOS report no evictions
+            }
+            else if (_evictions.TryRead(out var evicted, out var filePages))
+            {
                 AddEvictions(evicted, filePages);
+            }
             DeviceWriteBudget.Tick();
         }, null, 0, TickMs);
     }
@@ -55,27 +58,27 @@ public sealed class PrefetchPolicy : IDisposable
     /// <summary>1 to 255 during a warm-up, 0 when memory is full.</summary>
     public byte Generation => _generation;
 
-    // Page hints age by this clock (seconds). A hint is stale after half the time the page cache takes to turn over at the
-    // eviction rate of the last 10 ticks, so a page that left the cache is hinted again; never while nothing is evicted.
-    public int Clock => Volatile.Read(ref _clock);
+    // Page hints age by epochs: an epoch ends each time the kernel evicts 1/16 of the file pages in the page cache. A hint is
+    // stale after 8 epochs (half the cache replaced), so a page that may have left the cache is hinted again, however the
+    // evictions are spread in time. Without eviction counts (Windows and macOS) an epoch ends every 8 seconds.
+    public const int EpochsPerCache = 16;
+    public const int StaleAfterEpochs = EpochsPerCache / 2;
 
-    public int StaleAfterSeconds => Volatile.Read(ref _staleAfterSeconds);
+    public long PageCacheEpoch => Volatile.Read(ref _epoch);
 
     internal void AddEvictions(long evictedFilePages, long filePages)
     {
-        _evicted[_evictedCount++ % EvictionSamples] = Math.Max(evictedFilePages, 0);
-        var samples = Math.Min(_evictedCount, EvictionSamples);
-        double perSecond = 0;
-        for (var i = 0; i < samples; i++)
-            perSecond += _evicted[i];
-        perSecond /= samples;
-        var staleAfter = perSecond <= 0 || filePages <= 0 ? int.MaxValue : Math.Clamp(filePages / (2 * perSecond), 1, int.MaxValue);
-        Volatile.Write(ref _staleAfterSeconds, (int)staleAfter);
+        if (filePages <= 0)
+            return;
+        var pagesPerEpoch = Math.Max(filePages / EpochsPerCache, 1);
+        var evicted = _evictedInEpoch + Math.Max(evictedFilePages, 0);
+        _evictedInEpoch = evicted % pagesPerEpoch;
+        if (evicted >= pagesPerEpoch)
+            Interlocked.Add(ref _epoch, evicted / pagesPerEpoch);
     }
 
     internal void Tick(long freeBytes)
     {
-        Interlocked.Increment(ref _clock);
         var warmingUp = _generation != 0;
         if (warmingUp && freeBytes < _endWarmUpBelowBytes)
         {
