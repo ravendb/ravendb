@@ -328,6 +328,7 @@ public class ServerBackupRunner : IDisposable
             backupState.BackupStatus.Error = new Error { Exception = e.ToString(), At = DateTime.UtcNow };
             backupState.BackupStatus.IsFull = isFullBackup;
             backupState.BackupStatus.NodeTag = _serverStore.NodeTag;
+            backupState.BackupStatus.DurationInMs = 0;
             if (isFullBackup)
                 backupState.BackupStatus.LastFullBackupInternal = startTimeInUtc;
             else
