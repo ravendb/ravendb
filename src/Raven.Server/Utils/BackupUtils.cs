@@ -522,7 +522,7 @@ public static class BackupUtils
         }
         finally
         {
-            BackupHistoryStorage.UpdateBackupHistoryWithRetries(maxRetries: 10, databaseName, serverStore, status, backupResult, onProgress, logger, operationCancelToken);
+            BackupHistoryStorage.UpdateBackupHistory(databaseName, serverStore, status, backupResult, onProgress, logger, operationCancelToken);
         }
     }
 

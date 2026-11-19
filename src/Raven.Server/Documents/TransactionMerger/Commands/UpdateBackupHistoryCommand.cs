@@ -1,5 +1,4 @@
-using System;
-using Raven.Client.Documents.Operations.Backups;
+using System.Collections.Generic;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.ServerWide.Context;
 
@@ -7,34 +6,34 @@ namespace Raven.Server.Documents.TransactionMerger.Commands;
 
 public sealed class UpdateBackupHistoryCommand : MergedTransactionCommand<ClusterOperationContext, ClusterTransaction>
 {
-    private readonly string _databaseName;
-    private readonly PeriodicBackupStatus _status;
-    private readonly BackupResult _result;
-    private readonly DateTime _cutoffTime;
+    private readonly IReadOnlyList<BackupHistoryUpdate> _updates;
 
-    public UpdateBackupHistoryCommand(string databaseName, PeriodicBackupStatus status, BackupResult result, DateTime cutoffTime)
+    public UpdateBackupHistoryCommand(IReadOnlyList<BackupHistoryUpdate> updates)
     {
-        _databaseName = databaseName;
-        _status = status;
-        _result = result;
-        _cutoffTime = cutoffTime;
+        _updates = updates;
     }
 
     protected override long ExecuteCmd(ClusterOperationContext context)
     {
-        BackupHistoryStorage.StoreBackupStatus(context, _databaseName, _status, _cutoffTime);
-        BackupHistoryStorage.StoreBackupResultDetails(context, _databaseName, _status, _result);
+        foreach (var update in _updates)
+        {
+            var entry = new BackupHistoryEntry(update.Status);
+            BackupHistoryStorage.StoreBackupStatus(context, update.DatabaseName, update.Status.TaskId, entry, update.CutoffTime);
 
-        return 1;
+            if (update.Result != null)
+                BackupHistoryStorage.StoreBackupResultDetails(context, update.DatabaseName, update.Status.TaskId, entry, update.Result);
+        }
+
+        return _updates.Count;
     }
 
     public override IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, UpdateBackupHistoryCommand> ToDto(ClusterOperationContext context) =>
-        new UpdateBackupHistoryCommandDto(_databaseName, _status, _result, _cutoffTime);
+        new UpdateBackupHistoryCommandDto(_updates);
 
-    private sealed record UpdateBackupHistoryCommandDto(string DatabaseName, PeriodicBackupStatus Status, BackupResult Result, DateTime CutoffTime)
+    private sealed record UpdateBackupHistoryCommandDto(IReadOnlyList<BackupHistoryUpdate> Updates)
         : IReplayableCommandDto<ClusterOperationContext, ClusterTransaction, UpdateBackupHistoryCommand>
     {
         public UpdateBackupHistoryCommand ToCommand(ClusterOperationContext context, DocumentDatabase database) =>
-            new(DatabaseName, Status, Result, CutoffTime);
+            new(Updates);
     }
 }

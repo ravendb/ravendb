@@ -2,19 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -86,11 +90,8 @@ public class BackupHistoryStorage
         }
     }
 
-    public static void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, PeriodicBackupStatus status, DateTime cutoffTime) where T : RavenTransaction
+    public static void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry, DateTime cutoffTime) where T : RavenTransaction
     {
-        var entry = new BackupHistoryEntry(status);
-        var taskId = status.TaskId;
-
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
         StoreNewBackupEntry(table, entry, databaseName, taskId, context);
@@ -184,9 +185,9 @@ public class BackupHistoryStorage
         return result;
     }
 
-    public static unsafe void StoreBackupResultDetails<T>(TransactionOperationContext<T> context, string databaseName, PeriodicBackupStatus status, BackupResult result) where T : RavenTransaction
+    public static unsafe void StoreBackupResultDetails<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry, BackupResult result) where T : RavenTransaction
     {
-        var key = BackupResultDetailsSchema.GenerateKey(databaseName, status);
+        var key = BackupResultDetailsSchema.GenerateKey(databaseName, taskId, entry.CreatedAt.Ticks);
 
         var table = context.Transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
@@ -221,64 +222,55 @@ public class BackupHistoryStorage
             return table.ReadByKey(slice, out tvr);
     }
 
-    internal static void UpdateBackupHistoryWithRetries(
-        int maxRetries,
-        string databaseName,
-        ServerStore serverStore,
-        PeriodicBackupStatus status,
-        BackupResult backupResult,
-        Action<IOperationProgress> onProgress,
-        RavenLogger logger,
-        OperationCancelToken operationCancelToken)
+    internal static void UpdateBackupHistory(string databaseName, ServerStore serverStore, PeriodicBackupStatus status, BackupResult backupResult,
+        Action<IOperationProgress> onProgress, RavenLogger logger, OperationCancelToken operationCancelToken)
     {
-        var retries = 0;
-        const int throttleDelay = 1_000;
-        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
-        var retentionTimeSetting = serverStore.DatabaseInfoCache.BackupHistoryStorage._forTestingPurposes?.CustomBackupHistoryRetentionConfiguration ?? database.Configuration.Backup.BackupHistoryRetentionPeriod.AsTimeSpan;
-
-        while (true)
+        try
         {
-            try
+            AsyncHelpers.RunSync(() => UpdateBackupHistoryAsync(serverStore, [CreateUpdate(serverStore, databaseName, status, backupResult)], backupResult, onProgress, operationCancelToken));
+        }
+        catch (Exception e)
+        {
+            var message = $"Failed to update the backup history of task {status.TaskId} of database '{databaseName}'";
+            backupResult?.AddError($"{message}{Environment.NewLine}{e}");
+            onProgress?.Invoke(backupResult?.Progress);
+
+            if (logger.IsErrorEnabled)
+                logger.Error(message, e);
+        }
+    }
+
+    internal static BackupHistoryUpdate CreateUpdate(ServerStore serverStore, string databaseName, PeriodicBackupStatus status, BackupResult backupResult) =>
+        new(databaseName, status, backupResult, DateTime.UtcNow - GetRetentionPeriod(serverStore, databaseName));
+
+    internal static Task UpdateBackupHistoryAsync(ServerStore serverStore, IReadOnlyList<BackupHistoryUpdate> updates, BackupResult backupResult = default,
+        Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
+    {
+        return BackupHelper.RunWithRetriesAsync(maxRetries: 10, async () =>
             {
-                operationCancelToken?.Token.ThrowIfCancellationRequested();
+                serverStore.DatabaseInfoCache.BackupHistoryStorage._forTestingPurposes?.BeforeBackupHistoryUpdate?.Invoke();
+                await serverStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand(updates));
+                return default;
+            },
+            infoMessage: "Updating the backup history",
+            errorMessage: "Failed to update the backup history",
+            backupResult, onProgress, operationCancelToken);
+    }
 
-                if (retries > 0)
-                    (operationCancelToken?.Token ?? CancellationToken.None).WaitHandle.WaitOne(throttleDelay);
+    private static TimeSpan GetRetentionPeriod(ServerStore serverStore, string databaseName)
+    {
+        var customRetentionPeriod = serverStore.DatabaseInfoCache.BackupHistoryStorage._forTestingPurposes?.CustomBackupHistoryRetentionConfiguration;
+        if (customRetentionPeriod.HasValue)
+            return customRetentionPeriod.Value;
 
-                backupResult?.AddInfo("Updating the backup history");
-                onProgress?.Invoke(backupResult?.Progress);
+        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, ShardHelper.ToDatabaseName(databaseName)))
+        {
+            if (rawRecord == null)
+                return serverStore.Configuration.Backup.BackupHistoryRetentionPeriod.AsTimeSpan;
 
-                var cutoffTime = DateTime.UtcNow - retentionTimeSetting;
-                var updateBackupHistoryCommand = new UpdateBackupHistoryCommand(databaseName, status, backupResult, cutoffTime);
-                serverStore.Engine.TxMerger.EnqueueSync(updateBackupHistoryCommand);
-
-                return;
-            }
-            catch (OperationCanceledException)
-            {
-                const string message = "Backup history update was canceled.";
-                backupResult?.AddError(message);
-                onProgress?.Invoke(backupResult?.Progress);
-
-                if (logger.IsInfoEnabled)
-                    logger.Info(message);
-
-                return;
-            }
-            catch (Exception e)
-            {
-                var message = $"Failed to update the backup history: {e.Message}";
-                backupResult?.AddError(message);
-                onProgress?.Invoke(backupResult?.Progress);
-
-                if (++retries < maxRetries)
-                    continue;
-
-                if (logger.IsErrorEnabled)
-                    logger.Error(message, e);
-
-                return;
-            }
+            return ((TimeSetting)RavenConfiguration.GetValue(x => x.Backup.BackupHistoryRetentionPeriod, serverStore.Configuration, rawRecord.Settings)).AsTimeSpan;
         }
     }
 
@@ -569,18 +561,6 @@ public class BackupHistoryStorage
         /// <summary>
         /// Key structure: backups/{databaseName}/{taskId}/{createdAtTicks}
         /// </summary>
-        public static string GenerateKey(string databaseName, PeriodicBackupStatus status)
-        {
-            var createdAt = status.IsFull
-                ? status.LastFullBackup ?? status.Error.At
-                : status.LastIncrementalBackup ?? status.Error.At;
-
-            return GenerateKey(databaseName, status.TaskId, createdAt.Ticks);
-        }
-
-        /// <summary>
-        /// Key structure: backups/{databaseName}/{taskId}/{createdAtTicks}
-        /// </summary>
         public static string GenerateKey(string databaseName, long taskId, long createdAtTicks) =>
             $"{BackupHistorySchema.BackupsPrefix}/{databaseName}/{taskId}/{createdAtTicks}";
     }
@@ -598,6 +578,7 @@ public class BackupHistoryStorage
     internal class TestingStuff
     {
         internal TimeSpan? CustomBackupHistoryRetentionConfiguration { get; set; }
+        internal Action BeforeBackupHistoryUpdate { get; set; }
         internal long BackupHistoryEntriesNumber(TransactionOperationContext context) => GetBackupHistoryEntriesNumber(context);
         internal long BackupResultDetailsNumber(TransactionOperationContext context) => GetBackupResultDetailsNumber(context);
     }

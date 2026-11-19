@@ -612,6 +612,25 @@ public class BackupHistoryTests : ClusterTestBase
         }
     }
 
+    // #25: a failed history write is added to the backup result on every retry, with a wait of a second between retries
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_FailedHistoryWriteShouldBeReportedOnce()
+    {
+        const string historyWriteError = "RavenDB-19358 history write error";
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        server.ServerStore.DatabaseInfoCache.BackupHistoryStorage.ForTestingPurposesOnly().BeforeBackupHistoryUpdate = () => throw new InvalidOperationException(historyWriteError);
+
+        var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+        {
+            BackupType = BackupType.Backup,
+            LocalSettings = new LocalSettings { FolderPath = NewDataPath(suffix: "BackupFolder") }
+        }));
+        var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Single(backupResult.Messages, message => message.Contains(historyWriteError));
+    }
+
     // #6: an idle database's skipped incremental has no history row, and writing a row must not load the database
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistory_ShouldStoreSkippedIncrementalBackupsOfIdleDatabasesWithoutWakingThem()
@@ -1011,7 +1030,7 @@ public class BackupHistoryTests : ClusterTestBase
             LastIncrementalBackupInternal = DateTime.UtcNow,
             DurationInMs = 10
         };
-        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand(store.Database, incremental, new BackupResult(), DateTime.MinValue));
+        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, incremental, new BackupResult(), DateTime.MinValue)]));
 
         using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {

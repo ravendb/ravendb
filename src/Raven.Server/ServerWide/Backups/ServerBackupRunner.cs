@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1399,6 +1400,9 @@ public class ServerBackupRunner : IDisposable
                             await SaveBackupStatusesAsync(updates);
                         else
                             await SaveBackupStatusesOneByOneAsync(updates);
+
+                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore,
+                            updates.Select(update => BackupHistoryStorage.CreateUpdate(_serverStore, update.BackupState.DatabaseName, update.BackupStatus, backupResult: null)).ToList());
                     }
                     catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
                     {
@@ -1442,6 +1446,10 @@ public class ServerBackupRunner : IDisposable
                 var backupStatus = JsonDeserializationClient.PeriodicBackupStatus(context.ReadObject(currentStatus.ToJson(), "skipped-incremental-backup-status"));
 
                 backupStatus.Version++;
+                backupStatus.IsFull = false;
+                backupStatus.NodeTag = _serverStore.NodeTag;
+                backupStatus.Error = null;
+                backupStatus.DurationInMs = 0;
                 backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextBackup.DateTime;
 
                 if (backupStatus.LocalBackup != null)

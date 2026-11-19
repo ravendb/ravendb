@@ -10,9 +10,8 @@ public class BackupHistoryEntry : IDynamicJson
 
     public BackupHistoryEntry(PeriodicBackupStatus status)
     {
-        CreatedAt =
-            (status.IsFull ? status.LastFullBackup : status.LastIncrementalBackup)
-            ?? status.Error.At;
+        CreatedAt = (status.IsFull ? status.LastFullBackupInternal : status.LastIncrementalBackupInternal)
+                    ?? throw new ArgumentException($"The backup status of task {status.TaskId} has no {(status.IsFull ? "full" : "incremental")} backup start time", nameof(status));
 
         DurationInMs = status.DurationInMs;
         Error = status.Error?.Exception;
