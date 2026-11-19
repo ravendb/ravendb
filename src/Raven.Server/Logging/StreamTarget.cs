@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using JetBrains.Annotations;
 using NLog;
+using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Global;
 
@@ -21,6 +23,8 @@ public class StreamTarget : AbstractTarget
 
     private static readonly TargetCountGuardian RegisteredSockets = new();
 
+    private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
+
     private StreamTarget()
     {
     }
@@ -35,7 +39,24 @@ public class StreamTarget : AbstractTarget
     {
         stream.Write(HeaderBytes.Span);
 
-        return RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, RegisteredSockets);
+        var registration = RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, RegisteredSockets);
+
+        return new DisposableAction(() =>
+        {
+            FlushPendingEntries();
+
+            registration.Dispose();
+        });
+    }
+
+    private static void FlushPendingEntries()
+    {
+        foreach (var target in RavenLogManagerServerExtensions.PipeRule.Targets)
+        {
+            var flushed = new ManualResetEventSlim();
+            target.Flush(_ => flushed.Set());
+            flushed.Wait(FlushTimeout);
+        }
     }
 
     protected override void Write(LogEventInfo logEvent)
