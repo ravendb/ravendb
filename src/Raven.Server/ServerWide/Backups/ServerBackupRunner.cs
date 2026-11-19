@@ -1683,6 +1683,8 @@ public class ServerBackupRunner : IDisposable
         internal Action BeforeReadingDecisionLogs;
 
         internal int CountInQueue(DatabaseBackupState backupState) => _runner._backupQueue.Count(x => ReferenceEquals(x, backupState));
+
+        internal int QueueLength => _runner._backupQueue.Count;
     }
 
     internal class TestingStuffInternal

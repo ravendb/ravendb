@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -372,7 +371,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         var runner = server.ServerStore.ServerBackupRunner;
         var state = await WaitForStateAsync(runner, store.Database, taskId);
         Assert.NotNull(state);
-        Assert.Equal(1, CountInQueue(runner, state));
+        Assert.Equal(1, runner.ForTestingPurposesOnly().CountInQueue(state));
 
         config.TaskId = taskId;
         config.Disabled = true;
@@ -383,9 +382,9 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
         Assert.False(WaitForValue(() => state.Stale.IsRaised(), false, timeout: 30_000), "precondition: re-enabled task is not stale");
 
-        var count = CountInQueue(runner, state);
+        var count = runner.ForTestingPurposesOnly().CountInQueue(state);
         // the debug endpoint that returned the queue info was removed; the decision log is now served over a WebSocket, so the numbers are read here
-        var queue = (QueueLength: GetQueue(runner).Count, TrackedTasks: runner.BackupsPerDatabasePerTaskId.Sum(x => x.Value.Count));
+        var queue = (QueueLength: runner.ForTestingPurposesOnly().QueueLength, TrackedTasks: runner.BackupsPerDatabasePerTaskId.Sum(x => x.Value.Count));
         Assert.True(count == 1,
             $"Task {taskId} appears {count} times in the runner queue after disable+enable within one tick (QueueLength={queue.QueueLength}, TrackedTasks={queue.TrackedTasks}).");
     }
@@ -611,19 +610,6 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         }
 
         throw new InvalidOperationException($"precondition: runner should track backup task {taskId} of '{database}'");
-    }
-
-    private static int CountInQueue(ServerBackupRunner runner, DatabaseBackupState state)
-    {
-        var field = typeof(ServerBackupRunner).GetField("_backupQueue", BindingFlags.NonPublic | BindingFlags.Instance);
-        var queue = (ConcurrentQueue<DatabaseBackupState>)field!.GetValue(runner);
-        return queue!.Count(x => ReferenceEquals(x, state));
-    }
-
-    private static ConcurrentQueue<DatabaseBackupState> GetQueue(ServerBackupRunner runner)
-    {
-        var field = typeof(ServerBackupRunner).GetField("_backupQueue", BindingFlags.NonPublic | BindingFlags.Instance);
-        return (ConcurrentQueue<DatabaseBackupState>)field!.GetValue(runner);
     }
 
     private static PeriodicBackupConfiguration GetSingleBackupConfiguration(RavenServer server, string database)
