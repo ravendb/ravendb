@@ -56,9 +56,17 @@ public static class QueryBuilderHelper
         if (minType == maxType || minType == ValueTokenType.Null || maxType == ValueTokenType.Null)
             return false;
 
+        if (between.FoldedFromSiblings && IsLongAndDouble(minType, maxType))
+            return false;
+
         lower = between.LowerBound();
         upper = between.UpperBound();
         return true;
+    }
+
+    private static bool IsLongAndDouble(ValueTokenType first, ValueTokenType second)
+    {
+        return first == ValueTokenType.Long && second == ValueTokenType.Double || first == ValueTokenType.Double && second == ValueTokenType.Long;
     }
 
     // FieldExpression.Equals ignores the first path segment to tolerate an alias, which would match 'Origin.X' with 'Destination.X'
@@ -163,6 +171,9 @@ public static class QueryBuilderHelper
         if (first is BinaryExpression firstBound && second is BinaryExpression secondBound && firstBound.IsGreaterThan != secondBound.IsGreaterThan)
             return null;
 
+        if (IsComparedAsDoubles(first) || IsComparedAsDoubles(second))
+            return null;
+
         var (firstLower, firstUpper) = Sides(first);
         var (secondLower, secondUpper) = Sides(second);
 
@@ -181,6 +192,16 @@ public static class QueryBuilderHelper
             MaxInclusive = upper.Operator == OperatorType.LessThanEqual,
             Folded = true
         };
+
+        bool IsComparedAsDoubles(QueryExpression expression)
+        {
+            if (expression is not BetweenExpression { FoldedFromSiblings: true } pair)
+                return false;
+
+            var (_, minType) = GetValue(query, metadata, parameters, pair.Min);
+            var (_, maxType) = GetValue(query, metadata, parameters, pair.Max);
+            return IsLongAndDouble(minType, maxType);
+        }
 
         bool TryTightenSide(BinaryExpression a, BinaryExpression b, out BinaryExpression side)
         {

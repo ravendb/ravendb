@@ -296,6 +296,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         var clone = Query.Metadata.Query.ShallowCopy();
 
+        clone.Where = clone.WhereAsWritten;
+
         DynamicJsonValue modifications = new(queryTemplate);
 
         if (queryChanges.HasFlag(QueryChanges.RewriteForFilterInMapReduce))
