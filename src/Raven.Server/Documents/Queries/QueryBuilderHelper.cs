@@ -40,10 +40,18 @@ public static class QueryBuilderHelper
         return expression.IsRangeOperation && expression.Right is ValueExpression;
     }
 
+    internal interface IFieldProbe
+    {
+        bool HoldsSeveralValues(QueryExpression field);
+
+        bool TranslatesPairAsBetween(ValueTokenType min, ValueTokenType max);
+    }
+
     // a folded between may mix value kinds, which a between translates as one, so it is translated as the two comparisons
     // it came from; a null side stays a between, which reads it as an open end
-    internal static bool TryUnfoldBetweenOfMixedKinds(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
-        out BinaryExpression lower, out BinaryExpression upper)
+    internal static bool TryTranslateAsComparisons<TProbe>(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, BetweenExpression between,
+        TProbe probe, out BinaryExpression lower, out BinaryExpression upper)
+        where TProbe : struct, IFieldProbe
     {
         lower = null;
         upper = null;
@@ -53,18 +61,25 @@ public static class QueryBuilderHelper
 
         var (_, minType) = GetValue(query, metadata, parameters, between.Min);
         var (_, maxType) = GetValue(query, metadata, parameters, between.Max);
-        if (minType == maxType || minType == ValueTokenType.Null || maxType == ValueTokenType.Null)
+        if (minType == ValueTokenType.Null || maxType == ValueTokenType.Null)
             return false;
 
-        if (between.FoldedFromSiblings && IsLongAndDouble(minType, maxType))
+        if (between.FoldedFromSiblings)
+        {
+            if (probe.TranslatesPairAsBetween(minType, maxType))
+                return false;
+        }
+        else if (minType == maxType && probe.HoldsSeveralValues(between.Source) == false)
+        {
             return false;
+        }
 
         lower = between.LowerBound();
         upper = between.UpperBound();
         return true;
     }
 
-    private static bool IsLongAndDouble(ValueTokenType first, ValueTokenType second)
+    internal static bool IsLongAndDouble(ValueTokenType first, ValueTokenType second)
     {
         return first == ValueTokenType.Long && second == ValueTokenType.Double || first == ValueTokenType.Double && second == ValueTokenType.Long;
     }
@@ -92,8 +107,9 @@ public static class QueryBuilderHelper
 
     // walks the bounds on one field the metadata placed next to each other along the left spine of the 'and' chain and keeps
     // the tighter ones; what the walk did not consume comes back as the remainder, null when it consumed the whole chain
-    internal static bool TryMergeSameDirectionBounds(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
-        out QueryExpression tighter, out QueryExpression remainder)
+    internal static bool TryMergeSameDirectionBounds<TProbe>(BinaryExpression and, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, Index index,
+        TProbe probe, out QueryExpression tighter, out QueryExpression remainder)
+        where TProbe : struct, IFieldProbe
     {
         tighter = null;
         remainder = null;
@@ -102,6 +118,7 @@ public static class QueryBuilderHelper
             return false;
 
         QueryFieldName fieldName = null;
+        bool? severalValues = null;
         var merged = false;
         tighter = and.Right;
         QueryExpression node = and.Left;
@@ -125,6 +142,13 @@ public static class QueryBuilderHelper
 
             if (IsSameField(candidateField, field) == false)
                 break;
+
+            if (candidate is BetweenExpression { FoldedFromSiblings: true } || tighter is BetweenExpression { FoldedFromSiblings: true })
+            {
+                severalValues ??= probe.HoldsSeveralValues(field);
+                if (severalValues.Value)
+                    break;
+            }
 
             fieldName ??= ExtractIndexFieldName(query, parameters, field, metadata);
 

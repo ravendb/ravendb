@@ -224,7 +224,8 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.And:
                         {
                             // keep only the tighter of adjacent bounds on one field, whose values are known only here
-                            if (QueryBuilderHelper.TryMergeSameDirectionBounds(where, query, metadata, parameters, index, out var tighterBound, out var remainder))
+                            if (metadata.ScoresMayOrderResults(index) == false &&
+                                QueryBuilderHelper.TryMergeSameDirectionBounds(where, query, metadata, parameters, index, new FieldProbe(index, query, metadata, parameters, factories), out var tighterBound, out var remainder))
                             {
                                 var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
                                 buildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
@@ -322,9 +323,9 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is BetweenExpression be)
             {
-                if (QueryBuilderHelper.TryUnfoldBetweenOfMixedKinds(query, metadata, parameters, be, out var lower, out var upper))
+                if (QueryBuilderHelper.TryTranslateAsComparisons(query, metadata, parameters, be, new FieldProbe(index, query, metadata, parameters, factories), out var lower, out var upper))
                 {
-                    buildSteps?.Add($"Between of mixed value kinds, translated as the two comparisons it came from: {be}");
+                    buildSteps?.Add($"Between translated as the two comparisons it came from: {be}");
 
                     return ToLuceneQuery(serverContext, documentsContext, query, new BinaryExpression(lower, upper, OperatorType.And), metadata, index, parameters,
                         analyzer, factories, exact, secondary: secondary, buildSteps: buildSteps);
@@ -453,6 +454,53 @@ namespace Raven.Server.Documents.Queries
             }
 
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
+        }
+
+        private readonly struct FieldProbe : QueryBuilderHelper.IFieldProbe
+        {
+            private readonly Index _index;
+            private readonly Query _query;
+            private readonly QueryMetadata _metadata;
+            private readonly BlittableJsonReaderObject _parameters;
+            private readonly QueryBuilderFactories _factories;
+
+            public FieldProbe(Index index, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryBuilderFactories factories)
+            {
+                _index = index;
+                _query = query;
+                _metadata = metadata;
+                _parameters = parameters;
+                _factories = factories;
+            }
+
+            public bool HoldsSeveralValues(QueryExpression field)
+            {
+                if (_index == null || _factories?.FieldHoldsArrays == null || _index.Definition.HasDynamicFields)
+                    return true;
+
+                string fieldName = ExtractIndexFieldName(_query, _parameters, field, _metadata);
+                return IsTokenized(_index, fieldName) || _factories.FieldHoldsArrays(fieldName);
+            }
+
+            public bool TranslatesPairAsBetween(ValueTokenType min, ValueTokenType max)
+            {
+                return min == max || min == ValueTokenType.String || QueryBuilderHelper.IsLongAndDouble(min, max);
+            }
+
+            private static bool IsTokenized(Index index, string fieldName)
+            {
+                var analyzer = index.Configuration.DefaultAnalyzer;
+                if (index.Definition.IndexFields != null && index.Definition.IndexFields.TryGetValue(fieldName, out var options))
+                {
+                    if (string.IsNullOrWhiteSpace(options.Analyzer) == false || options.Indexing == FieldIndexing.Search)
+                        return true;
+
+                    if (options.Indexing == FieldIndexing.Exact)
+                        analyzer = index.Configuration.DefaultExactAnalyzer;
+                }
+
+                return analyzer != null && analyzer.EndsWith(nameof(KeywordAnalyzer), StringComparison.Ordinal) == false;
+            }
         }
 
         private static Lucene.Net.Search.Query TranslateOperationOnLong(Index index, string luceneFieldName, long valueAsLong, OperatorType whereOperator)
