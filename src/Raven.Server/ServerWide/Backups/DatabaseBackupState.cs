@@ -98,7 +98,8 @@ namespace Raven.Server.ServerWide.Backups
                 "Couldn't schedule next backup, this shouldn't happen",
                 message,
                 AlertReason.PeriodicBackup,
-                NotificationSeverity.Warning));
+                NotificationSeverity.Warning,
+                key: DatabaseName));
         }
 
         private void OnParsingError(BackupUtils.OnParsingErrorParameters parameters)
@@ -116,6 +117,7 @@ namespace Raven.Server.ServerWide.Backups
                 message,
                 AlertReason.PeriodicBackup,
                 NotificationSeverity.Error,
+                key: DatabaseName,
                 details: new ExceptionDetails(parameters.Exception)));
         }
 
