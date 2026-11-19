@@ -337,6 +337,40 @@ public class ServerBackupRunnerTests : ClusterTestBase
             $"The status of the backup that ran without quorum wasn't saved locally. Before: '{lastFullBackup}', after: '{localStatus?.LastFullBackup}'.");
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task IdleDatabaseMustSaveSkippedIncrementalBackupLocallyWhenTheNodeHasNoQuorum()
+    {
+        var (nodes, server) = await CreateRaftCluster(2, shouldRunInMemory: false, customSettings: IdleSettings());
+        var other = nodes.Single(x => x != server);
+
+        using var store = GetDocumentStore(new Options
+        {
+            Server = server,
+            RunInMemory = false,
+            ReplicationFactor = 1,
+            DeleteDatabaseOnDispose = false,
+            ModifyDatabaseRecord = record => record.Topology = new DatabaseTopology { Members = new List<string> { server.ServerStore.NodeTag } }
+        });
+        await StoreDocument(store);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 *", incrementalBackupFrequency: "* * * * *");
+        var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+
+        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+        Assert.True(WaitForValue(() => server.ServerStore.IdleDatabases.ContainsKey(store.Database), true, timeout: 90_000, interval: 500),
+            "precondition: the database should become idle");
+
+        await DisposeServerAndWaitForFinishOfDisposalAsync(other);
+        await WaitAndAssertForValueAsync(() => server.ServerStore.Engine.CurrentState, RachisState.Candidate);
+        var lastIncrementalBackup = server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId)?.LastIncrementalBackup ?? DateTime.MinValue;
+
+        Assert.True(await WaitForValueAsync(() => Task.FromResult((server.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId)?.LastIncrementalBackup ?? DateTime.MinValue) > lastIncrementalBackup), true,
+                timeout: 150_000, interval: 1000),
+            $"The skipped incremental backup status wasn't saved locally while the node had no quorum. Before: '{lastIncrementalBackup}'.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+        Assert.True(server.ServerStore.IdleDatabases.ContainsKey(store.Database), "The database should still be idle");
+    }
+
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task IdleDatabaseMustUnloadWhileACpuCreditsHoldHoldsItsBackup()
     {

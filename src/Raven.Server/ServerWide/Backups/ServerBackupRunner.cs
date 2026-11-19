@@ -1334,7 +1334,9 @@ public class ServerBackupRunner : IDisposable
                         if (updates.Count == 0)
                             continue;
 
-                        if (useBatch)
+                        if (_serverStore.LeaderTag == null)
+                            SaveBackupStatusesLocally(updates);
+                        else if (useBatch)
                             await SaveBackupStatusesAsync(updates);
                         else
                             await SaveBackupStatusesOneByOneAsync(updates);
@@ -1402,8 +1404,19 @@ public class ServerBackupRunner : IDisposable
             .Select(x => new UpdatePeriodicBackupStatusCommand(x.BackupState.DatabaseName, RaftIdGenerator.DontCareId) { PeriodicBackupStatus = x.BackupStatus })
             .ToList();
 
-        var (index, _) = await _serverStore.SendToLeaderAsync(new UpdatePeriodicBackupStatusBatchCommand(commands, RaftIdGenerator.NewId()), _serverStore.ServerShutdown);
-        await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, _serverStore.ServerShutdown);
+        try
+        {
+            var (index, _) = await _serverStore.SendToLeaderAsync(new UpdatePeriodicBackupStatusBatchCommand(commands, RaftIdGenerator.NewId()), _serverStore.ServerShutdown);
+            await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, index, _serverStore.ServerShutdown);
+        }
+        catch (Exception e) when (_serverStore.ServerShutdown.IsCancellationRequested == false)
+        {
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Failed to save the backup statuses of {updates.Count} skipped incremental backups in the cluster, saving them locally.", e);
+
+            SaveBackupStatusesLocally(updates);
+            return;
+        }
 
         foreach (var (backupState, backupStatus) in updates)
             OnBackupStatusSaved(backupState, backupStatus);
@@ -1425,8 +1438,30 @@ public class ServerBackupRunner : IDisposable
             catch (Exception e) when (_serverStore.ServerShutdown.IsCancellationRequested == false)
             {
                 if (_logger.IsWarnEnabled)
-                    _logger.Warn($"Failed to save the backup status of the skipped incremental backup {backupState}.", e);
+                    _logger.Warn($"Failed to save the backup status of the skipped incremental backup {backupState} in the cluster, saving it locally.", e);
+
+                SaveBackupStatusLocally(backupState, backupStatus);
             }
+        }
+    }
+
+    private void SaveBackupStatusesLocally(List<(DatabaseBackupState BackupState, PeriodicBackupStatus BackupStatus)> updates)
+    {
+        foreach (var (backupState, backupStatus) in updates)
+            SaveBackupStatusLocally(backupState, backupStatus);
+    }
+
+    private void SaveBackupStatusLocally(DatabaseBackupState backupState, PeriodicBackupStatus backupStatus)
+    {
+        try
+        {
+            _serverStore.DatabaseInfoCache.BackupStatusStorage.Insert(backupStatus, backupState.DatabaseName);
+            OnBackupStatusSaved(backupState, backupStatus);
+        }
+        catch (Exception e)
+        {
+            if (_logger.IsWarnEnabled)
+                _logger.Warn($"Failed to save the backup status of the skipped incremental backup {backupState} locally.", e);
         }
     }
 
