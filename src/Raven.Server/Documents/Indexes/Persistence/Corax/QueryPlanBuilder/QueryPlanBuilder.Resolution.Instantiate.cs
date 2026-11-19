@@ -21,7 +21,6 @@ internal static partial class QueryPlanBuilder
         PlanParameters planParams,
         QueryBuilderParameters builderParameters,
         ResolutionContext walkerCtx,
-        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
         bool wantTimings,
         CancellationToken token)
     {
@@ -94,7 +93,7 @@ internal static partial class QueryPlanBuilder
             default: // may either be the selected strategy or a one-off (because of bad parameters preventing a faster strategy)
             {
                 exec.ActualStrategy = ExecutionStrategy.BitmapPipeline;
-                var innerMatch = InstantiateBitmapPipeline(ctx.Plan, ctx.Exec, ctx.PlanParams, ctx.BuilderParams, walkerCtx, highlightingTerms, wantTimings, token);
+                var innerMatch = InstantiateBitmapPipeline(ctx.Plan, ctx.Exec, ctx.PlanParams, ctx.BuilderParams, walkerCtx, wantTimings, token);
                 if (innerMatch is CompiledQueryMatch forcedScanMatch)
                     forcedScanMatch.ForcedEntryScanGate = TryGetForcedEntryScanGate(ctx.PlanParams.QueryParameters); // $rvn_corax_entry_scan
                 // no ordering or already streams its results in right order — return the match as is.
