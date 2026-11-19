@@ -20,31 +20,24 @@ public class BackupHistory
     public string DatabaseName { get; init; }
     public List<BackupGroup> Groups { get; init; } = [];
     
-    public void Add(BackupHistoryEntry entry, long taskId, int? shardNumber)
+    private readonly Dictionary<(long TaskId, int? ShardNumber, long FullBackupTicks), BackupGroup> _groupsByKey = [];
+
+    public void Add(BackupHistoryEntry entry, long taskId, int? shardNumber, bool includeIncrementals)
     {
-        switch (entry.BackupKind)
+        var key = (taskId, shardNumber, entry.GetFullBackupTicks());
+        if (_groupsByKey.TryGetValue(key, out var group) == false)
         {
-            case BackupKind.Full:
-                var existingGroup = Groups.FirstOrDefault(group => group.FullBackup?.CreatedAt == entry.CreatedAt && group.TaskId == taskId && group.ShardNumber == shardNumber);
-                if (existingGroup == null)
-                    Groups.Add(new BackupGroup(entry, taskId, shardNumber));
-                else
-                    existingGroup.FullBackup = entry;
-                break;
-            
-            case BackupKind.Incremental:
-                var groupToAdd = Groups.FirstOrDefault(group => group.FullBackup?.LastFullBackup == entry.LastFullBackup && group.TaskId == taskId && group.ShardNumber == shardNumber);
-                if (groupToAdd == null)
-                {
-                    groupToAdd = new BackupGroup(entry, taskId, shardNumber);
-                    Groups.Add(groupToAdd);
-                }
-                else
-                {
-                    groupToAdd.AddIncrementalBackup(entry);
-                }
-                break;
+            group = new BackupGroup(entry, taskId, shardNumber);
+            _groupsByKey.Add(key, group);
+            Groups.Add(group);
         }
+
+        if (entry.BackupKind == BackupKind.Full)
+            group.FullBackup = entry;
+        else if (includeIncrementals)
+            group.AddIncrementalBackup(entry);
+        else
+            group.IncrementalBackupsCount++;
     }
     
     public void UpdateTaskNames(RawDatabaseRecord databaseRecord)

@@ -413,7 +413,8 @@ namespace Raven.Server.Documents
             if (directDelete == false)
                 return false;
 
-            if (rawRecord.EntireDatabasePendingDeletion() == false)
+            var entireDatabasePendingDeletion = rawRecord.EntireDatabasePendingDeletion();
+            if (entireDatabasePendingDeletion == false)
             {
                 if (rawRecord.Topology.Rehabs.Contains(_serverStore.NodeTag) && fromReplication == false)
                     // If the deletion was issued from the cluster observer to maintain the replication factor we need to make sure
@@ -425,12 +426,12 @@ namespace Raven.Server.Documents
             var record = rawRecord.MaterializedRecord;
 
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-                DeleteDatabase(dbName, deletionInProgress, record);
+                DeleteDatabase(dbName, deletionInProgress, record, entireDatabasePendingDeletion);
 
             return true;
         }
 
-        public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
+        public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record, bool entireDatabasePendingDeletion)
         {
             IDisposable removeLockAndReturn = null;
             string databaseId;
@@ -499,6 +500,9 @@ namespace Raven.Server.Documents
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
                 DeleteLocalBackupStatuses(dbName, throwOnError: true);
+
+                if (entireDatabasePendingDeletion)
+                    DeleteBackupHistory(dbName);
             }
             finally
             {
@@ -1127,6 +1131,19 @@ namespace Raven.Server.Documents
 
                 if (_logger.IsDebugEnabled)
                     _logger.Debug($"Failed to delete local backup statuses for '{databaseName}' database.", e);
+            }
+        }
+
+        private void DeleteBackupHistory(string databaseName)
+        {
+            try
+            {
+                _serverStore.BackupHistoryCleaner.DeleteDatabaseHistory(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Failed to delete the backup history of '{databaseName}' database.", e);
             }
         }
 

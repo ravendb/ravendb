@@ -53,6 +53,7 @@ using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Exceptions;
@@ -155,6 +156,7 @@ namespace Raven.Server.ServerWide
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
         public readonly ServerBackupRunner ServerBackupRunner;
+        public readonly BackupHistoryCleaner BackupHistoryCleaner;
         public bool Initialized;
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
@@ -229,6 +231,8 @@ namespace Raven.Server.ServerWide
             Secrets = new SecretProtection(configuration.Security);
 
             ServerBackupRunner = new ServerBackupRunner(this);
+
+            BackupHistoryCleaner = new BackupHistoryCleaner(this);
 
             InitializationCompleted = new AsyncManualResetEvent(_shutdownNotification.Token);
 
@@ -956,6 +960,8 @@ namespace Raven.Server.ServerWide
             RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
 
             ServerBackupRunner.Initialize();
+
+            BackupHistoryCleaner.Start();
 
             Initialized = true;
             InitializationCompleted.Set();
@@ -2743,6 +2749,8 @@ namespace Raven.Server.ServerWide
                     var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {nameof(ServerStore)}.");
 
                     exceptionAggregator.Execute(() => ServerBackupRunner?.Dispose());
+
+                    exceptionAggregator.Execute(() => BackupHistoryCleaner?.Dispose());
 
                     exceptionAggregator.Execute(() =>
                     {

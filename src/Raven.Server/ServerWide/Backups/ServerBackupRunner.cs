@@ -1406,8 +1406,8 @@ public class ServerBackupRunner : IDisposable
                         else
                             await SaveBackupStatusesOneByOneAsync(updates);
 
-                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore, updates.Select(update => BackupHistoryStorage.CreateUpdate(_serverStore, update.BackupState.DatabaseName, update.BackupStatus.TaskId,
-                            new BackupHistoryEntry(update.BackupStatus, update.BackupState.Configuration.Name, BackupTrigger.Scheduled, skipped: true), backupResult: null)).ToList());
+                        await BackupHistoryStorage.UpdateBackupHistoryAsync(_serverStore, updates.Select(update => new BackupHistoryUpdate(update.BackupState.DatabaseName, update.BackupStatus.TaskId,
+                            new BackupHistoryEntry(update.BackupStatus, update.BackupState.Configuration.Name, BackupTrigger.Scheduled, skipped: true), Result: null)).ToList());
                     }
                     catch (OperationCanceledException) when (_serverStore.ServerShutdown.IsCancellationRequested)
                     {

@@ -38,8 +38,6 @@ public class BackupGroup
                     NodeTag = entry.NodeTag,
                     LastFullBackup = entry.LastFullBackup,
                 };
-                
-                AddIncrementalBackup(entry);
 
                 break;
         }

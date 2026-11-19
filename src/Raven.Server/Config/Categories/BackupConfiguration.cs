@@ -149,11 +149,19 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.KeepIdleDatabaseLoadedBeforeBackupInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting KeepIdleDatabaseLoadedBeforeBackup { get; set; }
 
-        [Description("Number of days to keep backup groups in history. The most recent full backup is always preserved. A backup group (full backup and its incrementals) is removed when its full backup age exceeds this period.")]
+        [Description("Number of days to keep backup history entries. An entry is removed when it is older than this period, except the most recent successful full backup of an existing backup task on a node that hosts the database.")]
         [DefaultValue(30)]
+        [MinValue(1)]
         [TimeUnit(TimeUnit.Days)]
         [ConfigurationEntry("Backup.BackupHistoryRetentionPeriodInDays", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting BackupHistoryRetentionPeriod { get; set; }
+
+        [Description("How often the server removes backup history entries that are older than the backup history retention period.")]
+        [DefaultValue(1440)]
+        [MinValue(1)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.BackupHistoryCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting BackupHistoryCleanupInterval { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {

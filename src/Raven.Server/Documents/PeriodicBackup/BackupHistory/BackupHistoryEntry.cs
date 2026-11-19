@@ -35,6 +35,8 @@ public class BackupHistoryEntry : IDynamicJson
     public BackupTrigger? Trigger { get; set; }
     public BackupRunStatus? Status { get; set; }
 
+    internal long GetFullBackupTicks() => BackupKind == BackupKind.Full ? CreatedAt.Ticks : LastFullBackup?.Ticks ?? 0;
+
     public DynamicJsonValue ToJson() =>
         new()
         {

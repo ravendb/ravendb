@@ -5,9 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.ServerWide;
-using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.Logging;
@@ -38,16 +35,12 @@ public class BackupHistoryStorage
     private static readonly TableSchema BackupHistoryTableSchema = new();
     private static readonly TableSchema BackupResultDetailsTableSchema = new();
 
-    private static readonly Slice ByFullBackupIdSlice;
-    private static readonly Slice ByBackupKindSlice;
+    private static readonly Slice ByGroupSlice;
 
     static BackupHistoryStorage()
     {
         using (StorageEnvironment.GetStaticContext(out var ctx))
-        {
-            Slice.From(ctx, "ByBackupKind", out ByBackupKindSlice);
-            Slice.From(ctx, "ByFullBackupId", out ByFullBackupIdSlice);
-        }
+            Slice.From(ctx, "ByGroup", out ByGroupSlice);
 
         BackupHistoryTableSchema.DefineKey(new TableSchema.IndexDef
         {
@@ -57,18 +50,11 @@ public class BackupHistoryStorage
 
         BackupHistoryTableSchema.DefineIndex(new TableSchema.IndexDef
         {
-            Name = ByFullBackupIdSlice,
-            StartIndex = (int)BackupHistorySchema.BackupHistoryColumns.ByFullBackupIdKey,
+            Name = ByGroupSlice,
+            StartIndex = (int)BackupHistorySchema.BackupHistoryColumns.GroupKey,
             Count = 1
         });
 
-        BackupHistoryTableSchema.DefineIndex(new TableSchema.IndexDef
-        {
-            Name = ByBackupKindSlice,
-            StartIndex = (int)BackupHistorySchema.BackupHistoryColumns.ByBackupKindKey,
-            Count = 1
-        });
-        
         BackupResultDetailsTableSchema.DefineKey(new TableSchema.IndexDef
         {
             StartIndex = (int)BackupResultDetailsSchema.BackupResultDetailsColumns.PrimaryKey,
@@ -90,112 +76,32 @@ public class BackupHistoryStorage
         }
     }
 
-    public static void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry, DateTime cutoffTime) where T : RavenTransaction
+    public static unsafe void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry) where T : RavenTransaction
     {
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
-        StoreNewBackupEntry(table, entry, databaseName, taskId, context);
-
-        if (entry.BackupKind == BackupKind.Full && entry.Error == null)
-            EnforceBackupRetentionPolicy(table, context.Transaction, databaseName, taskId, cutoffTime);
-    }
-
-    private static unsafe void StoreNewBackupEntry<T>(Table table, BackupHistoryEntry entry, string databaseName, long taskId, TransactionOperationContext<T> context) where T : RavenTransaction
-    {
-        var createdAtTicks = entry.CreatedAt.Ticks;
-        var fullBackupCreatedAtTicks = entry.BackupKind is BackupKind.Full
-            ? createdAtTicks
-            : entry.LastFullBackup?.Ticks ?? 0;
-
-        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, createdAtTicks, out var primaryKeySlice))
-        using (BackupHistorySchema.GetByBackupKindIndexKey(context.Allocator, databaseName, taskId, entry.BackupKind, fullBackupCreatedAtTicks, createdAtTicks, out var byBackupKindKeySlice))
-        using (BackupHistorySchema.GetByFullBackupIdIndexKey(context.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, entry.BackupKind, createdAtTicks, out var byFullBackupIdKeySlice))
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, entry.CreatedAt.Ticks, out var primaryKeySlice))
+        using (BackupHistorySchema.GetGroupKey(context.Allocator, databaseName, taskId, entry.GetFullBackupTicks(), entry.BackupKind, out var groupKeySlice))
         using (table.Allocate(out TableValueBuilder tvb))
         using (var json = context.ReadObject(entry.ToJson(), JsonDocumentId))
         {
             tvb.Add(primaryKeySlice);
-            tvb.Add(byBackupKindKeySlice);
-            tvb.Add(byFullBackupIdKeySlice);
-            tvb.Add(Bits.SwapBytes(createdAtTicks));
+            tvb.Add(groupKeySlice);
             tvb.Add(json.BasePointer, json.Size);
 
             table.Set(tvb);
         }
     }
 
-    private static void EnforceBackupRetentionPolicy(Table backupHistoryTable, RavenTransaction tx, string databaseName, long taskId, DateTime cutoffTime)
-    {
-        var backupResultDetailsTable = tx.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
-
-        var tableIdsList = CollectBackupsToDelete(backupHistoryTable, tx, cutoffTime, databaseName, taskId);
-
-        foreach ((long historyTableId, long resultDetailsId) in tableIdsList)
-        {
-            backupHistoryTable.Delete(historyTableId);
-
-            if (resultDetailsId > 0)
-                backupResultDetailsTable.Delete(resultDetailsId);
-        }
-    }
-
-    private static unsafe List<(long HistoryTableId, long ResultDetailsId)> CollectBackupsToDelete(Table backupHistoryTable, RavenTransaction tx, DateTime cutoffTime, string databaseName, long taskId)
-    {
-        var result = new List<(long, long)>();
-
-        using (BackupHistorySchema.GetByBackupKindIndexKeyPrefix(tx.InnerTransaction.Allocator, databaseName, taskId, BackupKind.Full, out var fullBackupPrefixSlice))
-        using (BackupHistorySchema.GetByBackupKindIndexKey(tx.InnerTransaction.Allocator, databaseName, taskId, BackupKind.Full, fullBackupCreatedAtTicks: -1, createdAtTicks: -1, out var fullBackupLastSlice))
-        using (BackupHistorySchema.GetByBackupKindIndexKey(tx.InnerTransaction.Allocator, databaseName, taskId, BackupKind.Full, fullBackupCreatedAtTicks: 1, createdAtTicks: 1, out var fullBackupStartSlice))
-        {
-            var latestFullBackupValue = backupHistoryTable.SeekOneBackwardFrom(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupPrefixSlice, fullBackupLastSlice);
-            var latestFullBackupCreatedAtTicks = Bits.SwapBytes(*(long*)latestFullBackupValue.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
-
-            foreach (var fullBackupSeekResult in backupHistoryTable.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupStartSlice, fullBackupPrefixSlice, skip: 0))
-            {
-                var fullBackupCreatedAtTicks = Bits.SwapBytes(*(long*)fullBackupSeekResult.Result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
-                // If the full backup is newer than the cutoff time, we can stop searching as entries are sorted chronologically
-                // If the full backup is the latest one, we won't delete it
-                if (fullBackupCreatedAtTicks >= cutoffTime.Ticks || fullBackupCreatedAtTicks == latestFullBackupCreatedAtTicks)
-                {
-                    break;
-                }
-
-                var fullBackupResultDetailsId = -1L;
-                if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, fullBackupCreatedAtTicks, out var fullBackupReader))
-                    fullBackupResultDetailsId = fullBackupReader.Id;
-
-                result.Add((fullBackupSeekResult.Result.Reader.Id, fullBackupResultDetailsId));
-
-                using (BackupHistorySchema.GetByFullBackupIdIndexKeyPrefix(tx.InnerTransaction.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, BackupKind.Incremental, out var prefixSlice))
-                using (BackupHistorySchema.GetByFullBackupIdIndexKey(tx.InnerTransaction.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, BackupKind.Incremental, createdAtTicks: 1, out var firstSlice))
-                {
-                    foreach (var incrementalBackupSeekResult in backupHistoryTable.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByFullBackupIdSlice], firstSlice, prefixSlice, skip: 0))
-                    {
-                        var incrementalBackupCreatedAtTicks = Bits.SwapBytes(*(long*)incrementalBackupSeekResult.Result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.CreatedAtTicks, out _));
-
-                        var incrementalBackupResultDetailsId = -1L;
-                        if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, incrementalBackupCreatedAtTicks, out var incrementalBackupReader))
-                            incrementalBackupResultDetailsId = incrementalBackupReader.Id;
-
-                        result.Add((incrementalBackupSeekResult.Result.Reader.Id, incrementalBackupResultDetailsId));
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
     public static unsafe void StoreBackupResultDetails<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry, BackupResult result) where T : RavenTransaction
     {
-        var key = BackupResultDetailsSchema.GenerateKey(databaseName, taskId, entry.CreatedAt.Ticks);
-
         var table = context.Transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
-        var lsKey = context.GetLazyString(key);
-        using (var json = context.ReadObject(result.ToJson(), key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, entry.CreatedAt.Ticks, out var primaryKeySlice))
+        using (var json = context.ReadObject(result.ToJson(), JsonDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
         using (table.Allocate(out TableValueBuilder tvb))
         {
-            tvb.Add(lsKey.Buffer, lsKey.Size);
+            tvb.Add(primaryKeySlice);
             tvb.Add(json.BasePointer, json.Size);
 
             table.Set(tvb);
@@ -204,22 +110,16 @@ public class BackupHistoryStorage
 
     public static unsafe BlittableJsonReaderObject GetBackupResult(TransactionOperationContext context, string databaseName, long taskId, long createdAtTicks)
     {
-        if (TryGetBackupResultDetailsReader(context.Transaction, databaseName, taskId, createdAtTicks, out var tvr) == false)
-            return null;
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
-        var jsonPointer = tvr.Read((int)BackupResultDetailsSchema.BackupResultDetailsColumns.Data, out var size);
-        var json = new BlittableJsonReaderObject(jsonPointer, size, context);
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, createdAtTicks, out var primaryKeySlice))
+        {
+            if (table.ReadByKey(primaryKeySlice, out var tvr) == false)
+                return null;
 
-        return json;
-    }
-
-    private static bool TryGetBackupResultDetailsReader(RavenTransaction tx, string databaseName, long taskId, long createdAtTicks, out TableValueReader tvr)
-    {
-        var key = BackupResultDetailsSchema.GenerateKey(databaseName, taskId, createdAtTicks);
-
-        var table = tx.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
-        using (Slice.From(tx.InnerTransaction.Allocator, key, out Slice slice))
-            return table.ReadByKey(slice, out tvr);
+            var jsonPointer = tvr.Read((int)BackupResultDetailsSchema.BackupResultDetailsColumns.Data, out var size);
+            return new BlittableJsonReaderObject(jsonPointer, size, context);
+        }
     }
 
     internal static void UpdateBackupHistory(string databaseName, ServerStore serverStore, long taskId, BackupHistoryEntry entry, BackupResult backupResult,
@@ -227,7 +127,7 @@ public class BackupHistoryStorage
     {
         try
         {
-            AsyncHelpers.RunSync(() => UpdateBackupHistoryAsync(serverStore, [CreateUpdate(serverStore, databaseName, taskId, entry, backupResult)], backupResult, onProgress, operationCancelToken));
+            AsyncHelpers.RunSync(() => UpdateBackupHistoryAsync(serverStore, [new BackupHistoryUpdate(databaseName, taskId, entry, backupResult)], backupResult, onProgress, operationCancelToken));
         }
         catch (Exception e)
         {
@@ -239,9 +139,6 @@ public class BackupHistoryStorage
                 logger.Error(message, e);
         }
     }
-
-    internal static BackupHistoryUpdate CreateUpdate(ServerStore serverStore, string databaseName, long taskId, BackupHistoryEntry entry, BackupResult backupResult) =>
-        new(databaseName, taskId, entry, backupResult, DateTime.UtcNow - GetRetentionPeriod(serverStore, databaseName));
 
     internal static Task UpdateBackupHistoryAsync(ServerStore serverStore, IReadOnlyList<BackupHistoryUpdate> updates, BackupResult backupResult = default,
         Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
@@ -257,20 +154,84 @@ public class BackupHistoryStorage
             backupResult, onProgress, operationCancelToken);
     }
 
-    private static TimeSpan GetRetentionPeriod(ServerStore serverStore, string databaseName)
+    internal static int DeleteExpiredEntries(ClusterOperationContext context, string databaseName, DateTime cutoffTime, HashSet<long> tasksToKeepNewestFullBackup, int maxEntriesToDelete)
     {
-        var customRetentionPeriod = serverStore.DatabaseInfoCache.BackupHistoryStorage._forTestingPurposes?.CustomBackupHistoryRetentionConfiguration;
-        if (customRetentionPeriod.HasValue)
-            return customRetentionPeriod.Value;
+        var historyTable = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+        var detailsTable = context.Transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
-        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, ShardHelper.ToDatabaseName(databaseName)))
+        var expiredEntries = new List<(long TaskId, long CreatedAtTicks)>();
+        foreach (var taskId in GetTaskIds(context.Allocator, historyTable, databaseName))
         {
-            if (rawRecord == null)
-                return serverStore.Configuration.Backup.BackupHistoryRetentionPeriod.AsTimeSpan;
+            var keptFullBackupTicks = tasksToKeepNewestFullBackup.Contains(taskId)
+                ? GetNewestSuccessfulFullBackupTicks(context, historyTable, databaseName, taskId)
+                : null;
 
-            return ((TimeSetting)RavenConfiguration.GetValue(x => x.Backup.BackupHistoryRetentionPeriod, serverStore.Configuration, rawRecord.Settings)).AsTimeSpan;
+            CollectExpiredEntries(context.Allocator, historyTable, databaseName, taskId, cutoffTime.Ticks, keptFullBackupTicks, maxEntriesToDelete, expiredEntries);
+            if (expiredEntries.Count == maxEntriesToDelete)
+                break;
+        }
+
+        foreach (var (taskId, createdAtTicks) in expiredEntries)
+        {
+            using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, createdAtTicks, out var primaryKeySlice))
+            {
+                historyTable.DeleteByKey(primaryKeySlice);
+                detailsTable.DeleteByKey(primaryKeySlice);
+            }
+        }
+
+        return expiredEntries.Count;
+    }
+
+    internal static bool HasExpiredEntries(TransactionOperationContext context, string databaseName, DateTime cutoffTime)
+    {
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+
+        foreach (var taskId in GetTaskIds(context.Allocator, table, databaseName))
+        {
+            using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
+            {
+                foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, Slices.Empty, skip: 0))
+                {
+                    if (BackupHistorySchema.ReadValue(key, positionFromEnd: 0) < cutoffTime.Ticks)
+                        return true;
+
+                    break;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    internal static unsafe List<string> GetDatabaseNames(TransactionOperationContext context)
+    {
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+        var databaseNames = new List<string>();
+
+        var startAfter = Slices.Empty;
+        using (BackupHistorySchema.GetBackupsPrefix(context.Allocator, out var backupsPrefixSlice))
+        {
+            while (true)
+            {
+                string databaseName = null;
+                foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(backupsPrefixSlice, startAfter, skip: 0))
+                {
+                    databaseName = BackupHistorySchema.ReadDatabaseName(key);
+                    break;
+                }
+
+                if (databaseName == null)
+                    return databaseNames;
+
+                databaseNames.Add(databaseName);
+
+                using (BackupHistorySchema.GetDatabaseKeyPrefix(context.Allocator, databaseName, out var databasePrefixSlice))
+                {
+                    databasePrefixSlice.Content.Ptr[databasePrefixSlice.Size - 1]++;
+                    startAfter = databasePrefixSlice.Clone(context.Allocator);
+                }
+            }
         }
     }
 
@@ -288,46 +249,21 @@ public class BackupHistoryStorage
         {
             var taskIds = requestedTaskId.HasValue
                 ? [requestedTaskId.Value]
-                : GetTaskIds(context, table, source.DatabaseName);
+                : GetTaskIds(context.Allocator, table, source.DatabaseName);
 
             foreach (var taskId in taskIds)
-                PopulateBackupHistory(backupHistory, context, table, source, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
+            {
+                var entries = requestedFullBackupCreatedAtTicks.HasValue
+                    ? ReadGroupEntries(context, table, source.DatabaseName, taskId, requestedFullBackupCreatedAtTicks.Value)
+                    : ReadTaskEntries(context, table, source.DatabaseName, taskId);
+
+                foreach (var entry in entries)
+                    backupHistory.Add(entry, taskId, source.ShardNumber, includeIncrementals);
+            }
         }
 
         backupHistory.UpdateTaskNames(databaseRecord);
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
-    }
-
-    private static List<long> GetTaskIds(TransactionOperationContext context, Table table, string databaseName)
-    {
-        var taskIds = new List<long>();
-
-        using (BackupHistorySchema.GetDatabaseKeyPrefix(context.Allocator, databaseName, out Slice databasePrefixSlice))
-        {
-            var fromTaskId = 0L;
-            while (TryGetNextTaskId(context, table, databasePrefixSlice, databaseName, fromTaskId, out var taskId))
-            {
-                taskIds.Add(taskId);
-                fromTaskId = taskId + 1;
-            }
-        }
-
-        return taskIds;
-    }
-
-    private static unsafe bool TryGetNextTaskId(TransactionOperationContext context, Table table, Slice databasePrefixSlice, string databaseName, long fromTaskId, out long taskId)
-    {
-        using (BackupHistorySchema.GetPrimaryKeyPrefix(context.Allocator, databaseName, fromTaskId, fullBackupCreatedAtTicks: null, out Slice fromTaskSlice))
-        {
-            foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(databasePrefixSlice, fromTaskSlice, skip: 0))
-            {
-                taskId = Bits.SwapBytes(*(long*)(key.Content.Ptr + databasePrefixSlice.Size));
-                return true;
-            }
-        }
-
-        taskId = default;
-        return false;
     }
 
     private static IEnumerable<HistorySource> GetHistorySources(RawDatabaseRecord databaseRecord, int? shardNumber)
@@ -341,48 +277,115 @@ public class BackupHistoryStorage
 
     private readonly record struct HistorySource(string DatabaseName, int? ShardNumber);
 
-    private static void PopulateBackupHistory(BackupHistory backupHistory, TransactionOperationContext context, Table table, HistorySource source, bool includeIncrementals, long taskId, long? fullBackupCreatedAtTicks)
+    private static IEnumerable<BackupHistoryEntry> ReadTaskEntries(TransactionOperationContext context, Table table, string databaseName, long taskId)
     {
-        if (includeIncrementals)
+        using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
         {
-            using (BackupHistorySchema.GetPrimaryKeyPrefix(context.Allocator, source.DatabaseName, taskId, fullBackupCreatedAtTicks, out Slice prefixSlice))
+            foreach (var (_, result) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, Slices.Empty, skip: 0))
+                yield return GetBackupEntry(context, result.Reader);
+        }
+    }
+
+    private static IEnumerable<BackupHistoryEntry> ReadGroupEntries(TransactionOperationContext context, Table table, string databaseName, long taskId, long fullBackupTicks)
+    {
+        using (BackupHistorySchema.GetGroupKeyPrefix(context.Allocator, databaseName, taskId, fullBackupTicks, out var groupPrefixSlice))
+        {
+            foreach (var result in table.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByGroupSlice], groupPrefixSlice, groupPrefixSlice, skip: 0))
+                yield return GetBackupEntry(context, result.Result.Reader);
+        }
+    }
+
+    private static List<long> GetTaskIds(ByteStringContext allocator, Table table, string databaseName)
+    {
+        var taskIds = new List<long>();
+
+        using (BackupHistorySchema.GetDatabaseKeyPrefix(allocator, databaseName, out var databasePrefixSlice))
+        {
+            var fromTaskId = 0L;
+            while (TryGetNextTaskId(allocator, table, databasePrefixSlice, databaseName, fromTaskId, out var taskId))
             {
-                foreach ((_, Table.TableValueHolder result) in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, skip: 0))
-                {
-                    var entry = GetBackupEntry(context, result.Reader);
-                    backupHistory.Add(entry, taskId, source.ShardNumber);
-                }
+                taskIds.Add(taskId);
+                fromTaskId = taskId + 1;
             }
         }
-        else if (fullBackupCreatedAtTicks.HasValue)
+
+        return taskIds;
+    }
+
+    private static bool TryGetNextTaskId(ByteStringContext allocator, Table table, Slice databasePrefixSlice, string databaseName, long fromTaskId, out long taskId)
+    {
+        using (BackupHistorySchema.GetTaskKeyPrefix(allocator, databaseName, fromTaskId, out var fromTaskSlice))
         {
-            using (BackupHistorySchema.GetPrimaryKey(context.Allocator, source.DatabaseName, taskId, fullBackupCreatedAtTicks.Value, fullBackupCreatedAtTicks.Value, out Slice keySlice))
+            foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(databasePrefixSlice, fromTaskSlice, skip: 0))
             {
-                if (table.ReadByKey(keySlice, out var value))
-                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, source, taskId, value);
+                taskId = BackupHistorySchema.ReadValue(key, positionFromEnd: 1);
+                return true;
             }
         }
-        else
+
+        taskId = default;
+        return false;
+    }
+
+    private static void CollectExpiredEntries(ByteStringContext allocator, Table table, string databaseName, long taskId, long cutoffTicks, long? keptFullBackupTicks,
+        int maxEntriesToDelete, List<(long TaskId, long CreatedAtTicks)> expiredEntries)
+    {
+        using (BackupHistorySchema.GetTaskKeyPrefix(allocator, databaseName, taskId, out var taskPrefixSlice))
         {
-            using (BackupHistorySchema.GetByBackupKindIndexKeyPrefix(context.Allocator, source.DatabaseName, taskId, BackupKind.Full, out var fullBackupPrefixSlice))
-            using (BackupHistorySchema.GetByBackupKindIndexKey(context.Allocator, source.DatabaseName, taskId, BackupKind.Full, fullBackupCreatedAtTicks: 1, createdAtTicks: 1, out var fullBackupStartSlice))
+            foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, Slices.Empty, skip: 0))
             {
-                foreach (var fullBackupSeekResult in table.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupStartSlice, fullBackupPrefixSlice, skip: 0))
-                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, source, taskId, fullBackupSeekResult.Result.Reader);
+                var createdAtTicks = BackupHistorySchema.ReadValue(key, positionFromEnd: 0);
+                if (createdAtTicks >= cutoffTicks)
+                    return;
+
+                if (createdAtTicks == keptFullBackupTicks)
+                    continue;
+
+                expiredEntries.Add((taskId, createdAtTicks));
+                if (expiredEntries.Count == maxEntriesToDelete)
+                    return;
             }
         }
     }
 
-    private static void AddBackupEntryWithIncrementalsCountOnly(TransactionOperationContext context, Table table, BackupHistory backupHistory, HistorySource source, long taskId, TableValueReader result)
+    private static unsafe long? GetNewestSuccessfulFullBackupTicks<T>(TransactionOperationContext<T> context, Table table, string databaseName, long taskId) where T : RavenTransaction
     {
-        var entry = GetBackupEntry(context, result);
-        backupHistory.Add(entry, taskId, source.ShardNumber);
+        var index = BackupHistoryTableSchema.Indexes[ByGroupSlice];
 
-        using (BackupHistorySchema.GetByFullBackupIdIndexKeyPrefix(context.Allocator, source.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, out var prefixSlice))
-        using (BackupHistorySchema.GetByFullBackupIdIndexKey(context.Allocator, source.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, createdAtTicks: 1, out var startSlice))
+        using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
         {
-            var count = table.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByFullBackupIdSlice], startSlice, prefixSlice, skip: 0).Count();
-            backupHistory.Groups.Single(group => group.TaskId == taskId && group.ShardNumber == source.ShardNumber && group.FullBackup?.CreatedAt == entry.CreatedAt).IncrementalBackupsCount = count;
+            var fullBackupTicks = long.MaxValue;
+            var backupKind = BackupKind.Full;
+
+            while (true)
+            {
+                Table.TableValueHolder result;
+                using (BackupHistorySchema.GetGroupKey(context.Allocator, databaseName, taskId, fullBackupTicks, backupKind, out var lastSlice))
+                    result = table.SeekOneBackwardFrom(index, taskPrefixSlice, lastSlice);
+
+                if (result == null)
+                    return null;
+
+                var groupKeyPtr = result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.GroupKey, out var groupKeySize);
+                using (Slice.External(context.Allocator, groupKeyPtr, groupKeySize, out var groupKeySlice))
+                {
+                    fullBackupTicks = BackupHistorySchema.ReadValue(groupKeySlice, positionFromEnd: 1);
+
+                    if ((BackupKind)BackupHistorySchema.ReadValue(groupKeySlice, positionFromEnd: 0) == BackupKind.Incremental)
+                    {
+                        backupKind = BackupKind.Full;
+                        continue;
+                    }
+                }
+
+                using (var json = new BlittableJsonReaderObject(result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.Data, out var size), size, context))
+                {
+                    if (json.TryGet(nameof(BackupHistoryEntry.Error), out string error) && error == null)
+                        return fullBackupTicks;
+                }
+
+                backupKind = BackupKind.None;
+            }
         }
     }
 
@@ -413,189 +416,71 @@ public class BackupHistoryStorage
     private static class BackupHistorySchema
     {
         public const string TableName = "BackupHistoryTable";
-        public const string BackupsPrefix = "backups/";
+        private const string BackupsPrefix = "backups/";
+        private const byte Separator = (byte)'/';
 
         public enum BackupHistoryColumns
         {
             PrimaryKey = 0,
-            ByBackupKindKey = 1,
-            ByFullBackupIdKey = 2,
-            CreatedAtTicks = 3,
-            Data = 4
+            GroupKey = 1,
+            Data = 2
         }
 
-        /// <summary>
-        /// Key structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{createdAtTicks}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrimaryKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long fullBackupCreatedAtTicks,
-            long createdAtTicks,
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetBackupsPrefix(ByteStringContext allocator, out Slice keySlice) =>
+            Slice.From(allocator, BackupsPrefix, out keySlice);
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseKeyPrefix(ByteStringContext allocator, string databaseName, out Slice keySlice) =>
+            GetKey(allocator, databaseName, [], endsWithSeparator: true, out keySlice);
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetTaskKeyPrefix(ByteStringContext allocator, string databaseName, long taskId, out Slice keySlice) =>
+            GetKey(allocator, databaseName, [taskId], endsWithSeparator: false, out keySlice);
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrimaryKey(ByteStringContext allocator, string databaseName, long taskId, long createdAtTicks, out Slice keySlice) =>
+            GetKey(allocator, databaseName, [taskId, createdAtTicks], endsWithSeparator: false, out keySlice);
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetGroupKeyPrefix(ByteStringContext allocator, string databaseName, long taskId, long fullBackupTicks, out Slice keySlice) =>
+            GetKey(allocator, databaseName, [taskId, fullBackupTicks], endsWithSeparator: false, out keySlice);
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetGroupKey(ByteStringContext allocator, string databaseName, long taskId, long fullBackupTicks, BackupKind backupKind, out Slice keySlice) =>
+            GetKey(allocator, databaseName, [taskId, fullBackupTicks, (long)backupKind], endsWithSeparator: false, out keySlice);
+
+        public static unsafe long ReadValue(Slice key, int positionFromEnd) =>
+            Bits.SwapBytes(*(long*)(key.Content.Ptr + key.Size - (positionFromEnd + 1) * (sizeof(long) + 1) + 1));
+
+        public static unsafe string ReadDatabaseName(Slice key)
+        {
+            var nameStart = key.Content.Ptr + BackupsPrefix.Length;
+            var nameLength = 0;
+            while (nameStart[nameLength] != Separator)
+                nameLength++;
+
+            return Encoding.UTF8.GetString(nameStart, nameLength);
+        }
+
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(ByteStringContext allocator, string databaseName, ReadOnlySpan<long> values, bool endsWithSeparator,
             out Slice keySlice)
         {
-            return GetKey(allocator, databaseName, taskId, fullBackupCreatedAtTicks, createdAtTicks, out keySlice);
-        }
-
-        /// <summary>
-        /// Key prefix structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetPrimaryKeyPrefix(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long? fullBackupCreatedAtTicks,
-            out Slice keySlice)
-        {
-            return fullBackupCreatedAtTicks.HasValue
-                ? GetKey(allocator, databaseName, taskId, fullBackupCreatedAtTicks.Value, out keySlice)
-                : GetKey(allocator, databaseName, taskId, out keySlice);
-        }
-
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetDatabaseKeyPrefix(ByteStringContext allocator, string databaseName, out Slice keySlice)
-        {
-            var scope = GetKey(allocator, databaseName, taskId: 0, out keySlice);
-            keySlice.Content.Truncate(keySlice.Size - sizeof(long));
-            return scope;
-        }
-
-        /// <summary>
-        /// Key structure: backups/{databaseName}/{taskId}/{backupKindValue}/{fullBackupCreatedAtTicks}/{createdAtTicks}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByBackupKindIndexKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            BackupKind backupKind,
-            long fullBackupCreatedAtTicks,
-            long createdAtTicks,
-            out Slice keySlice)
-        {
-            return GetKey(allocator, databaseName, taskId, (long)backupKind, fullBackupCreatedAtTicks, createdAtTicks, out keySlice);
-        }
-
-        /// <summary>
-        /// Key prefix structure: backups/{databaseName}/{taskId}/{backupKindValue}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByBackupKindIndexKeyPrefix(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            BackupKind backupKind,
-            out Slice keySlice)
-        {
-            return GetKey(allocator, databaseName, taskId, (long)backupKind, out keySlice);
-        }
-
-        /// <summary>
-        /// Key structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{backupKindValue}/{createdAtTicks}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByFullBackupIdIndexKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long fullBackupCreatedAtTicks,
-            BackupKind backupKind,
-            long createdAtTicks,
-            out Slice keySlice)
-        {
-            return GetKey(allocator, databaseName, taskId, fullBackupCreatedAtTicks, (long)backupKind, createdAtTicks, out keySlice);
-        }
-
-        /// <summary>
-        /// Key prefix structure: backups/{databaseName}/{taskId}/{fullBackupCreatedAtTicks}/{BackupKind}
-        /// </summary>
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetByFullBackupIdIndexKeyPrefix(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long fullBackupCreatedAtTicks,
-            BackupKind backupKind,
-            out Slice keySlice)
-        {
-            return GetKey(allocator, databaseName, taskId, fullBackupCreatedAtTicks, (long)backupKind, out keySlice);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            out Slice keySlice)
-        {
-            Span<long> values = stackalloc long[] { taskId };
-            return GetKey(allocator, databaseName, values, out keySlice);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long value1,
-            out Slice keySlice)
-        {
-            Span<long> values = stackalloc long[] { taskId, value1 };
-            return GetKey(allocator, databaseName, values, out keySlice);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long value1,
-            long value2,
-            out Slice keySlice)
-        {
-            Span<long> values = stackalloc long[] { taskId, value1, value2 };
-            return GetKey(allocator, databaseName, values, out keySlice);
-        }
-
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
-            ByteStringContext allocator,
-            string databaseName,
-            long taskId,
-            long value1,
-            long value2,
-            long value3,
-            out Slice keySlice)
-        {
-            Span<long> values = stackalloc long[] { taskId, value1, value2, value3 };
-            return GetKey(allocator, databaseName, values, out keySlice);
-        }
-
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
-            ByteStringContext allocator,
-            string databaseName,
-            Span<long> values,
-            out Slice keySlice)
-        {
-            var prefixLength = Encoding.UTF8.GetByteCount(BackupsPrefix);
-            var dbNameLength = Encoding.UTF8.GetByteCount(databaseName);
-            var separatorsLength = 1 + values.Length; // 1 - is a separator
-            var numbersLength = sizeof(long) * separatorsLength;
-
-            var totalLength = prefixLength + dbNameLength + numbersLength + separatorsLength;
+            var name = databaseName.ToLowerInvariant();
+            var nameLength = Encoding.UTF8.GetByteCount(name);
+            var totalLength = BackupsPrefix.Length + nameLength + values.Length * (1 + sizeof(long)) + (endsWithSeparator ? 1 : 0);
 
             var scope = allocator.Allocate(totalLength, out var buffer);
-
             var pos = buffer.Ptr;
 
             foreach (var ch in BackupsPrefix)
-                *pos++ = (byte)char.ToLowerInvariant(ch);
+                *pos++ = (byte)ch;
 
-            foreach (var ch in databaseName)
-                *pos++ = (byte)char.ToLowerInvariant(ch);
+            pos += Encoding.UTF8.GetBytes(name, new Span<byte>(pos, nameLength));
 
             foreach (var value in values)
             {
-                *pos++ = (byte)'/';
-                var swappedValue = Bits.SwapBytes(value);
-                *(long*)pos = swappedValue;
+                *pos++ = Separator;
+                *(long*)pos = Bits.SwapBytes(value);
                 pos += sizeof(long);
             }
 
-            var size = (int)(pos - buffer.Ptr);
-            buffer.Truncate(size);
+            if (endsWithSeparator)
+                *pos = Separator;
 
             keySlice = new Slice(buffer);
             return scope;
@@ -611,12 +496,6 @@ public class BackupHistoryStorage
             PrimaryKey = 0,
             Data = 1
         }
-
-        /// <summary>
-        /// Key structure: backups/{databaseName}/{taskId}/{createdAtTicks}
-        /// </summary>
-        public static string GenerateKey(string databaseName, long taskId, long createdAtTicks) =>
-            $"{BackupHistorySchema.BackupsPrefix}/{databaseName}/{taskId}/{createdAtTicks}";
     }
 
     internal TestingStuff _forTestingPurposes;
@@ -631,7 +510,6 @@ public class BackupHistoryStorage
 
     internal class TestingStuff
     {
-        internal TimeSpan? CustomBackupHistoryRetentionConfiguration { get; set; }
         internal Action BeforeBackupHistoryUpdate { get; set; }
         internal long BackupHistoryEntriesNumber(TransactionOperationContext context) => GetBackupHistoryEntriesNumber(context);
         internal long BackupResultDetailsNumber(TransactionOperationContext context) => GetBackupResultDetailsNumber(context);

@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -22,6 +23,8 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
+using Raven.Server.Utils;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
@@ -199,85 +202,6 @@ public class BackupHistoryTests : ClusterTestBase
         Assert.NotNull(backupResult);
         Assert.Equal(0, backupResult.Documents.ReadCount);
         Assert.True(backupResult.Elapsed > TimeSpan.Zero);
-    }
-
-    [RavenFact(RavenTestCategory.BackupExportImport)]
-    public async Task BackupHistory_ShouldRespectRetentionPolicy()
-    {
-        var retentionPeriod = TimeSpan.FromSeconds(20);
-        var backupPath = NewDataPath(suffix: "BackupFolder");
-        var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
-
-        // Configure the custom retention period for testing purposes
-        server.ServerStore.DatabaseInfoCache.BackupHistoryStorage.ForTestingPurposesOnly().CustomBackupHistoryRetentionConfiguration = retentionPeriod;
-
-        var backupCounter = 0;
-        foreach (var _ in Enumerable.Range(0,2))
-        {
-            using var store = GetDocumentStore(new Options { Server = server });
-
-            // Create two backup configurations with different taskIds
-            var taskIds = new List<long>();
-            foreach (var j in Enumerable.Range(0,2))
-            {
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", name: $"BackupTask_{store.Database}_{j}");
-                var result = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config));
-                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, nodes: [server]);
-                taskIds.Add(result.TaskId);
-            }
-
-            // First series of backups
-            var expectedBackupHistory = new BackupHistory(store.Database);
-            var initialBackupsStartTime = DateTime.UtcNow;
-            foreach (var taskId in taskIds)
-                await RunBackupsAccordingPlan([BackupKind.Full, BackupKind.Incremental], server, taskId, store, expectedBackupHistory);
-
-            await Task.Delay(retentionPeriod / 2);
-
-            // Second series of backups
-            foreach (var taskId in taskIds)
-                await RunBackupsAccordingPlan([BackupKind.Full, BackupKind.Incremental, BackupKind.Incremental], server, taskId, store, expectedBackupHistory);
-
-            // Wait until the retention period is elapsed for the first series
-            await Task.Delay(retentionPeriod / 2);
-
-            // Perform another full backup to trigger the retention policy
-            foreach (var taskId in taskIds)
-                await RunBackupsAccordingPlan([BackupKind.Full, BackupKind.Incremental, BackupKind.Incremental, BackupKind.Incremental], server, taskId, store, expectedBackupHistory);
-
-            // Expecting that the oldest backups will be removed for each task
-            expectedBackupHistory.Groups.RemoveRange(index: 0, count: taskIds.Count);
-
-            // Verify backup history state after retention policy applied
-            var parameters = new BackupHistoryRequestParameters{ DatabaseName = store.Database };
-            var actualBackupHistory = CollectAndAssertBackupHistoryStructure(expectedBackupHistory, server, store, parameters);
-
-            Assert.True(actualBackupHistory.DatabaseName == expectedBackupHistory.DatabaseName,
-                userMessage: $"Expected database name is `{expectedBackupHistory.DatabaseName}`, but got `{actualBackupHistory.DatabaseName}`{Environment.NewLine}{actualBackupHistory.ToString(server.ServerStore.ContextPool)}");
-
-            Assert.True(actualBackupHistory.Groups[0].FullBackup.CreatedAt < initialBackupsStartTime + retentionPeriod,
-                userMessage: $"Expected oldest full backup date is less than `{DateTime.UtcNow + retentionPeriod}`, but got `{actualBackupHistory.Groups[0].FullBackup}`{Environment.NewLine}{actualBackupHistory.ToString(server.ServerStore.ContextPool)}");
-
-            foreach (long taskId in taskIds)
-            {
-                var actualNumberOfGroupsPerTaskId = actualBackupHistory.Groups.Count(x => x.TaskId == taskId);
-                var expectedNumberOfGroupsPerTaskId = expectedBackupHistory.Groups.Count(x => x.TaskId == taskId);
-
-                Assert.True(actualNumberOfGroupsPerTaskId == expectedNumberOfGroupsPerTaskId,
-                    userMessage: $"Expected number of groups for task id `{taskId}` is `{expectedNumberOfGroupsPerTaskId}`, but got `{actualNumberOfGroupsPerTaskId}`{Environment.NewLine}{actualBackupHistory.ToString(server.ServerStore.ContextPool)}");
-            }
-
-            backupCounter += expectedBackupHistory.Groups.Count + expectedBackupHistory.Groups.Sum(group => group.IncrementalBackups.Count);
-        }
-
-        using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        {
-            var backupHistoryEntriesNumber = server.ServerStore.DatabaseInfoCache.BackupHistoryStorage.ForTestingPurposesOnly().BackupHistoryEntriesNumber(context);
-            var backupResultDetailsNumber = server.ServerStore.DatabaseInfoCache.BackupHistoryStorage.ForTestingPurposesOnly().BackupResultDetailsNumber(context);
-
-            Assert.Equal(backupCounter, backupHistoryEntriesNumber);
-            Assert.Equal(backupCounter, backupResultDetailsNumber);
-        }
     }
 
     [RavenTheory(RavenTestCategory.BackupExportImport)]
@@ -1030,7 +954,7 @@ public class BackupHistoryTests : ClusterTestBase
             LastIncrementalBackupInternal = DateTime.UtcNow,
             DurationInMs = 10
         };
-        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, incremental.TaskId, new BackupHistoryEntry(incremental, "RavenDB-19358", BackupTrigger.Scheduled, skipped: false), new BackupResult(), DateTime.MinValue)]));
+        await Server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, incremental.TaskId, new BackupHistoryEntry(incremental, "RavenDB-19358", BackupTrigger.Scheduled, skipped: false), new BackupResult())]));
 
         using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
@@ -1062,6 +986,214 @@ public class BackupHistoryTests : ClusterTestBase
 
         Assert.Equal(0L, await WaitForValueAsync(() => Task.FromResult(CountStoredEntries(server)), 0L));
         Assert.Equal(0, CountStoredDetails(server));
+    }
+
+    // Coverage (#14): a node that only leaves the database group keeps its history, it is deleted only with the whole database (Pawel, RavenDB-25376)
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task BackupHistory_ShouldBeKeptOnANodeRemovedFromTheDatabaseGroup()
+    {
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        var (nodes, leader) = await CreateRaftCluster(2);
+        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 });
+
+        var backupNode = nodes.First(node => node != leader);
+        var backupNodeTag = backupNode.ServerStore.NodeTag;
+
+        var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: backupNodeTag, pinToMentorNode: true);
+        await Backup.UpdateConfigAndRunBackupAsync(backupNode, config, store);
+        Assert.Equal(1, CountStoredEntries(backupNode));
+
+        await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true, fromNode: backupNodeTag));
+
+        Assert.True(await WaitForValueAsync(async () =>
+        {
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            return record.Topology.AllNodes.Contains(backupNodeTag) == false && (record.DeletionInProgress == null || record.DeletionInProgress.ContainsKey(backupNodeTag) == false);
+        }, expectedVal: true), "precondition: the node should leave the database group");
+
+        Assert.Equal(1, CountStoredEntries(backupNode));
+    }
+
+    // #26 and #27: old rows go only after a successful full backup, and the group of the newest full backup grows forever
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldRemoveExpiredEntriesAndKeepTheNewestSuccessfulFullBackupOfEachTask()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        server.ServerStore.BackupHistoryCleaner.ForTestingPurposesOnly().RetentionPeriod = TimeSpan.FromHours(1);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 1");
+        var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, nodes: [server]);
+
+        var start = DateTime.UtcNow;
+        var newestSuccessfulFullBackup = start.AddMinutes(2);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start, lastFullBackup: start);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start.AddMinutes(1), lastFullBackup: start, isFull: false);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, newestSuccessfulFullBackup, lastFullBackup: newestSuccessfulFullBackup);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start.AddMinutes(3), lastFullBackup: newestSuccessfulFullBackup, isFull: false);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start.AddMinutes(4), lastFullBackup: newestSuccessfulFullBackup, error: "RavenDB-19358 failed full backup");
+
+        Assert.Equal(0, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start));
+        Assert.Equal(4, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddHours(2)));
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var group = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}"));
+            var fullBackup = GetObject(group, "FullBackup");
+            Assert.Equal(newestSuccessfulFullBackup, DateTime.Parse(GetString(fullBackup, "CreatedAt"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+            Assert.Equal(0, GetLong(group, "IncrementalBackupsCount"));
+        }
+
+        Assert.Equal(1, CountStoredDetails(server));
+    }
+
+    // #27: a deleted task's history is never removed, because only a successful full backup of the same task removes old rows
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldRemoveTheExpiredHistoryOfADeletedTask()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        server.ServerStore.BackupHistoryCleaner.ForTestingPurposesOnly().RetentionPeriod = TimeSpan.FromHours(1);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 1");
+        var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, nodes: [server]);
+
+        var start = DateTime.UtcNow;
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start, lastFullBackup: start);
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start.AddMinutes(1), lastFullBackup: start, isFull: false);
+
+        var deleteResult = await store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.Backup));
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(deleteResult.RaftCommandIndex, nodes: [server]);
+
+        Assert.Equal(0, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start));
+        Assert.Equal(2, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddHours(2)));
+        Assert.Equal(0, CountStoredEntries(server));
+        Assert.Equal(0, CountStoredDetails(server));
+    }
+
+    // #14: the history of a database deleted while this node did not delete it (down, or the delete failed) stays forever
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldRemoveTheHistoryOfADatabaseThatNoLongerExists()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+
+        var start = DateTime.UtcNow;
+        await StoreHistoryEntryAsync(server, "RavenDB-19358-no-such-database", taskId: 1, start, lastFullBackup: start);
+
+        Assert.Equal(1, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start));
+        Assert.Equal(0, CountStoredEntries(server));
+        Assert.Equal(0, CountStoredDetails(server));
+    }
+
+    // #29: the history of a shard that was removed from the database stays forever
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+    public async Task BackupHistoryCleaner_ShouldRemoveTheHistoryOfARemovedShard()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = Sharding.GetDocumentStore(new Options { Server = server });
+
+        var start = DateTime.UtcNow;
+        await StoreHistoryEntryAsync(server, ShardHelper.ToShardName(store.Database, 99), taskId: 1, start, lastFullBackup: start);
+
+        Assert.Equal(1, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start));
+        Assert.Equal(0, CountStoredEntries(server));
+    }
+
+    // #29: the retention period set on the database is not covered
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldUseTheRetentionPeriodOfTheDatabase()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var shortRetentionStore = GetDocumentStore(new Options
+        {
+            Server = server,
+            RunInMemory = true,
+            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Backup.BackupHistoryRetentionPeriod)] = "1"
+        });
+        using var defaultRetentionStore = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+
+        var start = DateTime.UtcNow;
+        foreach (var store in new[] { shortRetentionStore, defaultRetentionStore })
+            await StoreHistoryEntryAsync(server, store.Database, taskId: 0, start, lastFullBackup: start);
+
+        Assert.Equal(1, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddDays(2)));
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            Assert.Empty(await GetHistoryGroupsAsync(context, shortRetentionStore, $"database={shortRetentionStore.Database}"));
+            Assert.Single(await GetHistoryGroupsAsync(context, defaultRetentionStore, $"database={defaultRetentionStore.Database}"));
+        }
+    }
+
+    // #27: the cleanup deletes everything in one transaction
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldDeleteInBatches()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        server.ServerStore.BackupHistoryCleaner.ForTestingPurposesOnly().MaxEntriesToDeletePerCommand = 2;
+
+        var start = DateTime.UtcNow;
+        for (var i = 0; i < 5; i++)
+            await StoreHistoryEntryAsync(server, store.Database, taskId: 0, start.AddMinutes(i), lastFullBackup: start.AddMinutes(i));
+
+        Assert.Equal(5, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddDays(31)));
+        Assert.Equal(0, CountStoredEntries(server));
+    }
+
+    // #28: a cleanup interval of 0 makes the cleaner run without a pause
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public void BackupHistoryCleanupInterval_ShouldBeAtLeastOneMinute()
+    {
+        var configuration = RavenConfiguration.CreateForTesting("server", ResourceType.Server);
+        configuration.SetSetting(RavenConfiguration.GetKey(x => x.Backup.BackupHistoryCleanupInterval), "0");
+        configuration.Initialize();
+
+        Assert.Equal(TimeSpan.FromMinutes(1), configuration.Backup.BackupHistoryCleanupInterval.AsTimeSpan);
+    }
+
+    // #31: a history retention of 0 days deletes every entry right away, except the newest full backup of each task
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_RetentionPeriodShouldBeAtLeastOneDay()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options
+        {
+            Server = server,
+            RunInMemory = true,
+            ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Backup.BackupHistoryRetentionPeriod)] = "0"
+        });
+
+        var start = DateTime.UtcNow;
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 0, start, lastFullBackup: start);
+
+        Assert.Equal(0, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddHours(1)));
+    }
+
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData("not-a-number")]
+    [InlineData("999999")]
+    public async Task BackupHistoryCleaner_InvalidRetentionPeriodOfOneDatabaseShouldNotStopTheCleanupOfTheOthers(string retentionPeriod)
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var invalidRetentionStore = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        using var defaultRetentionStore = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+
+        await invalidRetentionStore.Maintenance.SendAsync(new PutDatabaseSettingsOperation(invalidRetentionStore.Database, new Dictionary<string, string>
+        {
+            [RavenConfiguration.GetKey(x => x.Backup.BackupHistoryRetentionPeriod)] = retentionPeriod
+        }));
+
+        var start = DateTime.UtcNow;
+        foreach (var store in new[] { invalidRetentionStore, defaultRetentionStore })
+            await StoreHistoryEntryAsync(server, store.Database, taskId: 0, start, lastFullBackup: start);
+
+        Assert.Equal(1, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddDays(31)));
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            Assert.Empty(await GetHistoryGroupsAsync(context, defaultRetentionStore, $"database={defaultRetentionStore.Database}"));
     }
 
     // #18 (runner): a backup that fails to start shows the duration of the previous backup
@@ -1337,6 +1469,24 @@ public class BackupHistoryTests : ClusterTestBase
             await session.StoreAsync(new User { Name = "RavenDB-19358" }, id);
             await session.SaveChangesAsync();
         }
+    }
+
+    private static Task StoreHistoryEntryAsync(RavenServer server, string databaseName, long taskId, DateTime createdAt, DateTime? lastFullBackup, bool isFull = true, string error = null)
+    {
+        var status = new PeriodicBackupStatus
+        {
+            TaskId = taskId,
+            IsFull = isFull,
+            BackupType = BackupType.Backup,
+            NodeTag = server.ServerStore.NodeTag,
+            LastFullBackup = lastFullBackup,
+            LastFullBackupInternal = isFull ? createdAt : lastFullBackup,
+            LastIncrementalBackupInternal = isFull ? null : createdAt,
+            Error = error == null ? null : new Error { Exception = error, At = createdAt }
+        };
+
+        var entry = new BackupHistoryEntry(status, "RavenDB-19358", BackupTrigger.Scheduled, skipped: false);
+        return server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(databaseName, taskId, entry, new BackupResult())]));
     }
 
     private static long CountStoredEntries(RavenServer server)
