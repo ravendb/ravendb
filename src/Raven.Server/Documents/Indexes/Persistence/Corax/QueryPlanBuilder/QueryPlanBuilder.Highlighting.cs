@@ -34,23 +34,20 @@ internal static partial class QueryPlanBuilder
         if (clause.FieldName == null)
             return; // can happen if we have a method, etc
 
-        if (clause.ClauseType is ClauseType.Equals or ClauseType.NotEquals)
-        {
-            if (exec.PackedParamValue.IsNone || // ignore null values that are == / != 
-                (exec.PackedParamValue.ValueType == PackedParam.TypeString && queryExec.StringValues[exec.PackedParamValue.Param1] == null))
-                return;
-        }
-
         if (highlightingTerms.TryGetValue(clause.FieldName, out var existingTerm))
         {
             existingTerm.Values ??= GetHighlightingValues(clause, exec, queryExec);
             return;
         }
 
+        var values = GetHighlightingValues(clause, exec, queryExec);
+        if (values == null)
+            return; // exists(), spatial, vector and = null have no text to highlight
+
         var term = new CoraxHighlightingTermIndex
         {
             FieldName = clause.FieldName,
-            Values = GetHighlightingValues(clause, exec, queryExec)
+            Values = values
         };
         if (metadata.IsDynamic)
         {
@@ -70,24 +67,23 @@ internal static partial class QueryPlanBuilder
     {
         if (clause.ClauseType == ClauseType.Between)
         {
-            return new List<string>
-            {
-                FormatValueFromPlan(exec.PackedParamValue, queryExec, exec.PackedParamValue.Param1), 
-                FormatValueFromPlan(exec.PackedParamValue, queryExec, exec.PackedParamValue.Param2)
-            };
+            var low = FormatValueFromPlan(exec.PackedParamValue, queryExec, exec.PackedParamValue.Param1);
+            var high = FormatValueFromPlan(exec.PackedParamValue, queryExec, exec.PackedParamValue.Param2);
+            return low == null || high == null ? low ?? high : new List<string> { low, high }; // an open bound formats as null
         }
 
-        if (clause.ClauseType is ClauseType.In or ClauseType.AllIn && (exec.InTermCount > 0 || exec.HasNullTerm))
+        if (clause.ClauseType is ClauseType.In or ClauseType.AllIn)
         {
-            var terms = new List<string>(exec.InTermCount + (exec.HasNullTerm ? 1 : 0));
+            if (exec.InTermCount == 0)
+                return null; // an empty or all-null IN
+
+            var terms = new List<string>(exec.InTermCount);
             for (int t = 0; t < exec.InTermCount; t++)
             {
                 PackedParam packed = exec.PackedParamValue.WithTermOffset(t);
                 terms.Add(FormatValueFromPlan(packed, queryExec, packed.Param1));
             }
 
-            if (exec.HasNullTerm)
-                terms.Add(null);
             return terms;
         }
 

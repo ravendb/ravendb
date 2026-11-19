@@ -87,7 +87,9 @@ internal static partial class QueryPlanBuilder
         var template = BuildTemplate(planParams);
 
         var exec = new BuildResolver(template, planParams, builderParameters, walkerCtx).Resolve();
-        return InstantiateBitmapPipeline(exec.Plan, exec, planParams, builderParameters, walkerCtx, highlightingTerms, wantTimings, token);
+        if (highlightingTerms != null)
+            PopulateHighlightingTerms(exec, highlightingTerms, planParams.Metadata);
+        return InstantiateBitmapPipeline(exec.Plan, exec, planParams, builderParameters, walkerCtx, wantTimings, token);
     }
 
     public static CompiledQuery BuildSortedQuery(PlanParameters planParams,
@@ -101,10 +103,12 @@ internal static partial class QueryPlanBuilder
         var template = BuildTemplate(planParams);
 
         var exec = new BuildResolver(template, planParams, builderParameters, walkerCtx).Resolve();
+        if (highlightingTerms != null)
+            PopulateHighlightingTerms(exec, highlightingTerms, planParams.Metadata);
         var orderByFields = GetSortMetadata(builderParameters, exec.Plan);
         // A single vector-search post-filter already streams its output in score order, we can skip the sorting step then
         exec.VectorPostFilterProvidesScoreOrder = VectorPostFilterProvidesResultOrder(exec, builderParameters, orderByFields);
-        var (queryMatch,  innerMatch) = Instantiate(exec, orderByFields, planParams, builderParameters, walkerCtx, highlightingTerms, wantTimings, token);
+        var (queryMatch,  innerMatch) = Instantiate(exec, orderByFields, planParams, builderParameters, walkerCtx, wantTimings, token);
         return new(queryMatch, innerMatch, queryMatch == innerMatch ? null : queryMatch, exec, builderParameters, orderByFields);
     }
 
@@ -322,7 +326,6 @@ internal static partial class QueryPlanBuilder
         PlanParameters planParams,
         QueryBuilderParameters builderParameters,
         ResolutionContext walkerCtx,
-        Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms,
         bool wantTimings,
         CancellationToken token)
     {
@@ -334,9 +337,6 @@ internal static partial class QueryPlanBuilder
             return InstantiateAllEntriesPostFilter(exec, builderParameters, walkerCtx, wantTimings);
 
         var (resolvedMatches, leaves) = ResolveAllSlots(exec, walkerCtx, planParams.HasBoost);
-
-        if (highlightingTerms != null)
-            PopulateHighlightingTerms(exec, highlightingTerms, planParams.Metadata);
 
         var compiledMatch = new CompiledQueryMatch(
             compiledPlan, exec, compiledPlan.RequiredBitmaps, compiledPlan.OpCount, resolvedMatches, leaves,
