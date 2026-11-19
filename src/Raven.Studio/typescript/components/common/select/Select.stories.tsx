@@ -138,6 +138,6 @@ export const WithLicenseBadge: StoryObj = {
         </div>
     ),
     play: async ({ canvasElement }) => {
-        await userEvent.click(within(canvasElement).getByRole("combobox", { name: LICENSE_SELECT_LABEL }));
+        await userEvent.click(await within(canvasElement).findByRole("combobox", { name: LICENSE_SELECT_LABEL }));
     },
 };
