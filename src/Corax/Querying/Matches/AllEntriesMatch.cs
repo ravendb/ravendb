@@ -22,13 +22,17 @@ namespace Corax.Querying.Matches
 
         public AllEntriesMatch(IndexSearcher searcher, Transaction tx)
         {
-            _count = searcher.NumberOfEntries;
-            if (_count == 0)
+            // the index's entry counter can drift, the lookup holds exactly the entries we read
+            var entriesToLocation = searcher.NumberOfEntries == 0 ? null : tx.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+            if (entriesToLocation == null || entriesToLocation.NumberOfEntries == 0)
             {
+                _count = 0;
                 _entriesPagesIt = new Lookup<Int64LookupKey>.ForwardIterator();
                 return;
             }
-            _entriesPagesIt = tx.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice).Iterate();
+
+            _count = entriesToLocation.NumberOfEntries;
+            _entriesPagesIt = entriesToLocation.Iterate();
             _entriesPagesIt.Reset();
         }
 
