@@ -518,7 +518,10 @@ public class ServerBackupRunnerTests : ClusterTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task DecisionLogWatchMustCountADecisionRepeatedWhileReadingTheSnapshot()
     {
-        using var server = GetNewServer();
+        using var server = GetNewServer(new ServerCreationOptions
+        {
+            CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Backup.BackupRunnerFrequency)] = "3600" }
+        });
         using var store = GetDocumentStore(new Options { Server = server });
         await StoreDocument(store);
         var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
@@ -608,6 +611,28 @@ public class ServerBackupRunnerTests : ClusterTestBase
         {
             using (notificationCenter.Storage.Read(id, out var stored))
                 return stored != null && stored.Json.TryGet(nameof(AlertRaised.Message), out string message) ? message : null;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public void BackupAlertsOfDatabasesThatAreNotLoadedMustNotReplaceEachOther()
+    {
+        using var server = GetNewServer();
+        var runner = server.ServerStore.ServerBackupRunner;
+        var databases = new[] { GetDatabaseName(), GetDatabaseName() };
+
+        foreach (var database in databases)
+            runner.GetTaskStatus(new PeriodicBackupConfiguration { TaskId = 1, FullBackupFrequency = "* * * * *" }, database, out _);
+
+        foreach (var database in databases)
+        {
+            var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, database);
+            using (server.ServerStore.NotificationCenter.Storage.Read(id, out var stored))
+            {
+                Assert.True(stored != null, $"The backup alert of '{database}' was replaced by the alert of another database in the server notification center.");
+                Assert.True(stored.Json.TryGet(nameof(AlertRaised.Database), out string alertDatabase), $"The stored alert '{id}' has no database.");
+                Assert.Equal(database, alertDatabase);
+            }
         }
     }
 

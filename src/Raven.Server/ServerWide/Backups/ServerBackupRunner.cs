@@ -314,9 +314,9 @@ public class ServerBackupRunner : IDisposable
 
             AddDatabaseAlert(backupState.DatabaseName, AlertRaised.Create(
                 backupState.DatabaseName,
-                $"Periodic Backup task: '{backupState.Configuration.Name}'",
-                $"Failed to start the backup task '{backupState.Configuration.Name}'. The next backup will be rescheduled.",
-                AlertReason.PeriodicBackup, NotificationSeverity.Error, details: new ExceptionDetails(e)));
+                $"Failed to start the backup task: '{backupState.Configuration.Name}'",
+                "The next backup will be rescheduled",
+                AlertReason.PeriodicBackup, NotificationSeverity.Error, key: backupState.DatabaseName, details: new ExceptionDetails(e)));
         }
         catch (Exception reportError)
         {
@@ -325,7 +325,7 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    private void FinishRunning(DatabaseBackupState backupState, BackupDecisionCategory category, string detail, string reason, bool reschedule = false)
+    private void FinishRunning(DatabaseBackupState backupState, BackupDecisionCategory category, string detail, string reason, bool reschedule = false, TimeSpan? elapsed = null)
     {
         backupState.AddToDecisionLog(category, detail, reason, DateTime.UtcNow);
 
@@ -357,7 +357,7 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            _serverStore.ConcurrentBackupsCounter.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, null, _logger);
+            _serverStore.ConcurrentBackupsCounter.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, elapsed, _logger);
         }
         catch (Exception e)
         {
@@ -452,7 +452,7 @@ public class ServerBackupRunner : IDisposable
 
                 backupState.BackupStatus = runningBackupStatus;
 
-                FinishRunning(backupState, BackupDecisionCategory.Completed, detail: null, reason: null, reschedule: true);
+                FinishRunning(backupState, BackupDecisionCategory.Completed, detail: null, reason: null, reschedule: true, elapsed: backupResult?.Elapsed);
                 tcs.SetResult(backupResult);
             }
 
@@ -791,7 +791,8 @@ public class ServerBackupRunner : IDisposable
                     "Periodic Backup",
                     message,
                     AlertReason.PeriodicBackup,
-                    NotificationSeverity.Info));
+                    NotificationSeverity.Info,
+                    key: databaseName));
             }
 
             responsibleNodeTag = null;
