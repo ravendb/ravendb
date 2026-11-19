@@ -6,19 +6,19 @@ using Voron.Global;
 namespace Voron.Impl.Paging;
 
 /// <summary>
-/// One bit per page of a data file, set when the page is hinted. Each 4 KB of bits (256 MB of pages) has the policy's clock
-/// of its last clearing: a chunk older than the policy's stale time is cleared on its next use, so a page that may have
-/// left the page cache is hinted again.
+/// One bit per page of a data file, set when the page is hinted. Each 4 KB of bits (256 MB of pages) has the page cache
+/// epoch of its last clearing: a chunk older than <see cref="PrefetchPolicy.StaleAfterEpochs"/> is cleared on its next use,
+/// so a page that may have left the page cache is hinted again.
 /// </summary>
 internal sealed class PageHints
 {
     internal const int ChunkLongs = 4 * Constants.Size.Kilobyte / sizeof(long);
     private const int ChunkShift = 9; // log2(ChunkLongs)
 
-    private sealed class Bitmap(long[] bits, int[] clearedAt)
+    private sealed class Bitmap(long[] bits, long[] clearedAt)
     {
         public readonly long[] Bits = bits;
-        public readonly int[] ClearedAt = clearedAt;
+        public readonly long[] ClearedAt = clearedAt;
     }
 
     private readonly PrefetchPolicy _policy;
@@ -28,7 +28,7 @@ internal sealed class PageHints
     {
         _policy = policy;
         var longs = (numberOfPages + 63) / 64;
-        _bitmap = new Bitmap(new long[longs], NewClearedAt(Chunks(longs), 0, policy.Clock));
+        _bitmap = new Bitmap(new long[longs], NewClearedAt(Chunks(longs), 0, policy.PageCacheEpoch));
     }
 
     /// <summary>False when the page is already marked.</summary>
@@ -71,18 +71,17 @@ internal sealed class PageHints
         var bitmap = _bitmap;
         if (lastIndex >= bitmap.Bits.Length)
             bitmap = Grow(lastIndex);
-        var now = _policy.Clock;
-        var staleAfter = _policy.StaleAfterSeconds;
+        var now = _policy.PageCacheEpoch;
         for (var chunk = firstIndex >> ChunkShift; chunk <= lastIndex >> ChunkShift; chunk++)
         {
             var clearedAt = Volatile.Read(ref bitmap.ClearedAt[chunk]);
-            if (now - clearedAt >= staleAfter)
+            if (now - clearedAt >= PrefetchPolicy.StaleAfterEpochs)
                 Clear(bitmap, (int)chunk, clearedAt, now);
         }
         return bitmap;
     }
 
-    private static void Clear(Bitmap bitmap, int chunk, int clearedAt, int now)
+    private static void Clear(Bitmap bitmap, int chunk, long clearedAt, long now)
     {
         if (Interlocked.CompareExchange(ref bitmap.ClearedAt[chunk], now, clearedAt) != clearedAt)
             return; // another reader clears it
@@ -100,7 +99,7 @@ internal sealed class PageHints
                 return bitmap;
             var bits = new long[Math.Max(index + 1, bitmap.Bits.Length + bitmap.Bits.Length / 4)];
             bitmap.Bits.CopyTo(bits, 0);
-            var clearedAt = NewClearedAt(Chunks(bits.Length), bitmap.ClearedAt.Length, _policy.Clock);
+            var clearedAt = NewClearedAt(Chunks(bits.Length), bitmap.ClearedAt.Length, _policy.PageCacheEpoch);
             bitmap.ClearedAt.CopyTo(clearedAt, 0);
             var grown = new Bitmap(bits, clearedAt);
             if (Interlocked.CompareExchange(ref _bitmap, grown, bitmap) == bitmap)
@@ -110,9 +109,9 @@ internal sealed class PageHints
 
     private static long Chunks(long longs) => (longs + ChunkLongs - 1) / ChunkLongs;
 
-    private static int[] NewClearedAt(long chunks, int from, int now)
+    private static long[] NewClearedAt(long chunks, int from, long now)
     {
-        var clearedAt = new int[Math.Max(chunks, 1)];
+        var clearedAt = new long[Math.Max(chunks, 1)];
         Array.Fill(clearedAt, now, from, clearedAt.Length - from);
         return clearedAt;
     }

@@ -34,5 +34,6 @@ public class PrefetchStatsEndpointTests(ITestOutputHelper output) : RavenTestBas
                 Assert.Equal(JsonValueKind.Null, value.ValueKind);
         }
         Assert.True(root.TryGetProperty("SegmentReadAheadWarmUp", out _));
+        Assert.True(root.GetProperty("PageCacheEpoch").GetInt64() >= 0);
     }
 }

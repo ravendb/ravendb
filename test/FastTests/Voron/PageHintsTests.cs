@@ -7,6 +7,7 @@ namespace FastTests.Voron;
 public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private const long PagesPerChunk = PageHints.ChunkLongs * 64L;
+    private const long FilePages = 1 << 20;
 
     [RavenFact(RavenTestCategory.Voron)]
     public void WithoutEvictionsAMarkStays()
@@ -21,23 +22,26 @@ public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
             policy.Tick(freeBytes: 0);
         }
 
-        Assert.Equal(int.MaxValue, policy.StaleAfterSeconds);
+        Assert.Equal(0, policy.PageCacheEpoch);
         Assert.False(hints.TryMark(0));
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void TheStaleTimeIsHalfTheTurnoverOfTheLastTenSeconds()
+    public void AMarkIsStaleAfterHalfThePageCacheIsEvictedHoweverTheEvictionsAreSpread()
     {
         var policy = new PrefetchPolicy(totalMemoryBytes: 0, startTimer: false);
-        policy.AddEvictions(evictedFilePages: 100, filePages: 100_000);
-        Assert.Equal(500, policy.StaleAfterSeconds); // 1,000 s to evict the whole cache
+        var hints = new PageHints(policy, PagesPerChunk);
+        Assert.True(hints.TryMark(0));
 
-        for (var i = 0; i < 9; i++)
-            policy.AddEvictions(evictedFilePages: 0, filePages: 100_000);
-        Assert.Equal(5_000, policy.StaleAfterSeconds); // the same 100 pages over 10 seconds
+        policy.AddEvictions(evictedFilePages: FilePages / 4, filePages: FilePages); // a burst
+        for (var i = 0; i < 100; i++)
+            policy.AddEvictions(evictedFilePages: 0, filePages: FilePages);
+        policy.AddEvictions(evictedFilePages: FilePages / 4 - 1, filePages: FilePages);
+        Assert.False(hints.TryMark(0));
 
-        policy.AddEvictions(evictedFilePages: 0, filePages: 100_000);
-        Assert.Equal(int.MaxValue, policy.StaleAfterSeconds);
+        policy.AddEvictions(evictedFilePages: 1, filePages: FilePages);
+        Assert.Equal(PrefetchPolicy.StaleAfterEpochs, policy.PageCacheEpoch);
+        Assert.True(hints.TryMark(0));
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -49,21 +53,18 @@ public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
         foreach (var page in pages)
             Assert.True(hints.TryMark(page));
 
-        policy.AddEvictions(evictedFilePages: 1, filePages: 20); // stale after 10 s
-        for (var i = 0; i < 9; i++)
-            policy.Tick(freeBytes: 0);
+        policy.AddEvictions(evictedFilePages: FilePages / 2 - 1, filePages: FilePages);
         Assert.False(hints.TryMark(pages[0]));
 
-        policy.Tick(freeBytes: 0); // 10 s
+        policy.AddEvictions(evictedFilePages: 1, filePages: FilePages); // half the cache replaced
         Assert.True(hints.TryMark(pages[0]));
         Assert.True(hints.TryMark(pages[1]));
-        Assert.False(hints.TryMark(pages[0])); // cleared at 10 s, marked again
+        Assert.False(hints.TryMark(pages[0])); // cleared, marked again
         Assert.False(hints.TryMark(PagesPerChunk + 1));
 
-        for (var i = 0; i < 5; i++)
-            policy.Tick(freeBytes: 0);
+        policy.AddEvictions(evictedFilePages: FilePages / 4, filePages: FilePages);
         Assert.True(hints.TryMark(pages[2])); // a chunk not used in between: cleared on its first use
-        Assert.False(hints.TryMark(pages[0])); // cleared 5 s ago
+        Assert.False(hints.TryMark(pages[0])); // cleared 4 epochs ago
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -90,8 +91,7 @@ public class PageHintsTests(ITestOutputHelper output) : NoDisposalNeeded(output)
         Assert.False(hints.TryMark(1_000_000));
         Assert.False(hints.TryMark(5));
 
-        policy.AddEvictions(evictedFilePages: 1, filePages: 2); // stale after 1 s
-        policy.Tick(freeBytes: 0);
+        policy.AddEvictions(evictedFilePages: 500, filePages: 1000); // half the page cache replaced
         Assert.True(hints.TryMark(1_000_000));
         Assert.True(hints.TryMark(5));
     }
