@@ -7,6 +7,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -228,6 +229,41 @@ namespace SlowTests.Core.Querying
 
                 Indexes.WaitForIndexing(store);
                 AssertMultiValuedCountsAndPages(store, orders);
+            }
+        }
+
+        // An update that leaves a document with nothing to index removes its Corax entry, which used to leave the index's
+        // entry counter one too high. The total of a query without a where clause must still equal the number of entries
+        // the query reads, after several such updates and after a document gets its value back.
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CountWithoutWhere_AfterUpdatesLeaveEntriesEmpty(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                new Orders_CompanyOnly().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 20; i++)
+                        session.Store(new Order { Company = i % 2 == 0 ? "A" : "B", Name = $"order {i}" }, $"orders/{i}");
+
+                    session.SaveChanges();
+                }
+
+                Indexes.WaitForIndexing(store);
+                AssertTotalsEqualWhatIsRead(store);
+
+                for (var i = 0; i < 5; i++)
+                {
+                    store.Operations.Send(new PatchOperation($"orders/{i}", null, new PatchRequest { Script = "delete this.Company" }));
+                    Indexes.WaitForIndexing(store);
+                    AssertTotalsEqualWhatIsRead(store);
+                }
+
+                store.Operations.Send(new PatchOperation("orders/0", null, new PatchRequest { Script = "this.Company = 'A'" }));
+                Indexes.WaitForIndexing(store);
+                AssertTotalsEqualWhatIsRead(store);
             }
         }
 
@@ -527,6 +563,20 @@ namespace SlowTests.Core.Querying
             }
         }
 
+        private static void AssertTotalsEqualWhatIsRead(IDocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                var read = session.Query<Order, Orders_CompanyOnly>().Take(1000).ToList();
+
+                Assert.Equal(read.Count, session.Query<Order, Orders_CompanyOnly>().Count());
+                Assert.Equal(read.Count(x => x.Company == "A"), session.Query<Order, Orders_CompanyOnly>().Count(x => x.Company == "A"));
+
+                session.Query<Order, Orders_CompanyOnly>().Statistics(out var stats).Take(2).ToList();
+                Assert.Equal(read.Count, stats.TotalResults);
+            }
+        }
+
         private static void AssertMultiMapCountsAndPages(IDocumentStore store, List<Order> orders, List<Invoice> invoices)
         {
             var companies = orders.Select(x => (x.Id, x.Company)).Concat(invoices.Select(x => (x.Id, x.Company))).ToList();
@@ -660,6 +710,18 @@ namespace SlowTests.Core.Querying
                                 select new
                                 {
                                     Lines_Product = line.Product
+                                };
+            }
+        }
+
+        private class Orders_CompanyOnly : AbstractIndexCreationTask<Order>
+        {
+            public Orders_CompanyOnly()
+            {
+                Map = orders => from o in orders
+                                select new
+                                {
+                                    o.Company
                                 };
             }
         }
