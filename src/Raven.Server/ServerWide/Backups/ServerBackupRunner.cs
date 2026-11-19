@@ -249,6 +249,9 @@ public class ServerBackupRunner : IDisposable
     {
         try
         {
+            if (TryGetTestingStuff(backupState.DatabaseName, out var startFailureTestingStuff) && startFailureTestingStuff.SimulateFailedBackupStart)
+                throw new InvalidOperationException(nameof(TestingStuffInternal.SimulateFailedBackupStart));
+
             var localBackupStatus = backupState.BackupStatus = backupState.GetMostUpdatedLocalBackupStatus(inMemoryBackupStatus: backupState.BackupStatus);
             var backupToLocalFolder = BackupConfiguration.CanBackupUsing(backupState.Configuration.LocalSettings);
             if (BackupUtils.IsFullBackupRequired(localBackupStatus, backupState.Configuration))
@@ -1753,6 +1756,7 @@ public class ServerBackupRunner : IDisposable
         internal bool SimulateActiveByCurrentNode_UpdateConfigurations;
         internal bool SimulateDisableNodeStatus_UpdateConfigurations;
         internal bool SimulateFailedBackup;
+        internal bool SimulateFailedBackupStart;
         internal bool BackupStatusFromMemoryOnly;
 
         internal TaskCompletionSource<object> OnBackupTaskRunHoldBackupExecution;
