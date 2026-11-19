@@ -51,16 +51,15 @@ public static class WhereClauseNormalizer
                 return true;
             }
 
-            // exact() and boost() wrap a where clause of their own
-            case MethodExpression { Arguments.Count: > 0 } method when WrapsAWhereClause(method):
+            case MethodExpression method when TryGetWrappedWhereClause(method, out var argument):
             {
-                if (TryNormalize(method.Arguments[0], out var inner) == false)
+                if (TryNormalize(method.Arguments[argument], out var inner) == false)
                 {
                     normalized = method;
                     return false;
                 }
 
-                var arguments = new List<QueryExpression>(method.Arguments) { [0] = inner };
+                var arguments = new List<QueryExpression>(method.Arguments) { [argument] = inner };
                 normalized = new MethodExpression(method.Name, arguments) { Alias = method.Alias };
                 return true;
             }
@@ -71,9 +70,17 @@ public static class WhereClauseNormalizer
         }
     }
 
-    private static bool WrapsAWhereClause(MethodExpression method)
+    private static bool TryGetWrappedWhereClause(MethodExpression method, out int argument)
     {
-        return QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) is MethodType.Exact or MethodType.Boost;
+        argument = QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) switch
+        {
+            // exact() and boost() wrap a where clause of their own
+            MethodType.Exact or MethodType.Boost => 0,
+            MethodType.When => 1,
+            _ => -1
+        };
+
+        return argument >= 0 && argument < method.Arguments.Count;
     }
 
     private static bool TryNormalizeAndChain(BinaryExpression root, out QueryExpression normalized)
