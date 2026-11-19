@@ -23,6 +23,8 @@ public class StreamTarget : AbstractTarget
 
     private static readonly TargetCountGuardian RegisteredSockets = new();
 
+    private static readonly Lock WriteLocker = new();
+
     private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
 
     private StreamTarget()
@@ -45,7 +47,8 @@ public class StreamTarget : AbstractTarget
         {
             FlushPendingEntries();
 
-            registration.Dispose();
+            lock (WriteLocker)
+                registration.Dispose();
         });
     }
 
@@ -72,16 +75,19 @@ public class StreamTarget : AbstractTarget
 
             var toWrite = new ReadOnlySpan<byte>(context.Stream.GetBuffer(), 0, (int)context.Stream.Length);
 
-            foreach (var stream in Streams)
+            lock (WriteLocker)
             {
-                try
+                foreach (var stream in Streams)
                 {
-                    stream.Write(toWrite);
-                    stream.Flush();
-                }
-                catch
-                {
-                    Streams.TryRemove(stream);
+                    try
+                    {
+                        stream.Write(toWrite);
+                        stream.Flush();
+                    }
+                    catch
+                    {
+                        Streams.TryRemove(stream);
+                    }
                 }
             }
         }
