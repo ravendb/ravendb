@@ -15,9 +15,10 @@ public class BackupGroup
         TaskId = taskId;
     }
     
-    public BackupGroup(BackupHistoryEntry entry, long taskId)
+    public BackupGroup(BackupHistoryEntry entry, long taskId, int? shardNumber)
     {
         TaskId = taskId;
+        ShardNumber = shardNumber;
         TaskName = entry.TaskName;
 
         switch (entry.BackupKind)
@@ -45,6 +46,7 @@ public class BackupGroup
     }
     
     public long TaskId { get; init; }
+    public int? ShardNumber { get; init; }
     public string TaskName { get; set; }
     public BackupHistoryEntry FullBackup { get; set; }
     public long IncrementalBackupsCount { get; set; }
@@ -72,6 +74,9 @@ public class BackupGroup
             [nameof(FullBackup)] = FullBackup,
             [nameof(IncrementalBackupsCount)] = IncrementalBackupsCount,
         };
+
+        if (ShardNumber.HasValue)
+            json[nameof(ShardNumber)] = ShardNumber;
 
         if (IncrementalBackups.Count > 0)
             json[nameof(IncrementalBackups)] = IncrementalBackups;

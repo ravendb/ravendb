@@ -276,18 +276,23 @@ public class BackupHistoryStorage
 
     public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
         RawDatabaseRecord databaseRecord,
+        int? shardNumber,
         bool includeIncrementals,
         long? requestedTaskId = null,
         long? requestedFullBackupCreatedAtTicks = null)
     {
         var backupHistory = new BackupHistory(databaseRecord.DatabaseName);
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
-        var taskIds = requestedTaskId.HasValue
-            ? [requestedTaskId.Value]
-            : GetTaskIds(context, table, databaseRecord.DatabaseName);
 
-        foreach (var taskId in taskIds)
-            PopulateBackupHistory(backupHistory, context, table, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
+        foreach (var source in GetHistorySources(databaseRecord, shardNumber))
+        {
+            var taskIds = requestedTaskId.HasValue
+                ? [requestedTaskId.Value]
+                : GetTaskIds(context, table, source.DatabaseName);
+
+            foreach (var taskId in taskIds)
+                PopulateBackupHistory(backupHistory, context, table, source, includeIncrementals, taskId, requestedFullBackupCreatedAtTicks);
+        }
 
         backupHistory.UpdateTaskNames(databaseRecord);
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
@@ -325,48 +330,59 @@ public class BackupHistoryStorage
         return false;
     }
 
-    private static void PopulateBackupHistory(BackupHistory backupHistory, TransactionOperationContext context, Table table, bool includeIncrementals, long taskId, long? fullBackupCreatedAtTicks)
+    private static IEnumerable<HistorySource> GetHistorySources(RawDatabaseRecord databaseRecord, int? shardNumber)
+    {
+        if (databaseRecord.IsSharded == false)
+            return [new HistorySource(databaseRecord.DatabaseName, ShardNumber: null)];
+
+        IEnumerable<int> shardNumbers = shardNumber.HasValue ? [shardNumber.Value] : databaseRecord.Sharding.Shards.Keys;
+        return shardNumbers.Select(shard => new HistorySource(ShardHelper.ToShardName(databaseRecord.DatabaseName, shard), shard));
+    }
+
+    private readonly record struct HistorySource(string DatabaseName, int? ShardNumber);
+
+    private static void PopulateBackupHistory(BackupHistory backupHistory, TransactionOperationContext context, Table table, HistorySource source, bool includeIncrementals, long taskId, long? fullBackupCreatedAtTicks)
     {
         if (includeIncrementals)
         {
-            using (BackupHistorySchema.GetPrimaryKeyPrefix(context.Allocator, backupHistory.DatabaseName, taskId, fullBackupCreatedAtTicks, out Slice prefixSlice))
+            using (BackupHistorySchema.GetPrimaryKeyPrefix(context.Allocator, source.DatabaseName, taskId, fullBackupCreatedAtTicks, out Slice prefixSlice))
             {
                 foreach ((_, Table.TableValueHolder result) in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, skip: 0))
                 {
                     var entry = GetBackupEntry(context, result.Reader);
-                    backupHistory.Add(entry, taskId);
+                    backupHistory.Add(entry, taskId, source.ShardNumber);
                 }
             }
         }
         else if (fullBackupCreatedAtTicks.HasValue)
         {
-            using (BackupHistorySchema.GetPrimaryKey(context.Allocator, backupHistory.DatabaseName, taskId, fullBackupCreatedAtTicks.Value, fullBackupCreatedAtTicks.Value, out Slice keySlice))
+            using (BackupHistorySchema.GetPrimaryKey(context.Allocator, source.DatabaseName, taskId, fullBackupCreatedAtTicks.Value, fullBackupCreatedAtTicks.Value, out Slice keySlice))
             {
                 if (table.ReadByKey(keySlice, out var value))
-                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, taskId, value);
+                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, source, taskId, value);
             }
         }
         else
         {
-            using (BackupHistorySchema.GetByBackupKindIndexKeyPrefix(context.Allocator, backupHistory.DatabaseName, taskId, BackupKind.Full, out var fullBackupPrefixSlice))
-            using (BackupHistorySchema.GetByBackupKindIndexKey(context.Allocator, backupHistory.DatabaseName, taskId, BackupKind.Full, fullBackupCreatedAtTicks: 1, createdAtTicks: 1, out var fullBackupStartSlice))
+            using (BackupHistorySchema.GetByBackupKindIndexKeyPrefix(context.Allocator, source.DatabaseName, taskId, BackupKind.Full, out var fullBackupPrefixSlice))
+            using (BackupHistorySchema.GetByBackupKindIndexKey(context.Allocator, source.DatabaseName, taskId, BackupKind.Full, fullBackupCreatedAtTicks: 1, createdAtTicks: 1, out var fullBackupStartSlice))
             {
                 foreach (var fullBackupSeekResult in table.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByBackupKindSlice], fullBackupStartSlice, fullBackupPrefixSlice, skip: 0))
-                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, taskId, fullBackupSeekResult.Result.Reader);
+                    AddBackupEntryWithIncrementalsCountOnly(context, table, backupHistory, source, taskId, fullBackupSeekResult.Result.Reader);
             }
         }
     }
 
-    private static void AddBackupEntryWithIncrementalsCountOnly(TransactionOperationContext context, Table table, BackupHistory backupHistory, long taskId, TableValueReader result)
+    private static void AddBackupEntryWithIncrementalsCountOnly(TransactionOperationContext context, Table table, BackupHistory backupHistory, HistorySource source, long taskId, TableValueReader result)
     {
         var entry = GetBackupEntry(context, result);
-        backupHistory.Add(entry, taskId);
+        backupHistory.Add(entry, taskId, source.ShardNumber);
 
-        using (BackupHistorySchema.GetByFullBackupIdIndexKeyPrefix(context.Allocator, backupHistory.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, out var prefixSlice))
-        using (BackupHistorySchema.GetByFullBackupIdIndexKey(context.Allocator, backupHistory.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, createdAtTicks: 1, out var startSlice))
+        using (BackupHistorySchema.GetByFullBackupIdIndexKeyPrefix(context.Allocator, source.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, out var prefixSlice))
+        using (BackupHistorySchema.GetByFullBackupIdIndexKey(context.Allocator, source.DatabaseName, taskId, entry.CreatedAt.Ticks, BackupKind.Incremental, createdAtTicks: 1, out var startSlice))
         {
             var count = table.SeekForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByFullBackupIdSlice], startSlice, prefixSlice, skip: 0).Count();
-            backupHistory.Groups.Single(group => group.FullBackup?.CreatedAt == entry.CreatedAt).IncrementalBackupsCount = count;
+            backupHistory.Groups.Single(group => group.TaskId == taskId && group.ShardNumber == source.ShardNumber && group.FullBackup?.CreatedAt == entry.CreatedAt).IncrementalBackupsCount = count;
         }
     }
 

@@ -29,7 +29,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupHistory));
-            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, includeIncrementals, requestedTaskId, fullBackupTicks));
+            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, shardNumber, includeIncrementals, requestedTaskId, fullBackupTicks));
             writer.WriteEndObject();
         }
     }
