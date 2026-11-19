@@ -84,6 +84,9 @@ namespace SlowTests.Issues
         // The pair sits inside exact(), which wraps a where clause of its own.
         private const string InsideExactShape = "CustomerId in ($p0) and exact(CreatedAt >= $p1 and CreatedAt < $p2) and EntityType in ($p3)";
 
+        // The pair sits inside when(), which wraps a where clause of its own.
+        private const string InsideWhenShape = "CustomerId in ($p0) and when($p1 != null, CreatedAt >= $p1 and CreatedAt < $p2) and EntityType in ($p3)";
+
         // The pair sits inside boost(), nested the way the LINQ provider nests it.
         private const string InsideBoostShape = "CustomerId in ($p0) and boost((EntityType in ($p3) and CreatedAt >= $p1) and CreatedAt < $p2, 2)";
 
@@ -483,6 +486,7 @@ namespace SlowTests.Issues
         [RavenData(UnderOrShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(InsideExactShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         [RavenData(InsideBoostShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
+        [RavenData(InsideWhenShape, SearchEngineMode = RavenSearchEngineMode.Corax)]
         public void CoraxRunsOneBoundedScanOnCreatedAtRegardlessOfShape(Options options, string where)
         {
             using (var store = GetDocumentStore(options))
@@ -524,6 +528,7 @@ namespace SlowTests.Issues
         [RavenData(UnderOrShape, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData(InsideExactShape, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData(InsideBoostShape, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(InsideWhenShape, SearchEngineMode = RavenSearchEngineMode.All)]
         public void FoldedQueriesKeepHalfOpenRangeSemantics(Options options, string where)
         {
             using (var store = GetDocumentStore(options))
@@ -1085,6 +1090,7 @@ namespace SlowTests.Issues
 
             Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where (Tag = 't' and Values >= 1) and Values < 5"));
             Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where Tag = 't' and Values between 1 and 4"));
+            Assert.Equal(new[] { "items/in-range" }, Query(store, "from index 'Items/ByTag' where when($flag != null, (Tag = 't' and Values >= 1) and Values < 5)", ("flag", 1)));
         }
 
         // N1: on a sharded database a query with skip > 0 is re-rendered from the cached AST and sent to the shards; the
