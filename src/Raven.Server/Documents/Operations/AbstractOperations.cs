@@ -129,13 +129,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
                     logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} completed successfully.");
             }
 
-            operation.State = notification.State = new OperationState
-            {
-                Progress = operationState.PersistProgressOnFaultedStatus ? operationState.Progress : null,
-                PersistProgressOnFaultedStatus = operationState.PersistProgressOnFaultedStatus,
-                Result = result,
-                Status = status
-            };
+            operation.State = notification.State = operationState.Finish(result, status);
 
             if (Monitor.TryEnter(locker) == false)
             {
