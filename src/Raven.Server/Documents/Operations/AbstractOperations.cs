@@ -88,9 +88,6 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         {
             var logger = GetLogger();
             operationDescription.EndTime = SystemTime.UtcNow;
-            
-            if (operationState.PersistProgressOnFaultedStatus == false)
-                operationState.Progress = null;
 
             IOperationResult result;
             OperationStatus status;
@@ -132,9 +129,9 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
                     logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} completed successfully.");
             }
 
-            operation.State = operationState = notification.State = new OperationState
+            operation.State = notification.State = new OperationState
             {
-                Progress = operationState.Progress,
+                Progress = operationState.PersistProgressOnFaultedStatus ? operationState.Progress : null,
                 PersistProgressOnFaultedStatus = operationState.PersistProgressOnFaultedStatus,
                 Result = result,
                 Status = status
