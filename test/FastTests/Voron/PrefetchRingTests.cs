@@ -42,7 +42,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                 var (pager, state) = Pager.Create(options, Path.Combine(path, $"{i}.voron"), 64 * 1024, Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch);
                 using (pager)
                 using (state)
-                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).IsCompleted); // nothing to wait for without a ring
+                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).AsTask().IsCompleted); // nothing to wait for without a ring
             }
         }
         finally
@@ -150,7 +150,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                     }
 
                     // read a moment ago: no group and no wait
-                    Assert.True(Pager.ReadPagesAhead(state, [3, 17]).IsCompletedSuccessfully);
+                    Assert.True(Pager.ReadPagesAhead(state, [3, 17]).AsTask().IsCompletedSuccessfully);
                     Assert.Equal(usesIoUring ? 1 : 0, ring.GetStats()!.Value.ReadGroups);
 
                     // only the new pages are read, in one group
@@ -446,7 +446,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                         Assert.Equal(enablePrefetching, info.Ticket != -1);
                     if (PlatformDetails.RunningOnLinux)
                         Assert.False(HasRandomReadAdvice(state.ReadAddress)); // reclaim would ignore the accesses through the mapping
-                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).IsCompleted);
+                    Assert.True(Pager.ReadPagesAhead(state, [1, 2, 3]).AsTask().IsCompleted);
                 }
             }
         }
@@ -549,7 +549,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
         using var noRing = new PrefetchRing(ringEntries: 8, maxFiles: 0, queueSize: 64);
         WithPage5InMemory(nameof(ReadAheadWithoutARingReadsOnlyThePagesNotInMemory), Pal.OpenFileFlags.RandomAccess | Pal.OpenFileFlags.Prefetch, (state, page) =>
         {
-            Assert.True(Pager.ReadPagesAhead(state, new long[] { 3, 5, 7 }).IsCompletedSuccessfully);
+            Assert.True(Pager.ReadPagesAhead(state, new long[] { 3, 5, 7 }).AsTask().IsCompletedSuccessfully);
 
             var expected = Constants.Storage.PageSize / Environment.SystemPageSize;
             Assert.Equal(expected, WaitForResident((byte*)page(3), expected));
@@ -633,7 +633,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                         return;
                     }
 
-                    Assert.True(Pager.ReadPagesAhead(state, [2, 4, 8]).IsCompletedSuccessfully);
+                    Assert.True(Pager.ReadPagesAhead(state, [2, 4, 8]).AsTask().IsCompletedSuccessfully);
                     Assert.Equal(0, ring.GetStats()!.Value.ReadGroups);
                 }
             }
@@ -724,7 +724,7 @@ public unsafe class PrefetchRingTests(ITestOutputHelper output) : NoDisposalNeed
                     if (ring.CanWaitForPages)
                     {
                         Assert.True(ring.TryRentSlot(out var slot));
-                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets).IsCompleted); // dropped: nothing to wait for
+                        Assert.True(ring.WaitForPages(slot, info.Ticket, offsets).AsTask().IsCompleted); // dropped: nothing to wait for
                         Assert.True(ring.TryRentSlot(out slot));
                         Assert.True(ring.WaitForPages(slot, info.Ticket, offsets.AsSpan(0, 24)).AsTask().Wait(TimeSpan.FromSeconds(10)));
                     }

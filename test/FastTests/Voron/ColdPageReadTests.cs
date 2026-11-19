@@ -225,17 +225,19 @@ public unsafe class ColdPageReadTests(ITestOutputHelper output) : StorageTest(ou
 
     private struct PageRange(long first, int count) : IEnumerator<long>
     {
+        private readonly long _first = first;
+        private readonly long _end = first + count;
         private long _next = first;
         public long Current { get; private set; }
         object IEnumerator.Current => Current;
         public bool MoveNext()
         {
-            if (_next >= first + count)
+            if (_next >= _end)
                 return false;
             Current = _next++;
             return true;
         }
-        public void Reset() => _next = first;
+        public void Reset() => _next = _first;
         public void Dispose() { }
     }
 
