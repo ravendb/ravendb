@@ -3,6 +3,7 @@
   <PropertyGroup>
     <!-- Roslyn loads generators as netstandard2.0 assemblies -->
     <TargetFramework>netstandard2.0</TargetFramework>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IsPackable>false</IsPackable>
