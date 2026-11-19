@@ -70,12 +70,12 @@ namespace FastTests.Voron
         }
 
         [RavenFact(RavenTestCategory.Voron)]
-        public void FirstTouchHintIgnoresPagesOutsideTheFile()
+        public void PageHintIgnoresPagesOutsideTheFile()
         {
             RequireFileBasedPager();
             var state = Env.CurrentStateRecord.DataPagerState;
             foreach (var page in new[] { -1L, -64L, long.MinValue, long.MaxValue })
-                Env.HintFirstTouch(state, page);
+                global::Voron.Impl.Paging.Pager.HintPage(state, page);
         }
 
         private unsafe ulong DataFileDeviceId()
