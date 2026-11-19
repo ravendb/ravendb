@@ -24,16 +24,7 @@ public sealed class ClauseExecution : IComparable<ClauseExecution>
 
     public ClauseType? SentinelRewriteType;
 
-    public ClauseType ClauseType
-    {
-        get;
-        private set
-        {
-            if (value is ClauseType.NotEquals)
-                IsNegated = true;
-            field = value;
-        }
-    }
+    public ClauseType ClauseType { get; private set; }
     
     public bool IsNegated;
 
