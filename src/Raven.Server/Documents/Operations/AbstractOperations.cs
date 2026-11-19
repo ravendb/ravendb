@@ -164,7 +164,11 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
 
         void ProgressNotification(IOperationProgress progress)
         {
-            notification.State.Progress = progress;
+            var state = notification.State;
+            if (state.Status != OperationStatus.InProgress)
+                return;
+
+            state.Progress = progress;
             RaiseNotifications(notification, operation);
         }
     }
