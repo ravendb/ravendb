@@ -232,14 +232,6 @@ public sealed class BackupDecisionLogFilter
 
         return taskId;
     }
-
-    internal static BackupDecisionCategory ParseCategory(string value)
-    {
-        if (Enum.TryParse<BackupDecisionCategory>(value, ignoreCase: true, out var category) == false || Enum.IsDefined(category) == false)
-            throw new BadRequestException($"Invalid category '{value}'. Valid categories are: {string.Join(", ", Enum.GetNames<BackupDecisionCategory>())}.");
-
-        return category;
-    }
 }
 
 public sealed class BackupDecisionLogDetails : IDynamicJson

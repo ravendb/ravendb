@@ -19,6 +19,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -439,6 +440,21 @@ namespace Raven.Server.Web
                 ThrowInvalidEnum(typeof(T), name, value);
 
             return (T)result;
+        }
+
+        internal HashSet<T> GetEnumValuesQueryString<T>(string name) where T : struct, Enum
+        {
+            var values = new HashSet<T>();
+
+            foreach (var value in GetStringValuesQueryString(name, required: false))
+            {
+                if (value.Contains(',') || Enum.TryParse<T>(value, ignoreCase: true, out var result) == false || Enum.IsDefined(result) == false)
+                    throw new BadRequestException($"Invalid {name} '{value}'. Valid values are: {string.Join(", ", Enum.GetNames<T>())}.");
+
+                values.Add(result);
+            }
+
+            return values;
         }
 
         [DoesNotReturn]

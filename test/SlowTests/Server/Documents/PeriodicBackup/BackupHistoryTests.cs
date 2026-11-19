@@ -659,6 +659,16 @@ public class BackupHistoryTests : ClusterTestBase
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldRejectSeveralTriggersInOneValue()
+    {
+        using var store = GetDocumentStore(new Options { RunInMemory = true });
+
+        using var response = await GetFromEndpointAsync(store, "history", $"database={store.Database}&trigger=Scheduled,BackupNow");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     // #8: a deleted task's history is hidden and its name is lost
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistory_ShouldShowTheHistoryOfADeletedTaskWithItsName()

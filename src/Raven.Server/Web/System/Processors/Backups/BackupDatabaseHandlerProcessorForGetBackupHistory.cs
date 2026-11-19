@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -25,12 +27,33 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         if (fullBackupTicks.HasValue && requestedTaskId.HasValue == false)
             throw new ArgumentException($"When requesting specific backup ({nameof(fullBackupTicks)}), `taskId` must be specified", nameof(requestedTaskId));
 
+        var query = new BackupHistoryQuery
+        {
+            ShardNumber = shardNumber,
+            TaskId = requestedTaskId,
+            FullBackupTicks = fullBackupTicks,
+            IncludeIncrementals = includeIncrementals,
+            From = GetUtcDateTimeQueryString("from"),
+            To = GetUtcDateTimeQueryString("to"),
+            TaskName = RequestHandler.GetStringQueryString("taskName", required: false),
+            Triggers = RequestHandler.GetEnumValuesQueryString<BackupTrigger>("trigger"),
+            BackupTypes = RequestHandler.GetEnumValuesQueryString<BackupType>("backupType"),
+            Start = RequestHandler.GetStart(),
+            PageSize = RequestHandler.GetPageSize()
+        };
+
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupHistory));
-            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, shardNumber, includeIncrementals, requestedTaskId, fullBackupTicks));
+            writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, query));
             writer.WriteEndObject();
         }
+    }
+
+    private DateTime? GetUtcDateTimeQueryString(string name)
+    {
+        var value = RequestHandler.GetDateTimeQueryString(name, required: false);
+        return value?.Kind == DateTimeKind.Local ? value.Value.ToUniversalTime() : value;
     }
 }

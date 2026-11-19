@@ -235,35 +235,67 @@ public class BackupHistoryStorage
         }
     }
 
-    public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context,
-        RawDatabaseRecord databaseRecord,
-        int? shardNumber,
-        bool includeIncrementals,
-        long? requestedTaskId = null,
-        long? requestedFullBackupCreatedAtTicks = null)
+    public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context, RawDatabaseRecord databaseRecord, BackupHistoryQuery query)
     {
         var backupHistory = new BackupHistory(databaseRecord.DatabaseName);
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
-        foreach (var source in GetHistorySources(databaseRecord, shardNumber))
+        foreach (var source in GetHistorySources(databaseRecord, query.ShardNumber))
         {
-            var taskIds = requestedTaskId.HasValue
-                ? [requestedTaskId.Value]
+            var taskIds = query.TaskId.HasValue
+                ? [query.TaskId.Value]
                 : GetTaskIds(context.Allocator, table, source.DatabaseName);
 
             foreach (var taskId in taskIds)
             {
-                var entries = requestedFullBackupCreatedAtTicks.HasValue
-                    ? ReadGroupEntries(context, table, source.DatabaseName, taskId, requestedFullBackupCreatedAtTicks.Value)
-                    : ReadTaskEntries(context, table, source.DatabaseName, taskId);
+                var currentTaskName = databaseRecord.PeriodicBackups.FirstOrDefault(configuration => configuration.TaskId == taskId)?.Name;
+                if (currentTaskName != null && query.MatchesTaskName(currentTaskName) == false)
+                    continue;
+
+                var entries = query.FullBackupTicks.HasValue
+                    ? ReadGroupEntries(context, table, source.DatabaseName, taskId, query.FullBackupTicks.Value)
+                    : ReadTaskEntries(context, table, source.DatabaseName, taskId, query.From, query.To);
 
                 foreach (var entry in entries)
-                    backupHistory.Add(entry, taskId, source.ShardNumber, includeIncrementals);
+                {
+                    var taskName = currentTaskName ?? entry.TaskName;
+                    if (query.IsInTimeRange(entry) == false || query.MatchesTaskName(taskName) == false)
+                        continue;
+
+                    backupHistory.Counts.Add(entry);
+
+                    if (query.MatchesValues(entry))
+                        backupHistory.Add(entry, taskId, source.ShardNumber, taskName, query.IncludeIncrementals);
+                }
             }
         }
 
-        backupHistory.UpdateTaskNames(databaseRecord);
+        backupHistory.ApplyPaging(query.Start, query.PageSize);
+
+        foreach (var group in backupHistory.Groups)
+            CompleteGroup(context, table, databaseRecord, group);
+
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
+    }
+
+    private static void CompleteGroup(TransactionOperationContext context, Table table, RawDatabaseRecord databaseRecord, BackupGroup group)
+    {
+        var index = BackupHistoryTableSchema.Indexes[ByGroupSlice];
+        var databaseName = group.ShardNumber.HasValue ? ShardHelper.ToShardName(databaseRecord.DatabaseName, group.ShardNumber.Value) : databaseRecord.DatabaseName;
+        var fullBackupTicks = group.FullBackup.CreatedAt.Ticks;
+
+        if (group.FullBackupInHistory == false)
+        {
+            using (BackupHistorySchema.GetGroupKey(context.Allocator, databaseName, group.TaskId, fullBackupTicks, BackupKind.Full, out var fullBackupKeySlice))
+            {
+                var fullBackup = table.SeekOneForwardFromPrefix(index, fullBackupKeySlice);
+                if (fullBackup != null)
+                {
+                    group.FullBackup = GetBackupEntry(context, fullBackup.Reader);
+                    group.FullBackupInHistory = true;
+                }
+            }
+        }
     }
 
     private static IEnumerable<HistorySource> GetHistorySources(RawDatabaseRecord databaseRecord, int? shardNumber)
@@ -277,12 +309,20 @@ public class BackupHistoryStorage
 
     private readonly record struct HistorySource(string DatabaseName, int? ShardNumber);
 
-    private static IEnumerable<BackupHistoryEntry> ReadTaskEntries(TransactionOperationContext context, Table table, string databaseName, long taskId)
+    private static IEnumerable<BackupHistoryEntry> ReadTaskEntries(TransactionOperationContext context, Table table, string databaseName, long taskId, DateTime? from, DateTime? to)
     {
+        var startAfterTicks = Math.Max((from?.Ticks ?? 0) - 1, 0);
+
         using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, startAfterTicks, out var startAfterSlice))
         {
-            foreach (var (_, result) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, Slices.Empty, skip: 0))
+            foreach (var (key, result) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, startAfterSlice, skip: 0))
+            {
+                if (to.HasValue && BackupHistorySchema.ReadValue(key, positionFromEnd: 0) > to.Value.Ticks)
+                    yield break;
+
                 yield return GetBackupEntry(context, result.Reader);
+            }
         }
     }
 

@@ -15,16 +15,17 @@ public class BackupGroup
         TaskId = taskId;
     }
     
-    public BackupGroup(BackupHistoryEntry entry, long taskId, int? shardNumber)
+    public BackupGroup(BackupHistoryEntry entry, long taskId, int? shardNumber, string taskName)
     {
         TaskId = taskId;
         ShardNumber = shardNumber;
-        TaskName = entry.TaskName;
+        TaskName = taskName;
 
         switch (entry.BackupKind)
         {
             case BackupKind.Full:
                 FullBackup = entry;
+                FullBackupInHistory = true;
                 _incrementalBackups = [];
                 break;
             
@@ -35,7 +36,6 @@ public class BackupGroup
                     DurationInMs = null,
                     Error = null,
                     BackupKind = BackupKind.Full,
-                    NodeTag = entry.NodeTag,
                     LastFullBackup = entry.LastFullBackup,
                 };
 
@@ -47,6 +47,7 @@ public class BackupGroup
     public int? ShardNumber { get; init; }
     public string TaskName { get; set; }
     public BackupHistoryEntry FullBackup { get; set; }
+    public bool FullBackupInHistory { get; set; }
     public long IncrementalBackupsCount { get; set; }
     private readonly List<BackupHistoryEntry> _incrementalBackups = [];
     public IReadOnlyList<BackupHistoryEntry> IncrementalBackups
@@ -70,6 +71,7 @@ public class BackupGroup
             [nameof(TaskId)] = TaskId,
             [nameof(TaskName)] = TaskName,
             [nameof(FullBackup)] = FullBackup,
+            [nameof(FullBackupInHistory)] = FullBackupInHistory,
             [nameof(IncrementalBackupsCount)] = IncrementalBackupsCount,
         };
 

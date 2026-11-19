@@ -111,7 +111,7 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
         {
             Databases = RequestHandler.GetStringValuesQueryString("database", required: false).ToHashSet(StringComparer.OrdinalIgnoreCase),
             TaskIds = RequestHandler.GetStringValuesQueryString("taskId", required: false).Select(BackupDecisionLogFilter.ParseTaskId).ToHashSet(),
-            Categories = RequestHandler.GetStringValuesQueryString("category", required: false).Select(BackupDecisionLogFilter.ParseCategory).ToHashSet(),
+            Categories = RequestHandler.GetEnumValuesQueryString<BackupDecisionCategory>("category"),
             Reason = RequestHandler.GetStringQueryString("reason", required: false),
             From = RequestHandler.GetDateTimeQueryString("from", required: false),
             To = RequestHandler.GetDateTimeQueryString("to", required: false),
