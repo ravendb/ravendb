@@ -104,7 +104,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         Assert.True(log.TryGetLatest(out var latest));
         Assert.Equal("detail 4", latest.Detail);
 
-        Assert.Equal(new[] { "detail 4" }, log.GetMatchingDecisions(afterEtag: 5, upToEtag: long.MaxValue, new BackupDecisionLogFilter(), take: 10, out _).Select(x => x.Detail));
+        Assert.Equal(new[] { "detail 4" }, log.GetMatchingDecisions(afterEtag: 5, upToEtag: long.MaxValue, afterId: 0, upToId: long.MaxValue, new BackupDecisionLogFilter(), take: 10, out _).Select(x => x.Detail));
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
@@ -513,6 +513,47 @@ public class ServerBackupRunnerTests : ClusterTestBase
         }
 
         Assert.Equal(1, timesSent);
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task DecisionLogWatchMustCountADecisionRepeatedWhileReadingTheSnapshot()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        const string reason = "RepeatedWhileReading";
+        state.AddToDecisionLog(BackupDecisionCategory.Waiting, "Repeated", reason, DateTime.UtcNow);
+
+        var repeated = 0;
+        runner.ForTestingPurposesOnly().BeforeReadingDecisionLogs = () =>
+        {
+            if (Interlocked.Exchange(ref repeated, 1) == 0)
+                state.AddToDecisionLog(BackupDecisionCategory.Waiting, "Repeated", reason, DateTime.UtcNow);
+        };
+
+        using var webSocket = new ClientWebSocket();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        await webSocket.ConnectAsync(new Uri($"{server.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?database={store.Database}&reason={reason}&take=10"), cts.Token);
+
+        using (var snapshot = await ReceiveJsonAsync(webSocket, cts.Token))
+            Assert.Equal(1, snapshot.RootElement.GetProperty("TotalResults").GetInt32());
+
+        while (true)
+        {
+            using var update = await ReceiveJsonAsync(webSocket, cts.Token);
+            var entries = update.RootElement.GetProperty("Entries");
+            if (entries.GetArrayLength() == 0)
+                continue;
+
+            Assert.Equal(2, entries[0].GetProperty("Count").GetInt32());
+            Assert.Equal(1, update.RootElement.GetProperty("TotalResults").GetInt32());
+            break;
+        }
     }
 
     [RavenFact(RavenTestCategory.BackupExportImport)]

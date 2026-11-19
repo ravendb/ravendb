@@ -115,24 +115,6 @@ public sealed class BackupDecisionTracker
         return _lastDecisionEtag;
     }
 
-    internal long LastDecisionEtag
-    {
-        get
-        {
-            lock (_decisionEtagLock)
-                return _lastDecisionEtag;
-        }
-    }
-
-    internal long LastDecisionId
-    {
-        get
-        {
-            lock (_decisionEtagLock)
-                return _lastDecisionId;
-        }
-    }
-
     internal long SummaryVersion
     {
         get
@@ -205,7 +187,7 @@ public sealed class BackupDecisionTracker
         }
     }
 
-    internal BackupDecisionLogDetails GetDecisionLogDetails(BackupDecisionLogFilter filter, long? afterEtag)
+    internal BackupDecisionLogDetails GetDecisionLogDetails(BackupDecisionLogFilter filter, long? afterEtag, long afterId = 0)
     {
         var nodeTag = _serverStore.NodeTag;
         var now = DateTime.UtcNow;
@@ -214,9 +196,14 @@ public sealed class BackupDecisionTracker
         {
             NodeTag = nodeTag,
             RunnerStartTime = _runnerStartTime,
-            Summary = GetSummary(now),
-            LastEtag = LastDecisionEtag
+            Summary = GetSummary(now)
         };
+
+        lock (_decisionEtagLock)
+        {
+            details.LastEtag = _lastDecisionEtag;
+            details.LastId = _lastDecisionId;
+        }
 
         var includeFilterOptions = afterEtag == null;
         var take = afterEtag == null ? filter.Take : int.MaxValue;
@@ -226,7 +213,7 @@ public sealed class BackupDecisionTracker
 
         _runner._forTestingPurposes?.BeforeReadingDecisionLogs?.Invoke();
 
-        var serverDecisions = _serverDecisionLog.GetMatchingDecisions(afterEtag, details.LastEtag, filter, take, out var totalResults);
+        var serverDecisions = _serverDecisionLog.GetMatchingDecisions(afterEtag, details.LastEtag, afterId, details.LastId, filter, take, out var totalResults);
         foreach (var decision in serverDecisions)
             matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag));
 
@@ -248,7 +235,7 @@ public sealed class BackupDecisionTracker
                 if (filter.MatchesTask(backupState.OriginalDatabaseName, taskId) == false)
                     continue;
 
-                var taskDecisions = backupState.GetMatchingDecisions(afterEtag, details.LastEtag, filter, take, out var taskMatches);
+                var taskDecisions = backupState.GetMatchingDecisions(afterEtag, details.LastEtag, afterId, details.LastId, filter, take, out var taskMatches);
                 foreach (var decision in taskDecisions)
                     matches.Add(BackupDecisionLogEntry.Create(decision, nodeTag, backupState));
 
