@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
@@ -65,9 +67,8 @@ namespace SlowTests.Voron.Issues
             Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
             Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
-            scratches = new DirectoryInfo(temp).GetFiles("scratch.*");
-
-            totalSize = scratches.Sum(x => x.Length);
+            // disposed scratch files can still be listed for a while on Windows, see the comment in ScratchSpaceSizeMustIncludeDecompressionBuffers
+            totalSize = WaitForSizeOnDiskToMatch(temp, _scratchSpaceMonitor.Size, "scratch.*");
 
             Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
             Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
@@ -141,10 +142,9 @@ namespace SlowTests.Voron.Issues
             Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
             Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
-            scratchBuffers = new DirectoryInfo(temp).GetFiles("scratch.*");
-            decompressionBuffers = new DirectoryInfo(temp).GetFiles("decompression.*");
-
-            totalSize = scratchBuffers.Sum(x => x.Length) + decompressionBuffers.Sum(x => x.Length);
+            // Cleanup() has just disposed the old decompression pagers. On Windows they are removed via FILE_FLAG_DELETE_ON_CLOSE,
+            // so if any other handle is open on such a file (e.g. AV scanner, indexer) it stays listed until that handle is closed
+            totalSize = WaitForSizeOnDiskToMatch(temp, _scratchSpaceMonitor.Size, "scratch.*", "decompression.*");
 
             Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
             Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
@@ -154,6 +154,21 @@ namespace SlowTests.Voron.Issues
 
             Assert.Equal(0, _scratchSpaceMonitor.Size);
             Assert.Equal(0, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
+        }
+
+        private static long WaitForSizeOnDiskToMatch(string directory, long expectedSize, params string[] searchPatterns)
+        {
+            var sw = Stopwatch.StartNew();
+
+            while (true)
+            {
+                var sizeOnDisk = searchPatterns.Sum(pattern => new DirectoryInfo(directory).GetFiles(pattern).Sum(x => x.Length));
+
+                if (sizeOnDisk == expectedSize || sw.Elapsed > TimeSpan.FromSeconds(30))
+                    return sizeOnDisk;
+
+                Thread.Sleep(50);
+            }
         }
 
         private class TestScratchSpaceMonitor : IScratchSpaceMonitor
