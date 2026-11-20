@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.SchemaValidation;
@@ -9,7 +9,7 @@ public class SchemaDefinition
 
     public string Schema { get; set; }
 
-    public DateTime LastModifiedTime { get; } = DateTime.UtcNow;
+    public DateTime LastModifiedTime { get; set; } = DateTime.UtcNow;
 
     public DynamicJsonValue ToJson()
     {
