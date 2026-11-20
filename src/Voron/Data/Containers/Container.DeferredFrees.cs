@@ -42,6 +42,45 @@ public readonly unsafe ref partial struct Container
     internal static long GetNumberOfPendingFrees(LowLevelTransaction llt, ContainerId containerId) =>
         llt.Transaction.GetContainerState(containerId).GetPendingFrees(llt, create: false)?.State.NumberOfEntries ?? 0;
 
+    public static bool ReclaimPendingFrees(LowLevelTransaction llt, int maxPages)
+    {
+        using var it = TransactionState.PendingFreesTree(llt).Iterate();
+        if (it.Seek(long.MinValue) == false)
+            return false;
+
+        bool hasMoreWork = false;
+        using var _ = llt.Allocator.Allocate(MaxItemsPerPage, out Span<long> buffer);
+        do
+        {
+            var containerId = new ContainerId(it.CurrentKey);
+            var txState = llt.Transaction.GetContainerState(containerId);
+            var pending = txState.GetPendingFrees(llt, create: false);
+            if (txState._deferredFreesProcessed || pending.State.NumberOfEntries == 0)
+                continue;
+
+            long position = txState._pendingFreesScanPosition ?? txState.ReadPendingFreesScanPosition(llt);
+            for (; maxPages > 0; maxPages--)
+            {
+                long page = txState.NextPendingFreesPage(position);
+                if (page < 0)
+                {
+                    position = 0;
+                    break;
+                }
+
+                position = (page + 1) * Constants.Storage.PageSize;
+                if (txState._reclaimedPendingPages?.Contains(page) != true)
+                    FreePendingFreesOfPage(llt, containerId, txState, page, buffer[..txState.ReadPendingFreesOfPage(page, buffer)]);
+            }
+
+            txState._pendingFreesScanPosition = position;
+            txState.EnsureDeferredFreesHook(llt.Transaction);
+            hasMoreWork |= pending.State.NumberOfEntries > txState._reclaimedPendingFrees.Count;
+        } while (it.MoveNext());
+
+        return hasMoreWork;
+    }
+
     private static bool TryReclaimPendingFreesPage(LowLevelTransaction llt, ContainerId containerId, Container rootContainer, TransactionState txState,
         long pageLevelMetadata, int size, out Container reclaimed)
     {
@@ -96,16 +135,7 @@ public readonly unsafe ref partial struct Container
     {
         reclaimed = default;
 
-        foreach (long id in ids)
-            Delete(llt, containerId, new ContainerEntryId(id));
-
-
-        // Store what we have done in current Tx in order to update deferred frees
-        if (txState._reclaimedPendingFrees.HasContext == false)
-            txState._reclaimedPendingFrees = new ContextBoundNativeList<long>(llt.Allocator);
-        txState._reclaimedPendingFrees.AddRange(ids);
-
-        (txState._reclaimedPendingPages ??= new HashSet<long>()).Add(page);
+        FreePendingFreesOfPage(llt, containerId, txState, page, ids);
 
         // Actually we removed the page because all the items of the page were pending, the page itself was freed
         if (txState.Removals.Contains(page))
@@ -122,6 +152,19 @@ public readonly unsafe ref partial struct Container
         rootContainer.UpdateNextFreePage(page);
         reclaimed = candidate;
         return true;
+    }
+
+    private static void FreePendingFreesOfPage(LowLevelTransaction llt, ContainerId containerId, TransactionState txState, long page, scoped ReadOnlySpan<long> ids)
+    {
+        foreach (long id in ids)
+            Delete(llt, containerId, new ContainerEntryId(id));
+
+        // Store what we have done in current Tx in order to update deferred frees
+        if (txState._reclaimedPendingFrees.HasContext == false)
+            txState._reclaimedPendingFrees = new ContextBoundNativeList<long>(llt.Allocator);
+        txState._reclaimedPendingFrees.AddRange(ids);
+
+        (txState._reclaimedPendingPages ??= new HashSet<long>()).Add(page);
     }
 
     public partial class TransactionState
@@ -151,7 +194,7 @@ public readonly unsafe ref partial struct Container
             tx.OnBeforeCommit += ProcessDeferredFrees;
         }
 
-        private static FixedSizeTree PendingFreesTree(LowLevelTransaction llt) => llt.Transaction.FixedTreeFor(Constants.Container.PendingFrees, (ushort)sizeof(PendingFreesState));
+        internal static FixedSizeTree PendingFreesTree(LowLevelTransaction llt) => llt.Transaction.FixedTreeFor(Constants.Container.PendingFrees, (ushort)sizeof(PendingFreesState));
 
         internal PostingList GetPendingFrees(LowLevelTransaction llt, bool create)
         {

@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract void Clean(IndexCleanup mode);
 
+        public virtual bool ReclaimSpace(Transaction writeTransaction, int maxPages) => false;
+
         public abstract void Initialize(StorageEnvironment environment);
 
         public abstract bool RequireOnBeforeExecuteIndexing();

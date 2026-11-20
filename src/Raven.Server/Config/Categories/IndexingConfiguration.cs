@@ -323,6 +323,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public Size? UnmanagedAllocationsBatchLimit { get; protected set; }
 
+        [Description("EXPERT: The maximum number of container pages with deferred frees that Corax cleans after an indexing batch that had nothing more to index. Set to 0 to disable the cleaning.")]
+        [DefaultValue(512)]
+        [MinValue(0)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.MaxPagesToReclaimPerBatch", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxMaxPagesToReclaimPerBatch { get; protected set; }
+
         [Description("EXPERT: The maximum size in MB that we'll consider for segments merging")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]

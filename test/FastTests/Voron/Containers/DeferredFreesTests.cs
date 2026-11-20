@@ -103,6 +103,29 @@ public class DeferredFreesTests(ITestOutputHelper output) : StorageTest(output)
     }
 
     [RavenFact(RavenTestCategory.Voron)]
+    public void ReclaimPendingFreesFreesAllPendingItemsInSteps()
+    {
+        var (containerId, ids) = CreateContainer(count: 3_000);
+        var deleted = TakePerPage(ids, perPage: 1);
+        Delete(containerId, deleted);
+
+        int steps = 0;
+        bool hasMoreWork;
+        do
+        {
+            using var wtx = Env.WriteTransaction();
+            hasMoreWork = Container.ReclaimPendingFrees(wtx.LowLevelTransaction, maxPages: 10);
+            wtx.Commit();
+            steps++;
+        } while (hasMoreWork);
+
+        Assert.True(steps > 1);
+        using var rtx = Env.ReadTransaction();
+        Assert.Equal(0, Container.GetNumberOfPendingFrees(rtx.LowLevelTransaction, containerId));
+        Assert.Equal(ids.Except(deleted).Order(), Container.GetAllIds(rtx.LowLevelTransaction, containerId).Order());
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
     public void PendingFreesAreCapped()
     {
         var (containerId, ids) = CreateContainer(count: 60_000);
