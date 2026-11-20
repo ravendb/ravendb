@@ -5,12 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Commercial;
 using Raven.Server.Logging;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -117,15 +116,8 @@ public class JsonConfigFileModifier : IDisposable
         {
             await using (var file = OpenFile(tempFile, FileMode.Create, FileAccess.ReadWrite))
             await using (var streamWriter = new StreamWriter(file))
-            await using (var writer = new JsonTextWriter(streamWriter))
-            await using (var reader = new BlittableJsonReader())
             {
-                writer.Formatting = Formatting.Indented;
-                reader.Initialize(json);
-
-                await writer.WriteTokenAsync(reader);
-
-                await writer.FlushAsync();
+                await streamWriter.WriteAsync(JsonStringHelper.Indent(json.ToString()));
                 await streamWriter.FlushAsync();
                 file.Flush(true);
             }
