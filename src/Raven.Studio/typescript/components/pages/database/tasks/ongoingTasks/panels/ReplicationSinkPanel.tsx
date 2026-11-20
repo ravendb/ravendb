@@ -28,11 +28,28 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ExternalReplicationTaskDistribution } from "components/pages/database/tasks/ongoingTasks/partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
+import { ReplicationSummaryItems } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationSummaryItems";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 import { ReplicationCursorDetailItem } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationCursorDetailItem";
 
 type ReplicationSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskReplicationSinkInfo>;
 
-function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
+function Summary(props: ReplicationSinkPanelProps & DetailsToggleProps) {
+    const { data, detailsVisible, toggleDetails } = props;
+
+    return (
+        <RichPanelDetails>
+            <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
+            {data.shared.destinationDatabase && (
+                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
+            )}
+            <ReplicationSummaryItems task={data} />
+        </RichPanelDetails>
+    );
+}
+
+function Settings(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
     const connectionStringDefined = !!data.shared.destinationDatabase;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -41,7 +58,6 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
 
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
             {mode && <RichPanelDetailItem label="Mode">{mode}</RichPanelDetailItem>}
             <ConnectionStringItem
                 connectionStringDefined={connectionStringDefined}
@@ -50,9 +66,6 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
                 connectionStringType="Raven"
                 databaseName={databaseName}
             />
-            {data.shared.destinationDatabase && (
-                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
-            )}
             <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Hub URL" />
 
             {data.shared.topologyDiscoveryUrls.map((url) => (
@@ -110,15 +123,14 @@ export function ReplicationSinkPanel(props: ReplicationSinkPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <Summary {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
+                    <Settings {...props} canEdit={canEdit} />
                     <ExternalReplicationTaskDistribution task={data} />
                 </div>
             </Collapse>

@@ -13,12 +13,12 @@ import {
 } from "./etlPanelUtils";
 import { healthStatusToBadge } from "components/pages/database/tasks/tasksErrors/utils/tasksErrorsUtils";
 
-interface EtlPanelToggleButtonProps {
+export interface DetailsToggleProps {
     detailsVisible: boolean;
     toggleDetails: () => void;
 }
 
-export function EtlPanelToggleButton({ detailsVisible, toggleDetails }: EtlPanelToggleButtonProps) {
+export function TaskPanelToggleButton({ detailsVisible, toggleDetails }: DetailsToggleProps) {
     return (
         <RichPanelDetailItem>
             <Button

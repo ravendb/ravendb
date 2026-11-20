@@ -13,6 +13,7 @@ import {
     getVisibleNodes,
     ReplicationProgressState,
 } from "./ExternalReplicationTaskDistribution";
+import { connectionStatusRanks, taskConnectionStatusLabels } from "./TaskConnectionStatus";
 import OngoingTaskConnectionStatus = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
 
 export type SinkSortField = "databaseName" | "url" | "status" | "node";
@@ -51,14 +52,6 @@ const sinkReplicationStateLabels: Record<ReplicationProgressState, string> = {
     Running: "Running",
     Disabled: "Disabled",
     Unknown: "Unknown",
-};
-
-export const sinkConnectionStatusLabels: Record<OngoingTaskConnectionStatus, string> = {
-    None: "None",
-    Active: "Active",
-    NotActive: "Not active",
-    Reconnect: "Reconnect",
-    NotOnThisNode: "Not on this node",
 };
 
 const emptyFilters: SinkFilters = {
@@ -109,7 +102,7 @@ function getSinkFilterCategories(
             label: "Replication status",
             icon: "connected",
             type: "checkboxList",
-            options: toFilterOptions(sinkConnectionStatusLabels),
+            options: toFilterOptions(taskConnectionStatusLabels),
             selectedValues: filters.statuses,
             onChange: (statuses) => updateFilters({ statuses }),
         } satisfies CheckboxListFilterCategory<OngoingTaskConnectionStatus>,
@@ -186,34 +179,12 @@ function matchesFilters(sink: OngoingTaskReplicationHubInfo, filters: SinkFilter
 
 const sinkWithErrorRank = 0;
 
-const connectionStatusRanks: Record<OngoingTaskConnectionStatus, number> = {
-    Reconnect: 1,
-    NotActive: 2,
-    None: 3,
-    NotOnThisNode: 4,
-    Active: 5,
-};
-
 function getStatusRank(sink: OngoingTaskReplicationHubInfo): number {
     const nodeRanks = getVisibleNodes(sink).map((x) =>
         x.details.error ? sinkWithErrorRank : connectionStatusRanks[x.details.taskConnectionStatus]
     );
 
     return nodeRanks.length > 0 ? Math.min(...nodeRanks) : connectionStatusRanks.None;
-}
-
-export function getSinkConnectionStatus(sink: OngoingTaskReplicationHubInfo): OngoingTaskConnectionStatus | null {
-    const statuses = getVisibleNodes(sink).map((x) => x.details.taskConnectionStatus);
-
-    if (statuses.length === 0) {
-        return null;
-    }
-
-    return statuses.reduce((worst, x) => (connectionStatusRanks[x] < connectionStatusRanks[worst] ? x : worst));
-}
-
-export function getSinkError(sink: OngoingTaskReplicationHubInfo): string | null {
-    return getVisibleNodes(sink).find((x) => x.details.error)?.details.error ?? null;
 }
 
 function compareText(a: string, b: string): number {

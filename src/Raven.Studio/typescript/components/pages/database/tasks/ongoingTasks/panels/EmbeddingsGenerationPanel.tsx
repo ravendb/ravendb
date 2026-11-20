@@ -25,7 +25,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import {
+    TaskPanelErrors,
+    EtlPanelHealthBadge,
+    EtlPanelProgressItem,
+    TaskPanelToggleButton,
+} from "./EtlPanelComponents";
 import copyToClipboard from "common/copyToClipboard";
 
 type EmbeddingsGenerationPanelProps = EtlPanelBaseProps<OngoingTaskEmbeddingsGenerationInfo>;
@@ -68,6 +73,10 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps)
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="ai-etl" className="text-reset" />
+                        Embeddings Generation
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -80,19 +89,12 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps)
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
-                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <RichPanelDetailItem label="Type">
-                    <Icon icon="ai-etl" className="text-reset" />
-                    Embeddings Generation
-                </RichPanelDetailItem>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
                 {identifier && (
                     <RichPanelDetailItem label="Identifier">
                         {identifier}

@@ -1,7 +1,6 @@
 ﻿import React from "react";
 import {
     BaseOngoingTaskPanelProps,
-    ConnectionStringItem,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -13,38 +12,17 @@ import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
-    RichPanelDetailItem,
-    RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
-import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { QueueSinkPanelDetails } from "./QueueSinkPanelDetails";
 
 type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
-
-function Details(props: KafkaSinkPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-
-    return (
-        <RichPanelDetails>
-            <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
-            <ConnectionStringItem
-                connectionStringDefined
-                canEdit={canEdit}
-                connectionStringName={data.shared.connectionStringName}
-                connectionStringType="Kafka"
-                databaseName={databaseName}
-            />
-        </RichPanelDetails>
-    );
-}
 
 export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
     const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
@@ -89,17 +67,19 @@ export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse in={detailsVisible}>
-                <div>
-                    <Details {...props} canEdit={canEdit} />
-                </div>
-            </Collapse>
+            <QueueSinkPanelDetails
+                task={data}
+                canEdit={canEdit}
+                connectionStringType="Kafka"
+                queuesLabel="Source Topics"
+                urlLabel="Bootstrap Servers"
+                detailsVisible={detailsVisible}
+                toggleDetails={toggleDetails}
+            />
         </RichPanel>
     );
 }

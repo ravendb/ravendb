@@ -35,13 +35,9 @@ describe("BackupsPage", function () {
         it("can render enabled", async () => {
             const Story = composeStory(stories.Default, stories.default);
 
-            const { screen, fireClick } = rtlRender(<Story />);
+            const { screen } = rtlRender(<Story />);
             expect(await screen.findByText(/Enabled/)).toBeInTheDocument();
             expect(screen.queryByText(/Disabled/)).not.toBeInTheDocument();
-
-            const detailsBtn = await screen.findByTitle(/Click for details/);
-
-            await fireClick(detailsBtn);
 
             expect(await screen.findByText(/Last Full Backup/)).toBeInTheDocument();
             expect(await screen.findByText(/Last Incremental Backup/)).toBeInTheDocument();
