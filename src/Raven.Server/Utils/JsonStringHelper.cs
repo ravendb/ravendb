@@ -2,6 +2,7 @@
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Raven.Server.Utils;
 
@@ -18,6 +19,40 @@ public sealed class JsonStringHelper
         Indented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
+
+    private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions(indented: false);
+
+    private static readonly JsonSerializerOptions IndentedSerializerOptions = CreateSerializerOptions(indented: true);
+
+    private static JsonSerializerOptions CreateSerializerOptions(bool indented)
+    {
+        return new JsonSerializerOptions
+        {
+            WriteIndented = indented,
+            IncludeFields = true,
+            PropertyNameCaseInsensitive = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+    }
+
+    public static string Serialize(object value, bool indented = false)
+    {
+        if (value == null)
+            return "null";
+
+        return JsonSerializer.Serialize(value, value.GetType(), indented ? IndentedSerializerOptions : SerializerOptions);
+    }
+
+    public static T Deserialize<T>(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return default;
+
+        return JsonSerializer.Deserialize<T>(json, SerializerOptions);
+    }
 
     public static string Indent(string json)
     {
