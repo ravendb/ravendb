@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.WriteUsageMetering;
@@ -231,7 +230,7 @@ namespace Raven.Server.Web.Studio
                 var payload = JsonDeserializationServer.SendFreeLicenseVerificationCodeRequest(json);
                 
                 var response = await ApiHttpClient.PostAsync("api/v2/license/free/send-verification-code",
-                    new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"), shouldRetry: false);
+                    new StringContent(JsonStringHelper.Serialize(payload), Encoding.UTF8, "application/json"), shouldRetry: false);
 
                 if (response.StatusCode == HttpStatusCode.TooManyRequests)
                 {
@@ -275,7 +274,7 @@ namespace Raven.Server.Web.Studio
                 var downloadLicensePayload = JsonDeserializationServer.DownloadFreeLicenseRequest(downloadLicensePayloadJson);
                     
                 var downloadLicenseResponse = await ApiHttpClient.PostAsync("api/v2/license/free/download",
-                    new StringContent(JsonConvert.SerializeObject(downloadLicensePayload), Encoding.UTF8, "application/json"), shouldRetry: false);
+                    new StringContent(JsonStringHelper.Serialize(downloadLicensePayload), Encoding.UTF8, "application/json"), shouldRetry: false);
                 
                 if (downloadLicenseResponse.StatusCode == HttpStatusCode.TooManyRequests)
                 {

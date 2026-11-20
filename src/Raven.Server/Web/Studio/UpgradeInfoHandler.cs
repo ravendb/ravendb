@@ -4,11 +4,11 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -50,7 +50,7 @@ public sealed class UpgradeInfoHandler : ServerRequestHandler
                 ChangelogPageSize = pageSize
             };
 
-            var requestPayload = JsonConvert.SerializeObject(request);
+            var requestPayload = JsonStringHelper.Serialize(request);
 
             var content = new StringContent(requestPayload, Encoding.UTF8, "application/json");
 

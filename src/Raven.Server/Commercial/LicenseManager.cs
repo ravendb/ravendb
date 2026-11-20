@@ -10,7 +10,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
@@ -107,7 +106,7 @@ namespace Raven.Server.Commercial
                 publicKeyString = new StreamReader(stream).ReadToEnd();
             }
 
-            var rsaPublicParameters = JsonConvert.DeserializeObject<RSAPublicParameters>(publicKeyString);
+            var rsaPublicParameters = JsonStringHelper.Deserialize<RSAPublicParameters>(publicKeyString);
             _rsaParameters = new RSAParameters
             {
                 Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
@@ -556,7 +555,7 @@ namespace Raven.Server.Commercial
             };
 
             var response = await ApiHttpClient.PostAsync("/api/v2/license/update-lets-encrypt-license",
-                    new StringContent(JsonConvert.SerializeObject(updateInfo), Encoding.UTF8, "application/json"), token: _serverStore.ServerShutdown)
+                    new StringContent(JsonStringHelper.Serialize(updateInfo), Encoding.UTF8, "application/json"), token: _serverStore.ServerShutdown)
                 .ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode == false)
@@ -650,7 +649,7 @@ namespace Raven.Server.Commercial
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense, contextPool);
 
             var response = await ApiHttpClient.PostAsync("/api/v2/license/lease",
-                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: token)
+                    new StringContent(JsonStringHelper.Serialize(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: token)
                 .ConfigureAwait(false);
 
             return response;
@@ -873,14 +872,14 @@ namespace Raven.Server.Commercial
 
             var requestUri = $"/api/v2/license/renew?&build={ServerVersion.Build}";
             var response = await ApiHttpClient.PostAsync(requestUri,
-                    new StringContent(JsonConvert.SerializeObject(license), Encoding.UTF8, "application/json"))
+                    new StringContent(JsonStringHelper.Serialize(license), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
 
             var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
                 throw new InvalidOperationException($"Failed to renew license, error: {responseString}");
 
-            return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
+            return JsonStringHelper.Deserialize<LicenseRenewalResult>(responseString);
         }
 
         public async Task<LicenseLeaseResult> LeaseLicense(string raftRequestId, bool throwOnError)
@@ -2149,7 +2148,7 @@ namespace Raven.Server.Commercial
                 using (var cts = new CancellationTokenSource(timeoutInSec * 1000))
                 {
                     var response = await ApiHttpClient.PostAsync("/api/v2/license/support",
-                            new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: cts.Token)
+                            new StringContent(JsonStringHelper.Serialize(leaseLicenseInfo), Encoding.UTF8, "application/json"), token: cts.Token)
                         .ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)

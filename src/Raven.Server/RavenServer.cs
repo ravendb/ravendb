@@ -30,7 +30,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using NLog.Web;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
@@ -1636,7 +1635,7 @@ namespace Raven.Server
             HttpResponseMessage response;
             try
             {
-                var licensePayload = JsonConvert.SerializeObject(new
+                var licensePayload = JsonStringHelper.Serialize(new
                 {
                     License = license
                 });
@@ -1652,7 +1651,7 @@ namespace Raven.Server
                 throw new InvalidOperationException($"Failed to validate user's license '{userLicense}' as part of Let's Encrypt certificate refresh", e);
             }
 
-            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringWithZstdSupportAsync());
+            var userDomainsResult = JsonStringHelper.Deserialize<UserDomainsResult>(await response.Content.ReadAsStringWithZstdSupportAsync());
 
             string usedRootDomain = null;
             foreach (var rd in userDomainsResult.RootDomains)

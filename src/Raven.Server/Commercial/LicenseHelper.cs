@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Properties;
 using Raven.Server.Commercial.LetsEncrypt;
@@ -183,7 +182,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var newLicenseString = JsonConvert.SerializeObject(newLicense);
+                var newLicenseString = JsonStringHelper.Serialize(newLicense);
                 Environment.SetEnvironmentVariable(RavenConfiguration.EnvironmentVariableLicenseString, newLicenseString, preferredTarget);
             }
             catch (SecurityException)
@@ -256,7 +255,7 @@ namespace Raven.Server.Commercial
 
                 settingsJson.Modifications = new DynamicJsonValue(settingsJson)
                 {
-                    [LicenseStringConfigurationName] = JsonConvert.SerializeObject(newLicense)
+                    [LicenseStringConfigurationName] = JsonStringHelper.Serialize(newLicense)
                 };
 
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
@@ -273,7 +272,7 @@ namespace Raven.Server.Commercial
             if (ValidateLicense(oldLicense, rsaParameters, newLicense) == false)
                 return;
 
-            var licenseString = JsonConvert.SerializeObject(newLicense, Formatting.Indented);
+            var licenseString = JsonStringHelper.Serialize(newLicense, indented: true);
             File.WriteAllText(_serverStore.Configuration.Licensing.LicensePath.FullPath, licenseString);
         }
 
