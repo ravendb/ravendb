@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using PgSqlParser;
 using Raven.Client;
 using Raven.Client.Documents.Queries;
@@ -243,7 +242,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 throw new NotSupportedException("Unsupported index name");
 
             var isGroupBy = selectStmt.GroupClause != null && selectStmt.GroupClause.Count > 0;
-            var q = new AsyncDocumentQuery<JObject>(session: null, indexName: isIndex ? relname : null, collectionName: isIndex ? null : relname, isGroupBy: isGroupBy);
+            var q = new AsyncDocumentQuery<object>(session: null, indexName: isIndex ? relname : null, collectionName: isIndex ? null : relname, isGroupBy: isGroupBy);
             var fromAlias = rangeVar.Alias?.Aliasname;
 
             // Build WHERE clause (must be applied before GROUP BY)
@@ -298,7 +297,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return BuildRql(q);
         }
 
-        private static string BuildRql(AsyncDocumentQuery<JObject> q)
+        private static string BuildRql(AsyncDocumentQuery<object> q)
         {
             // Prefer the official query text emitted by IndexQuery when possible.
             // Falls back to ToString() which also returns pure RQL.
@@ -566,7 +565,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return string.IsNullOrWhiteSpace(alias) == false && string.IsNullOrWhiteSpace(path) == false;
         }
 
-        private static void ApplyGroupBy(AsyncDocumentQuery<JObject> q, SelectStmt selectStmt, string fromAlias)
+        private static void ApplyGroupBy(AsyncDocumentQuery<object> q, SelectStmt selectStmt, string fromAlias)
         {
             if (selectStmt.GroupClause is not { Count: > 0 })
                 throw UnsupportedGroupBy();
@@ -648,7 +647,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
 
                 if (groupFieldNames.Count == 1)
                 {
-                    q.SelectFields<JObject>(projected.ToArray());
+                    q.SelectFields<object>(projected.ToArray());
                     q.Distinct();
                 }
                 else
@@ -660,7 +659,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                         ? groupFieldNames.GetRange(1, groupFieldNames.Count - 1).ToArray()
                         : Array.Empty<string>();
                     q.GroupBy(firstKey, restKeys);
-                    q.SelectFields<JObject>(projected.ToArray());
+                    q.SelectFields<object>(projected.ToArray());
                 }
                 return;
             }
@@ -693,7 +692,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             }
 
             q.GroupBy(groupFieldName);
-            q.SelectFields<JObject>(projections.ToArray());
+            q.SelectFields<object>(projections.ToArray());
 
             if (selectStmt.SortClause != null && selectStmt.SortClause.Count > 0)
                 TranslateOrderByForGroupBy(q, selectStmt.SortClause, groupFieldName, groupKeyProjected, aggregates, fromAlias);
@@ -750,7 +749,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
         }
 
         private static void TranslateOrderByForGroupBy(
-            AsyncDocumentQuery<JObject> q,
+            AsyncDocumentQuery<object> q,
             Google.Protobuf.Collections.RepeatedField<Node> sortClause,
             string groupFieldName,
             bool groupKeyProjected,
@@ -828,7 +827,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             return (aggregate.OrderField, aggregate.Ordering);
         }
 
-        private static IReadOnlyDictionary<string, string> ApplySelectProjection(AsyncDocumentQuery<JObject> q, SelectStmt selectStmt, string fromAlias)
+        private static IReadOnlyDictionary<string, string> ApplySelectProjection(AsyncDocumentQuery<object> q, SelectStmt selectStmt, string fromAlias)
         {
             var targets = selectStmt.TargetList;
             if (targets == null || targets.Count == 0)
@@ -863,7 +862,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 return null;
 
             // Distinct Fields vs Projections preserves `1 as "c0"`-style aliases (see BuildColumnProjections).
-            q.SelectFields<JObject>(new QueryData(projectionFields, projectionAliases) { IsProjectInto = true });
+            q.SelectFields<object>(new QueryData(projectionFields, projectionAliases) { IsProjectInto = true });
             if (isDistinct)
                 q.Distinct();
 
@@ -1195,7 +1194,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             };
         }
 
-        private static void TranslateWhereClause(AsyncDocumentQuery<JObject> q, Node whereNode, string fromAlias)
+        private static void TranslateWhereClause(AsyncDocumentQuery<object> q, Node whereNode, string fromAlias)
         {
             if (SqlWhereParser.TryParse(whereNode, fromAlias, out var parsed) == false)
                 throw new NotSupportedException("Unsupported WHERE clause");
@@ -1203,7 +1202,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
             EmitWhere(q, parsed, wrapInSubclause: false);
         }
 
-        private static void EmitWhere(AsyncDocumentQuery<JObject> q, ParsedWhere parsed, bool wrapInSubclause)
+        private static void EmitWhere(AsyncDocumentQuery<object> q, ParsedWhere parsed, bool wrapInSubclause)
         {
             if (wrapInSubclause)
                 q.OpenSubclause();
@@ -1390,7 +1389,7 @@ namespace Raven.Server.Integrations.PostgreSQL.Translation
                 ? new PgBoundParameterReference((int)value.Raw)
                 : value.Raw;
 
-        private static void TranslateOrderBy(AsyncDocumentQuery<JObject> q, Google.Protobuf.Collections.RepeatedField<Node> sortClause, string fromAlias, IReadOnlyDictionary<string, OrderingType> sortTypeMap = null, IReadOnlyDictionary<string, string> aliasToField = null)
+        private static void TranslateOrderBy(AsyncDocumentQuery<object> q, Google.Protobuf.Collections.RepeatedField<Node> sortClause, string fromAlias, IReadOnlyDictionary<string, OrderingType> sortTypeMap = null, IReadOnlyDictionary<string, string> aliasToField = null)
         {
             // Fail the translation rather than silently dropping a sort key we can't map to a column -
             // a missing ORDER BY term returns mis-ordered rows with no error (caller falls through to the diagnoser).
