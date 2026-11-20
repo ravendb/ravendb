@@ -20,6 +20,9 @@ namespace Raven.Server.Config.Categories
 
             // The sequential read-ahead hint relies on posix_fadvise, which exists on Linux but not macOS.
             UseSequentialReadAheadHintForJournalRecovery = PlatformDetails.RunningOnLinux;
+
+            // kernel 6.16+ keeps file data in large page-cache folios capped by read_ahead_kb; one dirty page writes back the whole folio
+            ReadAheadKbAlertThreshold = PlatformDetails.RunningOnLinux && Environment.OSVersion.Version >= new Version(6, 16) ? 32 : 128;
         }
 
         // CVE-2026-74674: on arm64 Linux, kernels [7.0, 7.1.9)
@@ -175,7 +178,7 @@ namespace Raven.Server.Config.Categories
         public int MaxNumberOfRecyclableJournals { get; set; }
 
         [Description("Threshold (in KB) for the block device read_ahead_kb alert raised on server startup on Linux. If any block device's read_ahead_kb exceeds this value, a warning alert is raised. Set to null to disable the check.")]
-        [DefaultValue(128)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(0)]
         [ConfigurationEntry("Storage.ReadAheadKbAlertThresholdInKb", ConfigurationEntryScope.ServerWideOnly)]
         public int? ReadAheadKbAlertThreshold { get; set; }
