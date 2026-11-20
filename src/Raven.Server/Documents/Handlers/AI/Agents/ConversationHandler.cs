@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Commands.MultiGet;
@@ -30,6 +29,7 @@ using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -1484,7 +1484,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private static readonly string SummarizationOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new SummarizationSampleObject()));
+    private static readonly string SummarizationOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonStringHelper.Serialize(new SummarizationSampleObject()));
 
     private class SummarizationSampleObject
     {
