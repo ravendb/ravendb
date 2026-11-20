@@ -60,6 +60,7 @@ rvn_create_and_mmap64_file(
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+    mfh->fd = -1;
 
     char directory_buffer[PATH_MAX];
     char *directory = _dirname_r(path, directory_buffer);

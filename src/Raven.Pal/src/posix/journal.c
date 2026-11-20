@@ -59,6 +59,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+    jfh->fd = -1;
 
     jfh->delete_on_close = transaction_mode == JOURNAL_MODE_PURE_MEMORY;
 
