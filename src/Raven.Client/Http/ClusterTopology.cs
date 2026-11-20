@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -249,7 +249,8 @@ namespace Raven.Client.Http
 #endif
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
+        [System.Text.Json.Serialization.JsonIgnore]
         internal int Count => Members.Count + Promotables.Count + Watchers.Count;
     }
 

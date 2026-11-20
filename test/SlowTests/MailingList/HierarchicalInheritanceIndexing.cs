@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
             var rootId = Guid.NewGuid().ToString();
             var childId = Guid.NewGuid().ToString();
             var grandChildId = Guid.NewGuid().ToString();
-            using (var documentStore = GetDocumentStore())
+            using (var documentStore = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = documentStore.OpenSession())
                 {

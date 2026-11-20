@@ -109,7 +109,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Load_PopulatesExtensionDictionary()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
             await SeedAsync(store, Id);
 
             using var session = store.OpenAsyncSession();
@@ -126,7 +126,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loaded_EditMetadataInDictionary_IsNotWritten()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())
@@ -151,7 +151,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Loaded_ModifyIdThroughDictionary_IdIsUnchanged()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())
@@ -352,7 +352,7 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task JTokenDictionary_LoadEditAndStore_IsPersisted()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
             await SeedAsync(store, Id);
 
             using (var session = store.OpenAsyncSession())

@@ -1580,7 +1580,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         
         public void VectorSearch(IVectorEmbeddingFieldFactoryAccessor fieldFactoryAccessor, IVectorFieldValueFactoryAccessor fieldValueFactoryAccessor, float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
-            var fieldName = fieldFactoryAccessor.FieldName;
+            var fieldName = fieldFactoryAccessor.GetFieldName(_conventions);
             var sourceQuantizationType = fieldFactoryAccessor.SourceQuantizationType;
             var targetQuantizationType = fieldFactoryAccessor.DestinationQuantizationType;
             var embeddingsGenerationTaskIdentifier = fieldFactoryAccessor.EmbeddingsGenerationTaskIdentifier;
@@ -1597,7 +1597,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
             float? minimumSimilarity, int? numberOfCandidates, bool isExact)
         {
-            var fieldName = embeddingFieldFactory.FieldName;
+            var fieldName = embeddingFieldFactory.GetFieldName(_conventions);
             var sourceQuantizationType = embeddingFieldFactory.SourceQuantizationType;
             var targetQuantizationType = embeddingFieldFactory.DestinationQuantizationType;
             var embeddingsGenerationTaskIdentifier = embeddingFieldFactory.EmbeddingsGenerationTaskIdentifier;

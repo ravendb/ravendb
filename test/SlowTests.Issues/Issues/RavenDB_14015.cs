@@ -49,7 +49,7 @@ namespace SlowTests.Issues
   }
 }";
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 using (var session = store.OpenSession())
                 {

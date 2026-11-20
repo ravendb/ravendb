@@ -24,7 +24,7 @@ namespace SlowTests.Bugs
         [RavenFact(RavenTestCategory.ClientApi)]
         public void EntitiesSerializeCorrectlyWithAttributes()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 var jObject = JObject.FromObject(new Item { Version = "First" }, (JsonSerializer)store.Conventions.Serialization.CreateSerializer());
                 Assert.Equal("First", jObject["Version"]);

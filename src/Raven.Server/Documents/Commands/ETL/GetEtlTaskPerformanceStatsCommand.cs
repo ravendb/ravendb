@@ -39,7 +39,7 @@ internal sealed class GetEtlTaskPerformanceStatsCommand : RavenCommand<EtlTaskPe
         if (response == null)
             return;
 
-        Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<EtlTaskPerformanceStatsResponse>(response).Results;
+        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<EtlTaskPerformanceStatsResponse>(response).Results;
     }
 
     // ReSharper disable once ClassNeverInstantiated.Local

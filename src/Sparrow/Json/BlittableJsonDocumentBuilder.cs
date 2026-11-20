@@ -31,6 +31,9 @@ namespace Sparrow.Json
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
 
+        // CachedProperties only looks this up and copies it when the name is new, so one instance serves every property
+        private LazyStringValue _propertyNameFromParserState;
+
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
 
         private WriteToken _writeToken;
@@ -217,6 +220,12 @@ namespace Sparrow.Json
                             return false;
                         }
                         currentState.State = ContinuationState.CompleteReadingPropertyValue;
+                        if (state.CurrentTokenType is not (JsonParserToken.StartObject or JsonParserToken.StartArray))
+                        {
+                            ReadJsonValue<TWriteStrategy, TJsonParser>();
+                            goto case ContinuationState.CompleteReadingPropertyValue;
+                        }
+
                         continuationState.PushByRef() = currentState;
 
                         goto case ContinuationState.ReadValue;
@@ -400,6 +409,12 @@ namespace Sparrow.Json
                         }
 
                         currentState.State = ContinuationState.CompleteArrayValue;
+                        if (state.CurrentTokenType is not (JsonParserToken.StartObject or JsonParserToken.StartArray))
+                        {
+                            ReadJsonValue<TWriteStrategy, TJsonParser>();
+                            goto case ContinuationState.CompleteArrayValue;
+                        }
+
                         continuationState.PushByRef() = currentState;
                         goto case ContinuationState.ReadValue;
 
@@ -775,9 +790,14 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe LazyStringValue CreateLazyStringValueFromParserState()
         {
-            var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
-            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.Count > 0 ? _state.EscapePositions.ToArray() : [];
-            return lazyStringValueFromParserState;
+            LazyStringValue propertyName = _propertyNameFromParserState;
+            if (propertyName == null)
+                _propertyNameFromParserState = propertyName = new LazyStringValue(null, _state.StringBuffer, _state.StringSize, _context);
+            else
+                propertyName.Renew(null, _state.StringBuffer, _state.StringSize, _context);
+
+            propertyName.EscapePositions = _state.EscapePositions.Count > 0 ? _state.EscapePositions.ToArray() : [];
+            return propertyName;
         }
 
         public void FinalizeDocument()

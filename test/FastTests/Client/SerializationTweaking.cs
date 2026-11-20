@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Xunit;
 using Tests.Infrastructure;
 
@@ -25,10 +26,17 @@ namespace FastTests.Client
         {
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void Should_throw_error_by_default_on_by_pointer_fields()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_throw_error_by_default_on_by_pointer_fields(bool useSystemTextJson)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = useSystemTextJson
+                    ? new SystemTextJsonSerializationConventions()
+                    : new NewtonsoftJsonSerializationConventions()
+            }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -38,10 +46,17 @@ namespace FastTests.Client
             }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void Should_throw_error_by_default_on_by_ref_fields()
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Should_throw_error_by_default_on_by_ref_fields(bool useSystemTextJson)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.Serialization = useSystemTextJson
+                    ? new SystemTextJsonSerializationConventions()
+                    : new NewtonsoftJsonSerializationConventions()
+            }))
             {
                 using (var session = store.OpenSession())
                 {

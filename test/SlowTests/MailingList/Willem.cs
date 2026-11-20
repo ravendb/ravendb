@@ -19,7 +19,7 @@ namespace SlowTests.MailingList
         [RavenFact(RavenTestCategory.Indexes)]
         public void ThisIsMyTest()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 new Sales_ByDateProduct().Execute(store);
                 using (var session = store.OpenSession())

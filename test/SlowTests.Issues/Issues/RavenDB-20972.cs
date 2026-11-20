@@ -16,7 +16,7 @@ public class RavenDB_20972 : RavenTestBase
     [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectIdInNestedDocuments()
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
         using (var s = store.OpenSession())
         {

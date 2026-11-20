@@ -23,7 +23,7 @@ namespace SlowTests.Bugs
         [RavenFact(RavenTestCategory.ClientApi)]
         public void CanBeSerializedProperly()
         {
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
             using (var stringWriter = new StringWriter())
             {
                 var item = new WithDic
@@ -44,7 +44,7 @@ namespace SlowTests.Bugs
         [RavenFact(RavenTestCategory.ClientApi)]
         public void CanBeDeSerializedProperly()
         {
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
             using (var stringWriter = new StringWriter())
             {
                 var item = new WithDic

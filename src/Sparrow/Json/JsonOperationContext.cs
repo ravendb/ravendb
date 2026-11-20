@@ -83,8 +83,8 @@ namespace Sparrow.Json
         private readonly ObjectJsonParser _objectJsonParser;
         private readonly BlittableJsonDocumentBuilder _documentBuilder;
 
-        private UnmanagedJsonParser _cachedAsyncParser;
-        private BlittableJsonDocumentBuilder _cachedAsyncBuilder;
+        private UnmanagedJsonParser _cachedParser;
+        private BlittableJsonDocumentBuilder _cachedBuilder;
         private JsonParserState _lazyStringParserState;
 
         public int Generation => _generation;
@@ -115,8 +115,8 @@ namespace Sparrow.Json
                 TryExecute(() => Reset(true));
 
                 TryDispose(_documentBuilder);
-                TryDispose(_cachedAsyncBuilder);
-                TryDispose(_cachedAsyncParser);
+                TryDispose(_cachedBuilder);
+                TryDispose(_cachedParser);
                 TryDispose(_arenaAllocator);
                 TryDispose(_arenaAllocatorForLongLivedValues);
                 if (_allocateStringValues != null)
@@ -706,8 +706,27 @@ namespace Sparrow.Json
             EnsureNotDisposed();
 
             _jsonParserState.Reset();
-            using (var parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag))
-            using (var builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier))
+
+            int generation = _generation;
+            UnmanagedJsonParser parser = _cachedParser;
+            BlittableJsonDocumentBuilder builder;
+            if (parser != null)
+            {
+                builder = _cachedBuilder;
+                _cachedParser = null;
+                _cachedBuilder = null;
+
+                parser.Renew(debugTag);
+                builder.Renew(debugTag, mode);
+                builder._modifier = modifier;
+            }
+            else
+            {
+                parser = new UnmanagedJsonParser(this, _jsonParserState, debugTag);
+                builder = new BlittableJsonDocumentBuilder(this, mode, debugTag, parser, _jsonParserState, modifier: modifier);
+            }
+
+            try
             {
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
@@ -720,6 +739,18 @@ namespace Sparrow.Json
 
                 var reader = builder.CreateReader();
                 return reader;
+            }
+            finally
+            {
+                if (generation == _generation && _cachedParser == null)
+                {
+                    _cachedParser = parser;
+                    _cachedBuilder = builder;
+                }
+                else
+                {
+                    DisposeIfNeeded(generation, parser, builder);
+                }
             }
         }
 
@@ -848,12 +879,12 @@ namespace Sparrow.Json
             }, stream);
             try
             {
-                parser = _cachedAsyncParser;
+                parser = _cachedParser;
                 if (parser != null)
                 {
-                    builder = _cachedAsyncBuilder;
-                    _cachedAsyncParser = null;
-                    _cachedAsyncBuilder = null;
+                    builder = _cachedBuilder;
+                    _cachedParser = null;
+                    _cachedBuilder = null;
 
                     parser.Renew(documentId);
                     builder.Renew(documentId, mode);
@@ -901,10 +932,10 @@ namespace Sparrow.Json
             finally
             {
                 streamDisposer?.Dispose();
-                if (generation == _generation && _cachedAsyncParser == null)
+                if (generation == _generation && _cachedParser == null)
                 {
-                    _cachedAsyncParser = parser;
-                    _cachedAsyncBuilder = builder;
+                    _cachedParser = parser;
+                    _cachedBuilder = builder;
                 }
                 else
                 {
@@ -972,8 +1003,8 @@ namespace Sparrow.Json
             }
 
             _documentBuilder.Reset();
-            _cachedAsyncBuilder?.Reset();
-            _cachedAsyncParser?.Reset();
+            _cachedBuilder?.Reset();
+            _cachedParser?.Reset();
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.

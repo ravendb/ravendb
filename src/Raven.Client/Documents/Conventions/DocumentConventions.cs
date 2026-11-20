@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -18,7 +19,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -80,20 +81,13 @@ namespace Raven.Client.Documents.Conventions
 
         internal static readonly DocumentConventions Default = new();
 
-        internal static readonly DocumentConventions DefaultForServer = new()
-        {
-            SendApplicationIdentifier = false,
-            MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
-#if NETCOREAPP3_1_OR_GREATER
-            HttpPooledConnectionLifetime = TimeSpan.FromMinutes(19),
-#endif
-            DisposeCertificate = false,
-            DisableTopologyCache = true
-        };
-
         internal static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15);
 
         private static readonly bool DefaultDisableTcpCompression = false;
+
+        private static readonly ConcurrentDictionary<string, Type> ResolvedClrTypes = new();
+
+        private static readonly Func<string, Type> GetTypeByName = Type.GetType;
 
         private static TypeCache<string> CachedDefaultTypeCollectionNames = new(128);
 
@@ -223,40 +217,12 @@ namespace Raven.Client.Documents.Conventions
         static DocumentConventions()
         {
 #if NETCOREAPP3_1_OR_GREATER
-            var httpPooledConnectionLifetimeAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC");
-            if (httpPooledConnectionLifetimeAsString != null)
-            {
-                if (int.TryParse(httpPooledConnectionLifetimeAsString, out var httpPooledConnectionLifetime) == false)
-                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_POOLEDCONNECTIONLIFETIMEINSEC' env variable with value '{httpPooledConnectionLifetimeAsString}'.");
-
-                DefaultForServer.HttpPooledConnectionLifetime = httpPooledConnectionLifetime < 0
-                    ? null
-                    : TimeSpan.FromSeconds(httpPooledConnectionLifetime);
-            }
-
-            var httpVersionAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_VERSION");
-            if (httpVersionAsString != null)
-            {
-                Version httpVersion;
-                try
-                {
-                    httpVersion = Version.Parse(httpVersionAsString);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException($"Could not parse 'RAVEN_HTTP_VERSION' env variable with value '{httpVersionAsString}'.", e);
-                }
-
-                DefaultForServer.HttpVersion = httpVersion;
-            }
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                 (RuntimeInformation.ProcessArchitecture == Architecture.Arm || RuntimeInformation.ProcessArchitecture == Architecture.Arm64) &&
                 IsZstdAvailable() == false)
             {
                 DefaultHttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
                 Default.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
-                DefaultForServer.HttpCompressionAlgorithm = HttpCompressionAlgorithm.Gzip;
             }
 
             var httpCompressionAlgorithmAsString = Environment.GetEnvironmentVariable("RAVEN_HTTP_COMPRESSION_ALGORITHM");
@@ -274,7 +240,6 @@ namespace Raven.Client.Documents.Conventions
 
                 DefaultHttpCompressionAlgorithm = httpCompressionAlgorithm;
                 Default.HttpCompressionAlgorithm = httpCompressionAlgorithm;
-                DefaultForServer.HttpCompressionAlgorithm = httpCompressionAlgorithm;
             }
 #endif
 
@@ -288,7 +253,6 @@ namespace Raven.Client.Documents.Conventions
 #endif
 
             Default.Freeze();
-            DefaultForServer.Freeze();
         }
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -311,7 +275,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions()
         {
-            Serialization = new NewtonsoftJsonSerializationConventions();
+            Serialization = new SystemTextJsonSerializationConventions();
 
             _topologyCacheLocation = AppContext.BaseDirectory;
 
@@ -330,7 +294,7 @@ namespace Raven.Client.Documents.Conventions
                 return null;
             };
             FindClrTypeName = ReflectionUtil.GetFullNameWithoutVersionInformation;
-            ResolveTypeFromClrTypeName = Type.GetType;
+            ResolveTypeFromClrTypeName = ResolveClrType;
 
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
@@ -1365,6 +1329,32 @@ namespace Raven.Client.Documents.Conventions
             _listOfRegisteredIdConventionsAsync.Insert(index, item);
 
             return this;
+        }
+
+        private static Type ResolveClrType(string typeName)
+        {
+#if NETCOREAPP3_1_OR_GREATER
+            if (System.Runtime.Loader.AssemblyLoadContext.CurrentContextualReflectionContext != null)
+                return GetTypeByName(typeName);
+#endif
+
+            if (ResolvedClrTypes.TryGetValue(typeName, out Type type))
+                return type;
+
+            type = GetTypeByName(typeName);
+            if (CanCacheClrType(type))
+                ResolvedClrTypes.TryAdd(typeName, type);
+
+            return type;
+        }
+
+        private static bool CanCacheClrType(Type type)
+        {
+#if NETCOREAPP3_1_OR_GREATER
+            return type is { IsCollectible: false };
+#else
+            return type != null;
+#endif
         }
 
         /// <summary>
