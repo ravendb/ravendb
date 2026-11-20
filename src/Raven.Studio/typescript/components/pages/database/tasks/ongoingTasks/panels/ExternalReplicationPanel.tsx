@@ -27,22 +27,36 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ExternalReplicationTaskDistribution } from "components/pages/database/tasks/ongoingTasks/partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
+import { ReplicationSummaryItems } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationSummaryItems";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 type ExternalReplicationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskExternalReplicationInfo>;
 
-function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
+function Summary(props: ExternalReplicationPanelProps & DetailsToggleProps) {
+    const { data, detailsVisible, toggleDetails } = props;
+
+    return (
+        <RichPanelDetails>
+            <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+            {data.shared.destinationDatabase && (
+                <RichPanelDetailItem label="Destination Database">
+                    {data.shared.destinationDatabase}
+                </RichPanelDetailItem>
+            )}
+            <ReplicationSummaryItems task={data} />
+        </RichPanelDetails>
+    );
+}
+
+function Settings(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
     const { data, canEdit } = props;
 
     const showDelayReplication = data.shared.delayReplicationTime > 0;
     const delayHumane = genUtils.formatTimeSpan(1000 * (data.shared.delayReplicationTime ?? 0), true);
-    const connectionStringDefined = !!data.shared.destinationDatabase;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     return (
         <RichPanelDetails>
-            {showDelayReplication && (
-                <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>
-            )}
             <ConnectionStringItem
                 connectionStringDefined={!!data.shared.destinationDatabase}
                 canEdit={canEdit}
@@ -50,16 +64,14 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
                 connectionStringType="Raven"
                 databaseName={databaseName}
             />
-            {connectionStringDefined && (
-                <RichPanelDetailItem label="Destination Database">
-                    {data.shared.destinationDatabase}
-                </RichPanelDetailItem>
-            )}
             <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Destination URL" />
             {data.shared.topologyDiscoveryUrls?.length > 0 && (
                 <RichPanelDetailItem label="Topology Discovery URLs">
                     {data.shared.topologyDiscoveryUrls.join(", ")}
                 </RichPanelDetailItem>
+            )}
+            {showDelayReplication && (
+                <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>
             )}
         </RichPanelDetails>
     );
@@ -108,15 +120,14 @@ export function ExternalReplicationPanel(props: ExternalReplicationPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <Summary {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
+                    <Settings {...props} canEdit={canEdit} />
                     <ExternalReplicationTaskDistribution task={data} />
                 </div>
             </Collapse>

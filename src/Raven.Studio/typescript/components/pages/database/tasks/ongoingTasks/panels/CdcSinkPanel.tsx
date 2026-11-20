@@ -18,7 +18,6 @@ import {
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
@@ -28,7 +27,12 @@ import moment from "moment";
 import genUtils from "common/generalUtils";
 import RichAlert from "components/common/RichAlert";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { TaskPanelErrors } from "components/pages/database/tasks/ongoingTasks/panels/EtlPanelComponents";
+import {
+    DetailsToggleProps,
+    TaskPanelErrors,
+    TaskPanelToggleButton,
+} from "components/pages/database/tasks/ongoingTasks/panels/EtlPanelComponents";
+import Collapse from "react-bootstrap/Collapse";
 import {
     getTaskErrorCount,
     getTaskErrorCountByLocation,
@@ -39,8 +43,8 @@ type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo> & {
     taskErrors?: TaskErrorsWithLocation[];
 };
 
-function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
+function Details(props: CdcSinkPanelProps & DetailsToggleProps & { canEdit: boolean }) {
+    const { data, canEdit, detailsVisible, toggleDetails } = props;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { appUrl } = useAppUrls();
 
@@ -62,52 +66,59 @@ function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
 
     return (
         <>
-            {data.shared.error && (
-                <div className="mx-3 mt-3">
-                    <RichAlert variant="danger">{data.shared.error}</RichAlert>
-                </div>
-            )}
-            {data.shared.healthIssue && (
-                <div className="mx-3 mt-3">
-                    <RichAlert variant="warning">{data.shared.healthIssue}</RichAlert>
-                </div>
-            )}
-            <RichPanelDetails className="d-block">
-                <div className="hstack flex-wrap">
-                    <ConnectionStringItem
-                        connectionStringDefined
-                        canEdit={canEdit}
-                        connectionStringName={data.shared.connectionStringName}
-                        connectionStringType="Sql"
-                        databaseName={databaseName}
-                    />
-                    <RichPanelDetailItem label="Factory name">{data.shared.factoryName}</RichPanelDetailItem>
-                    <RichPanelDetailItem label="Skip initial load">
-                        {configuration?.SkipInitialLoad ? "Yes" : "No"}
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem label="Last checkpoint" contentClassName="text-break">
-                        {data.shared.lastCheckpoint || "N/A"}
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem label="Tables">
-                        {enabledTables} / {tables.length} enabled
-                    </RichPanelDetailItem>
-                    <TaskPanelErrors
-                        errorCount={errorCount}
-                        errorsByLocation={errorsByLocation}
-                        goToTaskErrors={goToTaskErrors}
-                    />
-                </div>
-                <div className="hstack">
-                    <RichPanelDetailItem label="Last batch time">{lastBatchTime}</RichPanelDetailItem>
-                    <RichPanelDetailItem label="Time since last batch">{secondsSinceLastBatch}</RichPanelDetailItem>
-                </div>
-                <div className="hstack">
-                    <RichPanelDetailItem label="Last activity time">{lastActivityTime}</RichPanelDetailItem>
-                    <RichPanelDetailItem label="Time since last activity">
-                        {secondsSinceLastActivity}
-                    </RichPanelDetailItem>
-                </div>
+            <RichPanelDetails>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Last activity time">{lastActivityTime}</RichPanelDetailItem>
+                <TaskPanelErrors
+                    errorCount={errorCount}
+                    errorsByLocation={errorsByLocation}
+                    goToTaskErrors={goToTaskErrors}
+                />
             </RichPanelDetails>
+            <Collapse in={detailsVisible}>
+                <div>
+                    {data.shared.error && (
+                        <div className="mx-3 mt-3">
+                            <RichAlert variant="danger">{data.shared.error}</RichAlert>
+                        </div>
+                    )}
+                    {data.shared.healthIssue && (
+                        <div className="mx-3 mt-3">
+                            <RichAlert variant="warning">{data.shared.healthIssue}</RichAlert>
+                        </div>
+                    )}
+                    <RichPanelDetails className="d-block">
+                        <div className="hstack flex-wrap">
+                            <ConnectionStringItem
+                                connectionStringDefined
+                                canEdit={canEdit}
+                                connectionStringName={data.shared.connectionStringName}
+                                connectionStringType="Sql"
+                                databaseName={databaseName}
+                            />
+                            <RichPanelDetailItem label="Factory name">{data.shared.factoryName}</RichPanelDetailItem>
+                            <RichPanelDetailItem label="Skip initial load">
+                                {configuration?.SkipInitialLoad ? "Yes" : "No"}
+                            </RichPanelDetailItem>
+                            <RichPanelDetailItem label="Last checkpoint" contentClassName="text-break">
+                                {data.shared.lastCheckpoint || "N/A"}
+                            </RichPanelDetailItem>
+                            <RichPanelDetailItem label="Tables">
+                                {enabledTables} / {tables.length} enabled
+                            </RichPanelDetailItem>
+                        </div>
+                        <div className="hstack">
+                            <RichPanelDetailItem label="Last batch time">{lastBatchTime}</RichPanelDetailItem>
+                            <RichPanelDetailItem label="Time since last batch">
+                                {secondsSinceLastBatch}
+                            </RichPanelDetailItem>
+                            <RichPanelDetailItem label="Time since last activity">
+                                {secondsSinceLastActivity}
+                            </RichPanelDetailItem>
+                        </div>
+                    </RichPanelDetails>
+                </div>
+            </Collapse>
         </>
     );
 }
@@ -165,17 +176,11 @@ export function CdcSinkPanel(props: CdcSinkPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse in={detailsVisible}>
-                <div>
-                    <Details {...props} canEdit={canEdit} />
-                </div>
-            </Collapse>
+            <Details {...props} canEdit={canEdit} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
         </RichPanel>
     );
 }

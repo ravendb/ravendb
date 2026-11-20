@@ -25,7 +25,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import {
+    TaskPanelErrors,
+    EtlPanelHealthBadge,
+    EtlPanelProgressItem,
+    TaskPanelToggleButton,
+} from "./EtlPanelComponents";
 
 type OlapEtlPanelProps = EtlPanelBaseProps<OngoingTaskOlapEtlInfo>;
 
@@ -65,6 +70,10 @@ export function OlapEtlPanel(props: OlapEtlPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="olap-etl" />
+                        OLAP ETL
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -77,19 +86,12 @@ export function OlapEtlPanel(props: OlapEtlPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
-                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <RichPanelDetailItem label="Type">
-                    <Icon icon="olap-etl" />
-                    OLAP ETL
-                </RichPanelDetailItem>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
                 <ConnectionStringItem
                     connectionStringDefined
                     canEdit={canEdit}

@@ -109,6 +109,12 @@ const etlAndAiTaskTypes = genUtils.exhaustiveStringTuple<EtlOrAiOngoingTaskType>
     "GenAi"
 );
 
+const replicationTaskTypes: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType[] = [
+    "Replication",
+    "PullReplicationAsHub",
+    "PullReplicationAsSink",
+];
+
 export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {}) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
 
@@ -164,6 +170,10 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                 if (hasEtlOrAi) {
                     startTrackingEtlProgress();
                 }
+
+                if ((tasks.OngoingTasks ?? []).some((t) => replicationTaskTypes.includes(t.TaskType))) {
+                    startTrackingReplicationProgress();
+                }
             } catch (e) {
                 dispatch({
                     type: "TasksLoadError",
@@ -176,7 +186,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                 );
             }
         },
-        [db, tasksService, dispatch, startTrackingEtlProgress]
+        [db, tasksService, dispatch, startTrackingEtlProgress, startTrackingReplicationProgress]
     );
 
     const reload = useCallback(async () => {
@@ -567,14 +577,12 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                                                 {...sharedPanelProps}
                                                 key={taskKey(x.shared)}
                                                 data={x}
-                                                onToggleDetails={startTrackingReplicationProgress}
                                             />
                                         ))}
                                         {replicationSinks.map((x) => (
                                             <ReplicationSinkPanel
                                                 {...sharedPanelProps}
                                                 key={taskKey(x.shared)}
-                                                onToggleDetails={startTrackingReplicationProgress}
                                                 data={x}
                                             />
                                         ))}
@@ -583,7 +591,6 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                                                 {...sharedPanelProps}
                                                 key={taskKey(def.shared)}
                                                 data={def}
-                                                onToggleDetails={startTrackingReplicationProgress}
                                                 connectedSinks={replicationHubs.filter(
                                                     (x) => x.shared.taskId === def.shared.taskId
                                                 )}

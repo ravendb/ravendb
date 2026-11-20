@@ -464,4 +464,13 @@ describe("Replication Hub", function () {
 
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+
+    it("shows how many connected sinks have errors", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        expect(await container.findByText("3 with errors")).toBeInTheDocument();
+    });
 });

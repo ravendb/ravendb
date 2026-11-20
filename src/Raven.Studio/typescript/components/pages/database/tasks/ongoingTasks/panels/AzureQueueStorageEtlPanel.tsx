@@ -12,7 +12,6 @@ import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
-    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
@@ -25,7 +24,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import {
+    TaskPanelErrors,
+    EtlPanelHealthBadge,
+    EtlPanelProgressItem,
+    TaskPanelToggleButton,
+} from "./EtlPanelComponents";
 
 type AzureQueueStorageEtlPanelProps = EtlPanelBaseProps<OngoingTaskAzureQueueStorageEtlInfo>;
 
@@ -65,6 +69,10 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps)
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="azure-queue-storage-etl" />
+                        Azure Queue Storage ETL
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -77,19 +85,12 @@ export function AzureQueueStorageEtlPanel(props: AzureQueueStorageEtlPanelProps)
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
-                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <RichPanelDetailItem label="Type">
-                    <Icon icon="azure-queue-storage-etl" />
-                    Azure Queue Storage ETL
-                </RichPanelDetailItem>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
                 <ConnectionStringItem
                     connectionStringDefined
                     canEdit={canEdit}

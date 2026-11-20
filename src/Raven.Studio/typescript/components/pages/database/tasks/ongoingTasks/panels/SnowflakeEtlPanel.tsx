@@ -12,7 +12,6 @@ import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
-    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
@@ -25,7 +24,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import {
+    TaskPanelErrors,
+    EtlPanelHealthBadge,
+    EtlPanelProgressItem,
+    TaskPanelToggleButton,
+} from "./EtlPanelComponents";
 
 type SnowflakeEtlPanelProps = EtlPanelBaseProps<OngoingTaskSnowflakeEtlInfo>;
 
@@ -65,6 +69,10 @@ export function SnowflakeEtlPanel(props: SnowflakeEtlPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="snowflake-etl" />
+                        Snowflake ETL
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -77,19 +85,12 @@ export function SnowflakeEtlPanel(props: SnowflakeEtlPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
-                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <RichPanelDetailItem label="Type">
-                    <Icon icon="snowflake-etl" />
-                    Snowflake ETL
-                </RichPanelDetailItem>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
                 <ConnectionStringItem
                     connectionStringDefined
                     canEdit={canEdit}

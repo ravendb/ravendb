@@ -4,6 +4,7 @@ import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { TasksStubs } from "test/stubs/TasksStubs";
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import GetPeriodicBackupStatusOperationResult = Raven.Client.Documents.Operations.Backups.GetPeriodicBackupStatusOperationResult;
+import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
 import collectionsStats = require("models/database/documents/collectionsStats");
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { SharedStubs } from "test/stubs/SharedStubs";
@@ -142,6 +143,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withGetManualBackup(dto?: MockedValue<GetPeriodicBackupStatusOperationResult>) {
         return this.mockResolvedValue(this.mocks.getManualBackup, dto, TasksStubs.getManualBackup());
+    }
+
+    withGetPeriodicBackupStatus(dto?: MockedValue<PeriodicBackupStatus[]>) {
+        return this.mockResolvedValue(this.mocks.getPeriodicBackupStatus, dto, [TasksStubs.getPeriodicBackupStatus()]);
     }
 
     withGetSubscriptionTaskInfo(
