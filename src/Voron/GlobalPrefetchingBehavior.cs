@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using Sparrow.Logging;
@@ -22,7 +22,7 @@ namespace Voron
                 IsBackground = true,
                 Name = PrefetchingThreadName
             };
-            thread.Start();
+            thread.UnsafeStart();
             return prefetcher;
         });
 

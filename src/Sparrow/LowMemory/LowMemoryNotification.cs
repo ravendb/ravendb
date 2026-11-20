@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime;
 using System.Threading;
@@ -243,7 +243,11 @@ namespace Sparrow.LowMemory
                     Name = NotificationThreadName
                 };
 
+#if NET6_0_OR_GREATER
+                thread.UnsafeStart();
+#else
                 thread.Start();
+#endif
 
                 _cancellationTokenRegistration = shutdownNotification.Register(static (state) => ((ManualResetEvent)state).Set(), _shutdownRequested);
             }
