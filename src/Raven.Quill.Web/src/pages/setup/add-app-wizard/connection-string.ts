@@ -150,6 +150,25 @@ function toSslMode(value: string): SslMode {
     return "require";
 }
 
+export type ConnectionSeed = Pick<ExternalConnection, "mode" | "fields" | "connectionString">;
+
+/**
+ * Fills the connection inputs from a stored string. The details fields only when they build that exact
+ * string: the server keeps what it discovered and planned for that string alone, and a connect with any
+ * other one drops it.
+ */
+export function buildConnectionSeed(provider: Provider, connectionString: string): ConnectionSeed {
+    const { values: fields } = parseConnectionString(connectionString);
+
+    if (connectionString === "") {
+        return { mode: "fields", fields: { ...fields, port: DEFAULT_PORT_BY_PROVIDER[provider] }, connectionString };
+    }
+
+    const isRebuiltExactly = buildConnectionString(provider, fields) === connectionString;
+
+    return { mode: isRebuiltExactly ? "fields" : "raw", fields, connectionString };
+}
+
 export function parseConnectionString(connectionString: string): ParsedConnectionString {
     const values: ConnectionValues = {
         host: "",

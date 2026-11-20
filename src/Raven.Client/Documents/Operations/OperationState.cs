@@ -28,6 +28,14 @@ namespace Raven.Client.Documents.Operations
 
             return djv;
         }
+
+        internal OperationState Finish(IOperationResult result, OperationStatus status) => new()
+        {
+            Progress = PersistProgressOnFaultedStatus ? Progress : null,
+            PersistProgressOnFaultedStatus = PersistProgressOnFaultedStatus,
+            Result = result,
+            Status = status
+        };
     }
 
     public interface IOperationResult

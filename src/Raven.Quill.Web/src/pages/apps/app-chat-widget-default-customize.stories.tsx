@@ -1,12 +1,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { iframeHandlers, iframeMocks, SAMPLE_CHANNEL_THEME, SAMPLE_FONT_OPTIONS } from "@/mocks/iframe-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { AppChatWidgetDefaultCustomize } from "./app-chat-widget-default-customize";
 
 const meta = {
     title: "Apps/Default chat widget appearance",
     component: AppChatWidgetDefaultCustomize,
     parameters: {
-        page: { title: "Default chat widget appearance" },
+        page: {},
         router: {
             initialPath: "/apps/demo/chat-widget/default-customize",
             path: "/apps/:slug/chat-widget/default-customize",
@@ -24,37 +25,33 @@ export const Default: Story = {};
 // An app-wide default the operator has already tailored.
 export const WithSavedTheme: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                iframe: [
-                    iframeMocks.getDefaultTheme({
-                        theme: SAMPLE_CHANNEL_THEME,
-                        fontOptions: SAMPLE_FONT_OPTIONS,
-                    }),
-                    ...iframeHandlers(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            iframe: [
+                iframeMocks.getDefaultTheme({
+                    theme: SAMPLE_CHANNEL_THEME,
+                    fontOptions: SAMPLE_FONT_OPTIONS,
+                }),
+                ...iframeHandlers(),
+            ],
+        }),
     },
 };
 
 // A dark app-wide default.
 export const DarkTheme: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                iframe: [
-                    iframeMocks.getDefaultTheme({
-                        theme: {
-                            ...SAMPLE_CHANNEL_THEME,
-                            appearance: "Dark",
-                            dark: { buttonColor: "#0f766e", messageColor: "#122d2a", backgroundColor: "#0d1117" },
-                        },
-                        fontOptions: SAMPLE_FONT_OPTIONS,
-                    }),
-                    ...iframeHandlers(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            iframe: [
+                iframeMocks.getDefaultTheme({
+                    theme: {
+                        ...SAMPLE_CHANNEL_THEME,
+                        appearance: "Dark",
+                        dark: { buttonColor: "#0f766e", messageColor: "#122d2a", backgroundColor: "#0d1117" },
+                    },
+                    fontOptions: SAMPLE_FONT_OPTIONS,
+                }),
+                ...iframeHandlers(),
+            ],
+        }),
     },
 };

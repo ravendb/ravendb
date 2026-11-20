@@ -1,7 +1,7 @@
 import { Wrench } from "lucide-react";
 import type { AiToolCallResult } from "@/api/generated/server-api";
 import { Parameters } from "@/components/data/parameters";
-import { CodeBlock, TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
+import { CodeBlock, TranscriptDisclosure } from "@/components/chat/transcript-disclosure";
 import { Text } from "@/components/typography";
 import { tryParseJson } from "@/lib/utils";
 

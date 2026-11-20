@@ -6,12 +6,9 @@ import type {
     CdcSinkTableConfig,
 } from "@/api/generated/server-api";
 import { type AppFormData, providerSchema, tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
+import { type Provider, resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { resolveProviderFromSourceType } from "@/pages/setup/add-app-wizard/steps/connect/connect-source-options";
-import {
-    mapFormTablesToDto,
-    wrapDtoTablesToFormShape,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import { mapFormTablesToDto, mapDtoTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 
 /** The portable wizard configuration: connection details plus the CDC Sink table mapping, in the
  * canonical DTO shape (matching `/setup/map`). The app name and slug are excluded - a slug
@@ -69,7 +66,7 @@ export function downloadConfig(config: WizardConfig, fileName = "Quill-app-confi
     URL.revokeObjectURL(url);
 }
 
-export async function parseConfigFile(file: File): Promise<WizardConfig> {
+export async function parseConfigFile(file: File): Promise<WizardConfig & { provider: Provider }> {
     let raw: string;
 
     try {
@@ -100,7 +97,7 @@ export async function parseConfigFile(file: File): Promise<WizardConfig> {
 }
 
 export function parseConfigTables(tables: CdcSinkTableConfig[]) {
-    const result = tablesSchema.safeParse(wrapDtoTablesToFormShape(tables));
+    const result = tablesSchema.safeParse(mapDtoTablesToForm(tables));
 
     if (!result.success) {
         throw new Error(firstTableIssueMessage(result.error, tables));

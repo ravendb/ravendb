@@ -63,7 +63,7 @@ export function describeAiConsentBlock(consent: AiConsentState, manualHint: stri
 }
 
 /** Invalidates the suggestions the missing consent already turned away, so they reload without a page refresh. */
-export function useGrantAiConsent({ onGranted }: { onGranted?: () => void } = {}) {
+export function useGrantAiConsent() {
     const queryClient = useQueryClient();
 
     return useMutation({
@@ -79,7 +79,6 @@ export function useGrantAiConsent({ onGranted }: { onGranted?: () => void } = {}
         onSuccess: (result) => {
             queryClient.setQueryData(api.queries.assistant.consent().queryKey, result);
             void invalidateConsentBlockedSuggestions(queryClient);
-            onGranted?.();
         },
     });
 }

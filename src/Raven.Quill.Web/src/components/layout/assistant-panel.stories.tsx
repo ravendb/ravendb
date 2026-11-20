@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import { AI_LICENSE_UNAVAILABLE_MESSAGE } from "@/api/custom-services/assistant-service";
 import { assistantMocks } from "@/mocks/assistant-mocks";
-import { defaultApiMocks } from "@/mocks/default-mocks";
+import { defaultApiMocks, mockHandlers } from "@/mocks/default-mocks";
 import { AssistantPanel } from "./assistant-panel";
 import { useAssistantStore } from "./assistant-store";
 
@@ -36,11 +36,9 @@ export const ConsentGranted: Story = {
 
 export const ConsentRequired: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                assistant: [assistantMocks.consent({ status: "ConsentRequired" }), ...defaultApiMocks.assistant],
-            },
-        },
+        msw: mockHandlers({
+            assistant: [assistantMocks.consent({ status: "ConsentRequired" }), ...defaultApiMocks.assistant],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -52,11 +50,9 @@ export const ConsentRequired: Story = {
 
 export const LicenseWithoutAssistant: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                assistant: [assistantMocks.consent({ status: "InvalidCredentials" }), ...defaultApiMocks.assistant],
-            },
-        },
+        msw: mockHandlers({
+            assistant: [assistantMocks.consent({ status: "InvalidCredentials" }), ...defaultApiMocks.assistant],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -67,9 +63,7 @@ export const LicenseWithoutAssistant: Story = {
 
 export const ConsentCheckFailed: Story = {
     parameters: {
-        msw: {
-            handlers: { assistant: [assistantMocks.consentUnavailable(), ...defaultApiMocks.assistant] },
-        },
+        msw: mockHandlers({ assistant: [assistantMocks.consentUnavailable(), ...defaultApiMocks.assistant] }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);

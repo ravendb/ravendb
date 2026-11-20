@@ -18,10 +18,14 @@ import SizeGetter from "../SizeGetter";
 import { ClassNameProps } from "components/models/common";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { splitViewActions, splitViewSelectors } from "components/common/splitView/store/splitViewSlice";
+import useConfirm from "components/common/ConfirmDialog";
+import { useDirtyFlagRegistry } from "components/hooks/useDirtyFlag";
 
 const SplitViewContext = createContext<{
     sheetComponent: ReactNode;
     setSheetComponent: (sheetComponent: ReactNode) => void;
+    confirmBeforeClose: (action: () => void) => void;
+    registerSheetDirtyFlag: (dirtyFlagId: string) => () => void;
     registerSheetClose: (callback: (() => void) | null) => void;
     activeSheetOwnerId: string | null;
     setActiveSheetOwnerId: (ownerId: string | null) => void;
@@ -41,6 +45,34 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
     const [activeSheetOwnerId, setActiveSheetOwnerId] = useState<string | null>(null);
     const [sheetPortalNode, setSheetPortalNode] = useState<HTMLDivElement | null>(null);
     const onSheetCloseRef = useRef<(() => void) | null>(null);
+    const sheetDirtyFlagIdsRef = useRef(new Set<string>());
+    const { isDirty } = useDirtyFlagRegistry();
+    const confirm = useConfirm();
+
+    const registerSheetDirtyFlag = useCallback((dirtyFlagId: string) => {
+        sheetDirtyFlagIdsRef.current.add(dirtyFlagId);
+        return () => {
+            sheetDirtyFlagIdsRef.current.delete(dirtyFlagId);
+        };
+    }, []);
+
+    const confirmBeforeClose = useCallback(
+        (action: () => void) => {
+            if (!Array.from(sheetDirtyFlagIdsRef.current).some(isDirty)) {
+                action();
+                return;
+            }
+
+            confirm({
+                title: "Unsaved changes",
+                icon: "warning",
+                message: "You have unsaved changes. Do you want to discard them?",
+                confirmText: "Discard",
+                confirmIcon: "trash",
+            }).then((isConfirmed) => isConfirmed && action());
+        },
+        [confirm, isDirty]
+    );
 
     const setSheetComponent = useCallback((component: ReactNode) => {
         if (component === null) {
@@ -63,13 +95,23 @@ function SplitViewWithSize(props: Required<PropsWithChildren> & { viewWidthInPx:
         () => ({
             sheetComponent,
             setSheetComponent,
+            confirmBeforeClose,
+            registerSheetDirtyFlag,
             registerSheetClose,
             activeSheetOwnerId,
             setActiveSheetOwnerId,
             sheetPortalNode,
             setSheetPortalNode,
         }),
-        [sheetComponent, setSheetComponent, registerSheetClose, activeSheetOwnerId, sheetPortalNode]
+        [
+            sheetComponent,
+            setSheetComponent,
+            confirmBeforeClose,
+            registerSheetDirtyFlag,
+            registerSheetClose,
+            activeSheetOwnerId,
+            sheetPortalNode,
+        ]
     );
 
     return (

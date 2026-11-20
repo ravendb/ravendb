@@ -6,6 +6,7 @@ import {
     sampleUsedByTasksConnectionStringResponses,
     sampleUsedByTasksVertexConnectionStringResponses,
 } from "@/mocks/ai-connection-strings-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { DashboardConnectionStrings } from "./connection-strings";
 
 const meta = {
@@ -26,24 +27,20 @@ export const Default: Story = {};
 
 export const Empty: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                aiConnectionStrings: [aiConnectionStringsMocks.list([])],
-            },
-        },
+        msw: mockHandlers({
+            aiConnectionStrings: [aiConnectionStringsMocks.list([])],
+        }),
     },
 };
 
 export const UsedByAgents: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                aiConnectionStrings: [
-                    aiConnectionStringsMocks.list(sampleUsedByAgentsConnectionStringResponses),
-                    aiConnectionStringsMocks.detail(sampleUsedByAgentsConnectionStringResponses),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            aiConnectionStrings: [
+                aiConnectionStringsMocks.list(sampleUsedByAgentsConnectionStringResponses),
+                aiConnectionStringsMocks.detail(sampleUsedByAgentsConnectionStringResponses),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -62,14 +59,12 @@ export const UsedByAgents: Story = {
 
 export const UsedByTasks: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                aiConnectionStrings: [
-                    aiConnectionStringsMocks.list(sampleUsedByTasksConnectionStringResponses),
-                    aiConnectionStringsMocks.detail(sampleUsedByTasksConnectionStringResponses),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            aiConnectionStrings: [
+                aiConnectionStringsMocks.list(sampleUsedByTasksConnectionStringResponses),
+                aiConnectionStringsMocks.detail(sampleUsedByTasksConnectionStringResponses),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -90,14 +85,12 @@ export const UsedByTasks: Story = {
 // invalidate the embeddings the task has already written.
 export const UsedByTasksVertex: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                aiConnectionStrings: [
-                    aiConnectionStringsMocks.list(sampleUsedByTasksVertexConnectionStringResponses),
-                    aiConnectionStringsMocks.detail(sampleUsedByTasksVertexConnectionStringResponses),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            aiConnectionStrings: [
+                aiConnectionStringsMocks.list(sampleUsedByTasksVertexConnectionStringResponses),
+                aiConnectionStringsMocks.detail(sampleUsedByTasksVertexConnectionStringResponses),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);

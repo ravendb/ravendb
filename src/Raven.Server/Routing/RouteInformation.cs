@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Utils;
@@ -156,7 +157,7 @@ namespace Raven.Server.Routing
                             using (context.RavenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                             using (ctx.OpenReadTransaction())
                             {
-                                if (context.RavenServer.ServerStore.Cluster.DatabaseExists(ctx, databaseName.Value))
+                                if (ClusterStateMachine.DatabaseExists(ctx, databaseName.Value))
                                 {
                                     // db got disabled during loading
                                     throw new DatabaseDisabledException($"Cannot complete the request, because {databaseName.Value} has been disabled.");

@@ -17,8 +17,7 @@ import QuillMark from "@/components/brand/quill-mark.svg?react";
 // import { AssistantPanel } from "@/components/layout/assistant-panel";
 // import { ASSISTANT_PANEL_TITLE_ID, useAssistantPinning, useAssistantStore } from "@/components/layout/assistant-store";
 import { FeedbackSheet } from "@/components/layout/feedback-sheet";
-import { Heading } from "@/components/typography";
-import { PageContainer } from "@/components/page-container";
+import { AppShellMain } from "@/components/layout/app-shell-main";
 import { Button } from "@/components/shadcn/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/shadcn/ui/tooltip";
 
@@ -163,49 +162,13 @@ function App() {
                 />
             </aside>
 
-            <main
-                className={cn(
-                    "app-shell__main me-2 mb-2 rounded-lg border bg-surface1 dark:bg-surface2",
-                    isBareLayout ? "gap-0 p-0" : "gap-3 px-4 py-5 lg:px-5",
-                    isPageTitleHidden && "grid-rows-[minmax(0,1fr)]",
-                )}
+            <AppShellMain
+                title={isPageTitleHidden ? undefined : (activeRoute?.title ?? "My apps")}
+                isBareLayout={isBareLayout}
+                className="me-2 mb-2"
             >
-                {!isPageTitleHidden && (
-                    // Mirror the scroll area below (same bleed + scrollbar-gutter) so the centred title lines up
-                    // with the centred content whether or not the content shows a scrollbar. `overflow-hidden`
-                    // makes this a scroll container so `scrollbar-gutter` reserves the same space here too.
-                    <div className="-mx-4 [scrollbar-gutter:stable] overflow-hidden px-4 lg:-mx-5 lg:px-5">
-                        <PageContainer>
-                            <Heading as="h1" variant="page">
-                                {activeRoute?.title ?? "My apps"}
-                            </Heading>
-                        </PageContainer>
-                    </div>
-                )}
-                <div
-                    className={cn(
-                        "min-h-0",
-                        // Bleed the scroll area to the panel's inner border (padding keeps content in place) so
-                        // a full-bleed detail header can reach the edges instead of being clipped short. Clip
-                        // horizontal overflow so the page never scrolls sideways; wide content self-scrolls.
-                        // `scrollbar-gutter: stable` reserves the scrollbar space even when no scrollbar shows; the
-                        // title band above mirrors this exact box, so the two centre on the same axis either way.
-                        isBareLayout
-                            ? "overflow-auto"
-                            : "-mx-4 [scrollbar-gutter:stable] overflow-x-clip overflow-y-auto px-4 lg:-mx-5 lg:px-5",
-                    )}
-                >
-                    {/* Bare layouts (wizards) manage their own width; every other page is capped and
-                        centred here so content matches the title band instead of stretching on wide screens. */}
-                    {isBareLayout ? (
-                        <Outlet />
-                    ) : (
-                        <PageContainer>
-                            <Outlet />
-                        </PageContainer>
-                    )}
-                </div>
-            </main>
+                <Outlet />
+            </AppShellMain>
 
             {/* Stays mounted while closed so the conversation and draft survive toggling. */}
             {/* <aside

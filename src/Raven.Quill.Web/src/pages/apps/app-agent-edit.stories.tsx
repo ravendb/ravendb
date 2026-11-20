@@ -5,7 +5,7 @@ const meta = {
     title: "Apps/Edit agent",
     component: AppAgentEdit,
     parameters: {
-        page: { title: "Edit agent" },
+        page: {},
         router: {
             initialPath: `/apps/demo/agents/${encodeURIComponent("agents/sales")}/edit`,
             path: "/apps/:slug/agents/:agentId/edit",

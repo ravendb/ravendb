@@ -3,6 +3,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import assertUnreachable from "components/utils/assertUnreachable";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
+import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
 
 export function commonInit(databaseType: "sharded" | "cluster" | "singleNode" = "sharded") {
     const { accessManager, license, databases } = mockStore;
@@ -42,20 +43,22 @@ export function commonInit(databaseType: "sharded" | "cluster" | "singleNode" = 
     });
 }
 
+export function markReplicationProcessCompleted(progress: ReplicationProcessProgress) {
+    progress.Completed = true;
+    progress.NumberOfAttachmentsToProcess = 0;
+    progress.NumberOfCounterGroupsToProcess = 0;
+    progress.NumberOfDocumentsToProcess = 0;
+    progress.NumberOfDocumentTombstonesToProcess = 0;
+    progress.NumberOfRevisionsToProcess = 0;
+    progress.NumberOfTimeSeriesSegmentsToProcess = 0;
+    progress.NumberOfTimeSeriesDeletedRangesToProcess = 0;
+}
+
 export function mockExternalReplicationProgress(tasksService: MockTasksService, completed: boolean) {
     if (completed) {
         tasksService.withGetExternalReplicationProgress((dto) => {
             dto.Results.forEach((x) => {
-                x.ProcessesProgress.forEach((progress) => {
-                    progress.Completed = true;
-                    progress.NumberOfAttachmentsToProcess = 0;
-                    progress.NumberOfCounterGroupsToProcess = 0;
-                    progress.NumberOfDocumentsToProcess = 0;
-                    progress.NumberOfDocumentTombstonesToProcess = 0;
-                    progress.NumberOfRevisionsToProcess = 0;
-                    progress.NumberOfTimeSeriesSegmentsToProcess = 0;
-                    progress.NumberOfTimeSeriesDeletedRangesToProcess = 0;
-                });
+                x.ProcessesProgress.forEach(markReplicationProcessCompleted);
             });
         });
     } else {

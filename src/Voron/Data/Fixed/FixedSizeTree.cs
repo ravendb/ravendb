@@ -1809,6 +1809,14 @@ namespace Voron.Data.Fixed
 
         private (long Count, int ReachedDepth) EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int currentDepth, int maxDepth, ref RemainingNumberOfEntriesState state)
         {
+            if (page.IsLeaf)
+            {
+                // siblings can be leaves after a branch collapses
+                var activeEntriesInPage = page.NumberOfActiveEntries;
+                state.NonEstimatedAmount += activeEntriesInPage;
+                return (activeEntriesInPage, currentDepth - 1);
+            }
+
             var lastEntry = page.GetEntry(page.NumberOfEntries - 1);
             var lastPage = GetReadOnlyPage(lastEntry->PageNumber);
 
@@ -1839,19 +1847,9 @@ namespace Voron.Data.Fixed
                     {
                         var entry = page.GetEntry(page.LastSearchPosition);
                         var childPage = GetReadOnlyPage(entry->PageNumber);
-
-                        if (childPage.IsLeaf)
-                        {
-                            var activeEntriesInChildPage = childPage.NumberOfActiveEntries;
-                            totalEstimate += activeEntriesInChildPage;
-                            state.NonEstimatedAmount += activeEntriesInChildPage;
-                        }
-                        else
-                        {
-                            var branchEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
-                            totalEstimate += branchEstimate.Count;
-                            reachedDepth = Math.Max(reachedDepth, branchEstimate.ReachedDepth);
-                        }
+                        var childEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
+                        totalEstimate += childEstimate.Count;
+                        reachedDepth = Math.Max(reachedDepth, childEstimate.ReachedDepth);
 
                         page.LastSearchPosition++;
                     }

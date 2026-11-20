@@ -19,9 +19,6 @@ public class RavenDB_18013 : ClusterTestBase
     private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(60);
     // handler waits must outlive the test orchestration so they don't timeout before the test signals them
     private readonly TimeSpan _handlerWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(2);
-    private bool WaitOrTestDone(WaitHandle handle, WaitHandle testDone) =>
-        WaitHandle.WaitAny([handle, testDone], _handlerWaitTime) != WaitHandle.WaitTimeout;
-
     [RavenFact(RavenTestCategory.ClusterTransactions)]
     public async Task ShouldHandleDatabaseDeleteWhileItsBeingDeleted()
     {
@@ -29,10 +26,14 @@ public class RavenDB_18013 : ClusterTestBase
 
         var deleteDatabaseCommandMre = new ManualResetEvent(false);
         var deleteDatabaseCommandHasWaiterMre = new ManualResetEvent(false);
-        var removeNodeFromDatabaseCommandMre = new ManualResetEvent(false);
+        // RemoveNodeFromDatabaseCommand handlers are released through two events that are only ever Set, never Reset.
+        // A single event that the handlers Reset() themselves loses wake-ups: a handler that reaches its wait after another
+        // handler (or the test) already went through the Set/Reset pair stays blocked inside DatabasesLandlord.HandleClusterDatabaseChanged,
+        // which holds the landlord's dispose guard, so the server cannot be disposed (RavenDB-26635).
+        var firstRemoveNodeFromDatabaseCommandMre = new ManualResetEvent(false);
+        var otherRemoveNodeFromDatabaseCommandsMre = new ManualResetEvent(false);
         var documentDatabaseDisposeMre = new ManualResetEvent(false);
         var documentDatabaseDisposeHasWaiterMre = new ManualResetEvent(false);
-        var testDone = new ManualResetEvent(false);
 
         using var store = GetDocumentStore(new Options
         {
@@ -56,7 +57,7 @@ public class RavenDB_18013 : ClusterTestBase
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(deleteDatabaseCommandMre)}'");
 
                 deleteDatabaseCommandHasWaiterMre.Set();
-                var result = WaitOrTestDone(deleteDatabaseCommandMre, testDone);
+                var result = deleteDatabaseCommandMre.WaitOne(_handlerWaitTime);
 
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: '{nameof(deleteDatabaseCommandMre)}' got signaled. Result: {result}");
 
@@ -73,28 +74,16 @@ public class RavenDB_18013 : ClusterTestBase
                 {
        
                 }
-                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}' (1)");
+                // the first handler to arrive is the one released while the database is still being disposed by the first deletion
+                var handlerNumber = Interlocked.Increment(ref c);
+                var mre = handlerNumber == 1 ? firstRemoveNodeFromDatabaseCommandMre : otherRemoveNodeFromDatabaseCommandsMre;
+                var mreName = handlerNumber == 1 ? nameof(firstRemoveNodeFromDatabaseCommandMre) : nameof(otherRemoveNodeFromDatabaseCommandsMre);
 
-                var result = WaitOrTestDone(removeNodeFromDatabaseCommandMre, testDone);
-                removeNodeFromDatabaseCommandMre.Reset();
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: handler #{handlerNumber} waiting for '{mreName}'");
 
-                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(removeNodeFromDatabaseCommandMre)}': {result} (1)");
+                var result = mre.WaitOne(_handlerWaitTime);
 
-                if (Interlocked.Increment(ref c) == 1)
-                {
-                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: incremented '{nameof(c)}' to 1 (value: {c}), returning");
-
-                    return;
-                }
-                else
-                {
-                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: incremented '{nameof(c)}', current value: {c}");
-                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(removeNodeFromDatabaseCommandMre)}' (2)");
-
-                    result = WaitOrTestDone(removeNodeFromDatabaseCommandMre, testDone);
-
-                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(removeNodeFromDatabaseCommandMre)}': {result} (2)");
-                }
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{mreName}': {result}");
             }
         };
         var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -105,41 +94,43 @@ public class RavenDB_18013 : ClusterTestBase
                    documentDatabaseDisposeHasWaiterMre.Set();
                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(documentDatabaseDisposeMre)}'");
 
-                   var result = WaitOrTestDone(documentDatabaseDisposeMre, testDone);
+                   var result = documentDatabaseDisposeMre.WaitOne(_handlerWaitTime);
 
                    Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: result of waiting for '{nameof(documentDatabaseDisposeMre)}': {result}");
                }))
         {
+
+            var t = store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true));
+
             try
             {
-                var t = store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true));
-
                 // wait for DeleteDatabaseCommand
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(deleteDatabaseCommandHasWaiterMre)}' in test");
 
-                deleteDatabaseCommandHasWaiterMre.WaitOne(_reasonableWaitTime);
+                Assert.True(deleteDatabaseCommandHasWaiterMre.WaitOne(_reasonableWaitTime), $"{nameof(DeleteDatabaseCommand)} handler wasn't reached");
                 // wait for RemoveNodeFromDatabaseCommands
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(cde)}' in test");
 
-                cde.Wait(_reasonableWaitTime);
+                Assert.True(cde.Wait(_reasonableWaitTime), $"{nameof(RemoveNodeFromDatabaseCommand)} handlers weren't reached");
                 // advance DeleteDatabaseCommand
-                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(deleteDatabaseCommandMre)}' in test");
+                Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: setting '{nameof(deleteDatabaseCommandMre)}' in test");
 
                 deleteDatabaseCommandMre.Set();
                 // wait for the thread to reach dispose of document database
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for '{nameof(documentDatabaseDisposeHasWaiterMre)}' in test");
 
-                documentDatabaseDisposeHasWaiterMre.WaitOne(_reasonableWaitTime);
+                Assert.True(documentDatabaseDisposeHasWaiterMre.WaitOne(_reasonableWaitTime), "Document database dispose wasn't reached");
                 // advance one of RemoveNodeFromDatabaseCommands
-                removeNodeFromDatabaseCommandMre.Set();
+                firstRemoveNodeFromDatabaseCommandMre.Set();
                 // we should handle deletion while deletion is in progress
                 Output.WriteLine($"{SystemTime.UtcNow} RavenDB-18013: waiting for 'DeleteDatabaseWhileItBeingDeleted' in test");
 
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().DeleteDatabaseWhileItBeingDeleted.WaitOne(_reasonableWaitTime);
+                Assert.True(server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().DeleteDatabaseWhileItBeingDeleted.WaitOne(_reasonableWaitTime),
+                    "Deletion of a database that is already being deleted wasn't handled");
 
-                // advance the document database dispose & RemoveNodeFromDatabaseCommands
+                // advance the document database dispose & the rest of RemoveNodeFromDatabaseCommands
                 documentDatabaseDisposeMre.Set();
-                removeNodeFromDatabaseCommandMre.Set();
+                otherRemoveNodeFromDatabaseCommandsMre.Set();
 
                 // finish delete
                 try
@@ -154,7 +145,11 @@ public class RavenDB_18013 : ClusterTestBase
             }
             finally
             {
-                testDone.Set();
+                // release every handler, even if the test failed, so none of them keeps the server from being disposed
+                deleteDatabaseCommandMre.Set();
+                firstRemoveNodeFromDatabaseCommandMre.Set();
+                otherRemoveNodeFromDatabaseCommandsMre.Set();
+                documentDatabaseDisposeMre.Set();
             }
         }
     }

@@ -11,14 +11,14 @@ export default defineConfig({
     plugins: [tailwindcss(), viteSingleFile()],
     resolve: {
         alias: {
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(import.meta.dirname, "./src"),
         },
     },
     build: {
         // No dynamic imports to preload, so vite's preload polyfill would inline as dead weight.
         modulePreload: false,
         rollupOptions: {
-            input: path.resolve(__dirname, "expired.html"),
+            input: path.resolve(import.meta.dirname, "expired.html"),
         },
         // dist is shared with the SPA build, which runs first and empties it.
         emptyOutDir: false,

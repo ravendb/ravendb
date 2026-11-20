@@ -1,0 +1,48 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+.pagination-bar {
+    .vr {
+        align-self: stretch;
+        margin: sizes.$gutter-xxxs 0;
+    }
+
+    .page-size-select {
+        flex: 0 0 auto;
+        min-width: 90px;
+
+        .react-select__control {
+            min-height: bs5variables.$input-height-sm;
+        }
+
+        .react-select__value-container {
+            padding: 0 sizes.$gutter-xxs;
+        }
+
+        .react-select__dropdown-indicator {
+            padding: sizes.$gutter-xxxs;
+        }
+    }
+}
+
+.page-navigation {
+    .page-button {
+        color: colors.$text-muted-var;
+        line-height: 1;
+
+        &:hover:not(:disabled),
+        &:focus-visible {
+            color: colors.$text-emphasis-var;
+        }
+
+        .double-chevron {
+            margin-left: -#{sizes.$gutter-xxs} !important;
+        }
+    }
+
+    .page-input {
+        min-width: 4.5em;
+        padding-inline: sizes.$gutter-xxxs;
+    }
+}

@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Extensions;
+using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -202,6 +204,86 @@ namespace FastTests.Server.Documents.Operations
                 var result = json["Result"] as BlittableJsonReaderObject;
                 Assert.NotNull(result);
                 Assert.Equal("Done", result["Message"].ToString());
+            }
+        }
+
+        public enum Ending
+        {
+            Completed,
+            Faulted,
+            Canceled
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(Ending.Completed)]
+        [InlineData(Ending.Faulted)]
+        [InlineData(Ending.Canceled)]
+        public void Finishing_an_operation_publishes_a_new_state_and_never_mutates_the_running_one(Ending ending)
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var gate = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var operationId = db.Operations.GetNextOperationId();
+
+                db.Operations.AddLocalOperation(
+                    operationId,
+                    OperationType.DumpRawIndexData,
+                    "Operations Test",
+                    detailedDescription: null,
+                    onProgress =>
+                    {
+                        onProgress(new DeterminateProgress
+                        {
+                            Total = 10,
+                            Processed = 5
+                        });
+
+                        return gate.Task;
+                    }).IgnoreUnobservedExceptions();
+
+                var operation = db.Operations.GetOperation(operationId);
+                Assert.True(SpinWait.SpinUntil(() => operation.State.Progress != null, TimeSpan.FromSeconds(15)));
+
+                var running = operation.State;
+
+                switch (ending)
+                {
+                    case Ending.Completed:
+                        gate.SetResult(new SampleOperationResult { Message = "I'm done" });
+                        break;
+                    case Ending.Faulted:
+                        gate.SetException(new InvalidOperationException("Something bad happened"));
+                        break;
+                    case Ending.Canceled:
+                        gate.SetCanceled();
+                        break;
+                }
+
+                Assert.True(SpinWait.SpinUntil(() => ReferenceEquals(operation.State, running) == false, TimeSpan.FromSeconds(15)));
+
+                Assert.Equal(OperationStatus.InProgress, running.Status);
+                Assert.Null(running.Result);
+                Assert.NotNull(running.Progress);
+
+                var finished = operation.State;
+
+                switch (ending)
+                {
+                    case Ending.Completed:
+                        Assert.Equal(OperationStatus.Completed, finished.Status);
+                        Assert.Equal("I'm done", ((SampleOperationResult)finished.Result).Message);
+                        break;
+                    case Ending.Faulted:
+                        Assert.Equal(OperationStatus.Faulted, finished.Status);
+                        Assert.IsType<OperationExceptionResult>(finished.Result);
+                        break;
+                    case Ending.Canceled:
+                        Assert.Equal(OperationStatus.Canceled, finished.Status);
+                        Assert.Null(finished.Result);
+                        break;
+                }
+
+                Assert.Null(finished.Progress);
             }
         }
 

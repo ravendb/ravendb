@@ -79,34 +79,58 @@ function mapOnDeleteToDto(onDelete: FormRootTable["onDelete"]): CdcSinkOnDeleteC
     };
 }
 
-/** Converts DTO tables into the form's pre-validation shape. The result still needs
- * `tablesSchema.parse` to fill defaults and validate before it can be used as form data. */
-export function wrapDtoTablesToFormShape(tables: CdcSinkTableConfig[]): unknown[] {
-    return tables.map(wrapTableStringLists);
+/** Fills values missing from the DTO (a hand-written or older configuration, or a server response
+ * that omits nulls) with the defaults new tables get. The result still needs `tablesSchema` to validate. */
+export function mapDtoTablesToForm(tables: CdcSinkTableConfig[]): FormRootTable[] {
+    return tables.map(mapDtoTableToForm);
 }
 
-function wrapTableStringLists(table: CdcSinkTableConfig) {
+export function mapDtoTableToForm(table: CdcSinkTableConfig): FormRootTable {
     return {
-        ...table,
+        collectionName: table.collectionName ?? "",
+        sourceTableSchema: table.sourceTableSchema ?? null,
+        sourceTableName: table.sourceTableName ?? "",
+        columns: (table.columns ?? []).map(mapColumnToForm),
         primaryKeyColumns: toStringValueItems(table.primaryKeyColumns),
-        embeddedTables: (table.embeddedTables ?? []).map(wrapEmbeddedTableStringLists),
-        linkedTables: (table.linkedTables ?? []).map(wrapLinkedTableStringLists),
+        patch: table.patch ?? null,
+        onDelete: mapOnDeleteToForm(table.onDelete),
+        disabled: table.disabled ?? false,
+        embeddedTables: (table.embeddedTables ?? []).map(mapEmbeddedTableToForm),
+        linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToForm),
     };
 }
 
-function wrapEmbeddedTableStringLists(table: CdcSinkEmbeddedTableConfig): unknown {
+function mapEmbeddedTableToForm(table: CdcSinkEmbeddedTableConfig): FormEmbeddedTable {
     return {
-        ...table,
+        sourceTableSchema: table.sourceTableSchema ?? null,
+        sourceTableName: table.sourceTableName ?? "",
+        propertyName: table.propertyName ?? "",
+        columns: (table.columns ?? []).map(mapColumnToForm),
         primaryKeyColumns: toStringValueItems(table.primaryKeyColumns),
         joinColumns: toStringValueItems(table.joinColumns),
-        embeddedTables: (table.embeddedTables ?? []).map(wrapEmbeddedTableStringLists),
-        linkedTables: (table.linkedTables ?? []).map(wrapLinkedTableStringLists),
+        type: table.type ?? "Array",
+        patch: table.patch ?? null,
+        onDelete: mapOnDeleteToForm(table.onDelete),
+        caseSensitiveKeys: table.caseSensitiveKeys ?? false,
+        linkedTables: (table.linkedTables ?? []).map(mapLinkedTableToForm),
+        embeddedTables: (table.embeddedTables ?? []).map(mapEmbeddedTableToForm),
     };
 }
 
-function wrapLinkedTableStringLists(table: CdcSinkLinkedTableConfig) {
+function mapLinkedTableToForm(table: CdcSinkLinkedTableConfig): FormLinkedTable {
     return {
-        ...table,
+        sourceTableSchema: table.sourceTableSchema ?? null,
+        sourceTableName: table.sourceTableName ?? "",
+        propertyName: table.propertyName ?? "",
         joinColumns: toStringValueItems(table.joinColumns),
+        linkedCollectionName: table.linkedCollectionName ?? "",
     };
+}
+
+function mapColumnToForm(column: CdcColumnMapping): FormColumnMapping {
+    return { column: column.column ?? "", name: column.name ?? "", type: column.type ?? "Default" };
+}
+
+function mapOnDeleteToForm(onDelete: CdcSinkOnDeleteConfig | null | undefined): FormRootTable["onDelete"] {
+    return { patch: onDelete?.patch ?? null, ignoreDeletes: onDelete?.ignoreDeletes ?? false };
 }

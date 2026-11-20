@@ -1,4 +1,5 @@
 import { useFormContext } from "react-hook-form";
+import { InfoHint } from "@/components/data/info-hint";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -35,7 +36,9 @@ export function RootTableEditor({ path }: { path: RootTablePath }) {
                     control={control}
                     name={`${path}.collectionName`}
                     label="Target collection"
-                    description="The RavenDB collection where documents generated from this table are stored."
+                    labelAddon={
+                        <InfoHint content="The RavenDB collection where documents generated from this table are stored." />
+                    }
                 />
             </div>
             <FormStringList
@@ -45,7 +48,9 @@ export function RootTableEditor({ path }: { path: RootTablePath }) {
                 defaultValue={{ value: "" }}
                 label="Primary key columns"
                 addButtonLabel="Add primary key column"
-                description="Columns that uniquely identify each source row. Their values derive the document ID."
+                labelAddon={
+                    <InfoHint content="Columns that uniquely identify each source row. Their values derive the document ID." />
+                }
             />
             <AddNestedTableButtons path={path} />
             <FieldMappingEditor path={path} />

@@ -202,6 +202,7 @@ namespace Raven.Server.Documents.Indexes
             public const long CoraxUnicodeLengthAnalyzers_62 = 62_007; // RavenDB-24423
             public const long CoraxNumericTreesWithoutFrequencies_62 = 62_008; // RavenDB-27171
             public const long LuceneExactDatesUseTimeTicks_62 = 62_009; // RavenDB-27052
+            public const long SpatialSortByNearestPoint_62 = 62_010; // RavenDB-27747
 
             public const long Base72Version = 72_001;
 
@@ -215,11 +216,12 @@ namespace Raven.Server.Documents.Indexes
             public const long LuceneExactDatesUseTimeTicks_72 = 72_003; // RavenDB-27052
             public const long CoraxPerEntryMultipleTermsMarker_72 = 72_004; // RavenDB-27565
             public const long CoraxCharAsString_72 = 72_005; // RavenDB-27596
+            public const long SpatialSortByNearestPoint_72 = 72_006; // RavenDB-27747
 
             /// <summary>
             /// Remember to bump this
             /// </summary>
-            public const long CurrentVersion = CoraxCharAsString_72;
+            public const long CurrentVersion = SpatialSortByNearestPoint_72;
 
             public static bool IsLowerCasedReferencesSupported(long indexVersion)
             {
@@ -286,6 +288,14 @@ namespace Raven.Server.Documents.Indexes
             public static bool IsCoraxCharAsStringSupported(long indexVersion)
             {
                 return indexVersion >= CoraxCharAsString_72;
+            }
+
+            public static bool IsSpatialSortByNearestPointSupported(long indexVersion)
+            {
+                if (indexVersion >= Base72Version)
+                    return indexVersion >= SpatialSortByNearestPoint_72;
+
+                return indexVersion >= SpatialSortByNearestPoint_62;
             }
         }
     }

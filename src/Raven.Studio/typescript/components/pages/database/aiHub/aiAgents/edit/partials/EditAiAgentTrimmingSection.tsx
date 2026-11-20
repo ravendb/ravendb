@@ -222,8 +222,7 @@ function HistoryFields() {
                         <FormDurationPicker
                             control={control}
                             name="trimming.historyExpirationInSeconds"
-                            showDays
-                            isFlexGrow
+                            aria-label="History expiration"
                         />
                     )}
                 </FormGroup>

@@ -2,12 +2,17 @@
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
+import notificationDetailsByReason = require("common/notifications/models/notificationDetailsByReason");
 
-class performanceHint extends abstractNotification {
+type PerformanceHintReason = Raven.Server.NotificationCenter.Notifications.PerformanceHintReason;
+type PerformanceHintDetails<TReason extends PerformanceHintReason> =
+    notificationDetailsByReason.PerformanceHintDetails<TReason>;
 
-    details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
+class performanceHint<TReason extends PerformanceHintReason = PerformanceHintReason> extends abstractNotification {
+
+    details = ko.observable<PerformanceHintDetails<TReason>>();
     source = ko.observable<string>();
-    performanceHintReason = ko.observable<Raven.Server.NotificationCenter.Notifications.PerformanceHintReason>();
+    performanceHintReason = ko.observable<TReason>();
     dontShowAgain = ko.observable<boolean>(false);
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.PerformanceHint) {
@@ -20,9 +25,9 @@ class performanceHint extends abstractNotification {
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.PerformanceHint) {
         super.updateWith(incomingChanges);
 
-        this.details(incomingChanges.Details);
+        this.details(incomingChanges.Details as PerformanceHintDetails<TReason>);
         this.source(incomingChanges.Source);
-        this.performanceHintReason(incomingChanges.Reason);
+        this.performanceHintReason(incomingChanges.Reason as TReason);
     }
 
 }

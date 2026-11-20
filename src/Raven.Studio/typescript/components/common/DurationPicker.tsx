@@ -1,166 +1,220 @@
-import classNames from "classnames";
-import React, { ChangeEvent, useEffect, useRef, useState } from "react";
+import React, { ChangeEvent, FocusEvent, KeyboardEvent, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
-import FormGroup from "react-bootstrap/FormGroup";
-import InputGroup from "react-bootstrap/InputGroup";
+import { ColumnPickerColumn, ColumnPickerMenu, focusFirstColumn } from "components/common/ColumnPicker";
+import { Icon } from "components/common/Icon";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
+import {
+    DurationUnit,
+    DurationUnitSymbols,
+    formatDuration,
+    getListedValues,
+    getVisibleUnits,
+    hasSecondsPart,
+    joinDuration,
+    parseDuration,
+    splitDuration,
+} from "components/common/durationPickerUtils";
+import useUniqueId from "components/hooks/useUniqueId";
+import "./DurationPicker.scss";
 
-interface Duration {
-    days: number;
-    hours: number;
-    minutes: number;
-    seconds: number;
-}
+type DurationPlaceholder = Partial<Record<DurationUnit, string>>;
 
 export interface DurationPickerProps {
     onChange: (totalSeconds: number) => void;
     totalSeconds: number;
-    showDays?: boolean;
+    id?: string;
     showSeconds?: boolean;
     disabled?: boolean;
-    placeholder?: {
-        days?: string;
-        hours?: string;
-        minutes?: string;
-        seconds?: string;
-    };
-    isFlexGrow?: boolean;
+    placeholder?: DurationPlaceholder;
+    defaultTotalSeconds?: number;
+    "aria-label"?: string;
+    "aria-labelledby"?: string;
 }
 
+export const ZERO_DURATION_PLACEHOLDER: DurationPlaceholder = {
+    days: "0",
+    hours: "0",
+    minutes: "0",
+    seconds: "0",
+};
+
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled, isFlexGrow } = props;
+    const {
+        totalSeconds,
+        onChange,
+        id,
+        showSeconds,
+        placeholder,
+        defaultTotalSeconds,
+        disabled,
+        "aria-label": ariaLabel,
+        "aria-labelledby": ariaLabelledBy,
+    } = props;
 
-    const initialValues = getInitialValues(totalSeconds, showDays);
+    const t = useStudioTranslation("durationPicker");
+    const commonT = useStudioTranslation("common");
+    const menuId = useUniqueId("duration-picker-menu-");
 
-    const [days, setDays] = useState(initialValues?.days ?? null);
-    const [hours, setHours] = useState(initialValues?.hours ?? null);
-    const [minutes, setMinutes] = useState(initialValues?.minutes ?? null);
-    const [seconds, setSeconds] = useState(initialValues?.seconds ?? null);
+    const [hasStoredSeconds, setHasStoredSeconds] = useState(() => hasSecondsPart(totalSeconds));
+    const units = getVisibleUnits(showSeconds || hasStoredSeconds);
+    const symbols: DurationUnitSymbols = {
+        days: t("daysSymbol"),
+        hours: t("hoursSymbol"),
+        minutes: t("minutesSymbol"),
+        seconds: t("secondsSymbol"),
+    };
 
-    // the last value this picker and its consumer agreed on, so that emitting and syncing don't echo each other
-    const lastTotalSecondsRef = useRef(totalSeconds);
+    const [text, setText] = useState(() => formatDuration(totalSeconds, units, symbols));
+    const [syncedTotalSeconds, setSyncedTotalSeconds] = useState(totalSeconds ?? null);
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const shouldFocusListOnOpenRef = useRef(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (days == null && hours == null && minutes == null && seconds == null) {
+    const consumerTotalSeconds = totalSeconds ?? null;
+    if (consumerTotalSeconds !== syncedTotalSeconds) {
+        const willShowStoredSeconds = hasStoredSeconds || hasSecondsPart(consumerTotalSeconds);
+        setHasStoredSeconds(willShowStoredSeconds);
+        setSyncedTotalSeconds(consumerTotalSeconds);
+        setText(formatDuration(consumerTotalSeconds, getVisibleUnits(showSeconds || willShowStoredSeconds), symbols));
+    }
+
+    const commitTotalSeconds = (newTotalSeconds: number) => {
+        setText(formatDuration(newTotalSeconds, units, symbols));
+        if (newTotalSeconds !== syncedTotalSeconds) {
+            setSyncedTotalSeconds(newTotalSeconds);
+            onChange(newTotalSeconds);
+        }
+    };
+
+    const readText = (textToRead: string) => parseDuration(textToRead, units, symbols);
+
+    const commitText = () => {
+        if (text === formatDuration(syncedTotalSeconds, units, symbols)) {
             return;
         }
 
-        const calculatedTotalSeconds = seconds + minutes * 60 + hours * 60 * 60 + days * 24 * 60 * 60;
+        const parsedTotalSeconds = readText(text);
+        commitTotalSeconds(Number.isNaN(parsedTotalSeconds) ? syncedTotalSeconds : parsedTotalSeconds);
+    };
 
-        if (calculatedTotalSeconds === lastTotalSecondsRef.current) {
+    const close = () => {
+        commitText();
+        setIsOpen(false);
+    };
+
+    const hasValue = syncedTotalSeconds != null;
+    const valueParts = splitDuration(syncedTotalSeconds ?? 0, units);
+
+    const handleTextChange = (newText: string) => {
+        setText(newText);
+        const parsedTotalSeconds = readText(newText);
+        if (Number.isNaN(parsedTotalSeconds) || parsedTotalSeconds === syncedTotalSeconds) {
             return;
         }
 
-        lastTotalSecondsRef.current = calculatedTotalSeconds;
-        onChange(calculatedTotalSeconds);
-    }, [onChange, days, hours, minutes, seconds]);
+        setSyncedTotalSeconds(parsedTotalSeconds);
+        onChange(parsedTotalSeconds);
+    };
 
-    useEffect(() => {
-        if (totalSeconds === lastTotalSecondsRef.current) {
-            return;
+    const pickValue = (unit: DurationUnit, value: number) => {
+        commitTotalSeconds(joinDuration({ ...valueParts, [unit]: value }));
+    };
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            close();
+        } else if (e.key === "Escape" && isOpen) {
+            e.stopPropagation();
+            close();
+        } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            if (isOpen) {
+                focusFirstColumn(menuRef.current);
+            } else {
+                shouldFocusListOnOpenRef.current = true;
+                setIsOpen(true);
+            }
         }
+    };
 
-        lastTotalSecondsRef.current = totalSeconds;
+    const attachMenu = (menu: HTMLDivElement) => {
+        menuRef.current = menu;
+        if (menu && shouldFocusListOnOpenRef.current) {
+            shouldFocusListOnOpenRef.current = false;
+            focusFirstColumn(menu);
+        }
+    };
 
-        const values = getInitialValues(totalSeconds, showDays);
-        setDays(values?.days ?? null);
-        setHours(values?.hours ?? null);
-        setMinutes(values?.minutes ?? null);
-        setSeconds(values?.seconds ?? null);
-    }, [totalSeconds, showDays]);
+    const handleMenuKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            inputRef.current?.focus();
+            close();
+        }
+    };
 
-    const getInputValue = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = event.currentTarget.value;
-        return value === "" ? null : Number(value);
+    const handleBlur = (e: FocusEvent<HTMLDivElement>) => {
+        if (!containerRef.current?.contains(e.relatedTarget as Node)) {
+            close();
+        }
+    };
+
+    const getPlaceholder = (): string => {
+        if (defaultTotalSeconds != null) {
+            return commonT("defaultPlaceholder", { value: formatDuration(defaultTotalSeconds, units, symbols) });
+        }
+        if (placeholder) {
+            return units.map((unit) => `${placeholder[unit] ?? ""}${symbols[unit]}`).join(" ");
+        }
+        return t("formatExample");
     };
 
     return (
-        <div className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}>
-            {showDays && (
-                <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                    <InputGroup>
-                        <Form.Control
-                            type="number"
-                            min={0}
-                            value={days ?? ""}
-                            placeholder={placeholder?.days}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
-                            disabled={disabled}
+        <div ref={containerRef} className="duration-picker flex-grow-1" onBlur={handleBlur}>
+            <Icon icon="clock" margin="m-0" className="duration-picker__icon" />
+            <Form.Control
+                ref={inputRef}
+                id={id}
+                role="combobox"
+                value={text}
+                placeholder={getPlaceholder()}
+                disabled={disabled}
+                aria-label={ariaLabel}
+                aria-labelledby={ariaLabelledBy}
+                aria-expanded={isOpen}
+                aria-haspopup="dialog"
+                aria-controls={isOpen ? menuId : undefined}
+                autoComplete="off"
+                onChange={(e: ChangeEvent<HTMLInputElement>) => handleTextChange(e.currentTarget.value)}
+                onFocus={() => setIsOpen(true)}
+                onClick={() => setIsOpen(true)}
+                onKeyDown={handleKeyDown}
+            />
+            {isOpen && !disabled && (
+                <ColumnPickerMenu
+                    ref={attachMenu}
+                    id={menuId}
+                    role="dialog"
+                    aria-label={t("pickerLabel")}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onKeyDown={handleMenuKeyDown}
+                >
+                    {units.map((unit) => (
+                        <ColumnPickerColumn
+                            key={unit}
+                            label={t(unit)}
+                            values={getListedValues(unit, valueParts[unit])}
+                            currentValue={hasValue ? valueParts[unit] : null}
+                            onPick={(value) => pickValue(unit, value)}
+                            optionTabIndex={-1}
                         />
-                        <InputGroup.Text>Days</InputGroup.Text>
-                    </InputGroup>
-                </FormGroup>
-            )}
-            <FormGroup controlId="hours" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <InputGroup>
-                    <Form.Control
-                        type="number"
-                        min={0}
-                        value={hours ?? ""}
-                        placeholder={placeholder?.hours}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
-                        disabled={disabled}
-                    />
-                    <InputGroup.Text>Hours</InputGroup.Text>
-                </InputGroup>
-            </FormGroup>
-            <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <InputGroup>
-                    <Form.Control
-                        type="number"
-                        min={0}
-                        value={minutes ?? ""}
-                        placeholder={placeholder?.minutes}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
-                        disabled={disabled}
-                    />
-                    <InputGroup.Text>Minutes</InputGroup.Text>
-                </InputGroup>
-            </FormGroup>
-            {showSeconds && (
-                <FormGroup controlId="seconds" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                    <InputGroup>
-                        <Form.Control
-                            type="number"
-                            min={0}
-                            value={seconds ?? ""}
-                            placeholder={placeholder?.seconds}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
-                            disabled={disabled}
-                        />
-                        <InputGroup.Text>Seconds</InputGroup.Text>
-                    </InputGroup>
-                </FormGroup>
+                    ))}
+                </ColumnPickerMenu>
             )}
         </div>
     );
-}
-function getInitialValues(totalSeconds: number, showDays: boolean): Duration {
-    if (totalSeconds == null) {
-        return null;
-    }
-
-    let total = totalSeconds,
-        hours = 0,
-        days = 0;
-
-    const seconds = total % 60;
-    total = Math.floor(total / 60);
-
-    const minutes = total % 60;
-    total = Math.floor(total / 60);
-
-    if (showDays) {
-        hours = total % 24;
-        days = Math.floor(total / 24);
-    } else {
-        hours = total;
-        days = 0;
-    }
-
-    return {
-        days,
-        hours,
-        minutes,
-        seconds,
-    };
 }

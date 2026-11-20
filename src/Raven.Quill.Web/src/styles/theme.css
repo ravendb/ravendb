@@ -100,6 +100,10 @@
     --badge-info-fg: color-mix(in oklab, var(--info) 62%, black);
     --badge-info-border: color-mix(in oklab, var(--badge-info-fg) 25%, transparent);
 
+    /* Surfaces that rise off the page: one that floats over what it sits on, and one lifted off it. */
+    --elevation-floating: 0 -10px 28px oklch(0 0 0 / 10%);
+    --elevation-lifted: 0 20px 40px oklch(0.4 0.02 30 / 12%);
+
     --border: oklch(0.3 calc(0.04 * var(--tint-c)) var(--tint-h) / 12%);
     --input: oklch(0.3 calc(0.04 * var(--tint-c)) var(--tint-h) / 18%);
     /* The brand coral is 2.61:1 on white, under the 3:1 WCAG 1.4.11 floor for a focus
@@ -199,6 +203,9 @@
     --badge-info-bg: color-mix(in oklab, var(--info) 15%, transparent);
     --badge-info-fg: var(--info);
     --badge-info-border: color-mix(in oklab, var(--info) 30%, transparent);
+
+    --elevation-floating: 0 -12px 32px oklch(0 0 0 / 35%);
+    --elevation-lifted: 0 24px 48px oklch(0 0 0 / 35%);
 
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
@@ -315,4 +322,6 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) + 4px);
+    --shadow-floating: var(--elevation-floating);
+    --shadow-lifted: var(--elevation-lifted);
 }

@@ -51,13 +51,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
     // The injected tests never reach a provider, so any well-formed connection string will do.
     private const string FakeConnectionStringName = "ravendb-26944-connection";
 
-    private static AiConnectionString FakeConnection() => new()
-    {
-        Name = FakeConnectionStringName,
-        Identifier = FakeConnectionStringName,
-        ModelType = AiModelType.Chat,
-        OpenAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")
-    };
+    private static AiConnectionString FakeConnection() => AiAgentTest.FakeConnection(FakeConnectionStringName);
 
     #region streaming
 
@@ -123,6 +117,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         var (_, error) = await StreamAsync(store, "chats/bad-stream-" + shape, InjectedResponse.Sse(sse));
 
         AssertNoParserErrorLeaked<UnexpectedResponseException>(error);
+        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: shape is "reasoning-only" or "reasoning-content-only");
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -145,7 +140,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore();
         var (_, error) = await StreamAsync(store, "chats/length-stream-" + shape, InjectedResponse.Sse(sse));
 
-        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -161,7 +156,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore();
         var (streamed, error) = await StreamAsync(store, "chats/prefix-then-invalid", InjectedResponse.Sse(sse));
 
-        Assert.True(HasException<UnexpectedResponseException>(error), $"expected UnexpectedResponseException, got: {error}");
+        Assert.True(AiAgentTest.HasException<UnexpectedResponseException>(error), $"expected UnexpectedResponseException, got: {error}");
         Assert.Contains("valid prefix ", streamed);
     }
 
@@ -340,39 +335,9 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
                     using var client = await _listener.AcceptTcpClientAsync();
                     var stream = client.GetStream();
 
-                    // read the request headers, then the declared body length
-                    var buffer = new byte[64 * 1024];
-                    var read = 0;
-                    int headerEnd;
-                    while (true)
-                    {
-                        var n = await stream.ReadAsync(buffer, read, buffer.Length - read);
-                        if (n == 0)
-                            break;
-                        read += n;
-                        headerEnd = Encoding.ASCII.GetString(buffer, 0, read).IndexOf("\r\n\r\n", StringComparison.Ordinal);
-                        if (headerEnd < 0)
-                            continue;
-
-                        var headers = Encoding.ASCII.GetString(buffer, 0, headerEnd);
-                        var contentLength = 0;
-                        foreach (var header in headers.Split("\r\n"))
-                        {
-                            if (header.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))
-                                contentLength = int.Parse(header.Substring("Content-Length:".Length).Trim());
-                        }
-
-                        var bodyRead = read - (headerEnd + 4);
-                        while (bodyRead < contentLength)
-                        {
-                            var m = await stream.ReadAsync(buffer, 0, buffer.Length);
-                            if (m == 0)
-                                break;
-                            bodyRead += m;
-                        }
-
-                        break;
-                    }
+                    // Answering before the body is drained fails this test with a transport error.
+                    if (await ReadRequestAsync(stream) == false)
+                        continue;
 
                     var response = Encoding.ASCII.GetBytes(
                         "HTTP/1.1 200 OK\r\n" +
@@ -388,6 +353,42 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             {
                 // listener disposed - test is done
             }
+        }
+
+        private static async Task<bool> ReadRequestAsync(System.Net.Sockets.NetworkStream stream)
+        {
+            var buffer = new byte[64 * 1024];
+            var read = 0;
+            int headerEnd;
+
+            while (true)
+            {
+                var n = await stream.ReadAsync(buffer, read, buffer.Length - read);
+                if (n == 0)
+                    return false;
+
+                read += n;
+                headerEnd = Encoding.ASCII.GetString(buffer, 0, read).IndexOf("\r\n\r\n", StringComparison.Ordinal);
+                if (headerEnd >= 0)
+                    break;
+            }
+
+            var headers = Encoding.ASCII.GetString(buffer, 0, headerEnd);
+            if (headers.Contains("Transfer-Encoding: chunked", StringComparison.OrdinalIgnoreCase) == false)
+                return true;
+
+            var bodyStart = headerEnd + 4;
+            var body = Encoding.ASCII.GetString(buffer, bodyStart, read - bodyStart);
+            while (body.Contains("0\r\n\r\n", StringComparison.Ordinal) == false)
+            {
+                var n = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (n == 0)
+                    return false;
+
+                body += Encoding.ASCII.GetString(buffer, 0, n);
+            }
+
+            return true;
         }
 
         public void Dispose() => _listener.Stop();
@@ -427,6 +428,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             InjectedResponse.Json(response), maxModelIterationsPerCall: 16, withTool: true);
 
         AssertNoParserErrorLeaked<UnexpectedResponseException>(error);
+        AssertDiagnosisMatchesTheFailure(error, answerWasMissing: shape is "empty-content-with-reasoning" or "null-content-with-reasoning");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -486,7 +488,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             InjectedResponse.Json(Wire.Completion("", finishReason: "length", reasoning: RamblingReasoning)),
             maxModelIterationsPerCall: 16, withTool: true);
 
-        Assert.True(HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -510,12 +512,47 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Contains(answer, doc.ToString());
     }
 
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Unstructured_LengthTruncated_ThrowsTooManyTokens(bool streaming)
+    {
+        // a plain-text answer cut by the token limit isn't an answer, the same as a structured one
+        using var store = GetDocumentStore();
+        var conversationId = $"chats/unstructured-length-{streaming}";
+        var error = streaming
+            ? (await StreamAsync(store, conversationId, InjectedResponse.Sse(Wire.Stream(Wire.ContentDelta("Once upon a"), Wire.FinishChunk("length"))), noSchema: true)).error
+            : await RunAsync(store, conversationId, InjectedResponse.Json(Wire.Completion("Once upon a", finishReason: "length")),
+                maxModelIterationsPerCall: 16, noSchema: true);
+
+        Assert.True(AiAgentTest.HasException<TooManyTokensException>(error), $"expected TooManyTokensException, got: {error}");
+    }
+
     #endregion
 
 
+    // Matched on the two phrases the code itself tells apart, so the rest of the wording stays free to change.
+    private static void AssertDiagnosisMatchesTheFailure(Exception error, bool answerWasMissing)
+    {
+        var text = error.ToString();
+
+        if (answerWasMissing)
+        {
+            Assert.Contains("no content", text);
+            Assert.DoesNotContain("content that is not valid JSON", text);
+        }
+        else
+        {
+            // both paths name the content as the problem; which JSON failure it was differs by shape
+            Assert.True(text.Contains("content that is not valid JSON") || text.Contains("content that did not form a complete JSON object"),
+                "the error should name the content as unusable, but it was: " + text);
+            Assert.DoesNotContain("no content", text);
+        }
+    }
+
     private static void AssertNoParserErrorLeaked<T>(Exception error) where T : Exception
     {
-        Assert.True(HasException<T>(error), $"expected {typeof(T).Name}, got: {error}");
+        Assert.True(AiAgentTest.HasException<T>(error), $"expected {typeof(T).Name}, got: {error}");
 
         // the raw JSON-parser error must never reach the caller
         var text = error.ToString();
@@ -523,16 +560,6 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         Assert.DoesNotContain(nameof(InvalidDataException), text);
         Assert.DoesNotContain("InvalidStartOfObjectException", text);
         Assert.DoesNotContain(nameof(EndOfStreamException), text);
-    }
-
-    // No existing test helper walks an exception chain by type (ExtractSingleInnerException only unwraps a
-    // single AggregateException), so the walk lives here.
-    private static bool HasException<T>(Exception e) where T : Exception
-    {
-        for (; e != null; e = e.InnerException)
-            if (e is T)
-                return true;
-        return false;
     }
 
     private static AiAgentConfiguration Agent(string connectionStringName, bool withTool) =>
@@ -598,27 +625,10 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(FakeConnection()));
 
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        {
-            var handler = CreateHandler(database, injected);
-            // tool iterations stay enabled, so this stays a plain answer turn
-            Initialize(handler, conversationId, maxModelIterationsPerCall: 16, withTool: withTool, noSchema: noSchema);
 
-            // the real server-side streaming path writes the streamed property to this stream
-            using var clientStream = new MemoryStream();
-
-            Exception error = null;
-            try
-            {
-                await handler.HandleStreamingRequestAsync(context, clientStream,
-                    noSchema ? string.Empty : AnswerProperty, CancellationToken.None);
-            }
-            catch (Exception e)
-            {
-                error = e;
-            }
-
-            return (Encoding.UTF8.GetString(clientStream.ToArray()), error);
-        }
+        // tool iterations stay enabled, so this stays a plain answer turn
+        return await AiAgentTest.StreamAsync(Server.ServerStore, database, FakeConnection(), injected,
+            noSchema ? string.Empty : AnswerProperty,
+            handler => Initialize(handler, conversationId, maxModelIterationsPerCall: 16, withTool: withTool, noSchema: noSchema));
     }
 }

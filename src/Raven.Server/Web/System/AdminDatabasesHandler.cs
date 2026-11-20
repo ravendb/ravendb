@@ -29,6 +29,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Commands;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions;
@@ -392,6 +393,10 @@ namespace Raven.Server.Web.System
             using (var documentDatabase = DatabasesLandlord.CreateDocumentDatabase(databaseName, databaseConfiguration, ServerStore, addToInitLog))
             {
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
+
+                if (documentDatabase is ShardedDocumentDatabase sharded)
+                    sharded.ShardingConfiguration = ShardingStore.CopyWithPrefixedBucketRanges(databaseRecord.Sharding);
+
                 documentDatabase.Initialize(options);
                 await documentDatabase.IndexStore.InitializeSharedJournalsAsync();
 
@@ -973,7 +978,7 @@ namespace Raven.Server.Web.System
                 {
                     using (context.OpenReadTransaction())
                     {
-                        var databaseExists = ServerStore.Cluster.DatabaseExists(context, name);
+                        var databaseExists = ClusterStateMachine.DatabaseExists(context, name);
                         if (databaseExists == false)
                         {
                             resultList.Add(new DynamicJsonValue

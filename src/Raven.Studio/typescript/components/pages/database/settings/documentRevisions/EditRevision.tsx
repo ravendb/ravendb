@@ -185,8 +185,8 @@ export default function EditRevision(props: EditRevisionProps) {
                             <FormDurationPicker
                                 control={control}
                                 name="minimumRevisionAgeToKeep"
-                                showDays
                                 showSeconds
+                                aria-label="Minimum revision age to keep"
                             />
                             {!isDefaultConflicts &&
                             revisionsAgeInDaysLimit > 0 &&

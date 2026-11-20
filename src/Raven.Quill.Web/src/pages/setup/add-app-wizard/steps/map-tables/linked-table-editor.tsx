@@ -1,4 +1,5 @@
 import { useFormContext } from "react-hook-form";
+import { InfoHint } from "@/components/data/info-hint";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import type { AppFormData } from "@/pages/setup/add-app-wizard/app-wizard-validation";
@@ -32,13 +33,17 @@ export function LinkedTableEditor({ path }: { path: LinkedTablePath }) {
                     control={control}
                     name={`${path}.propertyName`}
                     label="Target property"
-                    description="The document field that holds the reference to the linked document."
+                    labelAddon={
+                        <InfoHint content="The document field that holds the reference to the linked document." />
+                    }
                 />
                 <FormInput
                     control={control}
                     name={`${path}.linkedCollectionName`}
                     label="Linked collection"
-                    description="The collection of the related documents. The related document ID is derived from it and the join column values."
+                    labelAddon={
+                        <InfoHint content="The collection of the related documents. The related document ID is derived from it and the join column values." />
+                    }
                 />
             </div>
             <FormStringList
@@ -48,7 +53,9 @@ export function LinkedTableEditor({ path }: { path: LinkedTablePath }) {
                 defaultValue={{ value: "" }}
                 label="Join columns"
                 addButtonLabel="Add join column"
-                description="Foreign key columns joining this table to the parent. Their values form the related document ID."
+                labelAddon={
+                    <InfoHint content="Foreign key columns joining this table to the parent. Their values form the related document ID." />
+                }
             />
         </div>
     );

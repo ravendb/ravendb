@@ -4,4 +4,9 @@ allowBuilds:
     esbuild: false
     msw: false
 overrides:
+    glob@13: ^14.0.2
     js-yaml@4: ^4.3.1
+# Part of the packages/api-codegen workaround (see its package.json). Remove together with that package.
+peerDependencyRules:
+    allowedVersions:
+        openapi-typescript>typescript: "6"

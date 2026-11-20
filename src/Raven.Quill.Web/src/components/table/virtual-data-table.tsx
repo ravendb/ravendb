@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/incompatible-library */
+/* eslint-disable react-hooks-js/incompatible-library */
 // https://github.com/TanStack/table/issues/5567
 "use no memo";
 

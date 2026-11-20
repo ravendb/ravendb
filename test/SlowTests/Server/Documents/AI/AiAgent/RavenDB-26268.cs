@@ -107,13 +107,23 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             else if (connectorType == AiConnectorType.Anthropic)
                 Assert.Equal("ephemeral", (string)cacheField["type"]);
             else
-                Assert.False(string.IsNullOrEmpty((string)cacheField), $"prompt_cache_key should be the conversation id, got: {cacheField}");
+            {
+                // A GenAi conversation id embeds the document being processed.
+                var key = (string)cacheField;
+                Assert.False(string.IsNullOrEmpty(key), $"prompt_cache_key should be sent, got: {cacheField}");
+                Assert.True(key.Length <= 64, $"got {key.Length} characters: {key}");
+                Assert.DoesNotContain("posts/1", key);
+            }
         }
 
         private class Post
         {
             public string Text;
         }
+
+        // longer than the 64 characters the provider accepts in prompt_cache_key
+        private const string LongConversationId =
+            "UserChats/marcus@example.com/support/escalations/semrush-specialist/4716-A";
 
         [RavenFact(RavenTestCategory.Ai)]
         public async Task ShouldIncludePromptCacheKeyInRequest()
@@ -169,7 +179,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Authentication = null
                 };
 
-                handler.Initialize(agent, "conversations/1-A", new RequestBody
+                handler.Initialize(agent, LongConversationId, new RequestBody
                 {
                     Parameters = parameters,
                     CreationOptions = new AiConversationCreationOptions(),
@@ -179,7 +189,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 await handler.HandleRequestAsync(context, CancellationToken.None);
 
                 Assert.NotNull(capturedPromptCacheKey);
-                Assert.Equal("conversations/1-A", capturedPromptCacheKey);
+                Assert.NotEqual(LongConversationId, capturedPromptCacheKey);
+                Assert.True(capturedPromptCacheKey.Length <= 64, $"got {capturedPromptCacheKey.Length} characters: {capturedPromptCacheKey}");
             }
         }
 

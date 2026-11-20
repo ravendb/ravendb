@@ -137,9 +137,6 @@ public class LicenseStatsProviderTests(ITestOutputHelper output) : NoDisposalNee
             }
         }
 
-        public Task<SuggestCdcInternalResult> SuggestCdcAsync(object? schema, object? samples, string prompt, CancellationToken ct) =>
-            throw new NotSupportedException();
-
         public Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct) =>
             throw new NotSupportedException();
 

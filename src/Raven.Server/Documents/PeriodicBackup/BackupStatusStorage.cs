@@ -137,12 +137,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             return result;
         }
 
-        public void Insert(PeriodicBackupStatus backupStatus, string databaseName)
+        public bool TryInsert(PeriodicBackupStatus backupStatus, string databaseName)
         {
-            _serverStore.Engine.TxMerger.EnqueueSync(new UpdateLocalBackupStatusCommand(backupStatus, databaseName, backupStatus.TaskId));
+            var command = new UpdateLocalBackupStatusCommand(backupStatus, databaseName, backupStatus.TaskId);
+            _serverStore.Engine.TxMerger.EnqueueSync(command);
 
             if (_logger.IsDebugEnabled)
-                _logger.Debug($"Inserted backup status for database '{databaseName}' with task ID {backupStatus.TaskId}.");
+            {
+                _logger.Debug(command.Inserted
+                    ? $"Inserted backup status for database '{databaseName}' with task ID {backupStatus.TaskId}."
+                    : $"Skipped inserting backup status for database '{databaseName}' with task ID {backupStatus.TaskId}, because the database no longer exists.");
+            }
+
+            return command.Inserted;
         }
 
         public static unsafe void Insert<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName, long taskId)

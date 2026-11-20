@@ -29,13 +29,13 @@ namespace SlowTests.Issues
         public async Task Can_Export_raw_index_entries_in_Csv_Async_Corax(Options options) => await Can_Export_raw_index_entries_in_Csv_Async(options, csv =>
         {
             csv.Read();
-            csv.TryGetField(0, out string value);
+            var value = csv.GetString(0);
             Assert.Equal("id()", value);
-            csv.TryGetField(3, out value);
+            value = csv.GetString(3);
             Assert.Equal("CoolCount", value);
-            csv.TryGetField(2, out value);
+            value = csv.GetString(2);
             Assert.Equal("LastName", value);
-            csv.TryGetField(1, out value);
+            value = csv.GetString(1);
             Assert.Equal("Name", value);
             
             var k = 0;
@@ -43,13 +43,13 @@ namespace SlowTests.Issues
             z = 'z';
             while (csv.Read())
             {
-                csv.TryGetField(3, out value);
+                value = csv.GetString(3);
                 Assert.Equal($"{(k * 2)}", value);
-                csv.TryGetField(2, out value);
+                value = csv.GetString(2);
                 Assert.Equal($"{z}", value);
-                csv.TryGetField(1, out value);
+                value = csv.GetString(1);
                 Assert.Equal($"{a}", value);
-                csv.TryGetField(0, out value);
+                value = csv.GetString(0);
                 Assert.Equal($"user/{k}", value);
                 k++;
                 a++;
@@ -62,13 +62,13 @@ namespace SlowTests.Issues
         public async Task Can_Export_raw_index_entries_in_Csv_Async_Lucene(Options options) => await Can_Export_raw_index_entries_in_Csv_Async(options, csv =>
         {
             csv.Read();
-            csv.TryGetField(0, out string value);
+            var value = csv.GetString(0);
             Assert.Equal("CoolCount", value);
-            csv.TryGetField(1, out value);
+            value = csv.GetString(1);
             Assert.Equal("LastName", value);
-            csv.TryGetField(2, out value);
+            value = csv.GetString(2);
             Assert.Equal("Name", value);
-            csv.TryGetField(3, out value);
+            value = csv.GetString(3);
             Assert.Equal("id()", value);
 
             var k = 0;
@@ -76,13 +76,13 @@ namespace SlowTests.Issues
             z = 'z';
             while (csv.Read())
             {
-                csv.TryGetField(0, out value);
+                value = csv.GetString(0);
                 Assert.Equal($"{(k * 2)}", value);
-                csv.TryGetField(1, out value);
+                value = csv.GetString(1);
                 Assert.Equal($"{z}", value);
-                csv.TryGetField(2, out value);
+                value = csv.GetString(2);
                 Assert.Equal($"{a}", value);
-                csv.TryGetField(3, out value);
+                value = csv.GetString(3);
                 Assert.Equal($"user/{k}", value);
                 k++;
                 a++;
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\'&format=csv&debug=entries");
                 TextReader tr = new StreamReader(stream);
-                var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
+                var csv = CsvReader.Create(tr, new CsvReaderOptions { Separator = ',', HasHeader = false });
                 assertionOfFile(csv);
             }
         }
@@ -197,18 +197,18 @@ namespace SlowTests.Issues
                 var stream = await client.GetStreamAsync(
                     $"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=from index \'Users/CoolCount\' select __all_stored_fields&format=csv");
                 TextReader tr = new StreamReader(stream);
-                var csv = new CsvReader(tr, CultureInfo.InvariantCulture);
+                var csv = CsvReader.Create(tr, new CsvReaderOptions { Separator = ',', HasHeader = false });
                 await csv.ReadAsync();
-                csv.TryGetField(0, out string value);
+                var value = csv.GetString(0);
                 Assert.Equal("@id", value);
-                csv.TryGetField(1, out value);
+                value = csv.GetString(1);
                 Assert.Equal("CoolCount", value);
                 var k = 0;
                 while (await csv.ReadAsync())
                 {
-                    csv.TryGetField(0, out value);
+                    value = csv.GetString(0);
                     Assert.Equal($"user/{k}", value);
-                    csv.TryGetField(1, out value);
+                    value = csv.GetString(1);
                     Assert.Equal($"{(k * 2)}", value);
                     k++;
                 }
