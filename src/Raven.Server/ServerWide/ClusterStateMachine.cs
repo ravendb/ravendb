@@ -2021,7 +2021,7 @@ namespace Raven.Server.ServerWide
                 var remote = addDatabaseCommand.Record.Topologies.ToArray();
                 if (databaseExists == false)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -2029,7 +2029,7 @@ namespace Raven.Server.ServerWide
 
                 if (remote.Length != local.Length)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -2049,13 +2049,13 @@ namespace Raven.Server.ServerWide
                     if (nameFound == false)
                     {
                         Debug.Assert(false, $"Same number of topologies {remote.Length}, but can't find remote topology {remoteName} in local topologies");
-                        AddStampToAllRemotes(index, remote);
+                        AddStampToAllRemotes(context, index, remote);
                         return true;
                     }
 
                     if (topologyFound == false)
                     {
-                        AddStampToRemote(index, remoteTopology);
+                        AddStampToRemote(context, index, remoteTopology);
                         changed = true;
                     }
                 }
@@ -2164,21 +2164,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void AddStampToAllRemotes(long index, (string Name, DatabaseTopology Topology)[] remote)
+        private void AddStampToAllRemotes(ClusterOperationContext context, long index, (string Name, DatabaseTopology Topology)[] remote)
         {
             foreach (var (name, topology) in remote)
             {
-                AddStampToRemote(index, topology);
+                AddStampToRemote(context, index, topology);
             }
         }
 
-        private void AddStampToRemote(long index, DatabaseTopology topology)
+        private void AddStampToRemote(ClusterOperationContext context, long index, DatabaseTopology topology)
         {
             topology.Stamp = new LeaderStamp
             {
                 Index = index,
                 LeadersTicks = -2,
-                Term = _parent.CurrentTerm
+                Term = _parent.GetTermForKnownExisting(context, index)
             };
         }
 

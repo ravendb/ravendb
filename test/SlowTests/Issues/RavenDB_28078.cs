@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -156,6 +157,41 @@ namespace SlowTests.Issues
 
                 Assert.Equal(["B"], record.DeletionInProgress.Keys);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public async Task DatabaseTopologyStampHasTheTermOfTheLogEntryOnAllNodes()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, shouldRunInMemory: false);
+            var stopped = nodes.First(x => x != leader);
+            var running = nodes.Where(x => x != stopped).ToList();
+            var stoppedInfo = await DisposeServerAndWaitForFinishOfDisposalAsync(stopped);
+
+            var database = GetDatabaseName();
+            using (var store = new DocumentStore { Urls = [leader.WebUrl], Database = database }.Initialize())
+            {
+                var result = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(database)
+                {
+                    Topology = new DatabaseTopology { Members = running.Select(x => x.ServerStore.NodeTag).ToList() }
+                }));
+
+                var term = leader.ServerStore.Engine.CurrentTerm;
+                leader.ServerStore.Engine.CurrentLeader?.StepDown();
+                await WaitForValueAsync(() => running.Any(x => x.ServerStore.IsLeader() && x.ServerStore.Engine.CurrentTerm > term), true);
+
+                var revived = await ReviveNodeAsync(stoppedInfo);
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.RaftCommandIndex, running.Append(revived).ToList());
+
+                var terms = running.Append(revived).Select(x => GetTopologyStampTerm(x, database)).ToList();
+                Assert.All(terms, x => Assert.Equal(terms[0], x));
+            }
+        }
+
+        private static long GetTopologyStampTerm(RavenServer server, string database)
+        {
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+                return server.ServerStore.Cluster.ReadDatabase(context, database).Topology.Stamp.Term;
         }
 
         private static List<string> GetClusterTransactionResults(RavenServer server)
