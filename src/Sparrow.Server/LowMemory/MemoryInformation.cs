@@ -503,7 +503,7 @@ namespace Sparrow.Server.LowMemory
              * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
              * Active memory: This information is currently in memory, and has been recently used.
              * Inactive memory: This information in memory is not actively being used, but was recently used. */
-            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount + vmStats.PurgeablePagesCount + vmStats.SpeculativePagesCount) * (long)pageSize, SizeUnit.Bytes);
+            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount + vmStats.PurgeablePagesCount) * (long)pageSize, SizeUnit.Bytes);
 
             // there is no commited memory value in OSX,
             // this is an approximation: wired + active + swap used
