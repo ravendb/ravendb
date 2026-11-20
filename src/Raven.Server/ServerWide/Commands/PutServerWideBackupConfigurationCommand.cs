@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -161,7 +160,10 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (localSettings?.FolderPath != null)
             {
-                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, databaseName, Path.DirectorySeparatorChar);
+                // This runs when the cluster applies the command, so every node must build the same path.
+                // Take the separator from the path itself, not from the operating system of this node.
+                var separator = localSettings.FolderPath.Contains('\\') && localSettings.FolderPath.Contains('/') == false ? '\\' : '/';
+                localSettings.FolderPath = GetUpdatedPath(localSettings.FolderPath, databaseName, separator);
             }
         }
 

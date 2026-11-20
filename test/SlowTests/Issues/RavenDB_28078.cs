@@ -194,6 +194,21 @@ namespace SlowTests.Issues
                 return server.ServerStore.Cluster.ReadDatabase(context, database).Topology.Stamp.Term;
         }
 
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
+        [InlineData("/backups", "/backups/db")]
+        [InlineData("/backups/", "/backups/db")]
+        [InlineData("C:\\backups", "C:\\backups\\db")]
+        [InlineData("C:\\backups\\", "C:\\backups\\db")]
+        [InlineData("C:/backups", "C:/backups/db")]
+        public void ServerWideBackupLocalFolderDoesNotDependOnTheOperatingSystem(string folderPath, string expected)
+        {
+            var localSettings = new LocalSettings { FolderPath = folderPath };
+
+            PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(localSettings, "db");
+
+            Assert.Equal(expected, localSettings.FolderPath);
+        }
+
         private static List<string> GetClusterTransactionResults(RavenServer server)
         {
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
