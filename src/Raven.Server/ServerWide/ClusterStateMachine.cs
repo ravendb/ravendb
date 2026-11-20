@@ -1198,6 +1198,9 @@ namespace Raven.Server.ServerWide
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
+                if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.OldThumbprint), out string oldThumbprint) == false || oldThumbprint == null)
+                    oldThumbprint = serverStore.Server.Certificate.ServerCertificate.Thumbprint;
+
                 var x509Certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(cert));
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not allowed
                 using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
@@ -1206,7 +1209,7 @@ namespace Raven.Server.ServerWide
                     {
                         [nameof(CertificateReplacement.Certificate)] = cert,
                         [nameof(CertificateReplacement.Thumbprint)] = x509Certificate.Thumbprint,
-                        [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.ServerCertificate.Thumbprint,
+                        [nameof(CertificateReplacement.OldThumbprint)] = oldThumbprint,
                         [nameof(CertificateReplacement.Confirmations)] = 0,
                         [nameof(CertificateReplacement.Replaced)] = 0,
                         [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately

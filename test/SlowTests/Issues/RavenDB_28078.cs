@@ -120,6 +120,20 @@ namespace SlowTests.Issues
             };
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
+        public void InstallUpdatedServerCertificateCommandCarriesTheOldThumbprintOfTheSendingNode()
+        {
+            var command = new InstallUpdatedServerCertificateCommand("certificate", "old-thumbprint", replaceImmediately: false, "id");
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.ReadObject(command.ToJson(context), "command");
+
+                Assert.True(json.TryGet(nameof(InstallUpdatedServerCertificateCommand.OldThumbprint), out string oldThumbprint));
+                Assert.Equal("old-thumbprint", oldThumbprint);
+            }
+        }
+
         private static List<string> GetClusterTransactionResults(RavenServer server)
         {
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

@@ -1598,7 +1598,7 @@ namespace Raven.Server
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(newCertificate.Export(X509ContentType.Pfx)), replaceImmediately,
+                await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand(Convert.ToBase64String(newCertificate.Export(X509ContentType.Pfx)), Certificate.ServerCertificate.Thumbprint, replaceImmediately,
                     $"{raftRequestId}/install-new-certificate"));
 
                 using (_tempLetsEncryptRefreshCertificate.Certificate)

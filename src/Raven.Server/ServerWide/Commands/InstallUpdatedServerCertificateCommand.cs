@@ -1,4 +1,4 @@
-﻿using Raven.Client.Util;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -8,6 +8,7 @@ namespace Raven.Server.ServerWide.Commands
     public sealed class InstallUpdatedServerCertificateCommand : CommandBase
     {
         public string Certificate { get; set; }
+        public string OldThumbprint { get; set; }
         public bool ReplaceImmediately { get; set; }
 
         public InstallUpdatedServerCertificateCommand()
@@ -15,9 +16,10 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        public InstallUpdatedServerCertificateCommand(string certificate, bool replaceImmediately, string uniqueRequestId) : base(uniqueRequestId)
+        public InstallUpdatedServerCertificateCommand(string certificate, string oldThumbprint, bool replaceImmediately, string uniqueRequestId) : base(uniqueRequestId)
         {
             Certificate = certificate;
+            OldThumbprint = oldThumbprint;
             ReplaceImmediately = replaceImmediately;
         }
 
@@ -30,6 +32,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Certificate)] = Certificate;
+            json[nameof(OldThumbprint)] = OldThumbprint;
             json[nameof(ReplaceImmediately)] = ReplaceImmediately;
             return json;
         }
