@@ -24,16 +24,7 @@ public sealed class ClauseExecution : IComparable<ClauseExecution>
 
     public ClauseType? SentinelRewriteType;
 
-    public ClauseType ClauseType
-    {
-        get;
-        private set
-        {
-            if (value is ClauseType.NotEquals)
-                IsNegated = true;
-            field = value;
-        }
-    }
+    public ClauseType ClauseType { get; private set; }
     
     public bool IsNegated;
 
@@ -43,7 +34,8 @@ public sealed class ClauseExecution : IComparable<ClauseExecution>
     {
         Clause = clause;
         IsNegated = clause.IsNegated;
-        ClauseType = clause.ClauseType;
+        // not (F != v) is F = v. The scan predicate and the estimator read the operator from ClauseType, not from IsNegated.
+        ClauseType = clause is { ClauseType: ClauseType.NotEquals, IsNegated: false } ? ClauseType.Equals : clause.ClauseType;
     }
 
     // A clause is a sentinal if it is a false WHEN() clause, or known upfront to be impossible (like contradictory BETWEEN) 

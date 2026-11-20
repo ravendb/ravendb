@@ -393,15 +393,19 @@ internal static partial class QueryPlanBuilder
             {
                 bool? savedEnclosing = walkerCtx.EnclosingIsOr;
                 walkerCtx.EnclosingIsOr = false;
+                int leftStart = walkerCtx.Clauses.Count;
                 BooleanOp left = be.Left is BinaryExpression { Operator: OperatorType.Or } ? HandleGroup(be.Left, ClauseType.OrGroup) : ParseExpression(be.Left, walkerCtx);
+                int rightStart = walkerCtx.Clauses.Count;
                 BooleanOp right = be.Right is BinaryExpression { Operator: OperatorType.Or } ? HandleGroup(be.Right, ClauseType.OrGroup) : ParseExpression(be.Right, walkerCtx);
                 walkerCtx.EnclosingIsOr = savedEnclosing;
 
                 return (left, right) switch
                 {
-                    (BooleanOp.True, _) => right,
-                    (_, BooleanOp.True) => left,
                     (BooleanOp.False, _) or (_, BooleanOp.False) => BooleanOp.False, // false annihilates an AND
+                    (BooleanOp.True, BooleanOp.True) => BooleanOp.True,
+                    // a true side folds away only when it left no clauses - a folded group's MatchAll is still AND-ed in
+                    (BooleanOp.True, _) when rightStart == leftStart => right,
+                    (_, BooleanOp.True) when walkerCtx.Clauses.Count == rightStart => left,
                     _ => BooleanOp.And
                 };
             }
@@ -589,6 +593,7 @@ internal static partial class QueryPlanBuilder
                     Operator: OperatorType.And or OperatorType.Or or OperatorType.Equal or OperatorType.NotEqual
                 } =>
                     ParseExpression(NegationNormalForm(negated.Expression), walkerCtx),
+            MethodExpression method when WrappedOperand(method) >= 0 => ParseExpression(NegationNormalForm(method), walkerCtx),
             _ => ParseNegatedLeaf(negated.Expression, walkerCtx)
         };
 
@@ -612,9 +617,19 @@ internal static partial class QueryPlanBuilder
             BinaryExpression { Operator: OperatorType.NotEqual } be => 
                 new BinaryExpression(be.Left, be.Right, OperatorType.Equal),
             NegatedExpression neg => neg.Expression, // not(not(x)) == x
+            MethodExpression method when WrappedOperand(method) is >= 0 and var operand => // not exact(x) == exact(not x)
+                new MethodExpression(method.Name, new List<QueryExpression>(method.Arguments) { [operand] = NegationNormalForm(method.Arguments[operand]) }),
             _ => new NegatedExpression(expr)
         };
     }
+
+    // The argument whose answer exact(), boost() and when() hand on, -1 for any other method
+    private static int WrappedOperand(MethodExpression method) => QueryMethod.GetMethodType(method.Name.Value, throwIfNoMatch: false) switch
+    {
+        MethodType.Exact or MethodType.Boost when method.Arguments.Count > 0 => 0,
+        MethodType.When when method.Arguments.Count > 1 => 1,
+        _ => -1
+    };
 
     private static BooleanOp ParseNegatedLeaf(QueryExpression inner, ResolutionContext walkerCtx)
     {
@@ -769,23 +784,39 @@ internal static partial class QueryPlanBuilder
     // ComputeTemplateOptimizations.
     private static void GroupWrapperOperands(ResolutionContext walkerCtx, int beforeCount, BooleanOp innerOp)
     {
-        if (innerOp is not (BooleanOp.And or BooleanOp.Or))
-            return;
-
-        // null enclosing = wrapper is the whole WHERE, so it can't disagree with itself
-        if (walkerCtx.EnclosingIsOr is not { } enclosingIsOr || enclosingIsOr == (innerOp is BooleanOp.Or))
-            return;
-
         int count = walkerCtx.Clauses.Count - beforeCount;
-        if (count < 2)
-            return;
+        // An operand that folds to a constant can keep clauses. Put them in a group with the constant:
+        //   Age < 10 and exact(Tag = 't1' or true)     =>  Age < 10 and (Tag = 't1' or MatchAll)
+        //   Age < 3 or exact(Tag = 't1' and not true)  =>  Age < 3 or (Tag = 't1' and MatchNothing)
+        // Without the group, the parent removes the constant and gives Age < 10 and Tag = 't1'.
+        // exact(true) keeps no clauses. The parent removes the constant correctly.
+        bool folded = innerOp is BooleanOp.True or BooleanOp.False;
+        if (folded)
+        {
+            if (count == 0)
+                return;
+        }
+        else
+        {
+            if (innerOp is not (BooleanOp.And or BooleanOp.Or))
+                return;
+
+            // null enclosing = wrapper is the whole WHERE, so it can't disagree with itself
+            if (walkerCtx.EnclosingIsOr is not { } enclosingIsOr || enclosingIsOr == (innerOp is BooleanOp.Or))
+                return;
+
+            if (count < 2)
+                return;
+        }
 
         List<ClauseInfo> inner = walkerCtx.Clauses.GetRange(beforeCount, count);
         walkerCtx.Clauses.RemoveRange(beforeCount, count);
+        if (folded)
+            inner.Add(new ClauseInfo { ClauseType = innerOp is BooleanOp.True ? ClauseType.MatchAll : ClauseType.MatchNothing });
 
         walkerCtx.Clauses.Add(new ClauseInfo
         {
-            ClauseType = innerOp is BooleanOp.Or ? ClauseType.OrGroup : ClauseType.AndGroup,
+            ClauseType = innerOp is BooleanOp.Or or BooleanOp.True ? ClauseType.OrGroup : ClauseType.AndGroup,
             SubClauses = inner
         });
     }
@@ -852,13 +883,19 @@ internal static partial class QueryPlanBuilder
         // group first - the guard must land on what the parent combines, not the ungrouped operands
         GroupWrapperOperands(walkerCtx, beforeCount, innerOp);
 
+        // The guard decides per execution, so an operand that folded to a constant is a guarded clause the parent has to
+        // keep, not a constant it may fold away - and a constant that left no clause gets its sentinel to carry the guard.
+        bool folded = innerOp is BooleanOp.True or BooleanOp.False;
+        if (folded && walkerCtx.Clauses.Count == beforeCount)
+            walkerCtx.Clauses.Add(new ClauseInfo { ClauseType = innerOp is BooleanOp.True ? ClauseType.MatchAll : ClauseType.MatchNothing });
+
         var whenCondition = new WhenConditionEvaluator(conditionExpr, walkerCtx.Metadata).Evaluate;
         for (int wi = beforeCount; wi < walkerCtx.Clauses.Count; wi++)
         {
             walkerCtx.Clauses[wi].WhenCondition = whenCondition;
         }
 
-        return innerOp;
+        return folded ? BooleanOp.Leaf : innerOp;
     }
 
     private static BooleanOp ParseSpatial(MethodExpression method, ResolutionContext walkerCtx)
