@@ -1113,8 +1113,8 @@ namespace Voron.Impl
             if (key == null)
                 return;
             
-            // The reason why we reset the key, which in turn will null the storage is to avoid cases of reused keys
-            // been used by multiple operations. Eventually someone wil restore
+            // Reset detaches the key from the transaction but keeps its buffers for reuse by the next acquirer.
+            // The caller's reference is nulled because the pooled instance may be handed to another operation.
             if (ReferenceEquals(key, CompactKey.NullInstance) == false)
             {
                 key.Reset();
