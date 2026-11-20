@@ -66,7 +66,7 @@ export default function StorageIoDevice({ device }: StorageIoDeviceProps) {
                             paced above {thresholds.QueueDepthEnterDrain}, normal below {thresholds.QueueDepthExitDrain}
                         </Sub>
                     </Metric>
-                    <Metric label="Read-ahead" help={storageTermHelp.readAhead}>
+                    <Metric label="Read-ahead warm-up" help={storageTermHelp.readAhead}>
                         {!device.ReadAheadWarmUp ? (
                             <span className="text-muted">off, memory is full</span>
                         ) : device.QueueDepth == null ? (

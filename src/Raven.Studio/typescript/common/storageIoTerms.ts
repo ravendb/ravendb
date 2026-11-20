@@ -57,9 +57,9 @@ export const storageTermHelp = {
     syncCost:
         "Average time of a data file sync on this disk. A sync makes the changes in a data file safe on disk. Above the limit, the disk switches to paced mode.",
     queueDepth:
-        "How many requests wait at the disk on average. Above the limit, the disk switches to paced mode and read-ahead slows down.",
+        "How many requests wait at the disk on average. Above the limit, the disk switches to paced mode and the read-ahead warm-up slows down.",
     readAhead:
-        "While more than 10% of memory is free, the server reads data files into memory ahead of time, so later reads are faster. It uses only spare disk capacity: its budget halves every second the disk queue is above the limit. It stops when free memory drops below 5%.",
+        "While more than 10% of memory is free, the server reads data file segments into memory ahead of time, so later reads are faster. It uses only spare disk capacity: its budget halves every second the disk queue is above the limit. It stops when free memory drops below 5%. Reading ahead during scans is separate and not limited by it.",
     diskStats:
         "Requests sent to this disk per second and their average size, as the operating system counts them. Cloud disks limit both requests per second (IOPS) and bytes per second (throughput). Many small requests hit the IOPS limit first, large ones the throughput limit. Compare with the limits of your volume.",
     pipelining: "Pipelined: the next journal write starts before the previous one finishes. Used when writes are small and the disk is slow to answer.",
