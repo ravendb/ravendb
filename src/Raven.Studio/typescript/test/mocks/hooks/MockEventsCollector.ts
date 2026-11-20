@@ -21,6 +21,10 @@ export default class MockEventsCollector implements EventsCollectorProps {
         });
     }
 
+    reportViewModel() {
+        return;
+    }
+
     get reportedEvents(): ReportedEvent[] {
         return this._events;
     }

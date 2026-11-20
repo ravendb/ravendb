@@ -259,7 +259,7 @@
             </div>
         </div>
         <div class="flex-window-head tabs-menu">
-            <button type="button" class="btn btn-sm results-btn"
+            <button type="button" class="btn btn-sm results-btn" title="Show the query results (reloads them from the first page)"
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
                 Results &nbsp; <span class="label" data-bind="text: totalResultsForUi().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResultsForUi(), 'label-default': !totalResultsForUi() }"></span>
             </button>
