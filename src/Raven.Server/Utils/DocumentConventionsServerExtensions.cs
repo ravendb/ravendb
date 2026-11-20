@@ -1,5 +1,5 @@
 using System;
-using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow;
 using Sparrow.Platform;
 
@@ -18,7 +18,7 @@ internal static class DocumentConventionsServerExtensions
     {
         var conventions = new DocumentConventions
         {
-            Serialization = new NewtonsoftJsonSerializationConventions(),
+            Serialization = new SystemTextJsonSerializationConventions(),
             SendApplicationIdentifier = false,
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
             HttpPooledConnectionLifetime = GetHttpPooledConnectionLifetime(),
