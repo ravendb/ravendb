@@ -785,8 +785,11 @@ internal static partial class QueryPlanBuilder
     private static void GroupWrapperOperands(ResolutionContext walkerCtx, int beforeCount, BooleanOp innerOp)
     {
         int count = walkerCtx.Clauses.Count - beforeCount;
-        // The parent folds a constant operand away, so the clauses it left behind are grouped with the constant like
-        // HandleGroup does - otherwise the parent combines them as if they were the operand.
+        // An operand that folds to a constant can keep clauses. Put them in a group with the constant:
+        //   Age < 10 and exact(Tag = 't1' or true)     =>  Age < 10 and (Tag = 't1' or MatchAll)
+        //   Age < 3 or exact(Tag = 't1' and not true)  =>  Age < 3 or (Tag = 't1' and MatchNothing)
+        // Without the group, the parent removes the constant and gives Age < 10 and Tag = 't1'.
+        // exact(true) keeps no clauses. The parent removes the constant correctly.
         bool folded = innerOp is BooleanOp.True or BooleanOp.False;
         if (folded)
         {
