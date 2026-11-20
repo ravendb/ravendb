@@ -30,6 +30,8 @@ import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { ReplicationHubSinksHeader } from "../partials/ReplicationHubSinksHeader";
 import { getSinkKey, useReplicationHubSinks } from "../partials/useReplicationHubSinks";
+import { getReplicationError } from "../partials/ReplicationSummaryItems";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
     connectedSinks: OngoingTaskReplicationHubInfo[];
@@ -79,8 +81,49 @@ function restoreSinkPosition(sinksList: HTMLElement, { sinkIndex, top }: SinkPos
     findScrollContainer(sinksList).scrollTop += sink.getBoundingClientRect().top - top;
 }
 
-function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { connectedSinks, data } = props;
+function Summary(props: ReplicationHubPanelProps & DetailsToggleProps) {
+    const { connectedSinks, detailsVisible, toggleDetails } = props;
+
+    const sinksWithErrorCount = connectedSinks.filter((x) => getReplicationError(x)).length;
+
+    return (
+        <RichPanelDetails>
+            <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+            <RichPanelDetailItem label="Connected Sinks">
+                {connectedSinks.length.toLocaleString()}
+                {sinksWithErrorCount > 0 && (
+                    <span className="text-danger ms-2">
+                        <Icon icon="warning" color="danger" margin="me-1" />
+                        {sinksWithErrorCount.toLocaleString()} with errors
+                    </span>
+                )}
+            </RichPanelDetailItem>
+        </RichPanelDetails>
+    );
+}
+
+function Settings(props: ReplicationHubPanelProps) {
+    const { data } = props;
+
+    const delayHumane = data.shared.delayReplicationTime
+        ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
+        : null;
+
+    return (
+        <RichPanelDetails>
+            <RichPanelDetailItem label="Replication Mode">
+                {formatReplicationMode(data.shared.taskMode)}
+            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Has Filtering">
+                {data.shared.hasFiltering ? "True" : "False"}
+            </RichPanelDetailItem>
+            {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
+        </RichPanelDetails>
+    );
+}
+
+function Details(props: ReplicationHubPanelProps) {
+    const { connectedSinks } = props;
     const sinksState = useReplicationHubSinks(connectedSinks);
     const { visibleSinks, expandedSinkKeys, toggleSinkExpanded, toggleAllExpanded } = sinksState;
 
@@ -106,21 +149,8 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
         toggleSinkExpanded(sinkKey);
     };
 
-    const delayHumane = data.shared.delayReplicationTime
-        ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
-        : null;
-
     return (
         <div>
-            <RichPanelDetails>
-                {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
-                <RichPanelDetailItem label="Replication Mode">
-                    {formatReplicationMode(data.shared.taskMode)}
-                </RichPanelDetailItem>
-                <RichPanelDetailItem label="Has Filtering">
-                    {data.shared.hasFiltering ? "True" : "False"}
-                </RichPanelDetailItem>
-            </RichPanelDetails>
             {connectedSinks.length > 0 && (
                 <div
                     ref={sinksListRef}
@@ -193,15 +223,15 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <Summary {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
+                    <Settings {...props} />
+                    <Details {...props} />
                 </div>
             </Collapse>
         </RichPanel>

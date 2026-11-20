@@ -18,6 +18,9 @@ import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoi
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
+import PeriodicBackupStatus = Raven.Client.Documents.Operations.Backups.PeriodicBackupStatus;
+import QueueBrokerType = Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
 import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
@@ -626,6 +629,43 @@ export class TasksStubs {
         };
     }
 
+    static getPeriodicBackupStatus(): PeriodicBackupStatus {
+        return { ...TasksStubs.getManualBackup().Status, Error: null };
+    }
+
+    static getFailedPeriodicBackupStatus(): PeriodicBackupStatus {
+        return {
+            ...TasksStubs.getPeriodicBackupStatus(),
+            Error: {
+                At: "2022-08-05T02:00:03.1234567Z",
+                Exception:
+                    "System.Net.WebException: Unable to connect to the remote server (ftp://backups.example.com)",
+            },
+        };
+    }
+
+    private static getQueueSinkConfiguration(
+        name: string,
+        taskId: number,
+        brokerType: QueueBrokerType,
+        connectionStringName: string,
+        queues: string[]
+    ): QueueSinkConfiguration {
+        return {
+            Name: name,
+            TaskId: taskId,
+            BrokerType: brokerType,
+            ConnectionStringName: connectionStringName,
+            Disabled: false,
+            MentorNode: null,
+            PinToMentorNode: false,
+            Scripts: [
+                { Name: "Script #1", Queues: queues, Script: "this.Put(this.Id, this)", Disabled: false },
+                { Name: "Script #2", Queues: ["archive"], Script: "", Disabled: true },
+            ],
+        };
+    }
+
     static getKafkaSink(): OngoingTaskQueueSink {
         return {
             TaskName: "KafkaSinkTask",
@@ -640,7 +680,10 @@ export class TasksStubs {
             BrokerType: "Kafka",
             Url: "localhost:9092",
             PinToMentorNode: false,
-            Configuration: null,
+            Configuration: TasksStubs.getQueueSinkConfiguration("KafkaSinkTask", 705, "Kafka", "Kafka-CS", [
+                "orders",
+                "payments",
+            ]),
         };
     }
 
@@ -658,7 +701,9 @@ export class TasksStubs {
             Url: "localhost:6006",
             BrokerType: "RabbitMq",
             PinToMentorNode: false,
-            Configuration: null,
+            Configuration: TasksStubs.getQueueSinkConfiguration("RabbitSinkTask", 706, "RabbitMq", "Rabbit-CS", [
+                "orders",
+            ]),
         };
     }
 
@@ -676,7 +721,13 @@ export class TasksStubs {
             BrokerType: "AzureServiceBus",
             Url: "mynamespace.servicebus.windows.net",
             PinToMentorNode: false,
-            Configuration: null,
+            Configuration: TasksStubs.getQueueSinkConfiguration(
+                "AzureServiceBusSinkTask",
+                707,
+                "AzureServiceBus",
+                "azure-service-bus-name",
+                ["orders", "invoices"]
+            ),
         };
     }
 
