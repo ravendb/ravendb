@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
 using TypeScripter.Readers;
 
 namespace TypingsGenerator
@@ -38,8 +37,7 @@ namespace TypingsGenerator
 
         private static bool IsIgnored(MemberInfo member)
         {
-            return member.GetCustomAttribute<JsonIgnoreAttribute>() != null
-                   || member.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() != null
+            return member.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() != null
                    || member.GetCustomAttribute<IgnoreDataMemberAttribute>() != null;
         }
 
