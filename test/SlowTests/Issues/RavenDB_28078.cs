@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -84,6 +89,35 @@ namespace SlowTests.Issues
             var results = nodes.Select(GetClusterTransactionResults).ToList();
             Assert.Single(results[0]);
             Assert.All(results, x => Assert.Equal(results[0], x));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
+        public async Task ReplicationHubAccessWithSameKeyAndExpirationDoesNotStopTheStateMachine()
+        {
+            using var store = GetDocumentStore();
+
+            using var key = RSA.Create(2048);
+            var notBefore = DateTimeOffset.UtcNow.AddDays(-1);
+            var notAfter = notBefore.AddYears(1);
+            using var first = new CertificateRequest("CN=sink-1", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1).CreateSelfSigned(notBefore, notAfter);
+            using var second = new CertificateRequest("CN=sink-2", key, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1).CreateSelfSigned(notBefore, notAfter);
+
+            await Server.ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(store.Database, "hub", CreateAccess(first), first, RaftIdGenerator.NewId()));
+            await Server.ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(store.Database, "hub", CreateAccess(second), second, RaftIdGenerator.NewId())
+            {
+                RegisteringSamePublicKeyPinningHash = true
+            });
+
+            var result = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("key", "value", 0));
+            Assert.True(result.Successful);
+
+            static ReplicationHubAccess CreateAccess(X509Certificate2 certificate) => new ReplicationHubAccess
+            {
+                Name = "sink",
+                CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                AllowedHubToSinkPaths = ["*"],
+                AllowedSinkToHubPaths = ["*"]
+            };
         }
 
         private static List<string> GetClusterTransactionResults(RavenServer server)

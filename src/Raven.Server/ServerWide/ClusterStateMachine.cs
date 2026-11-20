@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -2620,20 +2620,25 @@ namespace Raven.Server.ServerWide
                     return;
 
                 // here we'll clear the old values
-                var samePublicKeyHash = new SortedList<DateTime, long>();
+                var samePublicKeyHash = new List<(DateTime NotAfter, string Key, long Id)>();
                 foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeySlice, publicKeySlice, 0))
                 {
                     using var accessBlittable = new BlittableJsonReaderObject(result.Result.Reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
 
                     accessBlittable.TryGet(nameof(command.NotAfter), out DateTime notAfter);
 
-                    samePublicKeyHash.Add(notAfter, result.Result.Reader.Id);
+                    samePublicKeyHash.Add((notAfter, result.Result.Reader.ReadString((int)ReplicationCertificatesTable.Thumbprint), result.Result.Reader.Id));
                 }
 
-                while (samePublicKeyHash.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
+                samePublicKeyHash.Sort((x, y) =>
                 {
-                    certs.Delete(samePublicKeyHash.Values[0]);
-                    samePublicKeyHash.RemoveAt(0);
+                    var compare = x.NotAfter.CompareTo(y.NotAfter);
+                    return compare != 0 ? compare : string.CompareOrdinal(x.Key, y.Key);
+                });
+
+                for (var i = 0; i < samePublicKeyHash.Count - Constants.Certificates.MaxNumberOfCertsWithSameHash; i++)
+                {
+                    certs.Delete(samePublicKeyHash[i].Id);
                 }
             }
         }
@@ -3624,7 +3629,11 @@ namespace Raven.Server.ServerWide
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(ClusterOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x, y) => Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter));
+            list.Sort((x, y) =>
+            {
+                var compare = Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter);
+                return compare != 0 ? compare : string.CompareOrdinal(x.Thumbprint, y.Thumbprint);
+            });
             return list;
         }
 
