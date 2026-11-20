@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -604,9 +604,8 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             using var _ = llt.Allocator.Allocate(heapSize, out Span<int> indexes);
             using var __ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes, terms, descending, match.GetNullIsSmallestForClause(_comparerId));
-            
-
+            var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
+            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes, terms, descending, secondaryComparer, match.GetNullIsSmallestForClause(_comparerId));
 
             using var keyScope = new CompactKeyCacheScope(llt);
             for (int i = 0; i < batchResults.Length; i++)
