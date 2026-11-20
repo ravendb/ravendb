@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -8,7 +9,6 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Storage.v1.Data;
 using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
 using Sparrow.Server.Utils;
@@ -51,11 +51,16 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
-            var credentialJsonType = JObject.Parse(settings.GoogleCredentialsJson);
-
-            if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var value))
+            using (JsonDocument credentials = JsonDocument.Parse(settings.GoogleCredentialsJson))
             {
-                _projectId = value.Value<string>();
+                foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    _projectId = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
+                    break;
+                }
             }
 
             _bucketName = settings.BucketName;
