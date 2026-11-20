@@ -113,7 +113,7 @@ namespace Raven.Server.Utils
                     IsBackground = true,
                 };
 
-                thread.UnsafeStart(); // does not capture the AsyncLocals
+                thread.UnsafeStart();
             }
 
             pooled.StartedAt = DateTime.UtcNow;

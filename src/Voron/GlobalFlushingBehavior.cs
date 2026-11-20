@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
@@ -25,7 +25,7 @@ namespace Voron
                 IsBackground = true,
                 Name = FlushingThreadName
             };
-            thread.Start();
+            thread.UnsafeStart();
             return flusher;
         });
 
