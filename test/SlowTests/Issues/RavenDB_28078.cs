@@ -134,6 +134,30 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster)]
+        public void DeleteDatabaseCommandUsesTheClusterNodesOfTheSendingNode()
+        {
+            var sent = new DeleteDatabaseCommand("db", "id") { ClusterNodes = ["B"] };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.ReadObject(sent.ToJson(context), "command");
+                var command = (DeleteDatabaseCommand)JsonDeserializationCluster.Commands[nameof(DeleteDatabaseCommand)](json);
+
+                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext clusterContext))
+                using (clusterContext.OpenReadTransaction())
+                    command.Initialize(Server.ServerStore, clusterContext);
+
+                var record = new DatabaseRecord("db")
+                {
+                    Topology = new DatabaseTopology { Members = new List<string> { "B", "C" } }
+                };
+                command.UpdateDatabaseRecord(record, 10);
+
+                Assert.Equal(["B"], record.DeletionInProgress.Keys);
+            }
+        }
+
         private static List<string> GetClusterTransactionResults(RavenServer server)
         {
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
