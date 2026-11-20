@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -895,36 +895,7 @@ namespace Voron.Data.Fixed
 
         public bool Contains(TVal key)
         {
-            byte* dataStart;
-            switch (Type)
-            {
-                case null:
-                    return false;
-                case RootObjectType.EmbeddedFixedSizeTree:
-                    var embeddedPtr = _parent.DirectRead(_treeName);
-                    var header = (FixedSizeTreeHeader.Embedded*)embeddedPtr;
-                    dataStart = embeddedPtr + sizeof(FixedSizeTreeHeader.Embedded);
-                    BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
-                    return _lastMatch == 0;
-                case RootObjectType.FixedSizeTree:
-                    var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
-
-                    while (page.IsLeaf == false)
-                    {
-                        BinarySearch(page, key);
-                        if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                            page.LastSearchPosition--;
-                        var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                        page = GetReadOnlyPage(childPageNumber);
-                    }
-                    dataStart = page.Pointer + page.StartPosition;
-
-                    BinarySearch(dataStart, page.NumberOfEntries, key, _entrySize);
-                    return _lastMatch == 0;
-                default:
-                    throw new ArgumentOutOfRangeException(Type?.ToString());
-            }
+            return ReadPtr(key, out _) != null;
         }
 
         public DeletionResult Delete(TVal key)
