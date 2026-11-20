@@ -46,6 +46,9 @@ namespace Voron.Debugging
         public List<TableReport> Tables { get; set; }
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public string TotalEncryptionBufferSize { get; set; }
+
+        // set by the summary report only
+        public long? UnaccountedSpaceInBytes { get; set; }
     }
 
     public sealed class DataFileReport

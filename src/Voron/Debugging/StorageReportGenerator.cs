@@ -106,7 +106,6 @@ namespace Voron.Debugging
         {
             var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber);
 
-            long streamsAllocatedSpaceInBytes = 0;
             long treesAllocatedSpaceInBytes = 0;
             var trees = new List<TreeReport>();
             foreach (var tree in input.Trees)
@@ -179,8 +178,6 @@ namespace Voron.Debugging
 
                 if (treeReport.Streams == null)
                     treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
-                else
-                    streamsAllocatedSpaceInBytes += treeReport.Streams.AllocatedSpaceInBytes;
             }
 
             foreach (PostingList postingList in input.PostingLists)
@@ -252,21 +249,21 @@ namespace Voron.Debugging
             var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
             var preAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.IncludeDetails);
 
+            long? unaccountedSpaceInBytes = null;
             if (input.IncludeDetails == false && _skippedStreamsDetailsEntry != null)
             {
-                // we don't have the actual trees' streams size at this point
-                // so we calculate the original size as if we read the streams by:
-                // [DataFile allocated space] - [DataFile free space] - [Tables allocated space] - [FixedTrees allocated space] - [pre allocated buffers space] 
-
-                var treesCalculatedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes;
-
                 foreach (var tree in trees)
                 {
                     if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
                     {
-                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes;
-                        _skippedStreamsDetailsEntry.Length = treesCalculatedSpaceInBytes;
-                        tree.AllocatedSpaceInBytes = treesCalculatedSpaceInBytes - streamsAllocatedSpaceInBytes;
+                        // chunked streams are counted in OverflowPages, inline streams (stored in leaf pages) in PageCount
+                        var streamsSpaceInBytes = PagesToBytes(tree.OverflowPages);
+                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = streamsSpaceInBytes;
+                        _skippedStreamsDetailsEntry.Length = streamsSpaceInBytes;
+                        tree.Streams.AllocatedSpaceInBytes = streamsSpaceInBytes;
+                        tree.Streams.TotalNumberOfAllocatedPages = tree.OverflowPages;
+                        tree.AllocatedSpaceInBytes = PagesToBytes(tree.PageCount) + streamsSpaceInBytes;
+                        unaccountedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes - tree.AllocatedSpaceInBytes;
                         break;
                     }
                 }
@@ -281,7 +278,8 @@ namespace Voron.Debugging
                 Journals = journals,
                 PreAllocatedBuffers = preAllocatedBuffers,
                 TempBuffers = tempBuffers,
-                TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString()
+                TotalEncryptionBufferSize = input.TotalEncryptionBufferSize.ToString(),
+                UnaccountedSpaceInBytes = unaccountedSpaceInBytes
             };
         }
 
