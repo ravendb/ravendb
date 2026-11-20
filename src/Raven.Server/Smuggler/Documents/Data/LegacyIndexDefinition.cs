@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Runtime.Serialization;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.Suggestions;
@@ -105,23 +105,23 @@ namespace Raven.Server.Smuggler.Documents.Data
             set => _spatialIndexes = value;
         }
 
-        [JsonIgnore]
+        [IgnoreDataMember]
         private HashSet<string> _maps;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, FieldStorage> _stores;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, LegacyFieldIndexing> _indexes;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, LegacySortOptions> _sortOptions;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, string> _analyzers;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private List<string> _fields;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, FieldTermVector> _termVectors;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private Dictionary<string, SpatialOptions> _spatialIndexes;
-        [JsonIgnore]
+        [IgnoreDataMember]
         private HashSet<string> _suggestionsOptions;
 
         public override string ToString()

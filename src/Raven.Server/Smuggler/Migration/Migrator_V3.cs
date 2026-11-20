@@ -6,7 +6,6 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -15,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
@@ -83,19 +83,19 @@ namespace Raven.Server.Smuggler.Migration
                 {
                     exportData = new ExportDataV3
                     {
-                        SmugglerOptions = JsonConvert.SerializeObject(databaseMigrationOptions)
+                        SmugglerOptions = JsonStringHelper.Serialize(databaseMigrationOptions)
                     };
                 }
                 else
                 {
                     exportData = new ExportDataV35
                     {
-                        DownloadOptions = JsonConvert.SerializeObject(databaseMigrationOptions),
+                        DownloadOptions = JsonStringHelper.Serialize(databaseMigrationOptions),
                         ProgressTaskId = operationId
                     };
                 }
 
-                var exportOptions = JsonConvert.SerializeObject(exportData);
+                var exportOptions = JsonStringHelper.Serialize(exportData);
                 var canGetLastStateByOperationId = _buildVersion >= 35215;
 
                 await MigrateDatabase(exportOptions, readLegacyEtag: canGetLastStateByOperationId == false);
