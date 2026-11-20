@@ -9,9 +9,8 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Security;
@@ -73,14 +72,15 @@ namespace Raven.Server.Web.System
                         }
                         else
                         {
-                            result = JsonConvert.DeserializeObject<JObject>(responseString);
-                            if (result != null)
+                            JsonObject resultObject = JsonNode.Parse(responseString)?.AsObject();
+                            result = resultObject;
+                            if (resultObject != null)
                             {
-                                if (((JObject)result).TryGetValue(nameof(ExceptionDispatcher.ExceptionSchema.Error), out var err))
-                                    error = err.ToString();
+                                if (resultObject.TryGetPropertyValue(nameof(ExceptionDispatcher.ExceptionSchema.Error), out JsonNode err))
+                                    error = err?.ToString() ?? string.Empty;
 
-                                if (((JObject)result).TryGetValue(nameof(ExceptionDispatcher.ExceptionSchema.Message), out var msg))
-                                    errorMessage = msg.ToString();
+                                if (resultObject.TryGetPropertyValue(nameof(ExceptionDispatcher.ExceptionSchema.Message), out JsonNode msg))
+                                    errorMessage = msg?.ToString() ?? string.Empty;
                             }
                         }
                     }
@@ -96,13 +96,13 @@ namespace Raven.Server.Web.System
                     {
                         if (error != null)
                         {
-                            new JsonSerializer().Serialize(streamWriter, new
+                            await streamWriter.WriteAsync(JsonStringHelper.Serialize(new
                             {
                                 Message = errorMessage,
                                 Response = result,
                                 Error = error,
                                 Type = typeof(RavenException).FullName
-                            });
+                            }));
 
                             await streamWriter.FlushAsync();
                         }
@@ -139,7 +139,7 @@ namespace Raven.Server.Web.System
                         $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
                 }
 
-                var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
+                var content = new StringContent(JsonStringHelper.Serialize(licenseInfo), Encoding.UTF8, "application/json");
                 try
                 {
                     string error = null;
@@ -161,7 +161,7 @@ namespace Raven.Server.Web.System
                         }
                         else
                         {
-                            result = JsonConvert.DeserializeObject<JObject>(responseString);
+                            result = JsonNode.Parse(responseString)?.AsObject();
                         }
                     }
                     catch (Exception e)
@@ -174,20 +174,20 @@ namespace Raven.Server.Web.System
 
                     if (error != null)
                     {
-                        JToken errorJToken = null;
+                        JsonNode errorNode = null;
                         if (responseString != null)
                         {
-                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken);
+                            JsonNode.Parse(responseString).AsObject().TryGetPropertyValue("Error", out errorNode);
                         }
 
                         await using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
-                            new JsonSerializer().Serialize(streamWriter, new
+                            await streamWriter.WriteAsync(JsonStringHelper.Serialize(new
                             {
                                 Message = errorMessage,
                                 Response = result,
-                                Error = errorJToken ?? error
-                            });
+                                Error = (object)errorNode ?? error
+                            }));
 
                             await streamWriter.FlushAsync();
                         }
@@ -195,7 +195,7 @@ namespace Raven.Server.Web.System
                         return;
                     }
 
-                    var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
+                    var results = JsonStringHelper.Deserialize<UserDomainsResult>(responseString);
 
                     var fullResult = new UserDomainsAndLicenseInfo
                     {

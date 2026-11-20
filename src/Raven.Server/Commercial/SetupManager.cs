@@ -10,7 +10,6 @@ using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Commercial;
@@ -540,7 +539,7 @@ namespace Raven.Server.Commercial
                                                     Environment.NewLine +
                                                     "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." +
                                                     Environment.NewLine +
-                                                    "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
+                                                    "Existing cluster nodes " + JsonStringHelper.Serialize(allNodes, indented: true)
                 );
             }
         }

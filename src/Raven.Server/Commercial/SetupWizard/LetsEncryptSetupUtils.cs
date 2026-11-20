@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.Commercial.LetsEncrypt;
 using Raven.Server.Utils;
 
@@ -54,7 +53,7 @@ public static class LetsEncryptSetupUtils
                     Challenge = challengeResult.Challenge,
                     RootDomain = setupInfo.RootDomain,
                 };
-                var serializeObject = JsonConvert.SerializeObject(registrationInfo);
+                var serializeObject = JsonStringHelper.Serialize(registrationInfo);
 
                 try
                 {
