@@ -481,6 +481,48 @@ public class RavenDB_27802 : RavenTestBase
         Assert.Equal(all.Take(5).Select(x => x.Id), page.Select(x => x.Id));
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void RandomPageMustBeFilledFromTheRemainingMatches(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        using (var bulk = store.BulkInsert())
+        {
+            for (int i = 0; i < 1000; i++)
+                bulk.Store(new Item4 { Age = i }, $"items/{i}");
+        }
+
+        new Items_Index4().Execute(store);
+        Indexes.WaitForIndexing(store);
+
+        store.Maintenance.Send(new StopIndexingOperation());
+        using (var session = store.OpenSession())
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                if (i % 10 != 0)
+                    session.Delete($"items/{i}");
+            }
+            session.SaveChanges();
+        }
+
+        using var querySession = store.OpenSession();
+        foreach (var seed in new[] { "a", "b", "c", "d", "e" })
+        {
+            var all = querySession.Query<Item4, Items_Index4>().Customize(x => x.RandomOrdering(seed)).ToList();
+            var page = querySession.Query<Item4, Items_Index4>().Customize(x => x.RandomOrdering(seed)).Take(50).ToList();
+
+            Assert.Equal(100, all.Count);
+            Assert.Equal(all.Take(50).Select(x => x.Id), page.Select(x => x.Id));
+        }
+
+        for (int run = 0; run < 5; run++)
+        {
+            var page = querySession.Query<Item4, Items_Index4>().Customize(x => x.RandomOrdering()).Take(50).ToList();
+            Assert.Equal(50, page.Select(x => x.Id).Distinct().Count());
+        }
+    }
+
     private class Item4
     {
         public string Id { get; set; }

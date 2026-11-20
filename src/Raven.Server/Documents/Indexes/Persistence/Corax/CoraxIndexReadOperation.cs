@@ -660,6 +660,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             long docsToLoad = pageSize;
             bool runQuery = true;
+            // one seed for every pass, so a re-read continues the same random order
+            int freshRandomSeed = Random.Shared.Next();
             // Loop-invariant: depends only on index type / fields / query.
             bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
             
@@ -679,7 +681,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     var builderParameters = new QueryBuilderParameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
                         query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take,
-                        indexReadOperation: this, token: token, queryTime: queryTime);
+                        indexReadOperation: this, token: token, queryTime: queryTime, freshRandomSeed: freshRandomSeed);
 
                     var planParams = new QueryPlanBuilder.PlanParameters
                     {

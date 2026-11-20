@@ -38,6 +38,7 @@ public sealed class QueryBuilderParameters
     public readonly IndexReadOperationBase IndexReadOperation;
     public readonly bool IsVectorSingleClause;
     public readonly QueryTimeScope QueryTime;
+    public readonly int? FreshRandomSeed;
 
     // used for tests
     internal QueryBuilderParameters(IndexSearcher searcher, ByteStringContext allocator, QueryMetadata metadata, BlittableJsonReaderObject queryParameters, IndexFieldsMapping indexFieldsMapping, bool hasBoost = false)
@@ -55,9 +56,10 @@ public sealed class QueryBuilderParameters
 
     internal QueryBuilderParameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
         IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-        FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default, bool allowImplicitScoreOrdering = true)
+        FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default, bool allowImplicitScoreOrdering = true, int? freshRandomSeed = null)
     {
         QueryTime = queryTime;
+        FreshRandomSeed = freshRandomSeed;
         IndexSearcher = searcher;
         ServerContext = serverContext;
         Query = query;
