@@ -178,6 +178,10 @@ class storageReport extends shardViewModelBase {
         const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
 
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
+
+        if ((report.UnaccountedSpaceInBytes ?? 0) > 0) {
+            d.internalChildren.push(new storageReportItem("Other", "other", false, report.UnaccountedSpaceInBytes, []));
+        }
     }
 
     private mapPreAllocatedBuffers(buffersReport: Voron.Debugging.PreAllocatedBuffersReport): storageReportItem {
