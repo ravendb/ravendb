@@ -1,11 +1,11 @@
 ﻿using System;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class CounterOperationConverter : RavenTypeJsonConverter<CounterOperation>
+    internal sealed class CounterOperationConverter : JsonConverter<CounterOperation>
     {
         public static CounterOperationConverter Instance = new CounterOperationConverter();
 
@@ -13,76 +13,60 @@ namespace Raven.Server.Json.Converters
         {
         }
 
-        protected override void WriteJson(BlittableJsonWriter writer, CounterOperation value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, CounterOperation value, JsonSerializerOptions options)
         {
-            if (value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
             writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(CounterOperation.CounterName));
-            if (value.CounterName != null)
-                writer.WriteValue(value.CounterName);
-            else
-                writer.WriteNull();
-
-            writer.WritePropertyName(nameof(CounterOperation.Delta));
-            writer.WriteValue(value.Delta);
-
-            writer.WritePropertyName(nameof(CounterOperation.Type));
-            writer.WriteValue(value.Type);
-
-            writer.WritePropertyName(nameof(CounterOperation.DocumentId));
-            if (value.DocumentId != null)
-                writer.WriteValue(value.DocumentId);
-            else
-                writer.WriteNull();
-
-            writer.WritePropertyName(nameof(CounterOperation.ChangeVector));
-            if (value.ChangeVector != null)
-                writer.WriteValue(value.ChangeVector);
-            else
-                writer.WriteNull();
-
+            writer.WriteString(nameof(CounterOperation.CounterName), value.CounterName);
+            writer.WriteNumber(nameof(CounterOperation.Delta), value.Delta);
+            writer.WriteNumber(nameof(CounterOperation.Type), (int)value.Type);
+            writer.WriteString(nameof(CounterOperation.DocumentId), value.DocumentId);
+            writer.WriteString(nameof(CounterOperation.ChangeVector), value.ChangeVector);
             writer.WriteEndObject();
         }
 
-        internal override CounterOperation ReadJson(BlittableJsonReader blittableReader)
+        public override CounterOperation Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType != JsonTokenType.StartObject)
+                throw new InvalidOperationException("Expected StartObject, Got " + reader.TokenType);
+
             var result = new CounterOperation();
 
-            do
+            while (reader.Read())
             {
-                blittableReader.Read();
-                if (blittableReader.TokenType == JsonToken.EndObject)
+                if (reader.TokenType == JsonTokenType.EndObject)
                     return result;
-                if (blittableReader.TokenType != JsonToken.PropertyName)
-                    throw new InvalidOperationException("Expected PropertyName, Got " + blittableReader.TokenType);
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                    throw new InvalidOperationException("Expected PropertyName, Got " + reader.TokenType);
 
-                var property = (string)blittableReader.Value;
+                string property = reader.GetString();
+                reader.Read();
+
                 switch (property)
                 {
                     case nameof(CounterOperation.CounterName):
-                        result.CounterName = blittableReader.ReadAsString();
+                        result.CounterName = reader.GetString();
                         break;
                     case nameof(CounterOperation.Delta):
-                        blittableReader.Read();
-                        result.Delta = (long)blittableReader.Value;
+                        result.Delta = reader.GetInt64();
                         break;
                     case nameof(CounterOperation.Type):
-                        result.Type = Enum.Parse<CounterOperationType>(blittableReader.ReadAsString());
+                        result.Type = reader.TokenType == JsonTokenType.Number
+                            ? (CounterOperationType)reader.GetInt32()
+                            : Enum.Parse<CounterOperationType>(reader.GetString());
                         break;
                     case nameof(CounterOperation.DocumentId):
-                        result.DocumentId = blittableReader.ReadAsString();
+                        result.DocumentId = reader.GetString();
                         break;
                     case nameof(CounterOperation.ChangeVector):
-                        result.ChangeVector = blittableReader.ReadAsString();
+                        result.ChangeVector = reader.GetString();
+                        break;
+                    default:
+                        reader.Skip();
                         break;
                 }
-            } while (true);
+            }
+
+            throw new InvalidOperationException("Expected EndObject");
         }
     }
 }

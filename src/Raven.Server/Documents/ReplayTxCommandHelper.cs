@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.Json.Serialization;
+using Raven.Client.Json.Serialization.SystemTextJson;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
@@ -135,13 +136,7 @@ namespace Raven.Server.Documents
             }
             using (iterator.Current)
             {
-                var jsonSerializer = GetJsonSerializer();
-                StartRecordingDetails startDetail;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(iterator.Current);
-                    startDetail = jsonSerializer.Deserialize<StartRecordingDetails>(reader);
-                }
+                var startDetail = Deserialize<StartRecordingDetails>(context, iterator.Current);
 
                 if (string.IsNullOrEmpty(startDetail.Type))
                 {
@@ -172,120 +167,149 @@ namespace Raven.Server.Documents
                 throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
 
-            var jsonSerializer = GetJsonSerializer();
-            using (var reader = new BlittableJsonReader(context))
-            {
-                reader.Initialize(commandReader);
-                var dto = DeserializeCommandDto(type, jsonSerializer, reader, peepingTomStream);
-                return dto.ToCommand(context, database);
-            }
+            var dto = DeserializeCommandDto(type, context, commandReader, peepingTomStream);
+            return dto.ToCommand(context, database);
         }
 
         private static IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> DeserializeCommandDto(
             string type,
-            JsonSerializer jsonSerializer,
-            BlittableJsonReader reader,
+            DocumentsOperationContext context,
+            BlittableJsonReaderObject reader,
             PeepingTomStream peepingTomStream)
         {
             switch (type)
             {
                 case nameof(MergedBatchCommand):
-                    return jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
+                    return Deserialize<MergedBatchCommandDto>(context, reader);
 
                 case nameof(DeleteDocumentCommand):
-                    return jsonSerializer.Deserialize<DeleteDocumentCommandDto>(reader);
+                    return Deserialize<DeleteDocumentCommandDto>(context, reader);
 
                 case nameof(PatchDocumentCommand):
-                    return jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
+                    return Deserialize<PatchDocumentCommandDto>(context, reader);
 
                 case nameof(DatabaseDestination.MergedBatchPutCommand):
-                    return jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
+                    return Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(context, reader);
 
                 case nameof(MergedPutCommand):
-                    return jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
+                    return Deserialize<MergedPutCommand.MergedPutCommandDto>(context, reader);
 
                 case nameof(MergedInsertBulkCommand):
-                    return jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
+                    return Deserialize<MergedInsertBulkCommandDto>(context, reader);
 
                 case nameof(AttachmentHandler.MergedPutAttachmentCommand):
-                    return jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
+                    return Deserialize<MergedPutAttachmentCommandDto>(context, reader);
 
                 case nameof(AttachmentHandler.MergedDeleteAttachmentCommand):
-                    return jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
+                    return Deserialize<MergedDeleteAttachmentCommandDto>(context, reader);
 
                 case nameof(ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand):
-                    return jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+                    return Deserialize<PutResolvedConflictsCommandDto>(context, reader);
 
                 case nameof(HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommand):
-                    return jsonSerializer.Deserialize<HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommandDto>(reader);
+                    return Deserialize<HiLoHandlerProcessorForGetNextHiLo.MergedNextHiLoCommandDto>(context, reader);
 
                 case nameof(HiLoHandlerProcessorForReturnHiLo.MergedHiLoReturnCommand):
-                    return jsonSerializer.Deserialize<HiLoHandlerProcessorForReturnHiLo.MergedHiLoReturnCommandDto>(reader);
+                    return Deserialize<HiLoHandlerProcessorForReturnHiLo.MergedHiLoReturnCommandDto>(context, reader);
 
                 case nameof(IncomingReplicationHandler.MergedDocumentReplicationCommand):
-                    return jsonSerializer.Deserialize<MergedDocumentReplicationCommandDto>(reader);
+                    return Deserialize<MergedDocumentReplicationCommandDto>(context, reader);
 
                 case nameof(ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand):
-                    return jsonSerializer.Deserialize<DeleteExpiredDocumentsCommandDto>(reader);
+                    return Deserialize<DeleteExpiredDocumentsCommandDto>(context, reader);
 
                 case nameof(OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtag):
-                    return jsonSerializer.Deserialize<OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtagDto>(reader);
+                    return Deserialize<OutgoingInternalReplicationHandler.UpdateSiblingCurrentEtagDto>(context, reader);
 
                 case nameof(IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand):
-                    return jsonSerializer.Deserialize<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommandDto>(reader);
+                    return Deserialize<IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommandDto>(context, reader);
 
                case nameof(RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand):
-                    return jsonSerializer.Deserialize<RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand.DeleteRevisionsByDocumentIdMergedCommandDto>(reader);
+                    return Deserialize<RevisionsStorage.DeleteRevisionsByDocumentIdMergedCommand.DeleteRevisionsByDocumentIdMergedCommandDto>(context, reader);
 
                 case nameof(RevisionsStorage.DeleteRevisionsByChangeVectorMergedCommand):
-                    return jsonSerializer.Deserialize<RevisionsStorage.DeleteRevisionsByChangeVectorMergedCommand.DeleteRevisionsByChangeVectorMergedCommandDto>(reader);
+                    return Deserialize<RevisionsStorage.DeleteRevisionsByChangeVectorMergedCommand.DeleteRevisionsByChangeVectorMergedCommandDto>(context, reader);
 
                 case nameof(RevisionsStorage.RevertDocumentsCommand):
-                    return jsonSerializer.Deserialize<RevisionsStorage.RevertDocumentsCommandDto>(reader);
+                    return Deserialize<RevisionsStorage.RevertDocumentsCommandDto>(context, reader);
 
                 case nameof(RevisionsOperations.DeleteRevisionsBeforeCommand):
                     throw new ReplayTransactionsException(
                         "Because this command is deleting according to revisions' date & the revisions that created by replaying have different date an in place decision needed to be made",
                         peepingTomStream);
                 case nameof(TombstoneCleaner.DeleteTombstonesCommand):
-                    return jsonSerializer.Deserialize<DeleteTombstonesCommandDto>(reader);
+                    return Deserialize<DeleteTombstonesCommandDto>(context, reader);
 
                 case nameof(OutputReduceToCollectionCommand):
-                    return jsonSerializer.Deserialize<OutputReduceToCollectionCommandDto>(reader);
+                    return Deserialize<OutputReduceToCollectionCommandDto>(context, reader);
 
                 case nameof(ClusterTransactionMergedCommand):
-                    return jsonSerializer.Deserialize<ClusterTransactionMergedCommandDto>(reader);
+                    return Deserialize<ClusterTransactionMergedCommandDto>(context, reader);
 
                 case nameof(CountersHandler.ExecuteCounterBatchCommand):
-                    return jsonSerializer.Deserialize<ExecuteCounterBatchCommandDto>(reader);
+                    return Deserialize<ExecuteCounterBatchCommandDto>(context, reader);
 
                 case nameof(TimeSeriesRollups.AddedNewRollupPoliciesCommand):
-                    return jsonSerializer.Deserialize<TimeSeriesRollups.AddedNewRollupPoliciesCommand.AddedNewRollupPoliciesCommandDto>(reader);
+                    return Deserialize<TimeSeriesRollups.AddedNewRollupPoliciesCommand.AddedNewRollupPoliciesCommandDto>(context, reader);
 
                 case nameof(TimeSeriesRollups.RollupTimeSeriesCommand):
-                    return jsonSerializer.Deserialize<TimeSeriesRollups.RollupTimeSeriesCommand.RollupTimeSeriesCommandDto>(reader);
+                    return Deserialize<TimeSeriesRollups.RollupTimeSeriesCommand.RollupTimeSeriesCommandDto>(context, reader);
 
                 case nameof(TimeSeriesRollups.TimeSeriesRetentionCommand):
-                    return jsonSerializer.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(reader);
+                    return Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(context, reader);
 
                 case nameof(BatchQueueSinkScriptCommand):
-                    return jsonSerializer.Deserialize<BatchQueueSinkScriptCommand.Dto>(reader);
+                    return Deserialize<BatchQueueSinkScriptCommand.Dto>(context, reader);
 
                 default:
                     throw new ReplayTransactionsException($"Can't read {type} for replay", peepingTomStream);
             }
         }
 
-        internal static JsonSerializer GetJsonSerializer()
+        private static readonly ISerializationConventions RecordingSerialization = CreateRecordingSerialization();
+
+        private static ISerializationConventions CreateRecordingSerialization()
         {
-            var jsonSerializer = (NewtonsoftJsonJsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
-            jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
-            jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
-            jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
-            jsonSerializer.Converters.Add(StreamConverter.Instance);
-            jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);
-            jsonSerializer.Converters.Add(CounterOperationConverter.Instance);
-            return jsonSerializer;
+            var conventions = new DocumentConventions
+            {
+                Serialization = new SystemTextJsonSerializationConventions
+                {
+                    IgnoreUnsafeMembers = true,
+                    CustomizeJsonSerializerOptions = options =>
+                    {
+                        options.Converters.Insert(0, SliceJsonConverter.Instance);
+                        options.Converters.Insert(0, Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
+                        options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);
+                        options.Converters.Insert(0, StreamConverter.Instance);
+                        options.Converters.Insert(0, BlittableJsonReaderArrayConverter.Instance);
+                        options.Converters.Insert(0, CounterOperationConverter.Instance);
+                    }
+                }
+            };
+
+            conventions.Freeze();
+            return conventions.Serialization;
+        }
+
+        internal static BlittableJsonReaderObject Serialize(JsonOperationContext context, object value)
+        {
+            using (IJsonWriter writer = RecordingSerialization.CreateWriter(context))
+            {
+                RecordingSerialization.CreateSerializer().Serialize(writer, value);
+                writer.FinalizeDocument();
+
+                return writer.CreateReader();
+            }
+        }
+
+        internal static T Deserialize<T>(JsonOperationContext context, BlittableJsonReaderObject json)
+        {
+            using (RecordingJson.EnterContext(context))
+            using (var reader = new SystemTextJsonBlittableReader())
+            {
+                reader.Initialize(json);
+                return RecordingSerialization.CreateDeserializer().Deserialize<T>(reader);
+            }
         }
     }
 

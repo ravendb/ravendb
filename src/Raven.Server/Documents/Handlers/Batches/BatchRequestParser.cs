@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
@@ -57,15 +57,15 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             public ForceRevisionStrategy ForceRevisionCreationStrategy;
 
-            [JsonIgnore]
+            [IgnoreDataMember]
             public PatchDocumentCommandBase PatchCommand;
 
-            [JsonIgnore]
+            [IgnoreDataMember]
             public JsonPatchCommand JsonPatchCommand;
 
             #region BatchTrackChanges
 
-            [JsonIgnore]
+            [IgnoreDataMember]
             public BatchTrackChangesCommand BatchTrackChangesCommand;
             public Dictionary<string, string> TrackedEntities;
 

@@ -1,11 +1,12 @@
-﻿using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+﻿using System;
+using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class BlittableJsonReaderArrayConverter : RavenTypeJsonConverter<BlittableJsonReaderArray>
+    internal sealed class BlittableJsonReaderArrayConverter : JsonConverter<BlittableJsonReaderArray>
     {
         public static readonly BlittableJsonReaderArrayConverter Instance = new BlittableJsonReaderArrayConverter();
 
@@ -13,32 +14,20 @@ namespace Raven.Server.Json.Converters
         {
         }
 
-        protected override void WriteJson(BlittableJsonWriter writer, BlittableJsonReaderArray value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, BlittableJsonReaderArray value, JsonSerializerOptions options)
         {
-            writer.WriteStartArray();
-            foreach (var item in value)
-            {
-                serializer.Serialize(writer, item);
-            }
-            writer.WriteEndArray();
+            RecordingJson.Write(writer, value);
         }
 
-        internal override BlittableJsonReaderArray ReadJson(BlittableJsonReader blittableReader)
+        public override BlittableJsonReaderArray Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (!(blittableReader.Value is BlittableJsonReaderArray blittableArrayValue))
+            if (reader.TokenType != JsonTokenType.StartArray)
             {
                 throw new SerializationException(
-                    $"Can't convert {blittableReader.Value?.GetType()} type to {nameof(BlittableJsonReaderArray)}. The value must to be an array");
+                    $"Can't convert {reader.TokenType} token to {nameof(BlittableJsonReaderArray)}. The value must to be an array");
             }
 
-            //Because the value that return is the blittable array as a whole
-            //we skip the reading inside this blittable array
-            blittableReader.SkipBlittableArrayInside();
-
-            return
-                blittableArrayValue.BelongsToContext(blittableReader.Context)
-                    ? blittableArrayValue
-                    : blittableArrayValue.Clone(blittableReader.Context);
+            return RecordingJson.ReadArray(ref reader);
         }
     }
 }
