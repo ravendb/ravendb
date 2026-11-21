@@ -3,11 +3,10 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands.Analyzers
 {
-    public sealed class PutAnalyzersCommand : UpdateDatabaseCommand
+    public sealed class PutAnalyzersCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public List<AnalyzerDefinition> Analyzers = new List<AnalyzerDefinition>();
 
@@ -33,11 +32,6 @@ namespace Raven.Server.ServerWide.Commands.Analyzers
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Analyzers)] = TypeConverter.ToBlittableSupportedType(Analyzers);
-        }
-
-        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
-        {
-            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

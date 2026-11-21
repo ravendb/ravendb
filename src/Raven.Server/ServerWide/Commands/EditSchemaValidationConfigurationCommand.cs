@@ -3,11 +3,10 @@ using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Sparrow.Json.Parsing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands;
 
-public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
+public class EditSchemaValidationConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
 {
     public SchemaValidationConfiguration Configuration;
 
@@ -65,10 +64,5 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
     public override void FillJson(DynamicJsonValue json)
     {
         json[nameof(Configuration)] = Configuration.ToJson();
-    }
-
-    public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
-    {
-        AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
     }
 }

@@ -16,7 +16,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide.Commands.AI
 {
-    public class AddOrUpdateAiAgentCommand : UpdateDatabaseCommand
+    public class AddOrUpdateAiAgentCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public AiAgentConfiguration Configuration;
 
@@ -205,11 +205,6 @@ namespace Raven.Server.ServerWide.Commands.AI
                     throw new InvalidOperationException(
                         $"Sub-agent identifier '{tool.Identifier}' is invalid. Use only letters, digits, '_' or '-' (pattern: {ToolNameChecker}).");
             }
-        }
-
-        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
-        {
-            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

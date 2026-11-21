@@ -16,11 +16,31 @@ namespace Raven.Server.ServerWide.Commands
 
         protected UpdateDatabaseRecordFeaturesCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId) { }
 
-        public abstract bool Disabled { get; }
+        public virtual bool Disabled => false;
 
         public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
         {
-            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
+            // Clone the command (from Raw) and the database record, and run the update on the clones: the license checks
+            // see the record exactly as apply will produce it, in isolation, and this command and the stored record do not change.
+            var databaseRecord = serverStore.Cluster.ReadDatabase(context, DatabaseName);
+            if (databaseRecord == null)
+                return;
+
+            var type = GetType().Name;
+            var command = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](Raw);
+
+            try
+            {
+                command.Initialize(serverStore, context);
+                command.UpdateDatabaseRecord(databaseRecord, index);
+            }
+            catch
+            {
+                return;
+            }
+
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+            serverStore.Cluster.AssertLicenseLimits(type, serverStore, databaseRecord, items, context, command);
         }
     }
 }

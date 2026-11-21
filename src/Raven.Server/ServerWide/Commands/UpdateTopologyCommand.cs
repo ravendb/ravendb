@@ -3,11 +3,10 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class UpdateTopologyCommand : UpdateDatabaseCommand
+    public sealed class UpdateTopologyCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public DatabaseTopology Topology;
         public DateTime At;
@@ -55,11 +54,6 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
             json[nameof(ShardNumber)] = ShardNumber;
-        }
-
-        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
-        {
-            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

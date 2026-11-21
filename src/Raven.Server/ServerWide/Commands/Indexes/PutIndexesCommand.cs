@@ -5,11 +5,10 @@ using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
-    public sealed class PutIndexesCommand : UpdateDatabaseCommand
+    public sealed class PutIndexesCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public List<IndexDefinition> Static = new List<IndexDefinition>();
 
@@ -86,11 +85,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultStaticDeploymentMode)] = DefaultStaticDeploymentMode;
             json[nameof(DefaultAutoDeploymentMode)] = DefaultAutoDeploymentMode;
-        }
-
-        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
-        {
-            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }
