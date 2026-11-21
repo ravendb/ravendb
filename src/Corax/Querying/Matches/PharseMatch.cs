@@ -9,6 +9,7 @@ using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.CompactTrees;
 
 namespace Corax.Querying.Matches;
 
@@ -81,9 +82,10 @@ public struct PhraseMatch<TInner> : IQueryMatch
           ? stackalloc int[128]
           : MemoryMarshal.Cast<byte, int>(_memory.ToSpan().Slice(MemorySize * sizeof(long)));
         
+        using var keyScope = new CompactKeyCacheScope(_indexSearcher.Transaction.LowLevelTransaction);
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
-            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p);
+            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, keyScope.Key);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
             

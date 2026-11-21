@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <libgen.h>
+#include <limits.h>
 #include <sys/mman.h>
 #include <stdio.h>
 
@@ -103,18 +103,13 @@ _sync_directory_for(const char *file_path, int32_t *detailed_error_code)
 {
     assert(file_path != NULL);
 
-    char *file_path_copy = NULL;
-    file_path_copy = strdup(file_path);
-    if (file_path_copy == NULL)
+    char dir_buffer[PATH_MAX];
+    char *dir_path = _dirname_r(file_path, dir_buffer);
+    if (dir_path == NULL)
     {
         *detailed_error_code = errno;
-        return FAIL_NOMEM;
+        return FAIL_GET_REAL_PATH;
     }
-    char *dir_path = dirname(file_path_copy);
 
-    int32_t rc = _sync_directory_maybe_symblink(dir_path, detailed_error_code);
-
-    free(file_path_copy);
-
-    return rc;
+    return _sync_directory_maybe_symblink(dir_path, detailed_error_code);
 }

@@ -9,8 +9,11 @@ function log {
 
 function enable_cross_builds {
     log "Installing packages..."
-    sudo apt-get update -qq >> "${LOG}" 2>&1
-    if ! sudo apt-get install -y crossbuild-essential-armhf crossbuild-essential-arm64 cmake clang libxml2-dev fuse libbz2-dev libfuse-dev libssl-dev fuse >> "${LOG}" 2>&1; then
+    # noninteractive: a package like tzdata otherwise waits for an answer and the setup never ends
+    sudo env DEBIAN_FRONTEND=noninteractive apt-get update -qq >> "${LOG}" 2>&1
+    # build-essential: make and the c89 of the linux-x64 build; the rest of the second line builds osxcross
+    if ! sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y crossbuild-essential-armhf crossbuild-essential-arm64 cmake clang libxml2-dev fuse libbz2-dev libfuse-dev libssl-dev \
+        build-essential git wget ca-certificates xz-utils bzip2 cpio patch python3 liblzma-dev zlib1g-dev uuid-dev >> "${LOG}" 2>&1; then
         echo "Failed. See ${LOG}";  
         exit 1;
     fi
@@ -26,7 +29,7 @@ function enable_cross_builds {
     local MACOS_SDK_URL=https://ravendb-build-assets.s3.amazonaws.com/macos/MacOSX${MACOS_SDK_VERSION}.sdk.tar.xz
     local MACOS_SDK_TAR_PATH="${MACOSX_SDK_TAR_PATH:-build-libs/$MACOS_SDK_DIRNAME.tar.xz}"
 
-    if [ ! -f "$MACOSX_SDK_TAR_PATH" ]; then 
+    if [ ! -f "$MACOS_SDK_TAR_PATH" ]; then
         
         echo "SDK tarball not found. Downloading..."
         if ! wget -O "$MACOS_SDK_TAR_PATH" "$MACOS_SDK_URL"; then
@@ -42,8 +45,7 @@ function enable_cross_builds {
 
     OSXCROSS_SDKROOT="$(realpath "target/SDK/${MACOS_SDK_DIRNAME}")"
     export OSXCROSS_SDKROOT
-    
-    tar xf  "$(realpath ../$MACOS_SDK_TAR_PATH)sudo" -C "$(realpath "target/SDK")"
+    # build.sh extracts the SDK from tarballs/ into target/SDK
 
     log "Building mac compiler..."
     sed -i 's/read/echo/g' build.sh

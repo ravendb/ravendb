@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Server.Logging;
@@ -36,7 +36,7 @@ namespace Raven.Server.Utils.Metrics
                 IsBackground = true,
                 Name = "Metrics Scheduler"
             };
-            _schedulerThread.Start();
+            _schedulerThread.UnsafeStart();
         }
 
         private readonly int _tickIntervalInNanoseconds;

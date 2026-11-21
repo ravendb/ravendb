@@ -81,8 +81,9 @@ public sealed unsafe class CompactKey : IDisposable
         _currentIdx = 0;
         MaxLength = 0;
 
-        _storage = GetPoolFrom(SharedBytesPools).Rent(2 * Constants.CompactTree.MaximumKeySize);
-        _keyMappingCache = GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
+        // a key reused for many entries keeps its buffers, Reset() returns them
+        _storage ??= GetPoolFrom(SharedBytesPools).Rent(2 * Constants.CompactTree.MaximumKeySize);
+        _keyMappingCache ??= GetPoolFrom(SharedKeyMappingPools).Rent(2 * MappingTableSize);
     }
 
     public void Reset()

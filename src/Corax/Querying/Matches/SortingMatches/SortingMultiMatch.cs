@@ -173,14 +173,16 @@ public unsafe partial struct SortingMultiMatch<TInner>
         // var take = Math.Min(match._take, matches.Length);
         // take = take < 0 ? matches.Length : take;
         
-        var sizeToAllocate = take * (sizeof(long) + sizeof(UnmanagedSpan));
-        //OrderBySpatial relay on this order of data. If you change it please review Spatial ordering to ensure that everything works fine. [[ids], [terms], [spatial_distances]]
-        if (match._sortingDataTransfer.IncludeDistances)
-            sizeToAllocate += take * sizeof(SpatialResult);
-        
-        var bufScope = allocator.Allocate(sizeToAllocate, out ByteString bs);
-        Span<long> matchesTermIds = new(bs.Ptr, take);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + take * sizeof(long));
+        // [[ids], [terms]]
+        ByteStringContext.InternalScope bufScope = default;
+        Span<long> matchesTermIds = Span<long>.Empty;
+        UnmanagedSpan* termsPtr = null;
+        if (TComparer1.UsesBatchBuffers)
+        {
+            bufScope = allocator.Allocate(take * (sizeof(long) + sizeof(UnmanagedSpan)), out ByteString bs);
+            matchesTermIds = new(bs.Ptr, take);
+            termsPtr = (UnmanagedSpan*)(bs.Ptr + take * sizeof(long));
+        }
 
         // Initialize the important infrastructure for the sorting.
         TComparer1 entryComparer = new();

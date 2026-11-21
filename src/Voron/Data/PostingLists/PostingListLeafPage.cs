@@ -281,13 +281,14 @@ public readonly unsafe struct PostingListLeafPage
             mergedList.Count += fastPForDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
         }
 
-        var encoder = new FastPForEncoder(allocator);
+        using var encoder = new FastPForEncoder(allocator);
         int reqSize = 0;
         if (mergedList.Count > 0)
         {
             reqSize = encoder.Encode(mergedList.RawItems, mergedList.Count);
             if (reqSize >= Constants.Storage.PageSize - PageHeader.SizeOf)
             {
+                mergedList.Dispose();
                 scope.Dispose();
                 return false;
             }

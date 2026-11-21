@@ -41,6 +41,7 @@ using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
 using Sparrow.Server.Logging;
+using Voron.Data.CompactTrees;
 using Voron.Data.Graphs;
 using IndexFieldType = Raven.Server.Documents.Indexes.Debugging.IndexFieldType;
 
@@ -116,6 +117,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         }
         private readonly ByteStringContext _allocator;
 
+        private readonly LowLevelTransaction _llt;
+
         private readonly int _maxNumberOfOutputsPerDocument;
 
         private TermsReader _documentIdReader;
@@ -125,6 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public CoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {
             _allocator = readTransaction.Allocator;
+            _llt = readTransaction.LowLevelTransaction;
             _fieldMappings = fieldsMapping;
             IndexSearcher = new IndexSearcher(readTransaction, _fieldMappings)
             {
@@ -451,7 +455,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
             }
 
-            public long RegisterDuplicates<TProjection>(ref TProjection hasProjection, long currentIdx, Span<long> ids, CancellationToken token)
+            public long RegisterDuplicates<TProjection>(ref TProjection hasProjection, long currentIdx, Span<long> ids, CompactKey entryTermsKey, CancellationToken token)
                 where TProjection : struct, IHasProjection
             {
                 // From now on, we know we will try to skip duplicates.
@@ -495,7 +499,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Page page = default;
                     foreach (var id in distinctIds)
                     {
-                        var reader = _searcher.GetEntryTermsReader(id, ref page);
+                        var reader = _searcher.GetEntryTermsReader(id, ref page, entryTermsKey);
 
                         var key = _documentIdReader.GetTermFor(id);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key, _index.IndexFieldsPersistence.HasTimeValues);
@@ -698,6 +702,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 SortingDataTransfer sortingData = default;
                 using var queryFilter = GetQueryFilter();
                 Page page = default;
+                using var entryTermsKey = new CompactKey();
+                entryTermsKey.Initialize(_llt);
                 bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
                 totalResults.Value = 0;
 
@@ -739,7 +745,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     // If we are going to skip, we've better do it knowing how many we have passed. 
                     // After this call the order of ids from 0 to `i` may be changed, and we cannot rely on it (a sorting case).
-                    long i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), token);
+                    long i = identityTracker.RegisterDuplicates(ref hasProjections, totalResults.Value, ids.AsSpan(0, read), entryTermsKey, token);
                     totalResults.Value += read; // important that this is *after* RegisterDuplicates
 
                     // Now for every document that was selected. document it. 
@@ -775,7 +781,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         CoraxSpatialResult? documentDistance = hasOrderByDistance ? sortingData.DistancesBuffer[i] : null;
 
                         var key = _documentIdReader.GetTermFor(indexEntryId);
-                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page);
+                        EntryTermsReader entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page, entryTermsKey);
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, _index.IndexFieldsPersistence.HasTimeValues, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
@@ -1289,6 +1295,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 long returnedDocs = 0;
                 long skippedDocs = 0;
                 Page page = default;
+                using var entryTermsKey = new CompactKey();
+                entryTermsKey.Initialize(_llt);
                 while ((read = sortedQuery.Fill(ids.AsSpan())) != 0)
                 {
                     for (int i = 0; i < read; i++)
@@ -1312,7 +1320,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                             continue;
                         }
 
-                        var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page);
+                        var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page, entryTermsKey);
                         var documentScore = sortingData.IncludeScores ? sortingData.ScoresBuffer[i] : (float?)null;
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues, documentScore);
                         var result = retriever.Get(ref retrieverInput, token);
@@ -1373,6 +1381,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             int read;
             long i = Skip();
             Page page = default;
+            using var entryTermsKey = new CompactKey();
+            entryTermsKey.Initialize(_llt);
             var alreadySeenDocuments = new HashSet<long>();
             
             while (true)
@@ -1385,7 +1395,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
                     
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page);
+                    var reader = IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page, entryTermsKey);
                     var id = _documentIdReader.GetTermFor(coraxInternalEntryId);
                     yield return documentsContext.ReadObject(coraxEntryReader.GetDocument(ref reader), id);
                 }

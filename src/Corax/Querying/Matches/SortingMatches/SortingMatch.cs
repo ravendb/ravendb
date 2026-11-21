@@ -621,25 +621,23 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         where TEntryComparer : struct,  IEntryComparer, IComparer<UnmanagedSpan>
     {
         var llt = match._searcher.Transaction.LowLevelTransaction;
-        var allocator = match._searcher.Allocator;
-
-        var sizeToAllocate = batchResults.Length * (sizeof(long) + sizeof(UnmanagedSpan));
-
-        //OrderBySpatial relies on this order of data. If you change it, please review the spatial ordering to ensure that everything works fine: [[ids], [terms], [spatial_distances]].
-        if (match._sortingDataTransfer.IncludeDistances)
-            sizeToAllocate += batchResults.Length * sizeof(SpatialResult);
-        
-        var bufScope = allocator.Allocate(sizeToAllocate, out ByteString bs);
-        Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
-        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
 
         // Initialize the important infrastructure for the sorting.
         TEntryComparer entryComparer = new();
         entryComparer.Init(ref match);
-        
-        entryComparer.SortBatch(ref match, llt, llt.PageLocator, batchResults, batchTermIds, termsPtr);
 
-        bufScope.Dispose();
+        if (TEntryComparer.UsesBatchBuffers == false)
+        {
+            entryComparer.SortBatch(ref match, llt, llt.PageLocator, batchResults, Span<long>.Empty, null);
+            return;
+        }
+
+        // [[ids], [terms]]
+        using var _ = match._searcher.Allocator.Allocate(batchResults.Length * (sizeof(long) + sizeof(UnmanagedSpan)), out ByteString bs);
+        Span<long> batchTermIds = new(bs.Ptr, batchResults.Length);
+        UnmanagedSpan* termsPtr = (UnmanagedSpan*)(bs.Ptr + batchResults.Length * sizeof(long));
+
+        entryComparer.SortBatch(ref match, llt, llt.PageLocator, batchResults, batchTermIds, termsPtr);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
