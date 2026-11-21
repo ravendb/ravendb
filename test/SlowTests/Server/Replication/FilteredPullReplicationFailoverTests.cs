@@ -3492,15 +3492,21 @@ public class FilteredPullReplicationFailoverTests : ReplicationTestBase
 
             var hubStatsAfter = await hubBStore.Maintenance.SendAsync(new GetReplicationPerformanceStatisticsOperation());
 
+            // Hub B's Incoming/Outgoing stats also hold its internal replication connections with hub node C (and A, until B notices that it is down).
+            // C can legitimately forward the 512 sink docs it got from A if B didn't have them yet at C's heartbeat, so count only the sink connection.
+            // Sources and destinations are formatted as "{url}/databases/{database}...", the "/databases/" suffix avoids port-prefix matches.
+            var sinkConnectionPrefix = $"{sinkStore.Urls[0]}/databases/";
+
             // SinkToHub direction: hub B received from sink — check hub B's incoming
             var sinkDocsInNewConnection = hubStatsAfter.Incoming
-                ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentReadCount ?? 0) ?? 0) ?? 0;
+                ?.Where(x => x.Source.StartsWith(sinkConnectionPrefix, StringComparison.OrdinalIgnoreCase))
+                .Sum(o => o.Performance?.Sum(p => p.Network?.DocumentReadCount ?? 0) ?? 0) ?? 0;
             Assert.True(sinkDocsInNewConnection == 1 || sinkDocsInNewConnection == 2,
                 $"After hub failover (SinkToHub direction), expected == 1 or 2 docs on new connection but got {sinkDocsInNewConnection}.");
 
             // HubToSink direction: hub B sent to sink — check hub B's outgoing
             var hubDocsInNewConnection = hubStatsAfter.Outgoing
-                .Where(x => x.Destination.StartsWith(sinkStore.Urls[0]))
+                .Where(x => x.Destination.StartsWith(sinkConnectionPrefix, StringComparison.OrdinalIgnoreCase))
                 ?.Sum(o => o.Performance?.Sum(p => p.Network?.DocumentOutputCount ?? 0) ?? 0) ?? 0;
             Assert.True(hubDocsInNewConnection == 1 || hubDocsInNewConnection == 2,
                 $"After hub failover (HubToSink direction), expected == 1 or 2 docs on new connection but got {hubDocsInNewConnection}.");
