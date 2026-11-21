@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -18,6 +18,7 @@ using Raven.Server.Documents.Queries.Results.Counters;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using Voron.Data.Fixed;
 
 namespace Raven.Server.Documents.Indexes.Static.Counters
 {
@@ -254,12 +255,12 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
         }
 
         internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName,
-            Stopwatch overallDuration)
+            Stopwatch overallDuration, bool exact)
         {
-            progressStats.NumberOfItemsToProcess +=
-                DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
-                    queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, out var totalNumberOfItems, overallDuration);
-            progressStats.TotalNumberOfItems += totalNumberOfItems;
+            NumberOfEntriesAfterResult entriesAfter = DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
+                queryContext.Documents, collectionName, progressStats.LastProcessedItemEtag, overallDuration, exact);
+
+            progressStats.AddItems(entriesAfter);
         }
 
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)

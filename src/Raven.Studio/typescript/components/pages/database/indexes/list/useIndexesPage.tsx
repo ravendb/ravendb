@@ -41,6 +41,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
+import { useIndexesProgress } from "components/pages/database/indexes/list/useIndexesProgress";
 import router from "plugins/router";
 import RichAlert from "components/common/RichAlert";
 import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
@@ -143,23 +144,11 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         return groupedIndexes;
     }, [filter, stats.indexes]);
 
-    const fetchProgress = async (location: databaseLocationSpecifier) => {
-        try {
-            const progress = await indexesService.getProgress(db.name, location);
-
-            dispatch({
-                type: "ProgressLoaded",
-                progress,
-                location,
-            });
-        } catch (e) {
-            dispatch({
-                type: "ProgressLoadError",
-                error: e,
-                location,
-            });
-        }
-    };
+    const { refreshProgress, indexesWithExactProgress, toggleExactProgress } = useIndexesProgress(
+        db.name,
+        stats.indexes,
+        dispatch
+    );
 
     const fetchStats = useCallback(
         async (location: databaseLocationSpecifier) => {
@@ -181,7 +170,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
 
     const throttledProgressRefresh = useRef(
         _.throttle(() => {
-            locations.forEach((location) => fetchProgress(location));
+            locations.forEach(refreshProgress);
         }, 10_000)
     );
 
@@ -881,6 +870,8 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         } satisfies SwapSideBySideData,
         openFaulty,
         confirmDeleteIndexes,
+        indexesWithExactProgress,
+        toggleExactProgress,
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,

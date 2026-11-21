@@ -29,7 +29,8 @@ export function InternalReplicationProgressProvider(
             try {
                 const internalReplicationProgressResponse = await tasksService.getInternalReplicationProgress(
                     db.name,
-                    location
+                    location,
+                    false
                 );
                 onProgress(internalReplicationProgressResponse.Results, location);
             } catch (error) {
@@ -60,7 +61,7 @@ export function ReplicationProgressProvider(props: ReplicationProgressProviderPr
 
     const loadProgress = () => {
         locations.forEach(async (location) => {
-            const replicationProgressResponse = await tasksService.getReplicationProgress(db.name, location);
+            const replicationProgressResponse = await tasksService.getReplicationProgress(db.name, location, false);
             onProgress(replicationProgressResponse.Results, location);
         });
     };
@@ -84,7 +85,7 @@ export function EtlProgressProvider(props: EtlProgressProviderProps): React.JSX.
 
     const loadProgress = () => {
         locations.forEach(async (location) => {
-            const etlProgressResponse = await tasksService.getEtlProgress(db.name, location);
+            const etlProgressResponse = await tasksService.getEtlProgress(db.name, location, false);
             onProgress(etlProgressResponse.Results, location);
         });
     };

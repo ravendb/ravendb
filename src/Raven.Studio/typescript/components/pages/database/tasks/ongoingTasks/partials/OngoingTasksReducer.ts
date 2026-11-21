@@ -25,6 +25,7 @@ import {
     OngoingTaskSubscriptionInfo,
     OngoingTaskSubscriptionSharedInfo,
     OngoingReplicationProgressAwareTaskNodeInfo,
+    OngoingTaskNodeInternalReplicationProgressDetails,
     OngoingTaskNodeReplicationProgressDetails,
     OngoingTaskExternalReplicationNodeInfoDetails,
     OngoingTaskReplicationHubNodeInfoDetails,
@@ -159,7 +160,7 @@ const uniqueIdExtractorRaw = (task: OngoingTask) => {
     return hubTask.TaskId + "_" + (hubTask.DestinationDatabase ?? "??") + "_" + (hubTask.DestinationUrl ?? "??");
 };
 
-function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlProgressDetails {
+export function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlProgressDetails {
     const totalItems =
         taskProgress.TotalNumberOfDocuments +
         taskProgress.TotalNumberOfDocumentTombstones +
@@ -191,10 +192,13 @@ function mapEtlProgress(taskProgress: EtlProcessProgress): OngoingTaskNodeEtlPro
         disabled: taskProgress.Disabled,
         processedPerSecond: taskProgress.AverageProcessedPerSecond,
         transactionalId: taskProgress.TransactionalId,
+        estimated: taskProgress.Estimated,
     };
 }
 
-function mapReplicationProgress(taskProgress: ReplicationProcessProgress): OngoingTaskNodeReplicationProgressDetails {
+export function mapReplicationProgress(
+    taskProgress: ReplicationProcessProgress
+): OngoingTaskNodeReplicationProgressDetails {
     const totalItems =
         taskProgress.TotalNumberOfAttachments +
         taskProgress.TotalNumberOfCounterGroups +
@@ -248,6 +252,7 @@ function mapReplicationProgress(taskProgress: ReplicationProcessProgress): Ongoi
             processed: taskProgress.TotalNumberOfTimeSeriesSegments - taskProgress.NumberOfTimeSeriesSegmentsToProcess,
             total: taskProgress.TotalNumberOfTimeSeriesSegments,
         },
+        estimated: taskProgress.Estimated,
     };
 }
 
@@ -796,20 +801,8 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                 perLocationDraft.status = "success";
                 perLocationDraft.error = null;
 
-                (perLocationDraft as Draft<OngoingInternalReplicationNodeInfo>).progress = incomingProgresses.map(
-                    (progress) => {
-                        const firstProgress = progress.ProcessesProgress[0];
-                        return {
-                            ...mapReplicationProgress(firstProgress),
-                            lastSentEtag: firstProgress.LastSentEtag,
-                            lastDatabaseEtag: firstProgress.LastDatabaseEtag,
-                            sourceDatabaseChangeVector: firstProgress.SourceChangeVector,
-                            lastAcceptedChangeVectorFromDestination: firstProgress.DestinationChangeVector,
-                            fromToString: firstProgress.FromToString,
-                            destinationNodeTag: progress.DestinationNodeTag,
-                        };
-                    }
-                );
+                (perLocationDraft as Draft<OngoingInternalReplicationNodeInfo>).progress =
+                    incomingProgresses.map(mapInternalReplicationProgress);
             });
         }
 
@@ -859,7 +852,22 @@ function mergeResponsibleNodes(
     return sortBy(copy, (x) => x.shardNumber);
 }
 
-function matchProgresses(
+export function mapInternalReplicationProgress(
+    progress: InternalReplicationTaskProgress
+): OngoingTaskNodeInternalReplicationProgressDetails {
+    const firstProgress = progress.ProcessesProgress[0];
+    return {
+        ...mapReplicationProgress(firstProgress),
+        lastSentEtag: firstProgress.LastSentEtag,
+        lastDatabaseEtag: firstProgress.LastDatabaseEtag,
+        sourceDatabaseChangeVector: firstProgress.SourceChangeVector,
+        lastAcceptedChangeVectorFromDestination: firstProgress.DestinationChangeVector,
+        fromToString: firstProgress.FromToString,
+        destinationNodeTag: progress.DestinationNodeTag,
+    };
+}
+
+export function matchProgresses(
     task: OngoingTaskInfo,
     nodeInfo: OngoingTaskNodeInfo,
     progresses: ReplicationTaskProgress[]

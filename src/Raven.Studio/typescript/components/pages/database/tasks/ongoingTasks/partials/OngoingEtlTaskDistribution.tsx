@@ -7,6 +7,10 @@ import { OngoingEtlTaskProgressTooltip } from "../partials/OngoingEtlTaskProgres
 import { Icon } from "components/common/Icon";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { useServices } from "hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { mapEtlProgress } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 
 interface OngoingEtlTaskDistributionProps {
     task: AnyEtlOngoingTaskInfo;
@@ -44,6 +48,20 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const hasError = !!nodeInfo.details?.error;
     const [node, setNode] = useState<HTMLDivElement>();
 
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const fetchExactProgress = async () => {
+        const { Results } = await tasksService.getEtlProgress(
+            databaseName,
+            nodeInfo.location,
+            true,
+            task.shared.taskName,
+            true
+        );
+        return Results.find((x) => x.TaskName === task.shared.taskName)?.ProcessesProgress.map(mapEtlProgress);
+    };
+
     return (
         <div ref={setNode}>
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
@@ -76,6 +94,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         progress={nodeInfo.etlProgress}
                         status={nodeInfo.status}
                         showPreview={showPreview}
+                        fetchExactProgress={fetchExactProgress}
                     />
                 ))}
         </div>

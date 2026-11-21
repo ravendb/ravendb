@@ -192,6 +192,7 @@ export class TasksStubs {
             FromToString: "from sink1 at C to [A/http://127.0.0.1:59690]",
             HandlerId: "hub-id",
             Completed: false,
+            Estimated: false,
         };
     }
 
@@ -562,6 +563,7 @@ export class TasksStubs {
                     NumberOfTimeSeriesSegmentsToProcess: 0,
                     TransformationName: "Script #1",
                     TransactionalId: transactionalId,
+                    Estimated: true,
                 },
             ],
             EtlType: etlType,

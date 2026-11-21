@@ -1,4 +1,4 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
@@ -20,13 +20,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override RavenCommand<IReplicationTaskProgress[]> CreateCommandForNode(string nodeTag)
         {
+            bool exact = IsExact();
+
             if (_internalReplication)
-                return new GetOutgoingInternalReplicationProgressCommand(nodeTag);
+                return new GetOutgoingInternalReplicationProgressCommand(nodeTag, exact);
 
             var names = GetNames();
-            return new GetReplicationOngoingTasksProgressCommand(names, nodeTag);
+            return new GetReplicationOngoingTasksProgressCommand(names, nodeTag, exact);
         }
 
         protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);
+
+        protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
     }
 }
