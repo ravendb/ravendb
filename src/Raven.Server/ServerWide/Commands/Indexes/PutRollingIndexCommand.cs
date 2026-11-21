@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -47,8 +46,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             {
                 return; // was already removed
             }
-
-            MaybeAddNewNodesToRollingDeployment(record, rollingIndex.ActiveDeployments);
 
             if (CompleteAll)
             {
@@ -101,20 +98,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             rollingIndex.ActiveDeployments[chosenNode].State = RollingIndexState.Running;
             rollingIndex.ActiveDeployments[chosenNode].StartedAt = FinishedAt;
-        }
-
-        private static void MaybeAddNewNodesToRollingDeployment(DatabaseRecord record, Dictionary<string, RollingIndexDeployment> rollingIndex)
-        {
-            var allNodes = record.Topology.AllNodes;
-
-            foreach (var node in allNodes)
-            {
-                rollingIndex.TryAdd(node, new RollingIndexDeployment
-                {
-                    State = RollingIndexState.Pending, 
-                    CreatedAt = SystemTime.UtcNow
-                });
-            }
         }
 
         private string ChooseNextNode(DatabaseRecord record, Dictionary<string, RollingIndexDeployment> rollingIndex)
