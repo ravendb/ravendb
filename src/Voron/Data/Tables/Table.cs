@@ -2589,11 +2589,30 @@ namespace Voron.Data.Tables
             return builderToCache;
         }
 
+        public ReturnTableValueBuilderToCache Allocate(in TableValueReader source, out TableValueBuilder builder)
+        {
+            var copyScope = _tx.Allocator.Allocate(source.Size, out ByteString copy);
+            Memory.Copy(copy.Ptr, source.Pointer, source.Size);
+            var stable = new TableValueReader(copy.Ptr, source.Size);
+
+            var builderToCache = new ReturnTableValueBuilderToCache(_tx, copyScope);
+            builder = builderToCache.Builder;
+            for (var index = 0; index < stable.Count; index++)
+                builder.Add(stable.Read(index, out var size), size);
+            return builderToCache;
+        }
+
         public struct ReturnTableValueBuilderToCache : IDisposable
         {
 #if DEBUG
             private readonly Transaction _tx;
 #endif
+            private ByteStringContext<ByteStringMemoryCache>.InternalScope _sourceCopy;
+
+            public ReturnTableValueBuilderToCache(Transaction tx, ByteStringContext<ByteStringMemoryCache>.InternalScope sourceCopy) : this(tx)
+            {
+                _sourceCopy = sourceCopy;
+            }
 
             public ReturnTableValueBuilderToCache(Transaction tx)
             {
@@ -2612,6 +2631,7 @@ namespace Voron.Data.Tables
             public void Dispose()
             {
                 Builder.Reset();
+                _sourceCopy.Dispose();
 #if DEBUG
                 Debug.Assert(_tx.LowLevelTransaction.IsDisposed == false);
                 if (_tx.LowLevelTransaction.Environment.WriteTransactionPool.BuilderUsages-- != 1)

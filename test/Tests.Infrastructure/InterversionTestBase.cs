@@ -120,14 +120,15 @@ namespace Tests.Infrastructure
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
             Dictionary<string, string> customSettings = null,
-            CancellationToken token = default)
+            CancellationToken token = default,
+            string serverUrl = null) // e.g. https://host:0 for a secured server (with Security.Certificate.Path in customSettings)
         {
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion, environmentVariables: options?.EnvironmentVariables, customSettings: customSettings);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion, url: serverUrl, environmentVariables: options?.EnvironmentVariables, customSettings: customSettings);
 
             var result = await RunServer(locator);
             return new ProcessNode
@@ -151,7 +152,7 @@ namespace Tests.Infrastructure
 
             if (toVersion == "current")
             {
-                RunLocalServer(node);
+                RunLocalServer(node, customSettings);
                 return;
             }
 
@@ -168,15 +169,18 @@ namespace Tests.Infrastructure
             node.Version = toVersion;
         }
 
-        private void RunLocalServer(ProcessNode node)
+        // customSettings: e.g. Security.Certificate.Path for a secured node; the url and data directory always come from the node
+        private void RunLocalServer(ProcessNode node, Dictionary<string, string> customSettings = null)
         {
+            var settings = new Dictionary<string, string>(customSettings ?? new Dictionary<string, string>())
+            {
+                [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.Url,
+                [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = node.DataDir,
+            };
+            settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory)); // set by ServerCreationOptions.RunInMemory below
             var options = new ServerCreationOptions
             {
-                CustomSettings = new Dictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = node.Url,
-                    [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = node.DataDir,
-                },
+                CustomSettings = settings,
                 RunInMemory = false,
                 DeletePrevious = false
             };

@@ -12,7 +12,35 @@ namespace Tests.Infrastructure.InterversionTest
         private readonly string _serverUrl;
         private readonly string _commandsArg;
         private static int _port = 8080;
-        private static int Port => Interlocked.Increment(ref _port) - 1;
+
+        // skips ports another process already listens on (e.g. a server the developer runs on 8080)
+        private static int Port
+        {
+            get
+            {
+                while (true)
+                {
+                    var port = Interlocked.Increment(ref _port) - 1;
+                    if (IsPortFree(port))
+                        return port;
+                }
+            }
+        }
+
+        private static bool IsPortFree(int port)
+        {
+            try
+            {
+                var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+                listener.Start();
+                listener.Stop();
+                return true;
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return false;
+            }
+        }
 
         public ConfigurableRavenServerLocator(string serverDirPath, string version, string dataDir = null, string url = null, Dictionary<string, string> environmentVariables = null, Dictionary<string, string> customSettings = null)
         {
