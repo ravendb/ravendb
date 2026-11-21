@@ -532,18 +532,9 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveQueueSinkProcessStateCommand):
                     case nameof(UpdateCdcSinkProcessStateCommand):
                     case nameof(RemoveCdcSinkProcessStateCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
-
-                        if (result != null)
-                            leader?.SetStateOf(index, result);
-                        break;
-
                     case nameof(PutShardedSubscriptionCommand):
                     case nameof(PutSubscriptionCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result, onBeforeCommandExecuted: (items, updateValueCommand) =>
-                        {
-                            AssertSubscriptionsLicenseLimits(serverStore, items, (PutSubscriptionCommand)updateValueCommand, context);
-                        });
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
 
                         if (result != null)
                             leader?.SetStateOf(index, result);
@@ -600,7 +591,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutLicenseCommand):
-                        AssertLicense(context, type, cmd, serverStore);
                         PutValue<License>(context, type, cmd, index);
                         break;
 
@@ -621,7 +611,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideBackups);
 
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -639,7 +628,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideExternalReplications);
 
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
@@ -656,12 +644,10 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideConnectionStringCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
                         PutServerWideConnectionString(context, type, cmd, index);
                         break;
 
                     case nameof(RemoveServerWideConnectionStringCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
                         var deleteCSConfiguration = UpdateValue<RemoveServerWideConnectionStringCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         RemoveServerWideConnectionStringFromAllDatabases(deleteCSConfiguration, context, type, index);
                         break;
@@ -682,23 +668,19 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutClientConfigurationCommand):
-                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutClientConfiguration(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(PutServerWideStudioConfigurationCommand):
-                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideAnalyzerCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideAnalyzers);
 
                         PutValue<AnalyzerDefinition>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideSorterCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideCustomSorters);
 
                         PutValue<SorterDefinition>(context, type, cmd, index);
                         break;
@@ -826,7 +808,6 @@ namespace Raven.Server.ServerWide
             try
             {
                 var subscriptionCommands = ReadSubscriptionBatch<T>(subscriptionCommandsBlittable, type);
-                AssertSubscriptionsBatchLicenseLimits(serverStore, items, subscriptionCommands, context);
                 foreach (var command in subscriptionCommands)
                 {
                     updateCommand = command;
@@ -1548,7 +1529,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, UpdateValueForDatabaseCommand> onBeforeCommandExecuted = null)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
@@ -1557,8 +1538,6 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
                 updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
-
-                onBeforeCommandExecuted?.Invoke(items, updateCommand);
 
                 using (var databaseRecord = ReadRawDatabaseRecord(context, updateCommand.DatabaseName))
                 {
@@ -1837,13 +1816,6 @@ namespace Raven.Server.ServerWide
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
                         }
-                    }
-
-                    AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
-
-                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
-                    {
-                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
                     }
 
                     bool shouldSetClientConfigEtag;
@@ -2807,8 +2779,6 @@ namespace Raven.Server.ServerWide
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseRecord, serverStore);
                         return;
                     }
-
-                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context, updateCommand);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
