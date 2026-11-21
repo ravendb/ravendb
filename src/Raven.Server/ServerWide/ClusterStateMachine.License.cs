@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.AI;
@@ -240,8 +240,6 @@ public sealed partial class ClusterStateMachine
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-        AssertClusterSizeAndCores(serverStore, newLicenseLimits);
-
         var emptySubscriptionExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var databaseName in serverStore.Cluster.GetDatabaseNames(context))
@@ -263,7 +261,6 @@ public sealed partial class ClusterStateMachine
             AssertDataArchival(databaseRecord, newLicenseLimits, context);
             AssertEncryptionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertDynamicNodesDistribution(databaseRecord, newLicenseLimits, context);
-            AssertSnmp(serverStore, newLicenseLimits);
             AssertRavenEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertSqlEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertElasticSearchEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
@@ -1275,32 +1272,6 @@ public sealed partial class ClusterStateMachine
                 serverStore.Engine.StateMachine.AssertLicenseLimits(command, serverStore, databaseRecord, items, context);
             }
         }
-    }
-
-    internal void AssertClusterSizeAndCores(ServerStore serverStore, LicenseStatus licenseStatus)
-    {
-        if (serverStore.IsPassive())
-            return;
-        var clusterSize = serverStore.GetClusterTopology().AllNodes.Count;
-        if (clusterSize > licenseStatus.MaxClusterSize)
-            throw new LicenseLimitException(LimitType.ClusterSize, $"Your license supports a cluster size of {licenseStatus.MaxClusterSize}, while the current cluster size is {clusterSize}.");
-
-        var maxCores = licenseStatus.MaxCores;
-        if (clusterSize > maxCores)
-            throw new LicenseLimitException(LimitType.Cores, $"Your license is limited to {maxCores} cores, while the current cluster has {clusterSize} nodes (each node requires at least one core).");
-    }
-
-    private void AssertSnmp(ServerStore serverStore, LicenseStatus licenseStatus)
-    {
-        if (serverStore.Configuration.Monitoring.Snmp.Enabled == false)
-            return;
-
-        const string message = "SNMP Monitoring is currently enabled. " +
-                               "The provided license cannot be activated as it doesn't contain this feature. " +
-                               "In order to use this license please disable SNMP Monitoring in the server configuration";
-
-        if (licenseStatus.HasSnmpMonitoring == false)
-            throw new LicenseLimitException(LimitType.Snmp, message);
     }
 
     private void AssertToggleTaskStateLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand)
