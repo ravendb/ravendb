@@ -1943,8 +1943,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 // re-enable ETL
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
-                configuration.Disabled = false;
-                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                await EnableEtlAndTriggerScheduledRun(store, taskId, configuration, databaseMode);
 
                 // assert that batch completed successfully and that we got new files with new name of the document id column
                 r = await etlDone.WaitAsync(_defaultTimeout);
@@ -2099,8 +2098,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
                 // re-enable ETL
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
-                configuration.Disabled = false;
-                updateResult = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                updateResult = await EnableEtlAndTriggerScheduledRun(store, taskId, configuration, databaseMode);
                 taskId = updateResult.TaskId;
 
                 r = await etlDone.WaitAsync(timeout);
@@ -2241,8 +2239,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()], ['location', $custom
                 // re enable ETL
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
-                configuration.Disabled = false;
-                store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                await EnableEtlAndTriggerScheduledRun(store, taskId, configuration, databaseMode);
 
                 // assert that batch completed successfully with the new partition value
                 r = await etlDone.WaitAsync(_defaultTimeout);
@@ -2386,8 +2383,7 @@ loadToOrders(partitionBy(['year', orderDate.getFullYear()]),
 
                 etlDone = Etl.WaitForEtlToComplete(store, numOfProcessesToWaitFor: 2);
 
-                configuration.Disabled = false;
-                update = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+                update = await EnableEtlAndTriggerScheduledRun(store, taskId, configuration, databaseMode);
                 Assert.NotNull(update.RaftCommandIndex);
 
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.OlapEtl));
@@ -2590,6 +2586,29 @@ loadToOrders(noPartition(), {
             };
 
             return Etl.AddEtl(store, configuration, connectionString);
+        }
+
+        private async Task<UpdateEtlOperationResult> EnableEtlAndTriggerScheduledRun(DocumentStore store, long taskId, OlapEtlConfiguration configuration, RavenDatabaseMode databaseMode)
+        {
+            configuration.Disabled = false;
+
+            // the processes of a sharded database don't wait for the next scheduled run
+            if (databaseMode == RavenDatabaseMode.Sharded)
+                return store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+
+            // the process of a disabled task isn't started, wait for it so the enabled process is only the new one
+            Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().All(p => p.Configuration.Disabled), true));
+
+            var result = store.Maintenance.Send(new UpdateEtlOperation<OlapConnectionString>(taskId, configuration));
+
+            Assert.True(await WaitForValueAsync(() => database.EtlLoader.Processes.OfType<OlapEtl>().Any(p => p.Configuration.Disabled == false), true));
+
+            // the enabled process waits for the next scheduled run
+            database.EtlLoader.Processes.OfType<OlapEtl>().Single(p => p.Configuration.Disabled == false).ForTestingPurposesOnly().TriggerScheduledRun();
+
+            return result;
         }
 
         private class User
