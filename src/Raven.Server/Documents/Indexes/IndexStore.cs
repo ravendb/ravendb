@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -528,12 +528,12 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            // Can happen when we add a node to the database while the rolling index is running --> we skip this node for now.
-            // Adding the new node to the deployment will be handled in PutRollingIndexCommand.UpdateDatabaseRecord()
+            // A node that joined the database after the deployment started has no older version of the index that serves
+            // queries, and must build the index from the start anyway, so it does not wait for its turn.
             if (rollingIndex.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var nodeDeployment) == false)
             {
-                reason = "My node has no active deployment";
-                return true;
+                reason = "My node joined after the deployment started";
+                return false;
             }
 
             if (nodeDeployment.State != RollingIndexState.Pending)
