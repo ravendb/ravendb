@@ -260,12 +260,13 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
         // pretend an earlier collapse left this branch one level shallower than its siblings
         SetCollapsedLevels(markedBranch, 1);
 
-        // drain from the top: the marked branch cannot merge into its sibling of a different height, so it
-        // shrinks until its last two leaves merge and it collapses into the survivor
+        // drain from the top, but keep its first leaf: the marked branch cannot merge into its sibling of a different
+        // height, so it shrinks until only that leaf is left and collapses into it. An emptied leaf would be unlinked.
+        long keepBelow = ChildrenWithKeys(markedBranch)[1].Key;
         for (int round = 0; TypeOf(markedBranch) == ExtendedPageType.PostingListBranch; round++)
         {
-            Assert.True(round < 200 && model.Count > 0, "the marked branch never collapsed");
-            RemoveFromTop(model, 20_000);
+            Assert.True(round < 200 && model.GetViewBetween(keepBelow, long.MaxValue).Count > 0, "the marked branch never collapsed");
+            RemoveFromTop(model, 20_000, keepBelow);
         }
 
         Assert.Equal(rootChildren.Length, RootChildren().Length);
@@ -352,12 +353,12 @@ public unsafe class RavenDB_27533_PostingList(ITestOutputHelper output) : Storag
         }
     }
 
-    private void RemoveFromTop(SortedSet<long> model, int count)
+    private void RemoveFromTop(SortedSet<long> model, int count, long keepBelow)
     {
         using (var wtx = Env.WriteTransaction())
         {
             var list = wtx.OpenPostingList(Name);
-            foreach (long value in model.Reverse().Take(count).ToList())
+            foreach (long value in model.GetViewBetween(keepBelow, long.MaxValue).Reverse().Take(count).ToList())
             {
                 list.Remove(value);
                 model.Remove(value);
