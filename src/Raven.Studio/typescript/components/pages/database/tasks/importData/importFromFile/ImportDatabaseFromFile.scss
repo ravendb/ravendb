@@ -94,10 +94,27 @@
     align-items: center;
     justify-content: space-between;
     padding: sizes.$gutter-xxs sizes.$gutter-xs;
+    gap: sizes.$gutter-xs;
     border-bottom: sizes.$border-width solid colors.$border-color-light-var;
 
     &:last-child {
         border-bottom: none;
+    }
+
+    > .btn {
+        flex-shrink: 0;
+    }
+
+    .form-check {
+        min-width: 0;
+    }
+
+    .form-check-label {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
 
