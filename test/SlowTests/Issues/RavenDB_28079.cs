@@ -111,6 +111,19 @@ namespace SlowTests.Issues
             }
         }
 
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
+        public void FinishOfAnOlderRollingDeploymentIsIgnored()
+        {
+            var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            var record = CreateRecordWithRollingIndex(createdAt);
+            new PutRollingIndexCommand(record.DatabaseName, "Users/ByName", "A", createdAt, "stale") { DeploymentRaftCommandIndex = 4 }.UpdateDatabaseRecord(record, 10);
+            Assert.Equal(RollingIndexState.Running, record.RollingIndexes["Users/ByName"].ActiveDeployments["A"].State);
+
+            new PutRollingIndexCommand(record.DatabaseName, "Users/ByName", "A", createdAt, "current") { DeploymentRaftCommandIndex = 5 }.UpdateDatabaseRecord(record, 11);
+            Assert.Equal(RollingIndexState.Done, record.RollingIndexes["Users/ByName"].ActiveDeployments["A"].State);
+        }
+
         private static DatabaseRecord CreateRecordWithRollingIndex(DateTime createdAt)
         {
             var record = new DatabaseRecord("db")
