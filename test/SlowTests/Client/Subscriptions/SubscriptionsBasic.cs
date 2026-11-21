@@ -96,7 +96,7 @@ namespace SlowTests.Client.Subscriptions
                     Filter = user => user.Count > 0
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(
                     new SubscriptionWorkerOptions(sub)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5),
@@ -112,7 +112,7 @@ namespace SlowTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                _ = subscription.Run(async x =>
+                var processing = subscription.Run(async x =>
                 {
                     using var session = x.OpenAsyncSession();
 
@@ -126,6 +126,10 @@ namespace SlowTests.Client.Subscriptions
 
                 await AssertWaitForCountAsync(async () =>
                 {
+                    // a worker that stopped fails the wait with its own error rather than with the count it left behind
+                    if (processing.IsFaulted)
+                        await processing;
+
                     using (var session = store.OpenAsyncSession())
                     {
                         return await session.Query<User>().Where(u => u.Count > 0).ToListAsync();
