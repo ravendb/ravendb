@@ -92,6 +92,12 @@ public struct Int64LookupKey : ILookupKey
         return (T)(object)new Int64LookupKey(Value);
     }
 
+    public bool TryGetKnownKeyData(out long keyData)
+    {
+        keyData = 0;
+        return false;
+    }
+
     public Int64LookupKey(long value)
     {
         Value = value;

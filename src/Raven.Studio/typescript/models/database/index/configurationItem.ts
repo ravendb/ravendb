@@ -45,6 +45,7 @@ class configurationItem {
         "Indexing.Corax.MaxMemoizationSizeInMb",
         "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
         "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
+        "Indexing.Corax.MaxPagesToReclaimPerBatch",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
         "Indexing.Corax.VectorSearch.CacheSizeInMb",
         "Indexing.Corax.VectorSearch.DefaultMinimumSimilarity",

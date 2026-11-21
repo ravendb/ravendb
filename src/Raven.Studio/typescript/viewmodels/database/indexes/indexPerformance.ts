@@ -316,6 +316,7 @@ class indexPerformance extends shardViewModelBase {
             "Suggestions": undefined as string,
             "Field": undefined as string,
             "Corax/DictionaryTraining": undefined as string,
+            "Corax/ReclaimSpace": undefined as string,
             "DocumentsCleanup": undefined as string,
             "UnknownOperation": undefined as string
         }

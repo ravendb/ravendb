@@ -40,6 +40,7 @@ public sealed partial class CompactTree : IPrepareForCommit
     {
         public CompactKey Key;
         public ContainerEntryId ContainerId;
+        public ContainerEntryId KnownContainerId;
 
         public bool IsValid => ContainerId.IsValid;
         public bool IsEmpty => ContainerId.IsEmpty;
@@ -161,6 +162,12 @@ public sealed partial class CompactTree : IPrepareForCommit
             return match;
         }
 
+        public bool TryGetKnownKeyData(out long keyData)
+        {
+            keyData = (long)KnownContainerId;
+            return KnownContainerId.IsValid;
+        }
+
         private static void GetEncodedKey(LowLevelTransaction llt, ContainerEntryId entryId, out int encodedKeyLengthInBits, out byte* encodedKeyPtr)
         {
             Container.Get(llt, entryId, out var keyItem);
@@ -239,16 +246,17 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         private void DecrementTermReferenceCount(LowLevelTransaction llt, ContainerEntryId keyContainerId, ref LookupState state)
         {
-            var term = Container.GetMutable(llt, keyContainerId);
-            int termRefCount = term[0] & 0xF;
+            Container.Get(llt, keyContainerId, out var item);
+            int termRefCount = item.Address[0] & 0xF;
             if (termRefCount == 0)
                 throw new VoronErrorException("A term exists without any references? That should be impossible");
             if (termRefCount == 1) // no more references, can delete
             {
-                Container.Delete(llt, state.TermsContainerId, keyContainerId);
+                Container.DeleteOrDefer(llt, state.TermsContainerId, keyContainerId);
                 return;
             }
 
+            var term = Container.GetMutable(llt, keyContainerId);
             term[0] = (byte)((term[0] & 0xF0) | (termRefCount - 1));
         }
 
@@ -548,7 +556,10 @@ public sealed partial class CompactTree : IPrepareForCommit
         CompactTreeDumper.WriteBulkRemoval(this, ref key, oldValue);
         return result;
     }
-    
+
+    public void BulkUpdateRemoveRange(Span<CompactKeyLookup> keys, long pageNum, int offset, ref int adjustment) =>
+        _inner.BulkUpdateRemoveRange(keys, pageNum, offset, ref adjustment);
+
     public int BulkUpdateStart(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum)
     {
         #if DEBUG
@@ -568,6 +579,9 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         return read;
     }
+    
+    public int BulkUpdateResume(Span<CompactKeyLookup> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        _inner.BulkUpdateResume(keys, values, offsets, out pageNum);
 
     public List<long> AllPages() => _inner.AllPages();
 

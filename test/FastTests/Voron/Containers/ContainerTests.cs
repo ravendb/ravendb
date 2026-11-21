@@ -5,6 +5,7 @@ using System.Text;
 using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Global;
+using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
 
@@ -175,6 +176,261 @@ namespace FastTests.Voron.Containers
                     Assert.Equal(currentAllocations[releasedPage], "Freed Page");
                 }
 
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void CanReuseFreeListPageFromPreviousTransaction()
+        {
+            const int smallSize = 64, bigSize = 4000;
+            ContainerId containerId;
+            ContainerEntryId first;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var llt = wtx.LowLevelTransaction;
+                containerId = Container.Create(llt);
+                do
+                {
+                    first = Container.Allocate(llt, containerId, smallSize, out _);
+                }
+                while ((long)first / Constants.Storage.PageSize == (long)containerId);
+
+                for (int i = 0; i < 60; i++)
+                    Container.Allocate(llt, containerId, smallSize, out _);
+                Container.Allocate(llt, containerId, bigSize, out _);
+                Container.Allocate(llt, containerId, bigSize, out _);
+                wtx.Commit();
+            }
+
+            long pageWithSpace = (long)first / Constants.Storage.PageSize;
+            bool IsOnFreeList(LowLevelTransaction llt) => Container.GetPagesFor(llt, containerId).FreePages.TryGetValue(pageWithSpace, out _);
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                Assert.False(IsOnFreeList(wtx.LowLevelTransaction));
+                Container.Delete(wtx.LowLevelTransaction, containerId, first);
+                wtx.Commit();
+            }
+
+            using (var rtx = Env.ReadTransaction())
+                Assert.True(IsOnFreeList(rtx.LowLevelTransaction));
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var id = Container.Allocate(wtx.LowLevelTransaction, containerId, bigSize / 2, out _);
+                Assert.Equal(pageWithSpace, (long)id / Constants.Storage.PageSize);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void AllocationDoesNotModifyFreeListPagesWithoutEnoughSpace()
+        {
+            const int itemSize = 64;
+            ContainerId containerId;
+            var ids = new List<ContainerEntryId>();
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = Container.Create(wtx.LowLevelTransaction);
+                for (int i = 0; i < 2000; i++)
+                    ids.Add(Container.Allocate(wtx.LowLevelTransaction, containerId, itemSize, out _));
+                wtx.Commit();
+            }
+
+            // half of the items deleted from full pages, so they are on the free list, but their free space isn't in one piece
+            var fragmentedPages = new HashSet<long>();
+            using (var wtx = Env.WriteTransaction())
+            {
+                for (int i = 0; i < ids.Count; i += 2)
+                {
+                    Container.Delete(wtx.LowLevelTransaction, containerId, ids[i]);
+                    fragmentedPages.Add((long)ids[i] / Constants.Storage.PageSize);
+                }
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var expectedModifiedPages = new HashSet<long> { (long)containerId }; // the root page is modified by every allocation
+                for (int i = 0; i < 500; i++)
+                    expectedModifiedPages.Add((long)Container.Allocate(wtx.LowLevelTransaction, containerId, itemSize, out _) / Constants.Storage.PageSize);
+
+                fragmentedPages.ExceptWith(expectedModifiedPages);
+                Assert.NotEmpty(fragmentedPages);
+                Assert.DoesNotContain(fragmentedPages, wtx.LowLevelTransaction.IsDirty);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(1337)]
+        [InlineData(42)]
+        [InlineDataWithRandomSeed]
+        public void CanUpdateInPlaceWhenTheNewSizeFits(int seed)
+        {
+            var random = new Random(seed);
+            var model = new Dictionary<long, byte[]>();
+            long containerId;
+            int inPlace = 0, notInPlace = 0;
+
+            byte[] RandomBytes(int size)
+            {
+                var bytes = new byte[size];
+                random.NextBytes(bytes);
+                return bytes;
+            }
+
+            int RandomSize() => random.Next(4) switch
+            {
+                0 => random.Next(1, 30), // size stored in the metadata
+                1 => random.Next(25, 40), // around the switch to a size prefix
+                2 => random.Next(250, 262), // around the switch to a two bytes size prefix
+                _ => random.Next(1, 600)
+            };
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
+                for (int i = 0; i < 2000; i++)
+                {
+                    var data = RandomBytes(RandomSize());
+                    var id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), data.Length, out var space);
+                    data.CopyTo(space);
+                    model[id] = data;
+                }
+
+                wtx.Commit();
+            }
+
+            for (int round = 0; round < 20; round++)
+            {
+                using (var wtx = Env.WriteTransaction())
+                {
+                    var llt = wtx.LowLevelTransaction;
+                    foreach (var id in model.Keys.OrderBy(_ => random.Next()).Take(600).ToList())
+                    {
+                        switch (random.Next(10))
+                        {
+                            case 0: // delete
+                                Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                                model.Remove(id);
+                                break;
+                            case 1: // allocate a new item
+                            {
+                                var data = RandomBytes(RandomSize());
+                                var newId = (long)Container.Allocate(llt, new ContainerId(containerId), data.Length, out var space);
+                                data.CopyTo(space);
+                                model[newId] = data;
+                                break;
+                            }
+                            default: // update, in place if possible
+                            {
+                                var newSize = random.Next(4) == 0 ? RandomSize() : Math.Max(1, model[id].Length + random.Next(-6, 7));
+                                var data = RandomBytes(newSize);
+                                if (Container.TryUpdateInPlace(llt, new ContainerId(containerId), new ContainerEntryId(id), newSize, out var space))
+                                {
+                                    Assert.Equal(newSize, space.Length);
+                                    data.CopyTo(space);
+                                    model[id] = data;
+                                    inPlace++;
+                                }
+                                else
+                                {
+                                    Container.Get(llt, new ContainerEntryId(id), out var unchanged);
+                                    Assert.Equal(model[id], unchanged.ToSpan().ToArray());
+                                    Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                                    model.Remove(id);
+                                    var newId = (long)Container.Allocate(llt, new ContainerId(containerId), data.Length, out var newSpace);
+                                    data.CopyTo(newSpace);
+                                    model[newId] = data;
+                                    notInPlace++;
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+
+                    wtx.Commit();
+                }
+
+                using (var rtx = Env.ReadTransaction())
+                {
+                    foreach (var (id, expected) in model)
+                    {
+                        Container.Get(rtx.LowLevelTransaction, new ContainerEntryId(id), out var actual);
+                        Assert.Equal(expected, actual.ToSpan().ToArray());
+                    }
+
+                    var ids = Container.GetAllIds(rtx.LowLevelTransaction, new ContainerId(containerId));
+                    Assert.Equal(model.Keys.OrderBy(x => x), ids.OrderBy(x => x));
+                }
+            }
+
+            Assert.True(inPlace > 0, "expected some in place updates");
+            Assert.True(notInPlace > 0, "expected some updates that don't fit");
+        }
+
+        [RavenTheory(RavenTestCategory.Voron)]
+        [InlineData(3, 3, true)] // same number of pages
+        [InlineData(3, 1, false)] // fewer pages
+        [InlineData(2, 3, false)] // more pages
+        [InlineData(1, 0, false)] // same number of pages, but fits inside a container page
+        public void CanUpdateOverflowInPlaceOnlyWhenNumberOfPagesIsTheSame(int currentPages, int newPages, bool expectedInPlace)
+        {
+            static int MaxSizeFor(int pages) => pages == 0
+                ? Container.MaxSizeInsideContainerPage
+                : pages * Constants.Storage.PageSize - Constants.Tree.PageHeaderSize;
+
+            var currentData = new byte[MaxSizeFor(currentPages) - 1000];
+            currentData.AsSpan().Fill(1);
+            var newData = new byte[MaxSizeFor(newPages)];
+            newData.AsSpan().Fill(2);
+            long containerId, id;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = (long)Container.Create(wtx.LowLevelTransaction);
+                id = (long)Container.Allocate(wtx.LowLevelTransaction, new ContainerId(containerId), currentData.Length, out var space);
+                currentData.CopyTo(space);
+                wtx.Commit();
+            }
+
+            var pageNum = id / Constants.Storage.PageSize;
+            using (var wtx = Env.WriteTransaction())
+            {
+                var inPlace = Container.TryUpdateInPlace(wtx.LowLevelTransaction, new ContainerId(containerId), new ContainerEntryId(id), newData.Length, out var space);
+                Assert.Equal(expectedInPlace, inPlace);
+                if (inPlace)
+                {
+                    Assert.Equal(newData.Length, space.Length);
+                    newData.CopyTo(space);
+                }
+                else
+                {
+                    Assert.False(wtx.LowLevelTransaction.IsDirty(pageNum));
+                }
+
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var llt = wtx.LowLevelTransaction;
+                Container.Get(llt, new ContainerEntryId(id), out var item);
+                Assert.Equal(expectedInPlace ? newData : currentData, item.ToSpan().ToArray());
+                Assert.Equal(currentPages, new Container(llt.GetPage(containerId)).Header.NumberOfOverflowPages);
+
+                Container.Delete(llt, new ContainerId(containerId), new ContainerEntryId(id));
+                Assert.Equal(0, new Container(llt.GetPage(containerId)).Header.NumberOfOverflowPages);
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                var owners = Env.GetPageOwners(wtx);
+                for (var released = pageNum; released < pageNum + currentPages; released++)
+                    Assert.Equal("Freed Page", owners[released]);
             }
         }
     }
