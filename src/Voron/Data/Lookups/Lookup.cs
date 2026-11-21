@@ -533,11 +533,11 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     {
         Debug.Assert(_internalCursor._pos > 0, "_internalCursor._pos > 0");
         ref var parent = ref _internalCursor._stk[_internalCursor._pos - 1];
-        parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
         Debug.Assert(parent.Header->NumberOfEntries >= 2,"parent.Header->NumberOfEntries >= 2");
 
         if (destinationState.Header->NumberOfEntries == 0)
         {
+            parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
             RemovePageFromParent(ref destinationState, ref parent);
             return true;
         }
@@ -552,7 +552,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         var siblingPage = GetValue(ref parent, parent.LastSearchPosition + 1);
         var sourceState = new CursorState
         {
-            Page = _llt.ModifyPage(siblingPage)
+            Page = _llt.GetPage(siblingPage)
         };
 
         if (sourceState.Header->IsBranch != destinationState.Header->IsBranch 
@@ -581,6 +581,7 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         Debug.Assert(_llt.IsDirty(destinationState.Page.PageNumber));
         Memory.Copy(destinationState.Page.Pointer, temp.Ptr, Constants.Storage.PageSize);
         destinationState.Header->CollapsedLevels = Math.Max(destinationState.Header->CollapsedLevels, sourceState.Header->CollapsedLevels);
+        parent.Page = _llt.ModifyPage(parent.Page.PageNumber);
         // We update the entries offsets on the source page, now that we have moved the entries.
         parent.LastSearchPosition++;
         FreePageFor(ref destinationState, ref sourceState, ref parent);
@@ -1572,7 +1573,16 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
     /// values with all the _other_ keys that belong in the same page as the first key. Note that the key is whatever
     /// they *should* go there, so missing values are also included. 
     /// </summary>
-    public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum)
+    public int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        BulkUpdateStart(keys, values, offsets, out pageNum, resetKeyPastPage: true);
+
+    /// <summary>
+    /// Only finds the page and the positions again, the keys are kept as they are.
+    /// </summary>
+    public int BulkUpdateResume(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum) =>
+        BulkUpdateStart(keys, values, offsets, out pageNum, resetKeyPastPage: false);
+
+    private int BulkUpdateStart(Span<TLookupKey> keys, Span<long> values, Span<int> offsets, out long pageNum, bool resetKeyPastPage)
     {
         Debug.Assert(keys.IsEmpty == false);
         // here we find the right page to start
@@ -1590,7 +1600,8 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             {
                 if (curKey.CompareTo(this, limit.Value) >= 0)
                 {
-                    curKey.Reset(); // we don't want to retain any knowledge of this 
+                    if (resetKeyPastPage)
+                        curKey.Reset(); // we don't want to retain any knowledge of this
                     break; // hit the limits of the page...
                 }
             }
@@ -1705,6 +1716,61 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
         return true;
     }
     
+    public void BulkUpdateRemoveRange(Span<TLookupKey> keys, long pageNum, int offset, ref int adjustment)
+    {
+        Debug.Assert(keys.Length > 0);
+        ref var state = ref _internalCursor._stk[_internalCursor._pos];
+        
+        PortableExceptions.ThrowIf<InvalidOperationException>(state.Page.PageNumber != pageNum, "Different page number provided from BulkUpdateRemoveRange");
+        ArgumentOutOfRangeException.ThrowIfNegative(offset);
+        
+
+        state.Page = _llt.ModifyPage(state.Page.PageNumber);
+
+        int pos = offset + adjustment;
+        int count = keys.Length;
+        int numberOfEntries = state.Header->NumberOfEntries;
+        Debug.Assert(pos + count <= numberOfEntries, "pos + count <= numberOfEntries");
+
+        int freedSpace = 0;
+        for (int i = 0; i < count; i++)
+        {
+            var len = GetKeyAndValue(ref state, pos + i, out var k, out _);
+            Debug.Assert(k == keys[i].ToLong(), "k == keys[i].ToLong()");
+            freedSpace += len + sizeof(ushort);
+            keys[i].OnKeyRemoval(this);
+        }
+
+        var entriesOffsets = new Span<ushort>(state.EntriesOffsetsPtr, numberOfEntries);
+        entriesOffsets[(pos + count)..].CopyTo(entriesOffsets[pos..]);
+
+        state.Header->FreeSpace += (ushort)freedSpace;
+        state.Header->Lower -= (ushort)(sizeof(ushort) * count); // the upper will be fixed on defrag
+        Debug.Assert(state.Header->Upper - state.Header->Lower >= 0);
+        Debug.Assert(state.Header->FreeSpace <= Constants.Storage.PageSize - PageHeader.SizeOf);
+
+        if (state.Header->PageFlags.HasFlag(LookupPageFlags.Leaf))
+            _state.NumberOfEntries -= count;
+
+        adjustment -= count;
+
+        state.LastSearchPosition = pos;
+        state.LastMatch = 0;
+        if (_internalCursor._pos > 0 && 
+            state.Header->FreeSpace > Constants.Storage.PageSize / 2)
+        {
+            if (MaybeMergeEntries(ref state))
+            {
+                VerifySizeOfFullCursor();
+                _treeStructureVersion++;
+                InitializeCursorState(); // we change the structure of the tree, so we can't reuse
+                return;
+            }
+        }
+
+        VerifySizeOf(ref state, _internalCursor._pos == 0);
+    }
+
     
     private long? CurrentPageLimit()
     {
