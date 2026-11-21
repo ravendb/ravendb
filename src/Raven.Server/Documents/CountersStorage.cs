@@ -66,10 +66,14 @@ namespace Raven.Server.Documents
             public readonly BlittableJsonReaderArray DbIdsBlittableArray;
             public readonly List<LazyStringValue> DbIdsList;
 
+            // only the db ids read from the local counter group are owned by the holder, the added ones belong to the source
+            private readonly int _numberOfLocalDbIds;
+
             public DbIdsHolder(BlittableJsonReaderArray dbIds)
             {
                 DbIdsBlittableArray = dbIds;
                 DbIdsList = DbIdsToList(dbIds);
+                _numberOfLocalDbIds = DbIdsList.Count;
             }
 
             public int GetOrAddDbIdIndex(LazyStringValue dbId)
@@ -94,9 +98,9 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                foreach (var lsv in DbIdsList)
+                for (var i = 0; i < _numberOfLocalDbIds; i++)
                 {
-                    lsv.Dispose();
+                    DbIdsList[i].Dispose();
                 }
 
                 DbIdsList.Clear();

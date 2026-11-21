@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.Patch
         public bool Changed;
         private readonly BlittableObjectInstance _parent;
         private readonly Document _doc;
+        private readonly bool _ownsBlittable;
         private bool _set;
 
         public readonly DateTime? LastModified;
@@ -474,9 +475,11 @@ namespace Raven.Server.Documents.Patch
             BlittableJsonReaderObject blittable,
             string id,
             DateTime? lastModified,
-            string changeVector) : base(engine)
+            string changeVector,
+            bool ownsBlittable = false) : base(engine)
         {
             _parent = parent;
+            _ownsBlittable = ownsBlittable;
             blittable.NoCache = true;
             LastModified = lastModified;
             ChangeVector = changeVector;
@@ -487,7 +490,8 @@ namespace Raven.Server.Documents.Patch
         public BlittableObjectInstance(Engine engine,
             BlittableObjectInstance parent,
             BlittableJsonReaderObject blittable,
-            Document doc) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector)
+            Document doc,
+            bool ownsBlittable = false) : this(engine, parent, blittable, doc.Id, doc.LastModified, doc.ChangeVector, ownsBlittable)
         {
             _doc = doc;
         }
@@ -661,7 +665,8 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var val in OwnValues)
             {
-                if (val.Value.Value is BlittableObjectInstance boi)
+                // a blittable that was created for the instance (e.g. a clone of a loaded document), not one that was passed in (e.g. the script arguments)
+                if (val.Value.Value is BlittableObjectInstance { _ownsBlittable: true } boi)
                     boi.Blittable.Dispose();
             }
         }
