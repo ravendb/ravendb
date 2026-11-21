@@ -101,6 +101,12 @@ namespace Raven.Server.Documents.Queries
                 BuildFilterScript(query);
             }
 
+            // once, since the metadata is cached and shared by every request with the same query text, and after Build,
+            // so the clause is validated as the user wrote it
+            Query.WhereAsWritten ??= Query.Where;
+            Query.Where = WhereClauseNormalizer.Normalize(Query.WhereAsWritten, Query.From.Alias?.Value);
+            Query.WhereForScoreOrder = WhereClauseNormalizer.Normalize(Query.WhereAsWritten, Query.From.Alias?.Value, pairsOnly: true);
+
             CanCache = cacheKey != 0 && AddSpatialProperties == false;
 
             CreatedAt = DateTime.UtcNow;
@@ -161,6 +167,28 @@ function execute(doc, args){
         public bool HasMoreLikeThis { get; private set; }
 
         public bool HasBoost { get; private set; }
+
+        internal QueryExpression WhereFor(Raven.Server.Documents.Indexes.Index index)
+        {
+            return ScoresMayOrderResults(index) ? Query.WhereForScoreOrder ?? Query.Where : Query.Where;
+        }
+
+        internal bool ScoresMayOrderResults(Raven.Server.Documents.Indexes.Index index)
+        {
+            if (HasBoost || HasExplanations || HasVectorSearch || index is { HasBoostedFields: true })
+                return true;
+
+            if (OrderBy == null)
+                return false;
+
+            foreach (var field in OrderBy)
+            {
+                if (field.OrderingType == OrderByFieldType.Score)
+                    return true;
+            }
+
+            return false;
+        }
 
         public bool HasIntersect { get; private set; }
 

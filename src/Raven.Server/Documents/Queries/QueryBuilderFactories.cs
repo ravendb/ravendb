@@ -7,5 +7,6 @@ namespace Raven.Server.Documents.Queries
     {
         public Func<string, SpatialField> GetSpatialFieldFactory { get; set; }
         public Func<string, System.Text.RegularExpressions.Regex> GetRegexFactory { get; set; }
+        public Func<string, bool> FieldHoldsArrays { get; set; }
     }
 }

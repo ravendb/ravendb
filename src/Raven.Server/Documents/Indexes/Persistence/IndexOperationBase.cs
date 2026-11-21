@@ -34,10 +34,25 @@ public abstract class IndexOperationBase : IDisposable
 
     public abstract void Dispose();
 
+    protected virtual Func<string, bool> FieldHoldsArrays => null;
+
+    private QueryBuilderFactories WithArrayLookup(QueryMetadata metadata, QueryBuilderFactories factories)
+    {
+        if (ReferenceEquals(metadata.Query.Where, metadata.Query.WhereAsWritten) || FieldHoldsArrays is not { } lookup)
+            return factories;
+
+        return new QueryBuilderFactories
+        {
+            GetSpatialFieldFactory = factories?.GetSpatialFieldFactory,
+            GetRegexFactory = factories?.GetRegexFactory,
+            FieldHoldsArrays = lookup
+        };
+    }
+
     protected Query GetLuceneQuery(DocumentsOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer,
         QueryBuilderFactories factories, QueryTimeScope queryTime = null)
     {
-        return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, factories, queryTime);
+        return GetLuceneQuery(context, metadata, metadata.WhereFor(_index), parameters, analyzer, factories, queryTime);
     }
 
     protected Query GetLuceneQuery(DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters,
@@ -70,7 +85,7 @@ public abstract class IndexOperationBase : IDisposable
                 }
 
                 using (closeServerTransaction)
-                    documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, factories, queryTime);
+                    documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, WithArrayLookup(metadata, factories), queryTime);
             }
             finally
             {
