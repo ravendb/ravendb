@@ -48,7 +48,9 @@ public class StreamTarget : AbstractTarget
             FlushPendingEntries();
 
             lock (WriteLocker)
-                registration.Dispose();
+                Streams.TryRemove(stream);
+
+            registration.Dispose();
         });
     }
 
