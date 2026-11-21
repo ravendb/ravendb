@@ -3,7 +3,6 @@ using System.Threading;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
-using Voron.Impl.Journal;
 
 namespace Voron.Impl.Paging;
 
@@ -51,7 +50,6 @@ public sealed class PrefetchPolicy : IDisposable
             {
                 AddEvictions(evicted, filePages);
             }
-            DeviceWriteBudget.Tick();
         }, null, 0, TickMs);
     }
 

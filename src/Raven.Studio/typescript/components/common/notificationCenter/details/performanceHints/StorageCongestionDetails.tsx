@@ -129,7 +129,7 @@ function getSummaryItems(details: StorageCongestionDetailsDto): { name: string; 
 
     items.push(
         { name: "Journal writes now", value: formatMs(details.JournalWriteLatencyInMs) },
-        { name: "Data syncs", value: formatSyncCost(details.SyncCostInMs) },
+        { name: "Data file syncs", value: formatSyncCost(details.SyncCostInMs) },
         { name: "Mount point", value: details.MountPoint ?? "-" }
     );
 

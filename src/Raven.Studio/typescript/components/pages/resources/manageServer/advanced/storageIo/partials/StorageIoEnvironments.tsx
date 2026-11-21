@@ -66,7 +66,7 @@ export default function StorageIoEnvironments({ environments, devices, yieldsPer
                     type="switch"
                     id="storage-io-problems-only"
                     label="Only environments that need attention"
-                    title="The last data file sync was mandatory, or the unsynced backlog is above the soft limit"
+                    title="Only environments whose last sync was mandatory, or with more data waiting to be synced than the soft limit"
                     checked={problemsOnly}
                     onChange={(e) => setProblemsOnly(e.target.checked)}
                 />
@@ -152,7 +152,7 @@ function getColumns(
                 mountPoint(row.original) ?? (
                     <span
                         className="text-muted small"
-                        title="The device could not be identified, the environment uses its own write budget"
+                        title="The disk could not be identified, so this environment is tracked on its own"
                     >
                         not identified
                     </span>
@@ -161,7 +161,7 @@ function getColumns(
         },
         {
             id: "compression",
-            header: () => <span title="Journal compression algorithm in use">Codec</span>,
+            header: () => <span title="How journal writes are compressed">Codec</span>,
             accessorFn: (env) => env.Compression.Resolved,
             cell: CompressionCell,
             size: getSize(8, 90),
@@ -176,7 +176,7 @@ function getColumns(
         {
             id: "unsynced",
             header: () => (
-                <span title="Written to the data file but not synced yet, against the soft and mandatory limits">
+                <span title="Changes written to the data file but not yet synced to disk, against the soft and mandatory limits">
                     Unsynced
                 </span>
             ),
@@ -187,7 +187,9 @@ function getColumns(
         {
             id: "lastSync",
             header: () => (
-                <span title="Reason, size and total time of the last data file sync">Last data file sync</span>
+                <span title="Why the last data file sync ran, how much it wrote and how long it took">
+                    Last data file sync
+                </span>
             ),
             accessorFn: (env) => env.Sync.LastTotalInMs ?? -1,
             cell: LastSyncCell,
@@ -216,7 +218,9 @@ function getColumns(
 function CompressionCell({ row }: CellContext<EnvironmentIo, unknown>) {
     const { Resolved, Configured, CompressAboveInBytes } = row.original.Compression;
     return (
-        <span title={`Configured: ${Configured}. Compresses transactions above ${formatBytes(CompressAboveInBytes)}.`}>
+        <span
+            title={`Configured: ${Configured}. Transactions above ${formatBytes(CompressAboveInBytes)} are compressed.`}
+        >
             {Resolved}
         </span>
     );
@@ -277,7 +281,7 @@ function LastSyncCell({ row }: CellContext<EnvironmentIo, unknown>) {
     }
 
     const paced = sync.LastDrain
-        ? `paced: ${formatMs(sync.LastWritebackInMs)} in blocks + ${formatMs(sync.LastTotalInMs - sync.LastWritebackInMs)} fsync`
+        ? `paced: ${formatMs(sync.LastWritebackInMs)} writing in blocks, then ${formatMs(sync.LastTotalInMs - sync.LastWritebackInMs)} waiting for the disk`
         : "not paced";
 
     return (

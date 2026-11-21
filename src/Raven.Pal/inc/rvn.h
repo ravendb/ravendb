@@ -112,7 +112,12 @@ struct rvn_configuration
 
     MemoryLockCallback memoryLockCallback;
     RecoveryMemoryLockFailureCallback recoveryMemoryLockFailureCallback;
+
+    int32_t io_ring_max_files;
 };
+
+EXPORT int32_t
+rvn_io_ring_limit_files_for_testing(int32_t max);
 
 EXPORT
 int32_t rvn_startup_configure(struct rvn_configuration *cfg, int32_t *detailed_error_code);

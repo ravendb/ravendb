@@ -15,7 +15,7 @@ namespace FastTests.Voron
 
         private static readonly CongestionThresholds Thresholds = new(DrainShare: 0.5, JournalWriteLatencyInMs: 50, Sustained: TimeSpan.FromMinutes(10));
 
-        private static DeviceWriteBudget NewDevice() => new(queueReader: null, pathOnDevice: "test",
+        private static DeviceWriteBudget NewDevice() => new(sampler: null, pathOnDevice: "test",
             syncCostThresholdTicks: TimeSpan.FromMilliseconds(100).Ticks, queueDepthThreshold: 5,
             classifyAboveLatencyTicks: TimeSpan.FromMilliseconds(2).Ticks);
 

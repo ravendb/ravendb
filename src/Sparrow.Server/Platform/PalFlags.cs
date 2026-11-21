@@ -75,6 +75,7 @@ namespace Sparrow.Server.Platform
             FailWritebackNotSupported = 65,
             FailMoveFile = 66,
             FailPrefetchFilesExhausted = 67,
+            FailIoRingFilesExhausted = 68,
         };
 
         [Flags]
