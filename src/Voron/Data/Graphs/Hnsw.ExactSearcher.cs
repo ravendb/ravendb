@@ -15,25 +15,21 @@ public partial class Hnsw
         {
             private readonly SearchState _searchState;
             private readonly Memory<byte> _vector;
-            private readonly bool _hasFilterMatch;
             private ContextBoundNativeList<int> _candidates;
+            private ContextBoundNativeList<float> _distances;
             private readonly ContextBoundNativeList<long>? _nodesToScan;
             private PriorityQueue<long, float> _pq;
+            private readonly int _numberOfCandidates;
             private long _vectorReadCounter = 0;
-            private bool _initialized;
-            
-            public ExactSearcher(SearchState searchState, Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
+
+            public ExactSearcher(SearchState searchState, Memory<byte> vector, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan)
             {
                 _searchState = searchState;
                 _vector = vector;
-                _hasFilterMatch = hasFilterMatch;
-                PortableExceptions.ThrowIf<NotSupportedException>(_searchState.Options.CountOfVectors >= int.MaxValue && hasFilterMatch, $"Cannot have more than {int.MaxValue} vectors and filter match");
-                
-                NumberOfCandidates = numberOfCandidates;
+                _numberOfCandidates = numberOfCandidates;
                 _nodesToScan = nodesToScan;
-
-                var candidatesCapacity = Math.Min(numberOfCandidates, (int)searchState.Options.CountOfVectors);
-                _candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator, candidatesCapacity);
+                _candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
+                _distances = new ContextBoundNativeList<float>(searchState.Llt.Allocator);
             }
 
             public void Dispose()
@@ -41,33 +37,10 @@ public partial class Hnsw
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
                 _candidates.Dispose();
+                _distances.Dispose();
             }
 
-            public bool MoveNextBatch()
-            {
-                if (_initialized == false)
-                {
-                    Initialize();
-                    _initialized = true;
-                }
-
-                if (_pq.Count == 0)
-                {
-                    _candidates.Count = 0;
-                    return false;
-                }
-
-                _candidates.Count = 0;
-                while (_candidates.Count < NumberOfCandidates && _pq.TryDequeue(out var nodeId, out _))
-                {
-                    _candidates.AddByRefUnsafe() = _searchState.GetNodeIndexById(nodeId);
-                }
-
-                _candidates.Inner.Reverse();
-                return true;
-            }
-
-            private void Initialize()
+            public (ContextBoundNativeList<int> Results, ContextBoundNativeList<float> Distances) Search()
             {
                 // Reset the visited set for this traversal and record the query vector so the
                 // per-node QueryDistance cache is either reused (same vector) or invalidated
@@ -87,6 +60,18 @@ public partial class Hnsw
                     for (long nodeId = 1; nodeId <= count; nodeId++)
                         ScanNode(nodeId);
                 }
+
+                _candidates.EnsureCapacityFor(_pq.Count);
+                _distances.EnsureCapacityFor(_pq.Count);
+                while (_pq.TryDequeue(out var nodeId, out var negatedDistance))
+                {
+                    _candidates.AddUnsafe(_searchState.GetNodeIndexById(nodeId));
+                    _distances.AddUnsafe(-negatedDistance);
+                }
+
+                _candidates.Inner.Reverse();
+                _distances.Inner.Reverse();
+                return (_candidates, _distances);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -98,36 +83,14 @@ public partial class Hnsw
                     return;
 
                 var distance = _searchState.QueryDistance(_vector.Span, nodeIndex, ref _vectorReadCounter);
-                if (_pq.Count < NumberOfCandidates || _hasFilterMatch)
+                // The queue keeps the nearest candidates with the farthest on top.
+                if (_pq.Count < _numberOfCandidates)
                     _pq.Enqueue(nodeId, -distance);
                 else
                     _pq.EnqueueDequeue(nodeId, -distance);
             }
 
-            public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
-            {
-                if (_candidates.Count == 0)
-                {
-                    Unsafe.SkipInit(out candidates);
-                    return false;
-                }
-
-                candidates = _candidates;
-                return candidates.Count > 0;
-            }
-
-            public void IncreaseNumberOfCandidates(int currentlyAcceptedNodes)
-            {
-            }
-
-            public long CandidatesProcessed { get; set; }
-            
-            public bool ShouldContinueSearch(long filterDocsCount)
-            {
-                return _pq is {Count: > 0};
-            }
-
-            public int NumberOfCandidates { get; init; }
+            public long CandidatesProcessed { get; private set; }
         }
     }
 }

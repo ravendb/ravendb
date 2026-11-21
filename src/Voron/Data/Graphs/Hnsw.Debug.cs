@@ -31,8 +31,8 @@ public unsafe partial class Hnsw
         var searchState = new SearchState(llt, name);
         for (long nodeId = 1; nodeId <= searchState.Options.CountOfVectors; nodeId++)
         {
-            var node = searchState.GetNodeById(nodeId);
             int nodeIndex = searchState.GetNodeIndexById(nodeId);
+            var node = searchState.GetDecodedNode(nodeIndex);
             long[] entries = GetEntries(llt, node.PostingListId);
             var edgesByLevel = new (long NodeId, float Distance)[node.EdgesPerLevel.Count][];
             for (int i = 0; i < node.EdgesPerLevel.Count; i++)
@@ -76,8 +76,8 @@ public unsafe partial class Hnsw
                 ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                 var postingList = new PostingList(llt, Slices.Empty, setState);
                 result = new long[(int)Math.Min(postingList.State.NumberOfEntries, 16)];
-                var it = postingList.Iterate();
-                it.Fill(result, out _);
+                using (postingList.Iterate(out var it))
+                    it.Fill(result, out _);
                 break;
             }
             default:
@@ -157,9 +157,8 @@ table, th, td {
             var path = new ContextBoundNativeList<int>(llt.Allocator, searchState.Options.MaxLevel + 1);
             var edges = new ContextBoundNativeList<int>(llt.Allocator, 16);
             searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel,  ref path);
-            using var search = searchState.NearestSearch(path[0], new Memory<byte>(vector.ToArray()), 0, 8, edges, SearchState.NearestEdgesFlags.StartingPointAsEdge, false);
-            search.MoveNextBatch();
-            search.TryGetCurrentCandidates(out edges);
+            using var search = searchState.NearestSearch(path[0], new Memory<byte>(vector.ToArray()), 0, 8, edges, SearchState.NearestEdgesFlags.StartingPointAsEdge);
+            edges = search.Search().Results;
             
             
             for (int level = searchState.Options.MaxLevel - 1; level >= 0; level--)
@@ -170,7 +169,7 @@ table, th, td {
                 for (int j = 1; j <= searchState.Options.CountOfVectors; j++)
                 {
                     var nodeIdx = searchState.GetNodeIndexById(j);
-                    ref var n = ref searchState.Nodes[nodeIdx];
+                    ref var n = ref searchState.GetDecodedNode(nodeIdx);
                     if (level >= n.EdgesPerLevel.Count)
                         continue;
 

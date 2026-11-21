@@ -22,7 +22,7 @@ namespace Raven.Server.Storage.Schema
 
             public const int LuceneIndexVersion = 62_000;
 
-            public const int CoraxIndexVersion = 62_000;
+            public const int CoraxIndexVersion = 72_000;
 
             public static (int Version, StorageType Type) GetIndexVersionAndStorageType(SearchEngineType type) => type switch
             {

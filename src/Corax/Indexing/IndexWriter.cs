@@ -1008,8 +1008,7 @@ namespace Corax.Indexing
                 ref var setState = ref MemoryMarshal.AsRef<PostingListState>(setSpace);
 
                 using var set = new PostingList(_transaction.LowLevelTransaction, Slices.Empty, setState);
-                var iterator = set.Iterate();
-
+                using var _ = set.Iterate(out var iterator);
                 while (iterator.Fill(buffer, out var read))
                     AddDocumentsToDeletion(buffer, read, ref setsAreDisjoint);
             }

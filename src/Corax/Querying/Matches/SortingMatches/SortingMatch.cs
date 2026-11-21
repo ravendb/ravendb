@@ -365,6 +365,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                             break;
                         case TermIdMask.PostingList:
                             var postingList = _searcher.GetPostingList(postingListId);
+                            ReleaseLargePostingList();
                             _postListIt = postingList.Iterate();
                             _postListIt.Seek(_min);
                             ReadLargePostingList(sortedIds, ref currentIdx);
@@ -438,7 +439,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
         {
             if (_postListIt.Fill(sortedIds[currentIdx..], out var read) == false || (long)EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds[currentIdx + read - 1]) > _max)
-                _postListIt = default;
+                ReleaseLargePostingList();
 
             EntryIdEncodings.DecodeAndDiscardFrequency(sortedIds.Slice(currentIdx), read);
             currentIdx += read;
@@ -461,9 +462,16 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             }
         }
 
+        private void ReleaseLargePostingList()
+        {
+            _postListIt.Dispose();
+            _postListIt = default;
+        }
+
         public void Dispose()
         {
             _smallListReader.Dispose();
+            ReleaseLargePostingList();
             _smallPostListIds.Dispose();
             _containerItemsScope.Dispose();
             _itBufferScope.Dispose();

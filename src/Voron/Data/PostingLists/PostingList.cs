@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -242,17 +243,63 @@ namespace Voron.Data.PostingLists
             return new Iterator(this);
         }
 
-        public struct Iterator 
+        /// <summary>
+        /// For an iterator that a single scope reads: the returned scope disposes <paramref name="iterator"/> itself, the copy that the reads advanced.
+        /// </summary>
+        public IteratorScope Iterate([UnscopedRef] out Iterator iterator)
+        {
+            iterator = Iterate();
+            return new IteratorScope(ref iterator);
+        }
+
+        public readonly ref struct IteratorScope
+        {
+            private readonly ref Iterator _iterator;
+
+            internal IteratorScope(ref Iterator iterator) => _iterator = ref iterator;
+
+            public void Dispose() => _iterator.Dispose();
+        }
+
+        // A struct: dispose the copy that was used, once, since every copy shares the buffers of the decoder.
+        public struct Iterator : IDisposable
         {
             private readonly PostingList _parent;
             private PostingListLeafPage.Iterator _it;
+#if DEBUG
+            // Shared by every copy, so a second Dispose or a read after Dispose through any copy is caught.
+            private readonly StrongBox<bool> _disposed;
+#endif
 
             public bool IsValid => _parent != null;
+
+            public void Dispose()
+            {
+#if DEBUG
+                if (_disposed != null)
+                {
+                    Debug.Assert(_disposed.Value == false, "The iterator was already disposed, through this copy or another one.");
+                    _disposed.Value = true;
+                }
+#endif
+                _it.Dispose();
+            }
+
+            [Conditional("DEBUG")]
+            private void AssertNotDisposed()
+            {
+#if DEBUG
+                Debug.Assert(_disposed is null || _disposed.Value == false, "The iterator was used after it was disposed.");
+#endif
+            }
 
             public Iterator(PostingList parent)
             {
                 _parent = parent;
                 _it = new PostingListLeafPage.Iterator(parent._llt.Allocator);
+#if DEBUG
+                _disposed = new StrongBox<bool>();
+#endif
                 SeekSmallest();
             }
 
@@ -277,6 +324,7 @@ namespace Voron.Data.PostingLists
             /// </returns>
             public bool Seek(long from = long.MinValue)
             {
+                AssertNotDisposed();
                 while (true)
                 {
                     _parent.FindPageFor(from);
@@ -296,6 +344,7 @@ namespace Voron.Data.PostingLists
 
             public bool Fill(Span<long> matches, out int total, long pruneGreaterThanOptimization = long.MaxValue)
             {
+                AssertNotDisposed();
                 // We will try to fill.
                 total = 0;
                           

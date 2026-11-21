@@ -29,6 +29,13 @@ namespace Corax.Querying.Matches
         private long _current;
         internal Bm25Relevance _bm25Relevance;
         private PostingList.Iterator _set;
+
+        // For the owner of the match, once it no longer reads it.
+        internal void ReleasePostingList()
+        {
+            _set.Dispose();
+            _set = default;
+        }
         private Container.Item _containerItem;
         private FastPForBufferedReader _containerReader;
         private ByteStringContext _ctx;
@@ -310,7 +317,8 @@ namespace Corax.Querying.Matches
                 if (matchesCount == 0)
                     return 0;
                 
-                var it = term._set;
+                // A copy that reaches another page can replace the buffers it shares with term._set, which term._set then releases again.
+                ref var it = ref term._set;
                 // There is no element equal to or greater than `min(matches)-1`. No matches possible anyway.
                 if (it.Seek(EntryIdEncodings.PrepareIdForSeekInPostingList(matches[0] - 1)) == false)
                     return 0;

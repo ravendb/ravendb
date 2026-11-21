@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -11,6 +12,7 @@ using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Server.Tensors;
 using Sparrow.Server.Utils;
 using Voron.Data.BTrees;
@@ -137,8 +139,63 @@ public unsafe partial class Hnsw
 
     public partial class SearchState : IDisposable
     {
+        // A search reads the edges of a node only when it expands it, which is a few of the nodes whose distance it computes, so
+        // in a read transaction it loads the header of a node and decodes its edges on demand.
+        private readonly bool _decodesEdgesOnDemand;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Load(NodeReader reader, ref Node node)
+        {
+            if (_decodesEdgesOnDemand)
+            {
+                reader.LoadHeaderInto(ref node);
+                return;
+            }
+
+            reader.LoadInto(ref node);
+        }
+
+        // For code that reads the edges of a node directly rather than through the search.
+        internal ref Node GetDecodedNode(int index)
+        {
+            ref var node = ref GetNodeByIndex(index);
+            EnsureAllEdgesDecoded(ref node);
+            return ref node;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureEdgesDecoded(ref Node node, int level)
+        {
+            if (node.EncodedLevels != null && (node.DecodedLevels & (1UL << level)) == 0)
+                DecodeEdges(ref node, level);
+        }
+
+        private void EnsureAllEdgesDecoded(ref Node node)
+        {
+            for (int level = 0; node.EncodedLevels != null; level++)
+                EnsureEdgesDecoded(ref node, level);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void DecodeEdges(ref Node node, int level)
+        {
+            Debug.Assert(level < node.EncodedLevelCount, "The node is not at the level");
+            var encoded = new ReadOnlySpan<byte>(node.EncodedLevels, node.EncodedLevelsLength);
+            int offset = 0;
+            for (int i = 0; i < level; i++)
+                offset = NodeReader.SkipEdges(encoded, offset);
+
+            node.EdgesPerLevel.SetCapacity(Llt.Allocator, node.EncodedLevelCount);
+            node.EdgesPerLevel[level] = NodeReader.ReadEdges(Llt.Allocator, encoded, ref offset);
+            node.DecodedLevels |= 1UL << level;
+            if (ulong.PopCount(node.DecodedLevels) == (ulong)node.EncodedLevelCount)
+                node.EncodedLevels = null;
+        }
+
         private readonly PriorityQueue<int, float> _candidatesQ = new();
         private readonly PriorityQueue<int, float> _nearestEdgesQ = new();
+        // The nearest nodes of a filtered search that are in the filter, created by the first filtered search.
+        private PriorityQueue<int, float> _nearestInFilterQ;
         private readonly Dictionary<long, int> _nodeIdToIdx = new();
         private NativeList<Node> _nodes = default;
         private NativeList<int> _newNodes = default;
@@ -146,9 +203,8 @@ public unsafe partial class Hnsw
         private readonly Lookup<Int64LookupKey> _nodeIdToLocations;
         public readonly LowLevelTransaction Llt;
         // _visitsCounter versions Node.Visited; every traversal start bumps it so the visited
-        // set is reset in O(1). _queryVectorVersion versions Node.QueryDistanceVersion; it is
-        // bumped by OnQueryVector only when the query vector changes, so a node's cached distance
-        // survives across traversals that reuse the same query vector. Both start at 1 so
+        // set is reset in O(1). _queryVectorVersion versions Node.QueryDistanceVersion; bumping it
+        // drops every cached distance at once. Both start at 1 so
         // freshly-loaded nodes (fields default to 0) never spuriously match.
         private int _visitsCounter = 1;
         private int _queryVectorVersion = 1;
@@ -160,6 +216,9 @@ public unsafe partial class Hnsw
         // storage tx R never observes an entry stamped by a later commit.
         private readonly long _readerTxId;
         private ByteStringContext<ByteStringMemoryCache>.InternalScope? _queryNormalizationScope;
+        // Created by the first filter check that reads a small posting list.
+        private ContextBoundNativeList<long> _filterScratch;
+        private FastPForDecoder _filterDecoder;
 
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
@@ -243,6 +302,8 @@ public unsafe partial class Hnsw
         public SearchState(LowLevelTransaction llt, Slice name, HnswIndexCache nodeCache)
         {
             Llt = llt;
+            // The pages of a read transaction do not change, so a node can keep where its encoded levels are.
+            _decodesEdgesOnDemand = llt.Flags == TransactionFlags.Read;
             _nodeCache = nodeCache;
             _readerTxId = llt.Id;
             _tree = llt.Transaction.ReadTree(name);
@@ -258,6 +319,8 @@ public unsafe partial class Hnsw
             // cached value would route the search from a level the entry point never reached.
             var optionsPtr = _tree.DirectRead(OptionsSlice);
             Options = Unsafe.Read<Options>(optionsPtr);
+            if (Options.Version > Constants.Graphs.HnswVersion.CurrentVersion)
+                ThrowNewerVersion(name, Options.Version);
             SimilarityCalc = _nodeCache != null ? _nodeCache.SimilarityCalc : GetDistanceKernel(Options);
 
             if (_nodeCache != null)
@@ -277,6 +340,10 @@ public unsafe partial class Hnsw
         }
 
         private const int InitialNodesCapacityWithCache = 256;
+
+        [DoesNotReturn]
+        private static void ThrowNewerVersion(Slice name, ushort version) =>
+            throw new NotSupportedException($"The vector graph '{name}' has version {version}, which is newer than the version this server supports ({Constants.Graphs.HnswVersion.CurrentVersion}).");
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float DistanceToScore(float score)
@@ -323,7 +390,7 @@ public unsafe partial class Hnsw
             int nodeIndex = AllocateNodeIndex(newNodeId);
 
             _newNodes.Add(Llt.Allocator, nodeIndex);
-            _nodes[nodeIndex].VectorId = vectorId;
+            _nodes[nodeIndex].SetVectorId(vectorId);
 
             _nodeIdToIdx[newNodeId] = nodeIndex;
             return nodeIndex;
@@ -376,6 +443,7 @@ public unsafe partial class Hnsw
             for (int i = 0; i < _nodes.Count; i++)
             {
                 ref var node = ref _nodes[i];
+                EnsureAllEdgesDecoded(ref node);
                 int levels = node.GetLevelCount();
                 node.EdgesIndexesPerLevel.SetCapacity(Llt.Allocator, levels);
                 for (int lvl = 0; lvl < levels; lvl++)
@@ -455,6 +523,7 @@ public unsafe partial class Hnsw
         private void ResolveEdgeIndexes(int nodeIndex, int level, ref NativeList<long> nodeIds, ref NativeList<int> indexes)
         {
             ref var node = ref GetNodeByIndex(nodeIndex);
+            EnsureEdgesDecoded(ref node, level);
 
             // Fast path: the resolved indexes for this level are already cached on the node.
             // The slow path (miss) is in a NoInlining helper so only this copy is inlined into
@@ -468,6 +537,16 @@ public unsafe partial class Hnsw
             }
 
             ResolveEdgeIndexesSlow(nodeIndex, level, ref nodeIds, ref indexes);
+        }
+
+        // The index list of a level is used when its count equals the count of the id list, so then it must hold the same edges.
+        [Conditional("DEBUG")]
+        internal void AssertEdgeIndexesMatchEdges(int nodeIndex, int level)
+        {
+            ref var node = ref GetNodeByIndex(nodeIndex);
+            var ids = node.EdgesPerLevel[level].ToSpan();
+            foreach (var index in node.EdgesIndexesPerLevel[level].ToSpan())
+                Debug.Assert(ids.Contains(_nodes[index].NodeId), "The index list of a level has the count of the id list, but not the same edges.");
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -533,8 +612,7 @@ public unsafe partial class Hnsw
             for (int i = 0; i < keys.Length; i++)
             {
                 var buf = spans[i].ToSpan();
-                var reader = Node.Decode(Llt, buf);
-                reader.LoadInto(ref _nodes[indexes[matches + i]]);
+                Load(Node.Decode(Llt, buf), ref _nodes[indexes[matches + i]]);
             }
         }
 
@@ -561,8 +639,7 @@ public unsafe partial class Hnsw
 
             nodeIdx = AllocateNodeIndex(nodeId);
             var reader = Node.Decode(Llt, nodeLocation);
-            ref var n = ref GetNodeByIndex(nodeIdx);
-            reader.LoadInto(ref n);
+            Load(reader, ref GetNodeByIndex(nodeIdx));
             return nodeIdx;
         }
 
@@ -647,6 +724,82 @@ public unsafe partial class Hnsw
             ++_queryVectorVersion;
         }
 
+        /// <summary>True when the posting list holds an entry of <paramref name="filter"/>.</summary>
+        [SkipLocalsInit]
+        internal bool HasEntryInFilter(long postingListId, GrowableBitArray filter)
+        {
+            var rawPostingListId = postingListId & Constants.Graphs.VectorId.ContainerType;
+            switch (postingListId & Constants.Graphs.VectorId.EnsureIsSingleMask)
+            {
+                case Constants.Graphs.VectorId.Tombstone: // empty
+                    return false;
+                case Constants.Graphs.VectorId.Single: // single item posting list
+                    return filter.Contains(Registration.InternalEntryIdToEntryId(rawPostingListId));
+                case Constants.Graphs.VectorId.SmallPostingList: // small posting list
+                    if (_filterScratch.HasContext == false)
+                    {
+                        _filterScratch = new ContextBoundNativeList<long>(Llt.Allocator);
+                        _filterDecoder = new FastPForDecoder(Llt.Allocator);
+                    }
+
+                    ReadPostingList(new ContainerEntryId(rawPostingListId), ref _filterScratch, ref _filterDecoder, out _);
+                    var found = KeepEntriesInFilter(_filterScratch.ToSpan(), filter, stopAtFirst: true) > 0;
+                    _filterScratch.Clear();
+                    return found;
+                case Constants.Graphs.VectorId.PostingList: // large posting list
+                {
+                    if (filter.MaxSetBit < 0)
+                        return false;
+
+                    var setStateSpan = Container.GetReadOnly(Llt, new(rawPostingListId));
+                    using var postingList = new PostingList(Llt, Slices.Empty, MemoryMarshal.AsRef<PostingListState>(setStateSpan));
+                    using var _ = postingList.Iterate(out var iterator);
+                    // Only the entries between the first and the last member of the filter are read.
+                    if (iterator.Seek(Registration.EntryIdToInternalEntryId(filter.MinSetBit)) == false)
+                        return false;
+
+                    var lastRawEntryInFilter = Registration.EntryIdToInternalEntryId(filter.MaxSetBit + 1) - 1;
+                    Span<long> chunk = stackalloc long[256];
+                    while (iterator.Fill(chunk, out var total, lastRawEntryInFilter))
+                    {
+                        if (KeepEntriesInFilter(chunk[..total], filter, stopAtFirst: true) > 0)
+                            return true;
+                    }
+
+                    return false;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException("Impossible scenario, we have only 4 options, but got: " + postingListId);
+            }
+        }
+
+        /// <summary>
+        /// Converts sorted raw entries in place to entry ids, moves the ones that the filter has to the front and returns how many there are.
+        /// With <paramref name="stopAtFirst"/>, stops at the first one.
+        /// </summary>
+        internal static int KeepEntriesInFilter(Span<long> rawEntries, GrowableBitArray filter, bool stopAtFirst)
+        {
+            Registration.InternalEntryIdToEntryId(rawEntries);
+            if (rawEntries.IsEmpty || rawEntries[^1] < filter.MinSetBit || rawEntries[0] > filter.MaxSetBit)
+                return 0;
+
+            var kept = 0;
+            foreach (var entry in rawEntries)
+            {
+                if (entry > filter.MaxSetBit)
+                    break;
+
+                if (filter.Contains(entry) == false)
+                    continue;
+
+                rawEntries[kept++] = entry;
+                if (stopAtFirst)
+                    break;
+            }
+
+            return kept;
+        }
+
         public void ReadPostingList(ContainerEntryId rawPostingListId, ref ContextBoundNativeList<long> listBuffer, ref FastPForDecoder pforDecoder, out int postingListSize)
         {
             ReadPostingList(Llt, rawPostingListId, ref listBuffer, ref pforDecoder, out postingListSize);
@@ -674,83 +827,39 @@ public unsafe partial class Hnsw
             FilterNodesWithEmptyPostingLists = 1 << 2
         }
         
-        public IHnswSearcher NearestSearch(ContextBoundNativeList<int> startingPointsIndexes, Memory<byte> vector,
+        public IHnswSearcher NearestSearch(int startingPointIndex, Memory<byte> vector,
             int level, int numberOfCandidates,
             ContextBoundNativeList<int> candidates,
             NearestEdgesFlags flags)
         {
-            return new NearestSearcher(this, startingPointsIndexes, vector, level , numberOfCandidates, candidates, flags);
+            return new NearestSearcher(this, startingPointIndex, vector, level , numberOfCandidates, candidates, flags, null);
         }
-        
-        public IHnswSearcher NearestSearch(int startingPointIndex, Memory<byte> vector,
-            int level, int numberOfCandidates,
-            ContextBoundNativeList<int> candidates,
-            NearestEdgesFlags flags,
-            bool hasFilterMatch)
+
+        /// <summary>The descent from the entry point and the base-layer traversal from where it ends.</summary>
+        internal IHnswSearcher ApproximateSearch(Memory<byte> vector, int numberOfCandidates, GrowableBitArray? filter)
         {
-            return new NearestSearcher(this, startingPointIndex, vector, level , numberOfCandidates, candidates, flags, hasFilterMatch);
+            var nearestNodesByLevel = new ContextBoundNativeList<int>(Llt.Allocator);
+            nearestNodesByLevel.EnsureCapacityFor(Options.MaxLevel + 1);
+            SearchNearestAcrossLevels(vector.Span, -1, Options.MaxLevel, ref nearestNodesByLevel);
+            var nearest = nearestNodesByLevel[0];
+            nearestNodesByLevel.Clear();
+            return new NearestSearcher(this, nearest, vector, 0, numberOfCandidates, nearestNodesByLevel,
+                NearestEdgesFlags.StartingPointAsEdge | NearestEdgesFlags.FilterNodesWithEmptyPostingLists, filter);
         }
 
         public IHnswSearcher EmptySearch() => new EmptySearcher();
         
-        public IHnswSearcher ExactSearch(Memory<byte> vector, bool hasFilterMatch, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, hasFilterMatch, numberOfCandidates, nodesToScan);
+        public IHnswSearcher ExactSearch(Memory<byte> vector, int numberOfCandidates, ContextBoundNativeList<long>? nodesToScan) => new ExactSearcher(this, vector, numberOfCandidates, nodesToScan);
 
 
-        public void SearchFilteredNearest<TNodes>(ref ContextBoundNativeList<int> nearestIndexes, TNodes nodesFromFilter, int candidatesRequested, int maximumNumberOfNodesVisitedWithoutFindingBetterCandidate)
-            where TNodes : IEnumerator<long>
-        {
-            var numberOfNodesVisitedFromLastNewCandidate = 0;
-            PriorityQueue<int, int> nearestCandidates = new();
-            
-            // Retrieving nodes from the filter is costly (in terms of I/O). Therefore, we limit the number of random nodes we will visit.
-            var maximumAmountOfNodesToVisit = 512;
-            
-            while (nodesFromFilter.MoveNext() 
-                   && numberOfNodesVisitedFromLastNewCandidate < maximumNumberOfNodesVisitedWithoutFindingBetterCandidate 
-                   && maximumAmountOfNodesToVisit-- > 0)
-            {
-                var currentNodeIndex = nodesFromFilter.Current;
-                var nodeId = GetNodeIndexById(currentNodeIndex);
-                ref var entry = ref GetNodeByIndex(nodeId);
-                var currentNodeMaximumLevel = entry.GetLevelCount();
-
-                if (nearestCandidates.Count < candidatesRequested)
-                {
-                    // The queue is still empty. We will add anything that comes from the filter.
-                    nearestCandidates.Enqueue(nodeId, currentNodeMaximumLevel);
-                    numberOfNodesVisitedFromLastNewCandidate = 0;
-                    continue;
-                }
-                
-                // Our queue is full, which means we will only update the queue if the currently visited node is better (based on existence across levels)
-                // than our worst found candidate.
-                nearestCandidates.TryPeek(out _, out var worstCandidateMaximumLevel);
-                if (currentNodeMaximumLevel > worstCandidateMaximumLevel)
-                {
-                    // Replace the current worst candidate with the newly visited node since it exists on a higher level
-                    nearestCandidates.EnqueueDequeue(nodeId, currentNodeMaximumLevel);
-                    numberOfNodesVisitedFromLastNewCandidate = 0;
-                }
-                else
-                {
-                    numberOfNodesVisitedFromLastNewCandidate++;
-                }
-            }
-            
-            nearestIndexes.EnsureCapacityFor((int)nearestCandidates.Count);
-            while (nearestCandidates.TryDequeue(out var currentNodeIndex, out var _))
-                nearestIndexes.AddUnsafe(currentNodeIndex);
-            nearestIndexes.Inner.Reverse(); // we want to prioritize the nodes from the higher levels
-            nodesFromFilter.Dispose(); // dispose the iterator to restore the state.
-        }
-        
         public void SearchNearestAcrossLevels(ReadOnlySpan<byte> vector, int dstIdx, int maxLevel, ref ContextBoundNativeList<int> nearestIndexes)
         {
             var visitCounter = ++_visitsCounter;
             var currentNodeIndex = GetNodeIndexById(EntryPointId);
             var level = maxLevel;
             ref var entry = ref GetNodeByIndex(currentNodeIndex);
-            entry.EdgesPerLevel.SetCapacity(Llt.Allocator, maxLevel + 1);
+            EnsureAllEdgesDecoded(ref entry);
+            entry.EnsureLevels(Llt.Allocator, maxLevel + 1);
             var distance = Distance(vector, dstIdx, currentNodeIndex);
             var indexes = new NativeList<int>();
             var nodeIds = new NativeList<long>();
@@ -887,7 +996,7 @@ public unsafe partial class Hnsw
                    var reader = Node.Decode(Llt, buf);
                    var nodeIndex = indexesOfIds[i];
                    ref var n = ref _nodes[nodeIndex];
-                   reader.LoadInto(ref n);
+                   Load(reader, ref n);
                    nodeIndexes[vectorsToLoadIdx] = nodeIndex;
                    vectorIdsToLoad[vectorsToLoadIdx++] = n.GetVectorContainerId();
                }
@@ -923,12 +1032,14 @@ public unsafe partial class Hnsw
        {
            Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ must be empty between sub-queries on a shared SearchState");
            Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ must be empty between sub-queries on a shared SearchState");
+           Debug.Assert(_nearestInFilterQ is null || _nearestInFilterQ.Count == 0, "_nearestInFilterQ must be empty between sub-queries on a shared SearchState");
        }
 
        public void Dispose()
        {
            _candidatesQ.Clear();
            _nearestEdgesQ.Clear();
+           _nearestInFilterQ?.Clear();
            _newNodes.Dispose(Llt.Allocator);
 
            _nodes.Dispose(Llt.Allocator);
@@ -946,6 +1057,12 @@ public unsafe partial class Hnsw
            {
                scope.Dispose();
                _queryNormalizationScope = null;
+           }
+
+           if (_filterScratch.HasContext)
+           {
+               _filterScratch.Dispose();
+               _filterDecoder.Dispose();
            }
        }
 
@@ -991,6 +1108,13 @@ public unsafe partial class Hnsw
         internal sealed class TestingStuff
         {
             internal bool SimulateConcurrentRealloc;
+
+            // LLT thread, around the rewrite of an overfull list from its dispatch snapshot: state, node index and level.
+            internal Action<SearchState, int, int> BeforeEdgesReplaced;
+            internal Action<SearchState, int, int> AfterEdgesReplaced;
+
+            // Selects a list as soon as a back-link puts it over its cap, instead of once after the batch is placed.
+            internal bool SelectsListsOnOverflow;
 
             // Latched once the matching buffer was actually moved while the worker was parked, so a test
             // can fail loudly if the race window was never exercised.
@@ -1317,7 +1441,7 @@ public unsafe partial class Hnsw
             foreach (var (_, (_, nodeIndex, modifications)) in _vectorHashCache)
             {
                 ref var node = ref nodes[nodeIndex];
-                node.PostingListId = MergePostingList(node.PostingListId, modifications);
+                node.SetPostingListId(MergePostingList(node.PostingListId, modifications));
             }
 
             // Intentionally zeroing the nodes var, we may realloc the underlying array in the insert vector phase
@@ -1329,8 +1453,8 @@ public unsafe partial class Hnsw
             nodes = _searchState.Nodes;
             for (int i = 0; i < nodes.Length; i++)
             {
-                PersistNode(ref nodes[i], ref byteBuffer);
-                DirtyNodeIds.Add(nodes[i].NodeId);
+                if (PersistNode(ref nodes[i], ref byteBuffer))
+                    DirtyNodeIds.Add(nodes[i].NodeId);
             }
 
             // flush the local modifications
@@ -1494,16 +1618,26 @@ public unsafe partial class Hnsw
         }
 
 
-        void PersistNode(ref Node node, ref ContextBoundNativeList<byte> byteBuffer)
+        // Returns false when the stored node is unchanged.
+        bool PersistNode(ref Node node, ref ContextBoundNativeList<byte> byteBuffer)
         {
-            var encoded = node.Encode(ref byteBuffer);
+            if (node.Modified == false)
+            {
+                AssertStoredAsItIs(ref node, ref byteBuffer);
+                return false;
+            }
+
+            var encoded = node.Encode(ref byteBuffer, _searchState.Options.TracksInDegree);
             if (_searchState.TryGetLocationForNode(node.NodeId, out var locationId))
             {
+                if (Container.GetReadOnly(_searchState.Llt, new ContainerEntryId(locationId)).SequenceEqual(encoded))
+                    return false;
+
                 var existing = Container.GetMutable(_searchState.Llt, new ContainerEntryId(locationId));
                 if (existing.Length == encoded.Length)
                 {
                     encoded.CopyTo(existing);
-                    return;
+                    return true;
                 }
 
                 Container.Delete(_searchState.Llt, _searchState.Options.Container, new ContainerEntryId(locationId));
@@ -1513,6 +1647,20 @@ public unsafe partial class Hnsw
             locationId = (long)allocatedId;
             _searchState.RegisterNodeLocation(node.NodeId, locationId);
             encoded.CopyTo(storage);
+            return true;
+        }
+
+        // A change that does not set Node.Modified would be lost, so Debug builds check every node without it against its stored bytes.
+        [Conditional("DEBUG")]
+        private void AssertStoredAsItIs(ref Node node, ref ContextBoundNativeList<byte> byteBuffer)
+        {
+            var stored = _searchState.TryGetLocationForNode(node.NodeId, out var locationId);
+            Debug.Assert(stored, "A node that was never stored is not marked as modified.");
+            if (stored == false)
+                return;
+
+            var encoded = node.Encode(ref byteBuffer, _searchState.Options.TracksInDegree);
+            Debug.Assert(Container.GetReadOnly(_searchState.Llt, new ContainerEntryId(locationId)).SequenceEqual(encoded), "A node changed without being marked as modified.");
         }
     }
 
@@ -1527,46 +1675,20 @@ public unsafe partial class Hnsw
         return new Registration(llt, name, random);
     }
     
-    public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
+    public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, ContextBoundNativeList<long>? nodesToScan = null)
     {
         var searchState = new SearchState(llt, name, ref vector);
-        var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
-        return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
+        var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
+        return new VectorSearchRetriever(searchState,  results, minimumSimilarity);
     }
 
-    public static VectorSearchRetriever ApproximateFilteredNearest<TEnumerator>(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, TEnumerator nodesToProbe)
-     where TEnumerator : IEnumerator<long>
+    public static VectorSearchRetriever ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, GrowableBitArray? filter = null)
     {
         var searchState = new SearchState(llt, name, ref vector);
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity);
 
-        var startingPointsIndexes = new ContextBoundNativeList<int>(llt.Allocator);
-        var candidates = new ContextBoundNativeList<int>(llt.Allocator);
-        candidates.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
-
-        searchState.SearchFilteredNearest(ref startingPointsIndexes, nodesToProbe, numberOfCandidates, 16);
-        candidates.Clear();
-        var nearestEdgesSearch = searchState.NearestSearch(startingPointsIndexes, vector, 0, numberOfCandidates, candidates,
-            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity);
-    }
-    
-    public static VectorSearchRetriever ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch = false)
-    {
-        var searchState = new SearchState(llt, name, ref vector);
-        if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
-
-        var nearestNodesByLevel = new ContextBoundNativeList<int>(llt.Allocator);
-        nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
-
-        searchState.SearchNearestAcrossLevels(vector.Span, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel);
-        var nearest = nearestNodesByLevel[0];
-        nearestNodesByLevel.Clear();
-        var nearestEdgesSearch = searchState.NearestSearch(nearest, vector, 0, numberOfCandidates, nearestNodesByLevel,
-            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists, hasFilterMatch);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity);
+        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), minimumSimilarity);
     }
 
     /// <summary>
@@ -1576,7 +1698,7 @@ public unsafe partial class Hnsw
     /// so repeated traversals avoid the node-index resolution and container reads already paid
     /// for on the first pass.
     /// </summary>
-    public static VectorSearchRetriever ApproximateNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch = false)
+    public static VectorSearchRetriever ApproximateNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, GrowableBitArray? filter = null)
     {
         TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         // Bind the per-node QueryDistance cache to this query vector before SearchNearestAcrossLevels
@@ -1585,58 +1707,27 @@ public unsafe partial class Hnsw
         searchState.OnQueryVector(vector);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity, ownsSearchState: false, queryVectorScope);
 
-        var nearestNodesByLevel = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
-        nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
-
-        searchState.SearchNearestAcrossLevels(vector.Span, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel);
-        var nearest = nearestNodesByLevel[0];
-        nearestNodesByLevel.Clear();
-        var nearestEdgesSearch = searchState.NearestSearch(nearest, vector, 0, numberOfCandidates, nearestNodesByLevel,
-            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists, hasFilterMatch);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
+        return new VectorSearchRetriever(searchState, searchState.ApproximateSearch(vector, numberOfCandidates, filter), minimumSimilarity,
+            ownsSearchState: false, queryVectorScope);
     }
 
     /// <summary>
     /// Exact nearest neighbor search using a caller-owned SearchState.
     /// The caller is responsible for disposing the SearchState.
     /// </summary>
-    public static VectorSearchRetriever ExactNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
+    public static VectorSearchRetriever ExactNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, ContextBoundNativeList<long>? nodesToScan = null)
     {
         TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         searchState.OnQueryVector(vector);
-        var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
-        return new VectorSearchRetriever(searchState, results, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
-    }
-
-    /// <summary>
-    /// Approximate filtered nearest neighbor search using a caller-owned SearchState.
-    /// The caller is responsible for disposing the SearchState.
-    /// </summary>
-    public static VectorSearchRetriever ApproximateFilteredNearest<TEnumerator>(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, TEnumerator nodesToProbe)
-        where TEnumerator : IEnumerator<long>
-    {
-        TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
-        searchState.OnQueryVector(vector);
-
-        if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
-
-        var startingPointsIndexes = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
-        var candidates = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
-        candidates.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
-
-        searchState.SearchFilteredNearest(ref startingPointsIndexes, nodesToProbe, numberOfCandidates, 16);
-        candidates.Clear();
-        var nearestEdgesSearch = searchState.NearestSearch(startingPointsIndexes, vector, 0, numberOfCandidates, candidates,
-            SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
+        var results = searchState.ExactSearch(vector, numberOfCandidates, nodesToScan);
+        return new VectorSearchRetriever(searchState, results, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
     public static VectorSearchRetriever EmptySearch(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity)
     {
         var searchState = new SearchState(llt, name);
-        return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity);
+        return new VectorSearchRetriever(searchState, searchState.EmptySearch(), minimumSimilarity);
     }
 }

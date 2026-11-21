@@ -26,7 +26,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
 
     // Number of documents to be directly scanned instead of ANN / Exact on HNSW.
     private readonly int _scanningThreshold;
-    private readonly Random _random;
     private bool _scanningQuery;
 
 
@@ -57,7 +56,7 @@ public struct MultiVectorSearchMatch : IQueryMatch
     private long _filterMatchesCount;
 
     public MultiVectorSearchMatch(IndexSearcher searcher, in FieldMetadata metadata, in VectorValue[] vectorsToSearch, in float minimumMatch, in int numberOfCandidates,
-        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold, Random random = null)
+        in bool isExact, in bool singleVectorSearchDoNotSortByIds, IQueryMatch filterQuery, int scanningThreshold = ScanningThreshold)
     {
         _indexSearcher = searcher;
         _metadata = metadata;
@@ -67,7 +66,6 @@ public struct MultiVectorSearchMatch : IQueryMatch
         _isExact = isExact;
         _filterQuery = filterQuery;
         _scanningThreshold = scanningThreshold;
-        _random = random;
         IsBoosting = true;
         _singleVectorSearchDoNotSort = singleVectorSearchDoNotSortByIds;
         _isEmpty = false;
@@ -157,12 +155,12 @@ public struct MultiVectorSearchMatch : IQueryMatch
             sharedSearchState.AssertSharedQueuesClean();
 
             var vector = _vectorsToSearch[i].GetEmbeddingMemory();
+            var filter = _filterQuery != null ? _filterResults : null;
             var vectorSearcher = (_isExact) switch
             {
-                _ when _scanningQuery => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, false, _nodesIdsToScan),
-                true => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null, null),
-                false when _filterQuery != null => Hnsw.ApproximateFilteredNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, new IndexSearcher.VectorSearchUtils.RandomNodesFromFilterEnumerator(_indexSearcher, _metadata, _filterResults!.Value, _random)),
-                false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, _filterQuery != null),
+                _ when _scanningQuery => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, nodesToScan: _nodesIdsToScan),
+                true => Hnsw.ExactNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch),
+                false => Hnsw.ApproximateNearest(sharedSearchState, _numberOfCandidates, vector, _minimumMatch, filter),
             };
 
             if (i == 0)

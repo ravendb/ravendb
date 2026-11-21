@@ -49,6 +49,46 @@ public unsafe class PForEncoderTests(ITestOutputHelper output) : NoDisposalNeede
         }
     }
     
+    [RavenFact(RavenTestCategory.Voron)]
+    public void ACopyOfTheDecoderThatReadsDoesNotReplaceTheBuffersOfTheOriginal()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var encoder = new FastPForEncoder(bsc);
+        // Every gap is above uint.MaxValue, so each group of 4 values gets a big-delta marker: 64 in each block of 256.
+        const long Gap = 1L << 45;
+        var values = Enumerable.Range(1, 1024).Select(i => i * Gap).ToArray();
+        var buffer = new byte[8000];
+        int sizeUsed;
+        fixed (long* l = values)
+        fixed (byte* b = buffer)
+        {
+            encoder.Encode(l, values.Length);
+            (int count, sizeUsed) = encoder.Write(b, buffer.Length);
+            Assert.Equal(values.Length, count);
+        }
+
+        var allocatedBefore = bsc._currentlyAllocated;
+        var output = new long[values.Length];
+        fixed (byte* b = buffer)
+        fixed (long* o = output)
+        {
+            var decoder = new FastPForDecoder(bsc);
+            decoder.Init(b, sizeUsed);
+            // As PostingListLeafPage.Iterator.SkipHint does: read ahead through a copy, which is never disposed.
+            var copy = decoder;
+            Assert.Equal(256, copy.Read(o, 256));
+
+            int read = 0, lastRead;
+            while ((lastRead = decoder.Read(o + read, output.Length - read)) > 0)
+                read += lastRead;
+            decoder.Dispose();
+            Assert.Equal(values, output.Take(read));
+        }
+
+        // A buffer that the copy replaced would be released twice, and the buffer of the copy never.
+        Assert.Equal(allocatedBefore, bsc._currentlyAllocated);
+    }
+
     [RavenFact(RavenTestCategory.Core)]
     public void CanRespectBufferBoundaryForPage()
     {
