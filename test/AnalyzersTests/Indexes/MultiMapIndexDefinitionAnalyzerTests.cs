@@ -101,7 +101,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexMissingAddMap), d.Severity);
             Assert.Contains("MyMultiMapIndex", d.GetMessage());
         }
 
@@ -125,7 +125,7 @@ class Company { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexSingleAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexSingleAddMap), d.Severity);
             Assert.Contains("MyMultiMapIndex", d.GetMessage());
         }
 
@@ -219,7 +219,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexMissingAddMap), d.Severity);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
@@ -242,7 +242,7 @@ class Company { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexSingleAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexSingleAddMap), d.Severity);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
@@ -284,7 +284,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexMissingAddMap), d.Severity);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
@@ -307,7 +307,7 @@ class Company { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexSingleAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.MultiMapIndexSingleAddMap), d.Severity);
         }
     }
 }

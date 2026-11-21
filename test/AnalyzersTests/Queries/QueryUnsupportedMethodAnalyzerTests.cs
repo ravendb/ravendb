@@ -43,7 +43,7 @@ class Order { public string Status { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.QueryUnsupportedMethodCall), d.Severity);
             Assert.Contains("IsActive", d.GetMessage());
         }
 

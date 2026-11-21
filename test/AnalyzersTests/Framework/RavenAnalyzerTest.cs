@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Raven.Analyzers.Generators;
+using Raven.Analyzers.Shared;
 
 namespace AnalyzersTests.Framework
 {
@@ -51,6 +52,16 @@ namespace AnalyzersTests.Framework
         /// compilation themselves rather than go through <see cref="AnalyzeAsync{TAnalyzer}"/>.
         /// </summary>
         internal static IReadOnlyList<MetadataReference> MetadataReferences => DefaultReferences.Value;
+
+        /// <summary>
+        /// The severity a rule reports in this build: Info in the release that introduces it, its
+        /// destination severity once the product version has moved past that release.
+        /// </summary>
+        internal static DiagnosticSeverity ExpectedSeverity(string diagnosticId)
+        {
+            DiagnosticSeverityPolicyEntry policy = DiagnosticDescriptors.Policies.Single(x => x.Id == diagnosticId);
+            return SeverityPolicy.Resolve(policy.IntroducedAt, policy.DestinationSeverity);
+        }
 
         /// <summary>
         /// Parses <paramref name="source"/>, compiles it with Raven.Client referenced,

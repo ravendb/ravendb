@@ -122,7 +122,7 @@ class Order { public string Id { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.IndexMissingMapAssignment, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.IndexMissingMapAssignment), d.Severity);
             Assert.Contains("MyIndex", d.GetMessage());
         }
 

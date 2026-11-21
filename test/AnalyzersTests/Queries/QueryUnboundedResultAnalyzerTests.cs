@@ -39,7 +39,7 @@ class User { public string Id { get; set; } }
 
             Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
-            Assert.Equal(DiagnosticSeverity.Info, diagnostics[0].Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.QueryUnboundedResult), diagnostics[0].Severity);
         }
 
         [RavenTheory(RavenTestCategory.ClientApi)]

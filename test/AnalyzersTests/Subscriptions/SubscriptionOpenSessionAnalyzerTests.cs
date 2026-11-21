@@ -43,7 +43,7 @@ class Order { public string Id { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.SubscriptionStoreOpenSession), d.Severity);
             Assert.Contains("OpenSession", d.GetMessage());
         }
 
@@ -69,7 +69,7 @@ class Order { public string Id { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.SubscriptionStoreOpenSession), d.Severity);
             Assert.Contains("OpenAsyncSession", d.GetMessage());
         }
 
@@ -180,7 +180,7 @@ class Order { public string Id { get; set; } }
             Assert.All(diagnostics, d =>
             {
                 Assert.Equal(DiagnosticIds.SubscriptionStoreOpenSession, d.Id);
-                Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+                Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.SubscriptionStoreOpenSession), d.Severity);
             });
         }
 

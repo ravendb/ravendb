@@ -40,7 +40,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.QueryFilteringAfterProjection), d.Severity);
             Assert.Contains("Where", d.GetMessage());
         }
 
@@ -215,7 +215,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.DoubleProjectInto, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.DoubleProjectInto), d.Severity);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
@@ -263,7 +263,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.QueryFilteringAfterProjection), d.Severity);
             Assert.Contains("Search", d.GetMessage());
         }
 

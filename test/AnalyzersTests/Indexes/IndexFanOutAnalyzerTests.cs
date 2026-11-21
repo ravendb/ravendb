@@ -42,7 +42,7 @@ class Line { public string Product { get; set; } public int Quantity { get; set;
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.IndexFanOut), d.Severity);
             Assert.Contains("SelectMany", d.GetMessage());
         }
 

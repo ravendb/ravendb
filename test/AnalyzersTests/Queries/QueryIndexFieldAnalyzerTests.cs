@@ -123,7 +123,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryFieldNotIndexed, d.Id);
-            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
+            Assert.Equal(RavenAnalyzerTest.ExpectedSeverity(DiagnosticIds.QueryFieldNotIndexed), d.Severity);
             Assert.Contains("Price", d.GetMessage());
             Assert.Contains("Where", d.GetMessage());
         }
