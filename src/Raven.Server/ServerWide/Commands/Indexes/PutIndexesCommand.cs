@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
@@ -85,6 +86,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(RevisionsToKeep)] = RevisionsToKeep;
             json[nameof(DefaultStaticDeploymentMode)] = DefaultStaticDeploymentMode;
             json[nameof(DefaultAutoDeploymentMode)] = DefaultAutoDeploymentMode;
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

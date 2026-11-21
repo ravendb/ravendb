@@ -98,5 +98,9 @@ namespace Raven.Server.ServerWide.Commands
         {
             return null;
         }
+
+        public virtual void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+        }
     }
 }

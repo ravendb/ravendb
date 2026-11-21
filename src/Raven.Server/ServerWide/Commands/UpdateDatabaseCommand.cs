@@ -65,5 +65,28 @@ namespace Raven.Server.ServerWide.Commands
                 throw new RachisApplyException($"Task name `{name}` is already in use", e);
             }
         }
+
+        protected void AssertLicenseLimitsOnUpdatedRecord(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            var databaseRecord = serverStore.Cluster.ReadDatabase(context, DatabaseName);
+            if (databaseRecord == null)
+                return;
+
+            var type = GetType().Name;
+            var command = (UpdateDatabaseCommand)JsonDeserializationCluster.Commands[type](Raw);
+
+            try
+            {
+                command.Initialize(serverStore, context);
+                command.UpdateDatabaseRecord(databaseRecord, index);
+            }
+            catch
+            {
+                return;
+            }
+
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+            serverStore.Cluster.AssertLicenseLimits(type, serverStore, databaseRecord, items, context, command);
+        }
     }
 }

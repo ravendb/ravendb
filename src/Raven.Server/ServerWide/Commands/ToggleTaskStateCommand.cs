@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -7,6 +7,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -179,6 +180,11 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(TaskId)] = TypeConverter.ToBlittableSupportedType(TaskId);
             json[nameof(TaskType)] = TypeConverter.ToBlittableSupportedType(TaskType);
             json[nameof(Disable)] = TypeConverter.ToBlittableSupportedType(Disable);
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

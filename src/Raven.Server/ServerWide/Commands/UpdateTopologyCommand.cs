@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -54,6 +55,11 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(At)] = At;
             json[nameof(ShardNumber)] = ShardNumber;
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

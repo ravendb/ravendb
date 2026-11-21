@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -16,5 +17,10 @@ namespace Raven.Server.ServerWide.Commands
         protected UpdateDatabaseRecordFeaturesCommand(string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId) { }
 
         public abstract bool Disabled { get; }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
+        }
     }
 }

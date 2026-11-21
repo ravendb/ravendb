@@ -825,7 +825,8 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
-                var subscriptionCommands = AssertSubscriptionsBatchLicenseLimits<T>(serverStore, items, subscriptionCommandsBlittable, type, context);
+                var subscriptionCommands = ReadSubscriptionBatch<T>(subscriptionCommandsBlittable, type);
+                AssertSubscriptionsBatchLicenseLimits(serverStore, items, subscriptionCommands, context);
                 foreach (var command in subscriptionCommands)
                 {
                     updateCommand = command;

@@ -18,6 +18,8 @@ using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Client.Exceptions.Commercial;
+using Raven.Server.Commercial;
 using Raven.Server;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
@@ -331,6 +333,23 @@ namespace SlowTests.Issues
         {
             var index = nodes.Max(x => x.ServerStore.LastRaftCommitIndex);
             await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, nodes);
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Licensing, LicenseRequired = true)]
+        public async Task LeaderRejectsAnInvalidLicenseBeforeItIsAppendedToTheLog()
+        {
+            using var store = GetDocumentStore();
+            await Server.ServerStore.LicenseManager.PutMyNodeInfoAsync();
+
+            var licenseLimitsReported = await WaitForValueAsync(() => Server.ServerStore.LoadLicenseLimits()?.NodeLicenseDetails?.ContainsKey(Server.ServerStore.NodeTag) == true, true);
+            Assert.True(licenseLimitsReported);
+
+            var lastIndex = Server.ServerStore.LastRaftCommitIndex;
+            var invalidLicense = new License { Id = Guid.NewGuid(), Name = "RavenDB_28078", Keys = ["invalid"] };
+
+            await Assert.ThrowsAsync<LicenseLimitException>(() => Server.ServerStore.SendToLeaderAsync(new PutLicenseCommand(ServerStore.LicenseStorageKey, invalidLicense, RaftIdGenerator.NewId())));
+
+            Assert.Equal(lastIndex, Server.ServerStore.LastRaftCommitIndex);
         }
 
         private static List<long> GetCompareExchangeExpirationTicks(RavenServer server)

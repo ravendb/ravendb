@@ -79,7 +79,18 @@ public sealed partial class ClusterStateMachine
         nameof(ToggleTaskStateCommand),
     };
 
-    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
+    internal void AssertCreateDatabaseLicenseLimits(ClusterOperationContext context, ServerStore serverStore, DatabaseRecord databaseRecord)
+    {
+        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        AssertLicenseLimits(nameof(AddDatabaseCommand), serverStore, databaseRecord, items, context);
+
+        foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+        {
+            AssertLicenseLimits(command, serverStore, databaseRecord, items, context);
+        }
+    }
+
+    internal void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
     {
         if (updateDatabaseCommand is UpdateDatabaseRecordFeaturesCommand { Disabled: true })
             return;
@@ -218,7 +229,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void AssertLicense(ClusterOperationContext context, string type, BlittableJsonReaderObject bjro, ServerStore serverStore)
+    internal void AssertLicense(ClusterOperationContext context, string type, BlittableJsonReaderObject bjro, ServerStore serverStore)
     {
         LicenseStatus newLicenseLimits;
 
@@ -672,7 +683,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
+    internal void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
     {
         Dictionary<string, List<string>> subscriptionsNamesPerDatabase = new()
         {
@@ -691,22 +702,30 @@ public sealed partial class ClusterStateMachine
         AssertNumberOfSubscriptionsPerClusterLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase);
     }
 
-    private List<T> AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, BlittableJsonReaderArray subscriptionCommands, string type,
-        ClusterOperationContext context)
+    private static List<T> ReadSubscriptionBatch<T>(BlittableJsonReaderArray subscriptionCommands, string type)
         where T : PutSubscriptionCommand
     {
-        var includesRevisions = false;
         var putSubscriptionCommandsList = new List<T>();
-        var subscriptionsNamesPerDatabase = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (BlittableJsonReaderObject command in subscriptionCommands)
         {
             if (command.TryGet("Type", out string putSubscriptionType) == false || putSubscriptionType != typeof(T).Name)
                 throw new RachisApplyException($"Cannot execute {type} command, wrong format");
 
-            var putSubscriptionCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);
-            putSubscriptionCommandsList.Add(putSubscriptionCommand);
+            putSubscriptionCommandsList.Add((T)JsonDeserializationCluster.Commands[typeof(T).Name](command));
+        }
 
+        return putSubscriptionCommandsList;
+    }
+
+    internal void AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, List<T> subscriptionCommands, ClusterOperationContext context)
+        where T : PutSubscriptionCommand
+    {
+        var includesRevisions = false;
+        var subscriptionsNamesPerDatabase = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var putSubscriptionCommand in subscriptionCommands)
+        {
             if (subscriptionsNamesPerDatabase.TryGetValue(putSubscriptionCommand.DatabaseName, out _) == false)
                 subscriptionsNamesPerDatabase.Add(putSubscriptionCommand.DatabaseName, new List<string>());
 
@@ -720,10 +739,9 @@ public sealed partial class ClusterStateMachine
         AssertSubscriptionRevisionFeatureLimits(licenseStatus, includesRevisions, context);
 
         if (AssertNumberOfSubscriptionsPerDatabaseLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase))
-            return putSubscriptionCommandsList;
+            return;
 
         AssertNumberOfSubscriptionsPerClusterLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase);
-        return putSubscriptionCommandsList;
     }
 
     private bool AssertNumberOfSubscriptionsPerDatabaseLimits(
@@ -851,7 +869,7 @@ public sealed partial class ClusterStateMachine
         return true;
     }
 
-    private static void AssertServerWideFor(ServerStore serverStore, LicenseAttribute attribute)
+    internal static void AssertServerWideFor(ServerStore serverStore, LicenseAttribute attribute)
     {
         switch (attribute)
         {

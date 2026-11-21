@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Subscriptions;
@@ -202,6 +202,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(PinToMentorNode)] = PinToMentorNode;
             json[nameof(ArchivedDataProcessingBehavior)] = ArchivedDataProcessingBehavior;
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+            serverStore.Cluster.AssertSubscriptionsLicenseLimits(serverStore, items, this, context);
         }
     }
 }

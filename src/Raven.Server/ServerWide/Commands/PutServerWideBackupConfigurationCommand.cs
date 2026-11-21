@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Commercial;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -216,6 +217,11 @@ namespace Raven.Server.ServerWide.Commands
                 str += separator;
 
             return str + ShardHelper.ToDatabaseName(databaseName);
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            ClusterStateMachine.AssertServerWideFor(serverStore, LicenseAttribute.ServerWideBackups);
         }
     }
 }

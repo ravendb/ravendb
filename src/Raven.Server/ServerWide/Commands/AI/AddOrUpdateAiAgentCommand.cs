@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -205,6 +205,11 @@ namespace Raven.Server.ServerWide.Commands.AI
                     throw new InvalidOperationException(
                         $"Sub-agent identifier '{tool.Identifier}' is invalid. Use only letters, digits, '_' or '-' (pattern: {ToolNameChecker}).");
             }
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            AssertLicenseLimitsOnUpdatedRecord(context, serverStore, index);
         }
     }
 }

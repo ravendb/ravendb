@@ -8,6 +8,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Commercial;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -149,6 +150,11 @@ namespace Raven.Server.ServerWide.Commands
                 default:
                     throw new System.NotSupportedException($"Unknown connection string type: {type}");
             }
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            ClusterStateMachine.AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
         }
     }
 }
