@@ -53,6 +53,9 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
     private static readonly StandardFormat StandardFormat = new('g');
     private static readonly StandardFormat TimeSpanFormat = new('c');
 
+    // enough for the textual date and time values we index, the longest is DateTime in the default Raven format with 'Z' (28 bytes)
+    private const int DateTimeFormatBufferSize = 32;
+
     private readonly ConversionScope Scope;
     private readonly Lazy<IndexFieldsMapping> _knownFieldsForReaders;
     protected IndexFieldsMapping KnownFieldsForWriter;
@@ -239,20 +242,30 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 }
 
             case ValueType.Numeric:
+            {
+                // formatted per its original type, so e.g. ulong values keep their textual representation
+                Span<byte> buffer = stackalloc byte[32];
+                int length;
+                bool formatted;
                 switch (value)
                 {
-                    case long l: @long = l; break;
-                    case ulong ul: @long = (long)ul; break;
-                    case int i: @long = i; break;
-                    case uint ui: @long = ui; break;
-                    case short s: @long = s; break;
-                    case ushort us: @long = us; break;
-                    case byte b: @long = b; break;
-                    case sbyte sb: @long = sb; break;
+                    case long l: @long = l; formatted = Utf8Formatter.TryFormat(l, buffer, out length); break;
+                    case ulong ul: @long = (long)ul; formatted = Utf8Formatter.TryFormat(ul, buffer, out length); break;
+                    case int i: @long = i; formatted = Utf8Formatter.TryFormat(i, buffer, out length); break;
+                    case uint ui: @long = ui; formatted = Utf8Formatter.TryFormat(ui, buffer, out length); break;
+                    case short s: @long = s; formatted = Utf8Formatter.TryFormat(s, buffer, out length); break;
+                    case ushort us: @long = us; formatted = Utf8Formatter.TryFormat(us, buffer, out length); break;
+                    case byte b: @long = b; formatted = Utf8Formatter.TryFormat(b, buffer, out length); break;
+                    case sbyte sb: @long = sb; formatted = Utf8Formatter.TryFormat(sb, buffer, out length); break;
                     default: throw new InvalidOperationException("There shouldn't be other numeric type here.");
                 }
-                builder.Write(fieldId, path, value.ToString(), @long, @long);
+
+                if (formatted == false)
+                    throw new InvalidOperationException($"Cannot convert {field.Name} as {value.GetType().Name} into bytes.");
+
+                builder.Write(fieldId, path, buffer.Slice(0, length), @long, @long);
                 break;
+            }
 
             case ValueType.Char:
                 if (_charAsString)
@@ -292,18 +305,24 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
 
             case ValueType.DateTime:
+            {
                 var dateTime = (DateTime)value;
-                var dateAsBytes = dateTime.GetDefaultRavenFormat();
-                builder.Write( fieldId,path, dateAsBytes, dateTime.Ticks, dateTime.Ticks);
+                var dateBuffer = stackalloc byte[DateTimeFormatBufferSize];
+                var dateLength = dateTime.GetDefaultRavenFormat(dateBuffer, DateTimeFormatBufferSize, isUtc: dateTime.Kind == DateTimeKind.Utc);
+                builder.Write(fieldId, path, new ReadOnlySpan<byte>(dateBuffer, dateLength), dateTime.Ticks, dateTime.Ticks);
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 break;
+            }
 
             case ValueType.DateTimeOffset:
-                var dateTimeOffset = (DateTimeOffset)value;
-                var dateTimeOffsetBytes = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
-                builder.Write( fieldId,path, dateTimeOffsetBytes, dateTimeOffset.UtcDateTime.Ticks, dateTimeOffset.UtcDateTime.Ticks);
+            {
+                var utcDateTime = ((DateTimeOffset)value).UtcDateTime;
+                var dateBuffer = stackalloc byte[DateTimeFormatBufferSize];
+                var dateLength = utcDateTime.GetDefaultRavenFormat(dateBuffer, DateTimeFormatBufferSize, isUtc: true);
+                builder.Write(fieldId, path, new ReadOnlySpan<byte>(dateBuffer, dateLength), utcDateTime.Ticks, utcDateTime.Ticks);
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 break;
+            }
 
             case ValueType.TimeSpan:
             {
@@ -320,21 +339,31 @@ public abstract class CoraxDocumentConverterBase : ConverterBase
                 break;
             }
             case ValueType.DateOnly:
+            {
                 var dateOnly = ((DateOnly)value);
-                var dateOnlyTextual = dateOnly.ToString(DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture);
+                Span<byte> dateOnlyBuffer = stackalloc byte[DateTimeFormatBufferSize];
+                if (dateOnly.TryFormat(dateOnlyBuffer, out var dateOnlyLength, DefaultFormat.DateOnlyFormatToWrite, CultureInfo.InvariantCulture) == false)
+                    throw new InvalidOperationException($"Cannot convert {field.Name} as {nameof(DateOnly)} into bytes.");
+
                 var ticks = dateOnly.DayNumber * TimeSpan.TicksPerDay;
-                
-                builder.Write(fieldId, path,  dateOnlyTextual, ticks, ticks);
+
+                builder.Write(fieldId, path, dateOnlyBuffer.Slice(0, dateOnlyLength), ticks, ticks);
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 break;
-            
+            }
+
             case ValueType.TimeOnly:
+            {
                 var timeOnly = ((TimeOnly)value);
-                var timeOnlyTextual = timeOnly.ToString(DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture);
-                builder.Write(fieldId, path,  timeOnlyTextual, timeOnly.Ticks, timeOnly.Ticks);
+                Span<byte> timeOnlyBuffer = stackalloc byte[DateTimeFormatBufferSize];
+                if (timeOnly.TryFormat(timeOnlyBuffer, out var timeOnlyLength, DefaultFormat.TimeOnlyFormatToWrite, CultureInfo.InvariantCulture) == false)
+                    throw new InvalidOperationException($"Cannot convert {field.Name} as {nameof(TimeOnly)} into bytes.");
+
+                builder.Write(fieldId, path, timeOnlyBuffer.Slice(0, timeOnlyLength), timeOnly.Ticks, timeOnly.Ticks);
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
 
                 break;
+            }
             
             case ValueType.Convertible:
                 var iConvertible = (IConvertible)value;

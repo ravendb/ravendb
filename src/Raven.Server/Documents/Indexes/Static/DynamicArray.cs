@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (string.CompareOrdinal(binder.Name, lengthName) == 0 ||
                 string.CompareOrdinal(binder.Name, countName) == 0)
             {
-                result = _inner.Count();
+                result = Count();
                 return true;
             }
 
@@ -77,10 +77,24 @@ namespace Raven.Server.Documents.Indexes.Static
             if (!(indexes[0] is int i))
                 i = Convert.ToInt32(indexes[0]);
 
-            var resultObject = _inner.ElementAt(i);
+            var resultObject = GetInnerElementAt(i);
 
             result = TypeConverter.ToDynamicType(resultObject);
             return true;
+        }
+
+        private object GetInnerElementAt(int index)
+        {
+            // a blittable array has direct access by index, no need to enumerate (and materialize) the items before it
+            if (_inner is BlittableJsonReaderArray array)
+            {
+                if ((uint)index >= (uint)array.Length)
+                    throw new ArgumentOutOfRangeException(nameof(index), index, "Index was out of range. Must be non-negative and less than the size of the collection.");
+
+                return array[index];
+            }
+
+            return _inner.ElementAt(index);
         }
 
         public override bool TryConvert(ConvertBinder binder, out object result)
@@ -88,12 +102,12 @@ namespace Raven.Server.Documents.Indexes.Static
             if (binder.ReturnType.IsArray)
             {
                 var elementType = binder.ReturnType.GetElementType();
-                var count = _inner.Count();
+                var count = Count();
                 var array = Array.CreateInstance(elementType, count);
 
                 for (var i = 0; i < count; i++)
                 {
-                    var item = _inner.ElementAt(i);
+                    var item = GetInnerElementAt(i);
                     if (elementType == typeof(string) && (item is LazyStringValue || item is LazyCompressedStringValue))
                         array.SetValue(item.ToString(), i);
                     else
@@ -116,29 +130,24 @@ namespace Raven.Server.Documents.Indexes.Static
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public IEnumerator<object> GetEnumerator()
         {
+            // a blittable array gives us its struct enumerator directly, without boxing it via IEnumerable<object>
+            if (_inner is BlittableJsonReaderArray blittableArray)
+                return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(blittableArray.Items);
+
             var enumerator = _inner.GetEnumerator();
-            switch (enumerator)
-            {
-                case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
-                    return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
-            }
-            return new DynamicArrayIterator(_inner);
+            if (enumerator is BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae)
+                return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
+
+            return new DynamicArrayIterator(enumerator);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         IEnumerator IEnumerable.GetEnumerator()
         {
-            var enumerator = _inner.GetEnumerator();
-            switch (enumerator)
-            {
-                case BlittableJsonReaderArray.BlittableJsonArrayEnumerator bjae:
-                    return new DynamicArrayIterator<BlittableJsonReaderArray.BlittableJsonArrayEnumerator>(bjae);
-            }
-            return new DynamicArrayIterator(_inner);
+            return GetEnumerator();
         }
 
-
-        public int Count() => _inner.Count();
+        public int Count() => _inner is BlittableJsonReaderArray array ? array.Length : _inner.Count();
 
         public int Count(Func<dynamic, bool> predicate) => Enumerable.Count(this, predicate);
 
@@ -700,7 +709,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public dynamic ElementAt(int index)
         {
-            return Enumerable.ElementAt(this, index);
+            return TypeConverter.ToDynamicType(GetInnerElementAt(index));
         }
 
         public dynamic ElementAtOrDefault(int index)
@@ -825,9 +834,9 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             private IEnumerator<object> _inner;
 
-            public DynamicArrayIterator(IEnumerable<object> items)
+            public DynamicArrayIterator(IEnumerator<object> inner)
             {
-                _inner = items.GetEnumerator();
+                _inner = inner;
                 Current = null;
             }
 
@@ -850,7 +859,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
             object IEnumerator.Current => Current;
 
-            public void Dispose() { }
+            public void Dispose()
+            {
+                _inner.Dispose();
+            }
         }
 
         public override bool Equals(object obj)

@@ -19,22 +19,21 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
 
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
+        private readonly BlittableJsonDocumentBuilder.UsageMode _mode;
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
         public BlittableJsonWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
-            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null,
-            LazyStringValue idField = null, LazyStringValue keyField = null, LazyStringValue collectionField = null)
+            BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null)
         {
-            _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
-            _manualBlittableJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
-            _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();
+            _mode = mode ?? BlittableJsonDocumentBuilder.UsageMode.None;
+            _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, _mode, writer);
             _documentInfo = documentInfo;
-            _first = true;
+            Renew();
 
-            _metadataId = idField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id);
-            _metadataKey = keyField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
-            _metadataCollection = collectionField ?? context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
+            _metadataId = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id);
+            _metadataKey = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            _metadataCollection = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection);
         }
 
         public override void WriteStartObject()
@@ -564,6 +563,17 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         public BlittableJsonReaderObject CreateReader()
         {
             return _manualBlittableJsonDocumentBuilder.CreateReader();
+        }
+
+        /// <summary>
+        /// Starts a new document, discarding whatever wasn't finalized and read with <see cref="CreateReader"/>
+        /// (the reader owns the buffer of its document, so a new one is taken from the context)
+        /// </summary>
+        public void Renew()
+        {
+            _manualBlittableJsonDocumentBuilder.Reset(_mode);
+            _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();
+            _first = true;
         }
 
         public override void WriteValue(Guid value)

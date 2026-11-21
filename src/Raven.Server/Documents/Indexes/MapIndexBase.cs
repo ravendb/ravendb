@@ -234,6 +234,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (shouldRollbackCurrentDocument)
                     writer.Value.Delete(indexItem.LowerId, stats);
+
+                // all outputs of the source document were written (or dropped), so the fields created for them by CreateField can be reused
+                // by the next document; not after each output, since a created field (e.g. bound with `let`) can be shared by all outputs of the document
+                CurrentIndexingScope.Current?.ResetCreatedFieldPositions();
             }
         }
 

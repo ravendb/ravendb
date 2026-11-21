@@ -193,6 +193,99 @@ namespace Sparrow.Json
             return _lazyStringTempBuffer;
         }
 
+#if NETCOREAPP3_1_OR_GREATER
+
+        // keeps the per-thread temp buffer below the large object heap threshold (85,000 bytes)
+        private const int MaxLengthToDecodeInTempBuffer = 32 * 1024;
+
+        /// <summary>
+        /// Decodes the value into the per-thread temp buffer, so string-like searches can run on it without materializing a string.
+        /// Longer values are materialized (and cached) as a string instead, so the temp buffer doesn't grow to the largest value seen.
+        /// The returned span is valid only until the next use of the temp buffer.
+        /// </summary>
+        private ReadOnlySpan<char> DecodeToTempBuffer()
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            var length = Length;
+            if (length == 0)
+                return ReadOnlySpan<char>.Empty;
+
+            if (length > MaxLengthToDecodeInTempBuffer)
+                return ToString().AsSpan();
+
+            var buffer = GetlazyStringTempBuffer(length);
+            fixed (char* pChars = buffer)
+                Encodings.Utf8.GetChars(Buffer, Size, pChars, length);
+
+            return new ReadOnlySpan<char>(buffer, 0, length);
+        }
+
+        private int IndexOfInTempBuffer(string value, int startIndex, int count, StringComparison comparisonType)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (comparisonType == StringComparison.Ordinal && startIndex == 0 && count == Length &&
+                TryIndexOfOrdinalInBytes(value, out var indexInBytes))
+                return indexInBytes;
+
+            var chars = DecodeToTempBuffer();
+
+            if ((uint)startIndex > (uint)chars.Length)
+                throw new ArgumentOutOfRangeException(nameof(startIndex), startIndex, "Index was out of range. Must be non-negative and less than or equal to the size of the string.");
+
+            if ((uint)count > (uint)(chars.Length - startIndex))
+                throw new ArgumentOutOfRangeException(nameof(count), count, "Count must be positive and count must refer to a location within the string.");
+
+            var index = chars.Slice(startIndex, count).IndexOf(value.AsSpan(), comparisonType);
+            return index < 0 ? -1 : index + startIndex;
+        }
+
+        /// <summary>
+        /// Ordinal search for the value in the UTF-8 bytes of this string, without decoding them: the value is usually much
+        /// shorter, so we encode it instead. A UTF-8 encoding is unique, so an ordinal match of the chars is a match of the bytes.
+        /// Returns false when the value has unpaired surrogates (they can't be encoded exactly), then the caller has to search the chars.
+        /// </summary>
+        [SkipLocalsInit]
+        private bool TryIndexOfOrdinalInBytes(string value, out int index)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            var bytes = new ReadOnlySpan<byte>(Buffer, Size);
+
+            int byteIndex;
+            if (value.Length == 1 && value[0] < 0x80)
+            {
+                // a single ASCII char is a single byte
+                byteIndex = bytes.IndexOf((byte)value[0]);
+            }
+            else
+            {
+                // short values (the usual case) are encoded on the stack, a UTF-8 char takes at most 3 bytes per UTF-16 char
+                const int maxLengthToEncodeOnStack = 64;
+                Span<byte> utf8 = value.Length <= maxLengthToEncodeOnStack
+                    ? stackalloc byte[maxLengthToEncodeOnStack * 3]
+                    : GetLazyStringTempComparisonBuffer(value.Length);
+
+                if (System.Text.Unicode.Utf8.FromUtf16(value, utf8, out _, out var written, replaceInvalidSequences: false) != System.Buffers.OperationStatus.Done)
+                {
+                    index = -1;
+                    return false;
+                }
+
+                byteIndex = bytes.IndexOf(utf8.Slice(0, written));
+            }
+
+            // the caller expects a position in chars
+            index = byteIndex <= 0 ? byteIndex : Encodings.Utf8.GetCharCount(Buffer, byteIndex);
+            return true;
+        }
+
+#endif
+
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
         {
             // Inlined from Encodings.Utf8.GetMaxByteCount(charCount) to avoid virtual dispatch indirection.
@@ -565,7 +658,11 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
+#if NETCOREAPP3_1_OR_GREATER
+            return DecodeToTempBuffer().IndexOf(value) >= 0;
+#else
             return ToString().Contains(value);
+#endif
         }
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -578,7 +675,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value, comparisonType);
 
-            return ToString().Contains(value, comparisonType);
+            return DecodeToTempBuffer().IndexOf(new ReadOnlySpan<char>(in value), comparisonType) >= 0;
         }
 
 #endif
@@ -591,7 +688,21 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value);
 
+#if NETCOREAPP3_1_OR_GREATER
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            // every char takes at least one byte
+            if (value.Length > Size)
+                return false;
+
+            if (TryIndexOfOrdinalInBytes(value, out var index))
+                return index >= 0;
+
+            return DecodeToTempBuffer().IndexOf(value.AsSpan()) >= 0;
+#else
             return ToString().Contains(value);
+#endif
         }
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -604,7 +715,20 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.Contains(value, comparisonType);
 
-            return ToString().Contains(value, comparisonType);
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            if (comparisonType == StringComparison.Ordinal)
+            {
+                // every char takes at least one byte
+                if (value.Length > Size)
+                    return false;
+
+                if (TryIndexOfOrdinalInBytes(value, out var index))
+                    return index >= 0;
+            }
+
+            return DecodeToTempBuffer().IndexOf(value.AsSpan(), comparisonType) >= 0;
         }
 
 #endif
@@ -615,7 +739,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             if (_string != null)
-                return _string.EndsWith(value);
+                return _string.EndsWith(value, StringComparison.Ordinal);
 
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -642,7 +766,17 @@ namespace Sparrow.Json
 
         public bool EndsWith(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.EndsWith(value, comparisonType);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().EndsWith(value.AsSpan(), comparisonType);
+#else
             return ToString().EndsWith(value, comparisonType);
+#endif
         }
 
 #if !NETSTANDARD1_3
@@ -674,7 +808,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.IndexOf(value, comparisonType);
 
-            return ToString().IndexOf(value, comparisonType);
+            return DecodeToTempBuffer().IndexOf(new ReadOnlySpan<char>(in value), comparisonType);
         }
 
 #endif
@@ -722,32 +856,76 @@ namespace Sparrow.Json
 
         public int IndexOf(string value)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, StringComparison.Ordinal);
+
+            return IndexOfInTempBuffer(value, 0, Length, StringComparison.Ordinal);
+#else
             return ToString().IndexOf(value, StringComparison.Ordinal);
+#endif
         }
 
         public int IndexOf(string value, int startIndex)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex);
+
+            // like string.IndexOf(string, int), this is a culture-sensitive search
+            return IndexOfInTempBuffer(value, startIndex, Length - startIndex, StringComparison.CurrentCulture);
+#else
             return ToString().IndexOf(value, startIndex);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, int count)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count);
+
+            // like string.IndexOf(string, int, int), this is a culture-sensitive search
+            return IndexOfInTempBuffer(value, startIndex, count, StringComparison.CurrentCulture);
+#else
             return ToString().IndexOf(value, startIndex, count);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, comparisonType);
+
+            return IndexOfInTempBuffer(value, startIndex, Length - startIndex, comparisonType);
+#else
             return ToString().IndexOf(value, startIndex, comparisonType);
+#endif
         }
 
         public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, startIndex, count, comparisonType);
+
+            return IndexOfInTempBuffer(value, startIndex, count, comparisonType);
+#else
             return ToString().IndexOf(value, startIndex, count, comparisonType);
+#endif
         }
 
         public int IndexOf(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.IndexOf(value, comparisonType);
+
+            return IndexOfInTempBuffer(value, 0, Length, comparisonType);
+#else
             return ToString().IndexOf(value, comparisonType);
+#endif
         }
 
         public int IndexOfAny(char[] anyOf)
@@ -827,12 +1005,26 @@ namespace Sparrow.Json
             if (_string != null)
                 return _string.LastIndexOf(value, StringComparison.Ordinal);
 
+#if NETCOREAPP3_1_OR_GREATER
+            return LastIndexOf(value, StringComparison.Ordinal);
+#else
             return ToString().LastIndexOf(value, StringComparison.Ordinal);
+#endif
         }
 
         public int LastIndexOf(string value, StringComparison comparisonType)
         {
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.LastIndexOf(value, comparisonType);
+
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            return DecodeToTempBuffer().LastIndexOf(value.AsSpan(), comparisonType);
+#else
             return ToString().LastIndexOf(value, comparisonType);
+#endif
         }
 
         public int LastIndexOf(string value, int startIndex)
@@ -1032,7 +1224,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             if (_string != null)
-                return _string.StartsWith(value);
+                return _string.StartsWith(value, StringComparison.Ordinal);
 
             if (value == null)
                 throw new ArgumentNullException(nameof(value));
@@ -1079,7 +1271,14 @@ namespace Sparrow.Json
             if (value.Length > Size)
                 return false;
 
+#if NETCOREAPP3_1_OR_GREATER
+            if (_string != null)
+                return _string.StartsWith(value, comparisionType);
+
+            return DecodeToTempBuffer().StartsWith(value.AsSpan(), comparisionType);
+#else
             return ToString().StartsWith(value, comparisionType);
+#endif
         }
 
 #if !NETSTANDARD1_3
