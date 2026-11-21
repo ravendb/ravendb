@@ -404,7 +404,9 @@ public static class EmbedEndpoints
         if (allowedOrigins.Length == 0)
             return true;
 
-        // A same-origin fetch from inside the frame sends no Origin, and neither does a CLI smoke test.
+        // The widget's POST uses fetch's default CORS mode and sends the widget page's own Origin,
+        // which the self-origin check below accepts.
+        // Non-browser callers, such as CLI smoke tests, may omit the Origin header.
         var origin = request.Headers.Origin.ToString();
         if (string.IsNullOrEmpty(origin))
             return true;

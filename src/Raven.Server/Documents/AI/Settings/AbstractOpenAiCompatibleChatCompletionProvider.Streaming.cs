@@ -106,13 +106,9 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
         if (state.RefusalText is { Length: > 0 })
             RefusedToAnswerException.Throw(state.RefusalText.ToString(), "[streaming]", state.StopReason, GetRequestId(response.Headers));
 
-        var lengthTruncated = string.Equals(state.StopReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase);
-
-        // Runs before tool calls are returned. Partial plain text is still an answer; a cut structured object or a cut
-        // tool call is not.
-        if (lengthTruncated && (state.StructuredOutput || hasToolCalls))
+        if (string.Equals(state.StopReason, ChatCompletionClient.Constants.ResponseFields.FinishReasonLength, StringComparison.OrdinalIgnoreCase))
         {
-            var what = hasToolCalls ? "tool call" : "structured answer";
+            var what = hasToolCalls ? "tool call" : state.StructuredOutput ? "structured answer" : "answer";
             throw new TooManyTokensException(
                 $"The model response was truncated (finish_reason='length') before producing a complete {what}.{ReasoningPreview(state)}")
             {
@@ -139,6 +135,13 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider
             }
 
             var fullText = state.RawText?.ToString() ?? string.Empty;
+
+            // Stored and re-sent with the whole history on every later turn, so accepting it kills the conversation.
+            if (fullText.Length == 0)
+                throw UnexpectedResponseException.Create(
+                    $"No response content (finish_reason='{state.StopReason}')",
+                    response, content: (string)null, GetRequestId(response.Headers));
+
             return new AiResponse(AiResponseType.Result)
             {
                 Message = CreateAssistantMessage(streamingCtx, fullText, "persisted/streamed/message"),

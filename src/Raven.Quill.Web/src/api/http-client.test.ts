@@ -1,5 +1,5 @@
 import type { ApiErrorResponse } from "@/api/generated/server-api";
-import { createApiClient, isApiError, type ApiTransport } from "@/api/http-client";
+import { createApiClient, isApiError, isQuillSessionExpired, type ApiTransport } from "@/api/http-client";
 import { describe, expect, it } from "vitest";
 
 function respondWith(body: unknown, status = 400): ApiTransport {
@@ -28,6 +28,33 @@ const MAP_ERRORS = [
     "Table 'Customer': property name 'LanguageId' from linked table 'Language' conflicts with a column mapping or another embedded/linked table",
     "Table 'Customer': property name 'CurrencyId' from linked table 'Currency' conflicts with a column mapping or another embedded/linked table",
 ];
+
+async function refusalOf(body: string, contentType: string) {
+    const client = createApiClient({
+        transport: () => Promise.resolve(new Response(body, { status: 401, headers: { "Content-Type": contentType } })),
+    });
+
+    return client.post("/setup/migration/plan/get", {}).catch((error: unknown) => error);
+}
+
+describe("isQuillSessionExpired", () => {
+    it("recognizes Quill's bare 401 session challenge", async () => {
+        expect(isQuillSessionExpired(await refusalOf("", "text/plain"))).toBe(true);
+    });
+
+    it("does not read the AI service's relayed refusals as an expired session", async () => {
+        const consentError = await refusalOf('{"Status":"ConsentRequired"}', "application/json");
+        const licenseError = await refusalOf("Unauthorized", "text/plain");
+        const plannerError = await refusalOf(
+            '{"error":"The AI service refused the request: consent is required or the license was not accepted."}',
+            "application/json",
+        );
+
+        expect(isQuillSessionExpired(consentError)).toBe(false);
+        expect(isQuillSessionExpired(licenseError)).toBe(false);
+        expect(isQuillSessionExpired(plannerError)).toBe(false);
+    });
+});
 
 describe("api error message", () => {
     it("surfaces the errors list when error is null", async () => {

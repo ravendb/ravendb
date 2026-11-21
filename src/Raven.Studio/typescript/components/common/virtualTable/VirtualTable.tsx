@@ -8,6 +8,7 @@ import VirtualTableCells from "./partials/VirtualTableCells";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 import classNames from "classnames";
 import { values } from "lodash";
+import { NumberCondition, parseNumberCondition } from "./utils/numberFilterUtils";
 
 // Chrome/Edge can render up to 838 859 rows in a table
 // Firefox only up to 223 695 rows
@@ -97,7 +98,11 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                             data-index={virtualRow.index}
                             ref={(node) => rowVirtualizer.measureElement(node)}
                             key={row.id}
-                            onClick={onRowClick ? () => onRowClick(row) : undefined}
+                            onClick={
+                                onRowClick
+                                    ? (e) => e.currentTarget.contains(e.target as Node) && onRowClick(row)
+                                    : undefined
+                            }
                             style={{
                                 transform: `translateY(${virtualRow.start}px)`,
                                 height: `${virtualRow.size}px`,
@@ -113,15 +118,29 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
     );
 }
 
-// Allows filtering by object content
-const stringifyIncludesFilter: FilterFn<any> = (row, columnId, value: string): boolean => {
+interface ResolvedFilter {
+    lowercaseFilter: string;
+    numberCondition: NumberCondition | null;
+}
+
+// Allows filtering by object content and numbers by conditions like "> 100"
+const stringifyIncludesFilter: FilterFn<any> = (row, columnId, filter: ResolvedFilter): boolean => {
     const rowsToCheck = [row, ...row.getParentRows()];
-    return rowsToCheck.some((r) => isRowIncludesValue(r, columnId, value));
+    return rowsToCheck.some((r) => isRowIncludesValue(r, columnId, filter));
 };
 
-function isRowIncludesValue<T>(row: Row<T>, columnId: string, value: string): boolean {
+stringifyIncludesFilter.resolveFilterValue = (value: string): ResolvedFilter => ({
+    lowercaseFilter: value.toLowerCase(),
+    numberCondition: parseNumberCondition(value),
+});
+
+function isRowIncludesValue<T>(row: Row<T>, columnId: string, filter: ResolvedFilter): boolean {
     const cellValue = row.getValue(columnId);
-    const lowercaseFilter = value.toLowerCase();
+    const { lowercaseFilter, numberCondition } = filter;
+
+    if (typeof cellValue === "number" && numberCondition) {
+        return numberCondition(cellValue);
+    }
 
     if (typeof cellValue === "object") {
         return JSON.stringify(values(cellValue)).toLowerCase().includes(lowercaseFilter);

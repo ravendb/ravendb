@@ -128,87 +128,11 @@
     }
 }
 
-// Time entry dropdown: three click-to-pick columns (Hour / Minute / Second) below the typed
-// HH:mm:ss.SSS field. Rendered inline inside .ts-range-picker__input-icon (position: relative).
 .ts-time-picker {
-    &__menu {
-        position: absolute;
-        top: calc(100% + 2px);
-        left: 0;
-        right: 0;
-        z-index: 6;
-        overflow: hidden;
-        border: 1px solid colors.$border-color-light-var;
-        border-radius: sizes.$border-radius-sm;
-        background-color: colors.$panel-bg-1-var;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-    }
-
-    &__columns {
-        display: flex;
-    }
-
-    &__col {
-        flex: 1 1 0;
+    &__menu.column-picker {
+        width: auto;
         min-width: 0;
-
-        &:not(:last-child) {
-            border-right: 1px solid colors.$border-color-light-var;
-        }
-    }
-
-    &__col &__list {
-        max-height: 160px;
-        margin: 0;
-        padding: 4px;
-        // The browser's default `ul { padding-inline-start: 40px }` is a logical
-        // property, so it wins over the `padding` shorthand above and pushes the
-        // numbers to the right. Reset it explicitly on both sides.
-        padding-inline-start: 4px;
-        padding-inline-end: 4px;
-        overflow-y: auto;
-        list-style: none;
-        text-align: center;
-
-        // Take the scrollbar out of the layout flow so the numbers sit on the
-        // column's true center axis instead of being pushed left by its width.
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-
-        &::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-    }
-
-    // Styled to match the basic date picker's day cells (see ReactDatepicker.scss).
-    // Nested under &__list to raise specificity above the global `.bs5 button` reset
-    // (which sets border-radius: 0), so the rounded corners actually take effect.
-    &__list &__option {
-        display: block;
-        width: 100%;
-        margin: 0 auto;
-        padding: 4px 0;
-        border: 0;
-        border-radius: sizes.$border-radius-sm;
-        background-color: transparent;
-        color: colors.$text-color-var;
-        text-align: center;
-        cursor: pointer;
-
-        &:hover {
-            background-color: colors.$panel-bg-2-var;
-        }
-    }
-
-    &__list &__option--active {
-        background-color: var(--faded-primary);
-        color: colors.$primary-var;
-
-        &:hover {
-            background-color: colors.$primary-var;
-            color: colors.$white;
-        }
+        right: 0;
     }
 
     &__footer {

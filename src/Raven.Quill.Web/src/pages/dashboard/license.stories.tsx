@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { sampleLicense, settingsMocks } from "@/mocks/settings-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { DashboardLicense } from "./license";
 
 const meta = {
@@ -20,43 +21,39 @@ export const Default: Story = {};
 
 export const Expired: Story = {
     parameters: {
-        msw: {
-            // Overriding a service replaces its whole handler array, so keep the
-            // usage endpoint and only swap the license for an expired one.
-            handlers: {
-                settings: [
-                    settingsMocks.feedback(),
-                    settingsMocks.license({
-                        ...sampleLicense,
-                        response: {
-                            ...sampleLicense.response,
-                            expired: true,
-                            expiration: "2026-06-14T00:00:00Z",
-                        },
-                    }),
-                    settingsMocks.usage(),
-                ],
-            },
-        },
+        // Overriding a service replaces its whole handler array, so keep the
+        // usage endpoint and only swap the license for an expired one.
+        msw: mockHandlers({
+            settings: [
+                settingsMocks.feedback(),
+                settingsMocks.license({
+                    ...sampleLicense,
+                    response: {
+                        ...sampleLicense.response,
+                        expired: true,
+                        expiration: "2026-06-14T00:00:00Z",
+                    },
+                }),
+                settingsMocks.usage(),
+            ],
+        }),
     },
 };
 
 export const ConnectivityIssue: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                settings: [
-                    settingsMocks.feedback(),
-                    settingsMocks.license({
-                        ...sampleLicense,
-                        connectivity: {
-                            statusCode: "ServiceUnavailable",
-                            exception: "The licensing API did not respond within 30 seconds.",
-                        },
-                    }),
-                    settingsMocks.usage(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            settings: [
+                settingsMocks.feedback(),
+                settingsMocks.license({
+                    ...sampleLicense,
+                    connectivity: {
+                        statusCode: "ServiceUnavailable",
+                        exception: "The licensing API did not respond within 30 seconds.",
+                    },
+                }),
+                settingsMocks.usage(),
+            ],
+        }),
     },
 };

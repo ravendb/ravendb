@@ -4,9 +4,6 @@ namespace Raven.Quill.AiHelper;
 
 public interface IAiHelperClient
 {
-    Task<SuggestCdcInternalResult> SuggestCdcAsync(
-        object? schema, object? samples, string prompt, CancellationToken ct);
-
     Task<SuggestAiAgentInternalResult> SuggestAiAgentAsync(
         CdcSinkConfiguration cdcConfig, object? collectionsSample, string mode, string? prompt, CancellationToken ct);
 

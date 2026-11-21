@@ -197,6 +197,9 @@ namespace Raven.Client.Documents.Operations.ETL
             if (config.Disabled != Disabled)
                 differences |= EtlConfigurationCompareDifferences.ConfigurationDisabled;
 
+            if (config.AllowEtlOnNonEncryptedChannel != AllowEtlOnNonEncryptedChannel)
+                differences |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+
             return differences;
         }
 

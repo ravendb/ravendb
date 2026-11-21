@@ -1,10 +1,11 @@
-﻿import React, { HTMLAttributes, ReactNode } from "react";
+﻿import React, { HTMLAttributes, ReactNode, Ref } from "react";
 import classNames from "classnames";
 import "./StickyHeader.scss";
 
 interface StickyHeaderProps extends HTMLAttributes<HTMLDivElement> {
     children: ReactNode;
     flush?: boolean;
+    ref?: Ref<HTMLDivElement>;
 }
 
 export function StickyHeader({ flush, children, className, ...rest }: StickyHeaderProps) {

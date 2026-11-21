@@ -20,7 +20,7 @@
     <PackageVersion Include="CloudNative.CloudEvents.Kafka" Version="3.9.0" />
     <PackageVersion Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.9.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.16.0" />
-    <PackageVersion Include="CsvHelper" Version="33.1.0" />
+    <PackageVersion Include="CsvHelper" Version="34.0.0" />
     <PackageVersion Include="Discord.Net.WebSocket" Version="3.20.2" />
     <PackageVersion Include="Elastic.Clients.Elasticsearch" Version="9.5.3" />
     <PackageVersion Include="FluentFTP" Version="55.1.0" />
@@ -72,7 +72,7 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.11.0" />
-    <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+    <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="4.0.1" />
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.1" />
     <PackageVersion Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.31.1" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
@@ -98,11 +98,11 @@
     <PackageVersion Include="NLog.Web.AspNetCore" Version="5.5.0" />
     <PackageVersion Include="NodaTime" Version="3.3.7" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
-    <PackageVersion Include="NuGet.Commands" Version="7.9.0" />
-    <PackageVersion Include="NuGet.PackageManagement" Version="7.9.0" />
-    <PackageVersion Include="NuGet.ProjectModel" Version="7.9.0" />
-    <PackageVersion Include="NuGet.Protocol" Version="7.9.0" />
-    <PackageVersion Include="NuGet.Resolver" Version="7.9.0" />
+    <PackageVersion Include="NuGet.Commands" Version="8.0.0" />
+    <PackageVersion Include="NuGet.PackageManagement" Version="8.0.0" />
+    <PackageVersion Include="NuGet.ProjectModel" Version="8.0.0" />
+    <PackageVersion Include="NuGet.Protocol" Version="8.0.0" />
+    <PackageVersion Include="NuGet.Resolver" Version="8.0.0" />
     <PackageVersion Include="OllamaSharp" Version="5.5.2" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
@@ -119,7 +119,7 @@
     <PackageVersion Include="Raven.Pal" Version="7.0.924" />
     <PackageVersion Include="RavenDB.Zstd.Native" Version="1.5.7" />
     <PackageVersion Include="SharpCompress" Version="0.50.8" />
-    <PackageVersion Include="SlackNet" Version="0.18.0" />
+    <PackageVersion Include="SlackNet" Version="0.20.0" />
     <PackageVersion Include="Snappier" Version="1.3.1" />
     <PackageVersion Include="Snowflake.Data" Version="6.5.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />

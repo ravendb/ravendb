@@ -2,6 +2,7 @@
 // the array-level error message read below.
 "use no memo";
 
+import type { ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
     get,
@@ -14,10 +15,12 @@ import {
     type FieldValues,
     type UseFieldArrayProps,
 } from "react-hook-form";
+import { FormFieldLabel } from "@/components/form/form-field-label";
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
-import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { Field, FieldDescription } from "@/components/shadcn/ui/field";
 import { Text } from "@/components/typography";
+import { cn } from "@/lib/utils";
 
 type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPath<TFieldValues>> = UseFieldArrayProps<
     TFieldValues,
@@ -31,6 +34,7 @@ type FormStringListProps<TFieldValues extends FieldValues, TName extends ArrayPa
     fieldName: (index: number) => FieldPath<TFieldValues>;
     itemLabel?: (index: number) => string;
     label: string;
+    labelAddon?: ReactNode;
     placeholder?: string;
 };
 
@@ -44,6 +48,7 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
     fieldName,
     itemLabel,
     label,
+    labelAddon,
     name,
     placeholder,
 }: FormStringListProps<TFieldValues, TName>) {
@@ -58,9 +63,9 @@ export function FormStringList<TFieldValues extends FieldValues, TName extends A
 
     return (
         <Field>
-            <div className="flex items-start justify-between gap-3">
+            <div className={cn("flex justify-between gap-3", description ? "items-start" : "items-center")}>
                 <div>
-                    <FieldLabel>{label}</FieldLabel>
+                    <FormFieldLabel label={label} addon={labelAddon} />
                     {description && <FieldDescription>{description}</FieldDescription>}
                 </div>
                 <Button

@@ -1,7 +1,8 @@
-﻿import { rtlRender } from "test/rtlTestUtils";
+﻿import { rtlRender, within } from "test/rtlTestUtils";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./AboutPage.stories";
 import React from "react";
+import { mockServices } from "test/mocks/services/MockServices";
 
 const {
     AboutPage,
@@ -18,6 +19,10 @@ const {
     EssentialLicense,
     CommunityLicense,
     UsingLatestVersion,
+    DevelopmentBuild,
+    DevelopmentBuildWithoutStableRelease,
+    DevelopmentBuildChangelogUnavailable,
+    ChangelogUnavailable,
 } = composeStories(stories);
 
 describe("AboutPage", function () {
@@ -119,6 +124,33 @@ describe("AboutPage", function () {
 
             expect(await screen.findByText(selectors.versions.close)).toBeInTheDocument();
             expect(await screen.findByText(selectors.versions.updateInstructions)).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Next page" })).toBeEnabled();
+            expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+            expect(screen.queryByText(/6\.0\.7/)).not.toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: "Next page" }));
+
+            expect(await screen.findByText(/6\.0\.7/)).toBeInTheDocument();
+            expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Last page" })).not.toBeInTheDocument();
+        });
+
+        it("keeps the page buttons when a changelog page fails to load", async function () {
+            const { screen, fireClick } = rtlRender(<AboutPage />);
+
+            await fireClick(await screen.findByText(selectors.versions.whatsNew));
+            expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+
+            mockServices.licenseService.getMock("getChangeLog").mockRejectedValueOnce(new Error("failed"));
+            await fireClick(screen.getByRole("button", { name: "Next page" }));
+
+            expect(await screen.findByText("Error loading data")).toBeInTheDocument();
+            expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: "Previous page" }));
+
+            expect(await screen.findByText("Page 1 of 3")).toBeInTheDocument();
+            expect(screen.queryByText("Error loading data")).not.toBeInTheDocument();
         });
 
         it("using latest version", async function () {
@@ -132,6 +164,57 @@ describe("AboutPage", function () {
 
             expect(await screen.findByText(selectors.versions.close)).toBeInTheDocument();
             expect(screen.queryByText(selectors.versions.updateInstructions)).not.toBeInTheDocument();
+        });
+    });
+
+    describe("development build", function () {
+        it("shows the latest stable releases without upgrade badges", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuild />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.developmentBuildNote)).toBeInTheDocument();
+            expect(changelog.getByText(/6\.0\.5/)).toBeInTheDocument();
+            expect(changelog.queryAllByText(selectors.versions.upgradeBadge)).toHaveLength(0);
+            expect(changelog.queryAllByText(selectors.versions.downgradeBadge)).toHaveLength(0);
+        });
+
+        it("explains when there's no stable release yet", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuildWithoutStableRelease />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelog)).toBeInTheDocument();
+        });
+
+        it("shows a neutral message when the changelog isn't returned", async function () {
+            const { screen, fireClick } = rtlRender(<DevelopmentBuildChangelogUnavailable />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelogAvailable)).toBeInTheDocument();
+        });
+
+        it("hides the update check", async function () {
+            const { screen } = rtlRender(<DevelopmentBuild />);
+
+            expect(await screen.findByText(selectors.licenseServer.connected)).toBeInTheDocument();
+            expect(screen.queryByText(selectors.versions.usingLatest)).not.toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: selectors.versions.checkForUpdates })).not.toBeInTheDocument();
+        });
+    });
+
+    describe("changelog", function () {
+        it("shows a neutral message on a stable build when there's no changelog", async function () {
+            const { screen, fireClick } = rtlRender(<ChangelogUnavailable />);
+
+            await fireClick(await screen.findByRole("button", { name: selectors.versions.changelog }));
+            const changelog = within(await screen.findByRole("dialog"));
+
+            expect(await changelog.findByText(selectors.versions.noChangelogAvailable)).toBeInTheDocument();
         });
     });
 
@@ -227,6 +310,12 @@ const selectors = {
         updateInstructions: /Update instructions/,
         close: "Close",
         changelog: /Changelog/,
+        checkForUpdates: /Check for updates/,
+        developmentBuildNote: /Nightly and development builds don't have their own changelog/,
+        noChangelog: /No changelog yet/,
+        noChangelogAvailable: /No changelog available/,
+        upgradeBadge: /Can upgrade|license needs to be upgraded/,
+        downgradeBadge: /Can downgrade|Can't downgrade/,
     },
     agplLicense: /No license - AGPLv3 Restrictions/,
     licenseId: /License ID/,

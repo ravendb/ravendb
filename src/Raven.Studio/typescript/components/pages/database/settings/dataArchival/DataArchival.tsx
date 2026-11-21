@@ -1,4 +1,3 @@
-﻿import { useEffect } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -19,7 +18,9 @@ import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormSwitch, DIRTY_AND_VALIDATE } from "components/common/Form";
+import FrequencyField, { getFrequencySettingsOnToggle } from "components/common/FrequencyField";
+import MaxItemsToProcessField from "components/common/MaxItemsToProcessField";
 import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -36,8 +37,6 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useRavenLink } from "hooks/useRavenLink";
 import moment from "moment";
 
-const defaultItemsToProcess = 65536;
-
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -49,7 +48,7 @@ export default function DataArchival() {
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
         mapToFormData(await databasesService.getDataArchivalConfiguration(databaseName))
     );
-    const { handleSubmit, control, formState, reset, setValue, watch } = useForm<DataArchivalFormData>({
+    const { handleSubmit, control, formState, reset, setValue, getValues } = useForm<DataArchivalFormData>({
         resolver: dataArchivalYupResolver,
         mode: "all",
         defaultValues: asyncGetDataArchivalConfiguration.execute,
@@ -68,36 +67,16 @@ export default function DataArchival() {
         ],
     });
 
-    useEffect(() => {
-        const { unsubscribe } = watch((values, { name }) => {
-            switch (name) {
-                case "isDataArchivalEnabled": {
-                    if (values.isDataArchivalEnabled) {
-                        setValue("isLimitMaxItemsToProcessEnabled", true, { shouldValidate: true });
-                    } else {
-                        setValue("isLimitMaxItemsToProcessEnabled", false, { shouldValidate: true });
-                        setValue("isArchiveFrequencyEnabled", false, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isLimitMaxItemsToProcessEnabled": {
-                    if (values.isLimitMaxItemsToProcessEnabled) {
-                        setValue("maxItemsToProcess", defaultItemsToProcess, { shouldValidate: true });
-                    } else {
-                        setValue("maxItemsToProcess", null, { shouldValidate: true });
-                    }
-                    break;
-                }
-                case "isArchiveFrequencyEnabled": {
-                    if (!values.isArchiveFrequencyEnabled) {
-                        setValue("archiveFrequency", null, { shouldValidate: true });
-                    }
-                    break;
-                }
-            }
+    const resetSettingsOnToggle = (isEnabled: boolean) => {
+        const settings = getFrequencySettingsOnToggle({
+            isEnabled,
+            frequencyInSec: getValues("archiveFrequency"),
+            maxItemsToProcess: getValues("maxItemsToProcess"),
         });
-        return () => unsubscribe();
-    }, [setValue, watch]);
+
+        setValue("archiveFrequency", settings.frequencyInSec, DIRTY_AND_VALIDATE);
+        setValue("maxItemsToProcess", settings.maxItemsToProcess, DIRTY_AND_VALIDATE);
+    };
 
     const onSave: SubmitHandler<DataArchivalFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -105,8 +84,8 @@ export default function DataArchival() {
 
             await databasesService.saveDataArchivalConfiguration(databaseName, {
                 Disabled: !formData.isDataArchivalEnabled,
-                ArchiveFrequencyInSec: formData.isArchiveFrequencyEnabled ? formData.archiveFrequency : null,
-                MaxItemsToProcess: formData.isLimitMaxItemsToProcessEnabled ? formData.maxItemsToProcess : null,
+                ArchiveFrequencyInSec: formData.archiveFrequency,
+                MaxItemsToProcess: formData.maxItemsToProcess,
             });
 
             messagePublisher.reportSuccess("Data archival configuration saved successfully");
@@ -157,58 +136,26 @@ export default function DataArchival() {
                             <Col className={hasDataArchival ? "" : "item-disabled pe-none"}>
                                 <Card>
                                     <Card.Body>
-                                        <div className="vstack gap-2">
+                                        <div className="vstack gap-3">
                                             <FormSwitch
                                                 name="isDataArchivalEnabled"
                                                 control={control}
                                                 disabled={formState.isSubmitting}
+                                                afterChange={resetSettingsOnToggle}
                                             >
                                                 Enable Data Archival
                                             </FormSwitch>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isArchiveFrequencyEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                >
-                                                    Set custom archive frequency
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="archiveFrequency"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isArchiveFrequencyEnabled
-                                                    }
-                                                    placeholder="Default (60)"
-                                                    addon="seconds"
-                                                />
-                                            </div>
-                                            <div>
-                                                <FormSwitch
-                                                    name="isLimitMaxItemsToProcessEnabled"
-                                                    control={control}
-                                                    className="mb-3"
-                                                    disabled={
-                                                        formState.isSubmitting || !formValues.isDataArchivalEnabled
-                                                    }
-                                                >
-                                                    Set max number of documents to process in a single run
-                                                </FormSwitch>
-                                                <FormInput
-                                                    name="maxItemsToProcess"
-                                                    control={control}
-                                                    type="number"
-                                                    disabled={
-                                                        formState.isSubmitting ||
-                                                        !formValues.isLimitMaxItemsToProcessEnabled
-                                                    }
-                                                    addon="items"
-                                                />
-                                            </div>
+                                            <FrequencyField
+                                                control={control}
+                                                name="archiveFrequency"
+                                                label="Archive frequency"
+                                                disabled={!formValues.isDataArchivalEnabled}
+                                            />
+                                            <MaxItemsToProcessField
+                                                control={control}
+                                                name="maxItemsToProcess"
+                                                disabled={!formValues.isDataArchivalEnabled}
+                                            />
                                         </div>
                                     </Card.Body>
                                 </Card>
@@ -274,19 +221,15 @@ function mapToFormData(dto: DataArchivalConfiguration): DataArchivalFormData {
     if (!dto) {
         return {
             isDataArchivalEnabled: false,
-            isArchiveFrequencyEnabled: false,
             archiveFrequency: null,
-            isLimitMaxItemsToProcessEnabled: false,
             maxItemsToProcess: null,
         };
     }
 
     return {
         isDataArchivalEnabled: !dto.Disabled,
-        isArchiveFrequencyEnabled: dto.ArchiveFrequencyInSec != null,
-        archiveFrequency: dto.ArchiveFrequencyInSec,
-        isLimitMaxItemsToProcessEnabled: dto.MaxItemsToProcess != null,
-        maxItemsToProcess: dto.MaxItemsToProcess,
+        archiveFrequency: dto.ArchiveFrequencyInSec ?? null,
+        maxItemsToProcess: dto.MaxItemsToProcess ?? null,
     };
 }
 

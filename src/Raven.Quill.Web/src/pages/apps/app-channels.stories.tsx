@@ -2,13 +2,14 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { channelsMocks, SAMPLE_DISCORD_CHANNEL_ID, SAMPLE_SLACK_CHANNEL_ID } from "@/mocks/channels-mocks";
 import { embedLinksMocks } from "@/mocks/embed-links-mocks";
+import { mockHandlers } from "@/mocks/default-mocks";
 import { AppChannels } from "./app-channels";
 
 const meta = {
     title: "Apps/Channels",
     component: AppChannels,
     parameters: {
-        page: { title: "Channels" },
+        page: {},
         router: { initialPath: "/apps/demo", path: "/apps/:slug" },
     },
 } satisfies Meta<typeof AppChannels>;
@@ -21,26 +22,22 @@ export const Default: Story = {};
 
 export const Empty: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                channels: [channelsMocks.list([])],
-            },
-        },
+        msw: mockHandlers({
+            channels: [channelsMocks.list([])],
+        }),
     },
 };
 
 export const CreateSlack: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                channels: [
-                    channelsMocks.list(),
-                    channelsMocks.create({ channelId: SAMPLE_SLACK_CHANNEL_ID }),
-                    channelsMocks.update(),
-                    channelsMocks.delete(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            channels: [
+                channelsMocks.list(),
+                channelsMocks.create({ channelId: SAMPLE_SLACK_CHANNEL_ID }),
+                channelsMocks.update(),
+                channelsMocks.delete(),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -63,16 +60,14 @@ export const CreateSlack: Story = {
 
 export const CreateDiscord: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                channels: [
-                    channelsMocks.list(),
-                    channelsMocks.create({ channelId: SAMPLE_DISCORD_CHANNEL_ID }),
-                    channelsMocks.update(),
-                    channelsMocks.delete(),
-                ],
-            },
-        },
+        msw: mockHandlers({
+            channels: [
+                channelsMocks.list(),
+                channelsMocks.create({ channelId: SAMPLE_DISCORD_CHANNEL_ID }),
+                channelsMocks.update(),
+                channelsMocks.delete(),
+            ],
+        }),
     },
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
@@ -96,12 +91,10 @@ export const CreateDiscord: Story = {
 // server's inline error surfaced (e.g. a required parameter left blank server-side).
 export const LinkMintError: Story = {
     parameters: {
-        msw: {
-            handlers: {
-                // Overriding a service replaces its whole handler array, so keep the list
-                // endpoint and only swap the mint one for the failing variant.
-                embedLinks: [embedLinksMocks.list(), embedLinksMocks.mintError()],
-            },
-        },
+        msw: mockHandlers({
+            // Overriding a service replaces its whole handler array, so keep the list
+            // endpoint and only swap the mint one for the failing variant.
+            embedLinks: [embedLinksMocks.list(), embedLinksMocks.mintError()],
+        }),
     },
 };

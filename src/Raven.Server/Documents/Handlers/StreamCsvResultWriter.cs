@@ -7,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
-using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
@@ -17,6 +16,18 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
+    internal static class CsvExportOptions
+    {
+        public static readonly CsvWriterOptions Writer = new()
+        {
+            Separator = ',',
+            // keep the output of CsvHelper 33: it also quoted fields that start or end with whitespace,
+            // and did not require every record to have the field count of the first one
+            Quoting = CsvQuoting.WhenNeededOrWhitespace,
+            ValidateFieldCount = false
+        };
+    }
+
     public abstract class StreamCsvResultWriter<T> : IStreamQueryResultWriter<T>
     {
         private readonly StreamWriter _writer;
@@ -46,10 +57,7 @@ namespace Raven.Server.Documents.Handlers
             response.Headers[Constants.Headers.ContentType] = "text/csv";
 
             _writer = new StreamWriter(stream, Encoding.UTF8);
-            _csvWriter = new CsvWriter(_writer, new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                Delimiter = ","
-            });
+            _csvWriter = CsvWriter.Create(_writer, CsvExportOptions.Writer);
 
             //We need to write headers without the escaping but the path should be escaped
             //so @metadata.@collection should not be written in the header as @metadata\.@collection
@@ -72,7 +80,19 @@ namespace Raven.Server.Documents.Handlers
                 _csvWriter.WriteField(property);
             }
 
-            _csvWriter.NextRecord();
+            EndCsvRecord();
+        }
+
+        private void EndCsvRecord()
+        {
+            // CsvHelper 34 throws on a record without fields, which CsvHelper 33 wrote as an empty line
+            if (_csvWriter.FieldCount > 0)
+                _csvWriter.EndRecord();
+        }
+
+        protected ValueTask EndCsvRecordAsync(CancellationToken token)
+        {
+            return _csvWriter.FieldCount > 0 ? _csvWriter.EndRecordAsync(token) : ValueTask.CompletedTask;
         }
 
         protected bool WellKnownTypeForQuoting(object o) => o is string or LazyStringValue or LazyCompressedStringValue;

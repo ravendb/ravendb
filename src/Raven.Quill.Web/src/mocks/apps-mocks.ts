@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse, ws, type RequestHandler } from "msw";
+import { delay, http, HttpResponse, ws } from "msw";
 import { MS_IN } from "@/lib/time";
 import type {
     AiConnectionString,
@@ -21,12 +21,10 @@ const cdcProgressFeed = ws.link("*/api/apps/:slug/cdc/progress");
 
 export const appsMocks = {
     list: (apps: AppResponse[] = sampleApps) => apiHttp.get("/api/apps", ({ response }) => response(200).json(apps)),
-    // msw-storybook-addon's typings only know RequestHandler, but its runtime forwards
-    // every handler to worker.use, which accepts WebSocket handlers since msw 2.6.
     cdcProgress: (frame: CdcLiveRawFrame = sampleCdcProgressFrame()) =>
         cdcProgressFeed.addEventListener("connection", ({ client }) => {
             client.send(JSON.stringify(frame));
-        }) as unknown as RequestHandler,
+        }),
     cdcGet: (cdc: AppCdcConfigurationResponse = sampleAppCdcConfiguration) =>
         apiHttp.get("/api/apps/{slug}/cdc", ({ response }) => response(200).json(cdc)),
     cdcErrors: (errors: CdcError[] = sampleCdcErrors) =>

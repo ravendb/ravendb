@@ -695,7 +695,11 @@ $filtering-input-bg: $toggle-bg !default;
     }
 }
 
-// Lower opacity for disabled inputs and text addons
+// Lower opacity for disabled inputs, their labels and text addons
+.form-label-disabled {
+    opacity: 0.5;
+}
+
 .form-control {
     &:disabled {
         opacity: 0.5;

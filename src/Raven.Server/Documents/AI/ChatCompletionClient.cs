@@ -99,6 +99,23 @@ public class ChatCompletionClient : IDisposable
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string streamPropertyPath, AiChatRequest request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
+        AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        if (ShouldSendToolsWithoutSchema(request))
+        {
+            var r = await SendToolsWithoutSchemaAsync(streamingContext, request, usage, traces, token);
+            if (r.Type is AiResponseType.Tool)
+                return r;
+
+            request = FinalRequest(streamingContext, request, r);
+        }
+
+        return await SendStreamingAsync(streamingContext, contextPool, streamPropertyPath, request, streamedPropertyCallback, usage, traces?.CreateTrace(), token);
+    }
+
+    private async Task<AiResponse> SendStreamingAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
+        string streamPropertyPath, AiChatRequest request,
+        Func<Memory<byte>, Task> streamedPropertyCallback,
         AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         request = WithoutInternalMessages(request);
@@ -234,7 +251,7 @@ public class ChatCompletionClient : IDisposable
             [Constants.RequestFields.Content] = userPrompt
         }, "system/msg");
 
-        var r = await CompleteAsync(context, new AiChatRequest { Messages = [prompt, user], Schema = schema }, new AiUsage(), trace: null, token);
+        var r = await CompleteAsync(context, new AiChatRequest { Messages = [prompt, user], Schema = schema }, new AiUsage(), traces: null, token);
         return (r.Result.ToString(), r.Message.ToString());
     }
 
@@ -317,7 +334,53 @@ public class ChatCompletionClient : IDisposable
         HandleUnsuccessfulResponse(response, responseContent);
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        if (ShouldSendToolsWithoutSchema(request))
+        {
+            var r = await SendToolsWithoutSchemaAsync(context, request, usage, traces, token);
+            if (r.Type is AiResponseType.Tool)
+                return r;
+
+            request = FinalRequest(context, request, r);
+        }
+
+        return await SendAsync(context, request, usage, traces?.CreateTrace(), token);
+    }
+
+    private bool ShouldSendToolsWithoutSchema(AiChatRequest request) =>
+        _provider.SupportsToolsWithStructuredOutput == false && request.Schema != null && request.UseTools && request.Tools?.Count > 0;
+
+    // the usage is added only when this request ends the turn: AiUsage.GetUsageDifference expects the usage of one request
+    private async Task<AiResponse> SendToolsWithoutSchemaAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        var textUsage = new AiUsage();
+        var r = await SendAsync(context, request with { Schema = null }, textUsage, traces?.CreateTrace(), token);
+        if (r.Type is AiResponseType.Tool)
+            usage.Add(textUsage);
+        return r;
+    }
+
+    // Ollama continues a trailing assistant message instead of answering
+    private static AiChatRequest FinalRequest(JsonOperationContext context, AiChatRequest request, AiResponse textAnswer)
+    {
+        // not textAnswer.Message: an answer taken from 'reasoning' is only in its Modifications, which aren't sent
+        var draft = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleAssistantValue,
+            [Constants.RequestFields.Content] = textAnswer.Result.ToString()
+        }, "assistant/draft");
+
+        var finalAnswerPrompt = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = "Reply now with your final answer as JSON matching the schema."
+        }, "user/final-answer");
+
+        return request with { UseTools = false, Messages = request.Messages.Append(draft).Append(finalAnswerPrompt) };
+    }
+
+    private async Task<AiResponse> SendAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         request = WithoutInternalMessages(request);
         await SimulateRequestFailureIfNeededAsync(request);

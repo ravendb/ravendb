@@ -342,8 +342,8 @@ public class AiAgentDebugTracing : RavenTestBase
         using var session2 = store.OpenAsyncSession();
         var tracesList = (await session2.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
 
-        // At least 2 LLM calls: one that returned a tool call, one with the final answer.
-        Assert.True(tracesList.Count == 2, $"Expected at least 2 trace documents, got {tracesList.Count}");
+        // 2 LLM calls: one that returned a tool call, one with the final answer. Ollama adds its plain-text answer.
+        Assert.Equal(config.AiConnectorType == AiConnectorType.Ollama ? 3 : 2, tracesList.Count);
         Assert.All(tracesList, t => Assert.NotNull(t.RequestBody));
     }
 
@@ -380,8 +380,8 @@ public class AiAgentDebugTracing : RavenTestBase
         using var session = store.OpenAsyncSession();
         var tracesList = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
 
-        // At least 2 LLM calls: one that requested the action tool, one with the final answer.
-        Assert.True(tracesList.Count == 2, $"Expected at least 2 trace documents, got {tracesList.Count}");
+        // 2 LLM calls: one that requested the action tool, one with the final answer. Ollama adds its plain-text answer.
+        Assert.Equal(config.AiConnectorType == AiConnectorType.Ollama ? 3 : 2, tracesList.Count);
         Assert.All(tracesList, t => Assert.NotNull(t.RequestBody));
     }
 

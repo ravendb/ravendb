@@ -35,10 +35,10 @@ function mapToDto(form: RemoteAttachmentsFormDataWithDestinations): RemoteAttach
 
     return {
         Disabled: !form.isRemoteAttachmentsEnabled,
-        CheckFrequencyInSec: form.isCheckFrequencyInSecEnabled ? form.checkFrequencyInSec : null,
-        MaxItemsToProcess: form.isMaxItemsToProcessEnabled ? form.maxItemsToProcess : null,
+        CheckFrequencyInSec: form.checkFrequencyInSec,
+        MaxItemsToProcess: form.maxItemsToProcess,
         Destinations: destinations,
-        ConcurrentUploads: form.isConcurrentUploadsEnabled ? form.concurrentUploads : null,
+        ConcurrentUploads: form.concurrentUploads,
     };
 }
 
@@ -46,12 +46,9 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
     if (!dto) {
         return {
             isRemoteAttachmentsEnabled: false,
-            isCheckFrequencyInSecEnabled: false,
             checkFrequencyInSec: null,
             concurrentUploads: null,
-            isMaxItemsToProcessEnabled: false,
             maxItemsToProcess: null,
-            isConcurrentUploadsEnabled: false,
             destinations: [],
         };
     }
@@ -105,12 +102,9 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
 
     return {
         isRemoteAttachmentsEnabled: !dto.Disabled,
-        isCheckFrequencyInSecEnabled: dto.CheckFrequencyInSec != null,
-        checkFrequencyInSec: dto.CheckFrequencyInSec,
-        isMaxItemsToProcessEnabled: dto.MaxItemsToProcess != null,
-        maxItemsToProcess: dto.MaxItemsToProcess,
-        isConcurrentUploadsEnabled: dto.ConcurrentUploads != null,
-        concurrentUploads: dto.ConcurrentUploads,
+        checkFrequencyInSec: dto.CheckFrequencyInSec ?? null,
+        maxItemsToProcess: dto.MaxItemsToProcess ?? null,
+        concurrentUploads: dto.ConcurrentUploads ?? null,
         destinations,
     };
 }

@@ -25,9 +25,7 @@ export default function useEditAiAgentToolsSection() {
             query: "",
             parametersSchema: "",
             isAllowModelQueries: null,
-            isAllowModelQueriesOverride: false,
             isAddToInitialContext: null,
-            isAddToInitialContextOverride: false,
             isEditing: true,
         });
     };

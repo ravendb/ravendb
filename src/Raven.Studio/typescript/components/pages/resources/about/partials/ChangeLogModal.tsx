@@ -9,7 +9,10 @@ import { LoadError } from "components/common/LoadError";
 import genUtils from "common/generalUtils";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import CustomPagination from "components/common/Pagination";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { RichAlert } from "components/common/RichAlert";
+import { EmptySet } from "components/common/EmptySet";
+import { PageNavigation } from "components/common/PaginationBar";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -24,17 +27,31 @@ export function ChangeLogModal(props: ChangelogModalProps) {
     const { mode, onClose } = props;
     const { licenseService } = useServices();
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const isDevBuild = useAppSelector(clusterSelectors.isDevBuild);
+    const showUpgradeCompatibility = !isCloud && !isDevBuild;
 
     const [page, setPage] = useState(1);
 
     const asyncGetChangeLog = useAsync(
         () => licenseService.getChangeLog((page - 1) * changeLogItemsPerPage, changeLogItemsPerPage),
-        [page]
+        [page],
+        {
+            setLoading: (state) => ({ ...state, loading: true }),
+            setError: (error, state) => ({ ...state, status: "error", loading: false, error }),
+        }
     );
+
+    const changeLog = asyncGetChangeLog.result;
+    const totalResults =
+        mode === "whatsNew" ? changeLog?.TotalBuildsForLatestMajorMinor : changeLog?.TotalBuildsForUserMajorMinor;
+
+    const pagination = changeLog
+        ? { page, totalPages: Math.ceil(totalResults / changeLogItemsPerPage), onPageChange: setPage }
+        : {};
 
     if (asyncGetChangeLog.loading) {
         return (
-            <ModalWrapper onClose={onClose} mode={mode}>
+            <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
                 <LazyLoad active>
                     <h3>VERSION</h3>
                 </LazyLoad>
@@ -48,7 +65,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
 
     if (asyncGetChangeLog.status === "error") {
         return (
-            <ModalWrapper onClose={onClose} mode={mode}>
+            <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
                 <div className="m-3">
                     <LoadError />
                 </div>
@@ -56,29 +73,35 @@ export function ChangeLogModal(props: ChangelogModalProps) {
         );
     }
 
-    if (!asyncGetChangeLog.result) {
-        console.error("Change log isn't available in the Developer build.");
-        return null;
-    }
-
     const versionsList =
         mode === "whatsNew"
-            ? asyncGetChangeLog.result.BuildCompatibilitiesForLatestMajorMinor
-            : asyncGetChangeLog.result.BuildCompatibilitiesForUserMajorMinor;
+            ? changeLog?.BuildCompatibilitiesForLatestMajorMinor
+            : changeLog?.BuildCompatibilitiesForUserMajorMinor;
 
-    const totalResults =
-        mode === "whatsNew"
-            ? asyncGetChangeLog.result.TotalBuildsForLatestMajorMinor
-            : asyncGetChangeLog.result.TotalBuildsForUserMajorMinor;
+    if (!versionsList?.length) {
+        const hasNoStableReleaseYet = isDevBuild && changeLog != null;
+
+        return (
+            <ModalWrapper onClose={onClose} mode={mode}>
+                <div className="well rounded-3 p-4">
+                    <EmptySet>
+                        {hasNoStableReleaseYet
+                            ? "No changelog yet. It appears once this version has a stable release."
+                            : "No changelog available"}
+                    </EmptySet>
+                </div>
+            </ModalWrapper>
+        );
+    }
 
     return (
-        <ModalWrapper
-            onClose={onClose}
-            mode={mode}
-            page={page}
-            totalPages={Math.ceil(totalResults / changeLogItemsPerPage)}
-            onPageChange={setPage}
-        >
+        <ModalWrapper onClose={onClose} mode={mode} {...pagination}>
+            {isDevBuild && (
+                <RichAlert variant="info">
+                    Nightly and development builds don&apos;t have their own changelog. Here are the latest stable
+                    releases instead.
+                </RichAlert>
+            )}
             <div className="changelog-modal">
                 {versionsList.map((build, index) => {
                     const downgradeTooltipId = `canDowngradeTooltip-${index}`;
@@ -101,7 +124,7 @@ export function ChangeLogModal(props: ChangelogModalProps) {
                                     {genUtils.formatUtcDateAsLocal(build.ReleasedAt, genUtils.basicDateFormat)}{" "}
                                 </h3>
                                 <div className="flex-horizontal">
-                                    {!isCloud && (
+                                    {showUpgradeCompatibility && (
                                         <React.Fragment key="upgrade-downgrade-info">
                                             <OverlayTrigger
                                                 overlay={
@@ -199,22 +222,21 @@ function ModalWrapper(
             </Modal.Header>
             <Modal.Body className="vstack gap-4 position-relative">{children}</Modal.Body>
             <Modal.Footer>
+                {mode === "whatsNew" && totalPages != null && (
+                    <PageNavigation page={page} totalPages={totalPages} onPageChange={onPageChange} isSimple />
+                )}
+                <FlexGrow />
                 <Button variant="outline-secondary" onClick={onClose} className="rounded-pill px-3">
                     Close
                 </Button>
-
                 {mode === "whatsNew" && (
-                    <React.Fragment key="footer-part">
-                        <CustomPagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
-                        <FlexGrow />
-                        <Button
-                            variant="outline-primary"
-                            className="rounded-pill px-3"
-                            href={aboutPageUrls.updateInstructions}
-                        >
-                            Update instructions <Icon icon="newtab" margin="m-0" />
-                        </Button>
-                    </React.Fragment>
+                    <Button
+                        variant="outline-primary"
+                        className="rounded-pill px-3"
+                        href={aboutPageUrls.updateInstructions}
+                    >
+                        Update instructions <Icon icon="newtab" margin="m-0" />
+                    </Button>
                 )}
             </Modal.Footer>
         </Modal>

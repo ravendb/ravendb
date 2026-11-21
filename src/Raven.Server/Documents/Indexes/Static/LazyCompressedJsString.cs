@@ -45,5 +45,5 @@ internal sealed class LazyCompressedJsString : JsString
 
     public override char this[int index] => _lazyValue.ToString()[index];
 
-    public override int Length => _lazyValue.UncompressedSize;
+    public override int Length => _lazyValue.ToString().Length;
 }

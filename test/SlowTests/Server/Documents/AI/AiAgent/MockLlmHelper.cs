@@ -13,6 +13,9 @@ using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Sparrow.Json;
+using System.IO;
+using System.Linq;
+using Raven.Server.ServerWide.Context;
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
 
@@ -352,5 +355,64 @@ internal class InjectingConversationHandler(
         {
             Content = new StringContent(injected.Body, Encoding.UTF8, injected.ContentType)
         };
+    }
+}
+
+/// <summary>
+/// Pieces every injected agent test needs: a connection string that reaches no provider, the streaming run
+/// itself, and the exception search the assertions use.
+/// </summary>
+internal static class AiAgentTest
+{
+    /// <summary>The injected tests never reach a provider, so any well-formed connection string will do.</summary>
+    public static AiConnectionString FakeConnection(string name) => new()
+    {
+        Name = name,
+        Identifier = name,
+        ModelType = AiModelType.Chat,
+        OpenAiSettings = new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o")
+    };
+
+    /// <summary>Runs the real server-side streaming path and hands back what it wrote and what it threw.</summary>
+    public static async Task<(string streamed, Exception error)> StreamAsync(
+        Raven.Server.ServerWide.ServerStore serverStore, DocumentDatabase database, AiConnectionString connection,
+        InjectedResponse injected, string streamedProperty, Action<InjectingConversationHandler> initialize)
+    {
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var handler = new InjectingConversationHandler(serverStore, database, connection, injected) { Authentication = null };
+            initialize(handler);
+
+            using var clientStream = new MemoryStream();
+
+            Exception error = null;
+            try
+            {
+                await handler.HandleStreamingRequestAsync(context, clientStream, streamedProperty, CancellationToken.None);
+            }
+            catch (Exception e)
+            {
+                error = e;
+            }
+
+            return (Encoding.UTF8.GetString(clientStream.ToArray()), error);
+        }
+    }
+
+    /// <summary>The agent wraps provider failures, so assertions look for the type anywhere in the chain.</summary>
+    public static bool HasException<T>(Exception e) where T : Exception
+    {
+        while (e != null)
+        {
+            if (e is T)
+                return true;
+
+            if (e is AggregateException aggregate)
+                return aggregate.InnerExceptions.Any(HasException<T>);
+
+            e = e.InnerException;
+        }
+
+        return false;
     }
 }

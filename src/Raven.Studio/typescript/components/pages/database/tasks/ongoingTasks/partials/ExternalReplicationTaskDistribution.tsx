@@ -3,8 +3,10 @@ import {
     OngoingTaskAbstractReplicationNodeInfoDetails,
     OngoingTaskExternalReplicationInfo,
     OngoingTaskInfo,
+    OngoingTaskNodeInfo,
     OngoingTaskReplicationHubInfo,
     OngoingTaskReplicationSinkInfo,
+    OngoingTaskSharedInfo,
 } from "components/models/tasks";
 import {
     ClickableProgress,
@@ -13,7 +15,7 @@ import {
     LocationDistribution,
 } from "components/common/LocationDistribution";
 import { Icon } from "components/common/Icon";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import classNames from "classnames";
 import { ProgressCircle } from "components/common/ProgressCircle";
 import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks/ongoingTasks/partials/ReplicationProgressDetailsSheet";
@@ -135,22 +137,40 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
     );
 }
 
+export function getVisibleNodes<TNodeInfo extends OngoingTaskNodeInfo>(
+    task: OngoingTaskInfo<OngoingTaskSharedInfo, TNodeInfo>
+): TNodeInfo[] {
+    return task.nodesInfo.filter(
+        (nodeInfo) =>
+            nodeInfo.details && task.responsibleLocations.some((l) => databaseLocationComparator(l, nodeInfo.location))
+    );
+}
+
+function useCloseOwnedSheetOnUnmount(isSheetOwner: boolean, closeSheet: () => void) {
+    const isSheetOwnerRef = useRef(isSheetOwner);
+    const closeSheetRef = useRef(closeSheet);
+    isSheetOwnerRef.current = isSheetOwner;
+    closeSheetRef.current = closeSheet;
+
+    useEffect(
+        () => () => {
+            if (isSheetOwnerRef.current) {
+                closeSheetRef.current();
+            }
+        },
+        []
+    );
+}
+
 export function ExternalReplicationTaskDistribution(props: ExternalReplicationTaskDistributionProps) {
     const { task } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
     const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
     const ownerId = useId();
-    const { activeSheetOwnerId } = useViewSheet();
+    const { activeSheetOwnerId, close } = useViewSheet();
+    useCloseOwnedSheetOnUnmount(activeSheetOwnerId === ownerId, close);
 
-    const visibleNodes = useMemo(
-        () =>
-            task.nodesInfo.filter(
-                (nodeInfo) =>
-                    nodeInfo.details &&
-                    task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
-            ),
-        [task]
-    );
+    const visibleNodes = useMemo(() => getVisibleNodes(task), [task]);
 
     const items = visibleNodes.map((nodeInfo, index) => {
         const key = taskNodeInfoKey(task, nodeInfo);
@@ -207,43 +227,99 @@ interface ExternalReplicationTaskProgressProps {
     onClick?: () => void;
 }
 
-export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskProgressProps) {
-    const { nodeInfo, task, onClick } = props;
+type ReplicationNodeInfo = OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>;
 
+export type ReplicationProgressState = "UpToDate" | "Running" | "Disabled" | "Unknown";
+
+export function getReplicationProgressState(
+    task: OngoingTaskInfo,
+    nodeInfo: ReplicationNodeInfo
+): ReplicationProgressState {
     const disabled = task.shared.taskState === "Disabled";
 
     if (!nodeInfo.progress || nodeInfo.progress.length === 0) {
-        return (
-            <ClickableProgress onClick={onClick}>
-                <ProgressCircle icon={disabled ? "stop" : null} state="running" onClick={onClick}>
-                    {disabled ? "Disabled" : "?"}
-                </ProgressCircle>
-            </ClickableProgress>
-        );
+        return disabled ? "Disabled" : "Unknown";
     }
 
     if (nodeInfo.progress.every((x) => x.completed) && task.shared.taskState === "Enabled") {
+        return "UpToDate";
+    }
+
+    return disabled ? "Disabled" : "Running";
+}
+
+const progressCircleLabels: Record<ReplicationProgressState, string> = {
+    UpToDate: "up to date",
+    Running: "Running",
+    Disabled: "Disabled",
+    Unknown: "?",
+};
+
+function getTotalProgress(progress: ReplicationNodeInfo["progress"]): number {
+    const totalItems = progress.reduce((acc, current) => acc + current.global.total, 0);
+    const totalProcessed = progress.reduce((acc, current) => acc + current.global.processed, 0);
+
+    return totalItems === 0 ? 1 : Math.floor((totalProcessed * 100) / totalItems) / 100;
+}
+
+export function ExternalReplicationTaskProgress(props: ExternalReplicationTaskProgressProps) {
+    const { nodeInfo, task, onClick } = props;
+
+    const state = getReplicationProgressState(task, nodeInfo);
+
+    if (state === "UpToDate") {
         return (
             <ClickableProgress onClick={onClick}>
                 <ProgressCircle state="success" icon="check" onClick={onClick}>
-                    up to date
+                    {progressCircleLabels[state]}
                 </ProgressCircle>
             </ClickableProgress>
         );
     }
 
-    // at least one transformation is not completed - let's calculate total progress
-    const totalItems = nodeInfo.progress.reduce((acc, current) => acc + current.global.total, 0);
-    const totalProcessed = nodeInfo.progress.reduce((acc, current) => acc + current.global.processed, 0);
-
-    const percentage = totalItems === 0 ? 1 : Math.floor((totalProcessed * 100) / totalItems) / 100;
+    const hasProgress = nodeInfo.progress?.length > 0;
 
     return (
         <ClickableProgress onClick={onClick}>
-            <ProgressCircle state="running" icon={disabled ? "stop" : null} progress={percentage} onClick={onClick}>
-                {disabled ? "Disabled" : "Running"}
+            <ProgressCircle
+                state="running"
+                icon={state === "Disabled" ? "stop" : null}
+                progress={hasProgress ? getTotalProgress(nodeInfo.progress) : null}
+                onClick={onClick}
+            >
+                {progressCircleLabels[state]}
             </ProgressCircle>
         </ClickableProgress>
+    );
+}
+
+interface ReplicationTaskSummaryProgressProps {
+    task: OngoingTaskInfo;
+    nodesInfo: ReplicationNodeInfo[];
+}
+
+export function ReplicationTaskSummaryProgress({ task, nodesInfo }: ReplicationTaskSummaryProgressProps) {
+    const notUpToDateState = nodesInfo.map((x) => getReplicationProgressState(task, x)).find((x) => x !== "UpToDate");
+
+    if (!notUpToDateState) {
+        return (
+            <ProgressCircle state="success" icon="check" inline>
+                {progressCircleLabels.UpToDate}
+            </ProgressCircle>
+        );
+    }
+
+    const allProgress = nodesInfo.flatMap((x) => x.progress ?? []);
+
+    return (
+        <ProgressCircle
+            state="running"
+            icon={notUpToDateState === "Disabled" ? "stop" : null}
+            progress={allProgress.length > 0 ? getTotalProgress(allProgress) : null}
+            inline
+        >
+            {progressCircleLabels[notUpToDateState]}
+        </ProgressCircle>
     );
 }
 

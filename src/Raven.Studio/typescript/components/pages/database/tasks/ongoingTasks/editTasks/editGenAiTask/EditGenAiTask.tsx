@@ -18,7 +18,7 @@ import EditGenAiTaskSteps from "./partials/EditGenAiTaskSteps";
 import EditGenAiTaskPlayground from "./partials/EditGenAiTaskPlayground";
 import useEditGenAiCancel from "./hooks/useEditGenAiCancel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 
@@ -95,7 +95,7 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
                 await databasesService.saveExpirationConfiguration(databaseName, {
                     Disabled: false,
                     DeleteFrequencyInSec: isCommunityLicense ? TimeInSeconds.Day * 36 : null,
-                    MaxItemsToProcess: defaultItemsToProcess,
+                    MaxItemsToProcess: DEFAULT_ITEMS_TO_PROCESS,
                 });
             }
 
