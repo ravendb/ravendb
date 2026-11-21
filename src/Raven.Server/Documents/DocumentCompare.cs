@@ -35,6 +35,9 @@ namespace Raven.Server.Documents
             
             public static DocumentCompareOptions  MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata =
                 new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: true, compareDataArchivalMetadata: true);
+
+            public static DocumentCompareOptions MergeMetadataCompareDataArchivalMetadata =
+                new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: false, compareDataArchivalMetadata: true);
         }
 
         public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
