@@ -171,12 +171,15 @@ namespace Voron.Data.PostingLists
             else
             {
                 var values = new PostingListBranchPage(s.Page).GetDebugOutput();
-                ValidateValues(s.Page.PageNumber, min, maxExclusive, values.Select(x=>x.Key).ToList());
+                // like the other trees, the first key is not a lower bound, the first child covers the range from its start
+                if (values[0].Key > values[1].Key)
+                    throw new InvalidOperationException("Page " + s.Page.PageNumber + " is not sorted");
+                ValidateValues(s.Page.PageNumber, min, maxExclusive, values.Skip(1).Select(x=>x.Key).ToList());
                 for (int i = 0; i < values.Count; i++)
                 {
                     var v = values[i];
                     var max = i < values.Count - 1 ? values[i + 1].Key : maxExclusive;
-                    VerifyPage(new PostingListCursorState(Llt.GetPage(v.Page)), v.Key, max);
+                    VerifyPage(new PostingListCursorState(Llt.GetPage(v.Page)), i == 0 ? min : v.Key, max);
                 }
             }
         }
@@ -450,6 +453,14 @@ namespace Voron.Data.PostingLists
 
                     var branch = new PostingListBranchPage(parent.Page);
                     Debug.Assert(branch.Header->NumberOfEntries >= 2);
+
+                    if (leafPage.Header->NumberOfEntries == 0)
+                    {
+                        // the left sibling takes over its range, or the right one when it is the first child
+                        RemoveEmptyLeafAtParent();
+                        continue;
+                    }
+
                     var siblingIdx = GetSiblingIndex(parent);
                     var (_, siblingPageNum) = branch.GetByIndex(siblingIdx);
 
@@ -513,26 +524,7 @@ namespace Voron.Data.PostingLists
             // if it is empty, can just replace with the child
             if (current.Header->NumberOfEntries == 0)
             {
-                var leafPage = _llt.GetPage(leafPageNum);
-                
-                long cpy = state.Page.PageNumber;
-                int collapsedLevels = current.Header->CollapsedLevels;
-                leafPage.CopyTo(state.Page);
-                state.Page.PageNumber = cpy;
-
-                if (_pos == 0)
-                {
-                    _state.Depth--; // replaced the root page
-                }
-                else
-                {
-                    // PostingListLeafPageHeader & PostingListBranchPageHeader both have CollapsedLevels at the same offset
-                    var survivor = (PostingListLeafPageHeader*)state.Page.Pointer;
-                    survivor->CollapsedLevels += collapsedLevels + 1;
-                }
-
-                _state.BranchPages--;
-                _llt.FreePage(leafPageNum);
+                ReplaceBranchWithChild(leafPageNum);
                 return;
             }
 
@@ -540,6 +532,58 @@ namespace Voron.Data.PostingLists
             if (current.TryAdd(_llt, newKey, leafPageNum) == false)
                 throw new InvalidOperationException("We just removed two values to add one, should have enough space. This error should never happen");
 
+            MergeWithSiblingBranchIfSmall();
+        }
+
+        private void RemoveEmptyLeafAtParent()
+        {
+            ref var state = ref _stk[_pos];
+            state.Page = _llt.ModifyPage(state.Page.PageNumber);
+
+            var current = new PostingListBranchPage(state.Page);
+            Debug.Assert(current.Header->PageType == ExtendedPageType.PostingListBranch);
+            var (leafKey, leafPageNum) = current.GetByIndex(state.LastSearchPosition);
+
+            _state.LeafPages--;
+            _llt.FreePage(leafPageNum);
+            current.Remove(leafKey);
+
+            if (current.Header->NumberOfEntries == 1)
+            {
+                ReplaceBranchWithChild(current.GetPageByIndex(0));
+                return;
+            }
+
+            MergeWithSiblingBranchIfSmall();
+        }
+
+        private void ReplaceBranchWithChild(long childPageNum)
+        {
+            ref var state = ref _stk[_pos];
+
+            long cpy = state.Page.PageNumber;
+            int collapsedLevels = new PostingListBranchPage(state.Page).Header->CollapsedLevels;
+            _llt.GetPage(childPageNum).CopyTo(state.Page);
+            state.Page.PageNumber = cpy;
+
+            if (_pos == 0)
+            {
+                _state.Depth--; // replaced the root page
+            }
+            else
+            {
+                // PostingListLeafPageHeader & PostingListBranchPageHeader both have CollapsedLevels at the same offset
+                var survivor = (PostingListLeafPageHeader*)state.Page.Pointer;
+                survivor->CollapsedLevels += collapsedLevels + 1;
+            }
+
+            _state.BranchPages--;
+            _llt.FreePage(childPageNum);
+        }
+
+        private void MergeWithSiblingBranchIfSmall()
+        {
+            var current = new PostingListBranchPage(_stk[_pos].Page);
             Debug.Assert(current.Header->NumberOfEntries >= 2);
             
             if (_pos == 0)
@@ -553,7 +597,7 @@ namespace Voron.Data.PostingLists
             
             var gp = new PostingListBranchPage(parent.Page);
             var siblingIdx = GetSiblingIndex(parent);
-            (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
+            var (_, siblingPageNum) = gp.GetByIndex(siblingIdx);
             var siblingPage = _llt.GetPage(siblingPageNum);
             var siblingHeader = (PostingListLeafPageHeader*)siblingPage.Pointer;
             if (siblingHeader->PageType != ExtendedPageType.PostingListBranch || siblingHeader->CollapsedLevels != current.Header->CollapsedLevels)
@@ -565,9 +609,17 @@ namespace Voron.Data.PostingLists
 
             current.Header->CollapsedLevels = Math.Max(current.Header->CollapsedLevels, sibling.Header->CollapsedLevels);
 
+            // entries are added by key, and a page's first key is not its lower bound, the parent's separator is
+            // (see FixedSizeTree, RavenDB-9916). The first entry of the page on the right gets that separator.
+            bool siblingOnTheRight = parent.LastSearchPosition == 0;
+            if (siblingOnTheRight == false)
+                current.ReplaceFirstKey(_llt, gp.GetByIndex(parent.LastSearchPosition).Key);
+
             for (int i = 0; i < sibling.Header->NumberOfEntries; i++)
             {
                 (long key, long page) = sibling.GetByIndex(i);
+                if (i == 0 && siblingOnTheRight)
+                    key = gp.GetByIndex(siblingIdx).Key;
                 if(current.TryAdd(_llt, key, page) == false)
                     throw new InvalidOperationException("Even though we have checked for spare capacity, we run out?! Should not happen ever");
             }
@@ -610,6 +662,7 @@ namespace Voron.Data.PostingLists
             if (_pos == 0 || ShouldPromotePage()) // need to create a root page or restore a collapsed level
             {
                 var branch = WrapPageInBranch();
+                branch.MoveFirstKeyBelow(_llt, separator);
                 if(branch.TryAdd(_llt, separator, newPage) == false)
                     throw new InvalidOperationException("Failed to add to a newly created branch page? Should never happen");
                 return;
@@ -620,6 +673,7 @@ namespace Voron.Data.PostingLists
             Debug.Assert(state.IsLeaf == false);
             state.Page = _llt.ModifyPage(state.Page.PageNumber);
             var parent = new PostingListBranchPage(state.Page);
+            parent.MoveFirstKeyBelow(_llt, separator);
             if (parent.TryAdd(_llt, separator, newPage))
             {
                 // the next extras page is probed and wrapped against the page we push, keep the parent positioned at it

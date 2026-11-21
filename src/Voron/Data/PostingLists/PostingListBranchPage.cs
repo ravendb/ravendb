@@ -139,6 +139,8 @@ namespace Voron.Data.PostingLists
                 index = ~index;
             if (match != 0)
                 index--; // went too far
+            if (index < 0)
+                index = 0; // like the other trees, a key below the first one belongs to the first child
 
             var actual = Math.Min(Header->NumberOfEntries - 1, index);
 
@@ -184,7 +186,35 @@ namespace Voron.Data.PostingLists
             Positions.Slice(index+1).CopyTo(Positions.Slice(index));
             Header->NumberOfEntries--;
         }
-        
+
+        // Initial state: B: [100 -> L1, 200 -> L2, 300 -> L3]
+        // Search does not use the first key of a branch, the first child gets everything below the second key.
+        // So L1 can hold values below 100, say [50 .. 190]. On split, L1 keeps the lower part [50 .. 80], and the
+        // new page L4 gets the upper part [90 .. 190], with 90 as its separator.
+        // TryAdd places entries by key, so 90 would go in front of 100, and L4 would come before L1:
+        //   [90 -> L4, 100 -> L1, 200 -> L2, 300 -> L3]
+        // Setting the first key to 0 first keeps L1 first:
+        //   [0 -> L1, 90 -> L4, 200 -> L2, 300 -> L3]
+        public void MoveFirstKeyBelow(LowLevelTransaction tx, long separator)
+        {
+            var (firstKey, firstPage) = GetByIndex(0);
+            if (firstKey < separator)
+                return;
+
+            Remove(firstKey);
+            // values are never negative, so 0 works as the minimum and is never longer than the key it replaces
+            if (TryAdd(tx, 0, firstPage) == false)
+                throw new InvalidOperationException("Failed to add a shorter key in place of the one we removed, should never happen");
+        }
+
+        public void ReplaceFirstKey(LowLevelTransaction tx, long key)
+        {
+            var (firstKey, firstPage) = GetByIndex(0);
+            Remove(firstKey);
+            if (TryAdd(tx, key, firstPage) == false)
+                throw new InvalidOperationException("Failed to replace the first key, the merge capacity should leave room for it");
+        }
+
         public bool TryAdd(LowLevelTransaction tx, long key, long page)
         {
             Debug.Assert(tx.IsDirty(_page.PageNumber));
