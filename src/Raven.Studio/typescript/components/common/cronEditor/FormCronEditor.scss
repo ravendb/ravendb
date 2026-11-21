@@ -1,0 +1,22 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
+
+.cron-editor {
+    .cron-editor-link {
+        color: colors.$link-color-var;
+    }
+
+    .cron-editor-syntax-chart {
+        margin: 0;
+        padding: sizes.$gutter-xs;
+        font-family: bs5variables.$font-family-monospace;
+        font-size: inherit;
+        line-height: 1.2;
+        letter-spacing: 0.05em;
+        color: colors.$text-color-var;
+        background-color: colors.$input-bg-var;
+        border: 1px solid colors.$border-color-light-var;
+        border-radius: sizes.$border-radius-sm;
+    }
+}

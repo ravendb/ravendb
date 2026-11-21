@@ -54,7 +54,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                         <FormInput
                             control={control}
                             name="s3.customServerUrl"
-                            placeholder="Enter a custom server URL"
+                            placeholder="e.g. https://minio.example.com:9000"
                             type="text"
                             autoComplete="off"
                         />
@@ -80,7 +80,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                 <FormInput
                     control={control}
                     name="s3.bucketName"
-                    placeholder="Enter a bucket name"
+                    placeholder="e.g. company-attachments"
                     type="text"
                     autoComplete="off"
                 />
@@ -93,7 +93,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                 <FormInput
                     control={control}
                     name="s3.remoteFolderName"
-                    placeholder="Enter a remote folder name"
+                    placeholder="e.g. attachments/orders"
                     type="text"
                     autoComplete="off"
                 />
@@ -108,7 +108,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                         type="text"
                         control={control}
                         name="s3.awsRegionName"
-                        placeholder="Enter an AWS region"
+                        placeholder="e.g. us-east-1"
                         autoComplete="off"
                     />
                 ) : (
@@ -126,7 +126,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                 <FormInput
                     name="s3.awsAccessKey"
                     control={control}
-                    placeholder="Enter an access key"
+                    placeholder="e.g. AKIAIOSFODNN7EXAMPLE"
                     type="text"
                     autoComplete="off"
                 />
@@ -212,7 +212,7 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
                 <FormInput
                     name="azure.storageContainer"
                     control={control}
-                    placeholder="Enter a storage container"
+                    placeholder="e.g. attachments"
                     type="text"
                     autoComplete="off"
                 />
@@ -225,7 +225,7 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
                 <FormInput
                     name="azure.remoteFolderName"
                     control={control}
-                    placeholder="Enter a remote folder name"
+                    placeholder="e.g. attachments/orders"
                     type="text"
                     autoComplete="off"
                 />
@@ -236,7 +236,7 @@ export function RemoteAttachmentsAzureFields({ asyncTest }: RemoteAttachmentsDes
                 <FormInput
                     name="azure.accountName"
                     control={control}
-                    placeholder="Enter an account name"
+                    placeholder="e.g. companystorage"
                     type="text"
                     autoComplete="off"
                 />

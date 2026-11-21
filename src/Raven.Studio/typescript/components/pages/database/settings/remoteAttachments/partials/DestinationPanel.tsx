@@ -229,7 +229,7 @@ export function DestinationEditorPanel({ editingDestinationId }: CreateNewDestin
     return (
         <FormProvider {...form}>
             <form className="h-100 d-flex flex-column" onSubmit={handleSubmit(handleSaveDestination)}>
-                <ViewSheet.Header className="panel-bg-2 align-items-center" isPinHidden>
+                <ViewSheet.Header className="panel-bg-2 align-items-center" isPinHidden isCloseHidden>
                     <h3 className="m-0">
                         <Icon icon="global" addon="settings" color="primary" margin="me-1" />
                         <span>{editingDestinationId ? "Edit Destination" : "Define New Destination"}</span>

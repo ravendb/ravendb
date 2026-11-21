@@ -274,6 +274,49 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getBackupLocation, dto, TasksStubs.backupLocation());
     }
 
+    withPeriodicBackupServerLimits(dto?: MockedValue<periodicBackupServerLimitsResponse>) {
+        return this.mockResolvedValue(
+            this.mocks.getPeriodicBackupServerLimits,
+            dto,
+            TasksStubs.periodicBackupServerLimits()
+        );
+    }
+
+    withPeriodicBackupConfiguration(
+        dto?: MockedValue<Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getPeriodicBackupConfiguration,
+            dto,
+            TasksStubs.periodicBackupConfiguration()
+        );
+    }
+
+    withThrowingPeriodicBackupConfiguration() {
+        this.mocks.getPeriodicBackupConfiguration.mockRejectedValue(mockJQueryError("Task not found"));
+    }
+
+    withSavePeriodicBackupConfiguration() {
+        return this.mockResolvedValue(this.mocks.savePeriodicBackupConfiguration, null, {
+            TaskId: 1,
+            RaftCommandIndex: 1,
+        });
+    }
+
+    withStartManualBackup() {
+        return this.mockResolvedValue(this.mocks.startManualBackup, null, { OperationId: 1, ResponsibleNode: "A" });
+    }
+
+    withCronExpressionOccurrence(
+        dto?: MockedValue<Raven.Server.Web.Studio.StudioTasksHandler.NextCronExpressionOccurrence>
+    ) {
+        return this.mockResolvedValue(
+            this.mocks.getCronExpressionOccurrence,
+            dto,
+            TasksStubs.cronExpressionOccurrence()
+        );
+    }
+
     withLocalFolderPathOptions(dto?: Raven.Server.Web.Studio.FolderPathOptions) {
         return this.mockResolvedValue(this.mocks.getLocalFolderPathOptions, dto, TasksStubs.localFolderPathOptions());
     }

@@ -7,6 +7,11 @@ import etlProgressCommand from "commands/database/tasks/etlProgressCommand";
 import { OngoingTaskSharedInfo } from "../models/tasks";
 import TaskUtils from "../utils/TaskUtils";
 import getManualBackupCommand from "commands/database/tasks/getManualBackupCommand";
+import getPeriodicBackupConfigurationCommand from "commands/database/tasks/getPeriodicBackupConfigurationCommand";
+import getPeriodicBackupConfigCommand from "commands/database/tasks/getPeriodicBackupConfigCommand";
+import savePeriodicBackupConfigurationCommand from "commands/database/tasks/savePeriodicBackupConfigurationCommand";
+import backupNowManualCommand from "commands/database/tasks/backupNowManualCommand";
+import getCronExpressionOccurrenceCommand from "commands/database/tasks/getCronExpressionOccurrenceCommand";
 import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
 import getSubscriptionConnectionDetailsCommand from "commands/database/tasks/getSubscriptionConnectionDetailsCommand";
 import dropSubscriptionConnectionCommand from "commands/database/tasks/dropSubscriptionConnectionCommand";
@@ -114,6 +119,28 @@ export default class TasksService {
 
     async getManualBackup(databaseName: string) {
         return new getManualBackupCommand(databaseName).execute();
+    }
+
+    async getPeriodicBackupConfiguration(...args: ConstructorParameters<typeof getPeriodicBackupConfigurationCommand>) {
+        return new getPeriodicBackupConfigurationCommand(...args).execute();
+    }
+
+    async getPeriodicBackupServerLimits(...args: ConstructorParameters<typeof getPeriodicBackupConfigCommand>) {
+        return new getPeriodicBackupConfigCommand(...args).execute();
+    }
+
+    async savePeriodicBackupConfiguration(
+        ...args: ConstructorParameters<typeof savePeriodicBackupConfigurationCommand>
+    ) {
+        return new savePeriodicBackupConfigurationCommand(...args).execute();
+    }
+
+    async startManualBackup(...args: ConstructorParameters<typeof backupNowManualCommand>) {
+        return new backupNowManualCommand(...args).execute();
+    }
+
+    async getCronExpressionOccurrence(...args: ConstructorParameters<typeof getCronExpressionOccurrenceCommand>) {
+        return new getCronExpressionOccurrenceCommand(...args).execute();
     }
 
     async getCdcSinkTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forCdcSink>) {

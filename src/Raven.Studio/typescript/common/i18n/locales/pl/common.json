@@ -5,5 +5,25 @@
     "refresh": "Odśwież",
     "loadFromFile": "Wczytaj z pliku",
     "usefulLinks": "przydatne linki",
-    "defaultPlaceholder": "Domyślnie ({{value}})"
+    "defaultPlaceholder": "Domyślnie ({{value}})",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "edit": "Edytuj",
+    "close": "Zamknij",
+    "copy": "Kopiuj",
+    "test": "Testuj",
+    "whenToUse": "Kiedy używać?",
+    "connectionTestFailed": "Test połączenia nie powiódł się",
+    "stepsCompleted": "Ukończone kroki: {{completed}}/{{total}}",
+    "responsibleNode": {
+        "setLabel": "Ustaw węzeł odpowiedzialny",
+        "shardedInfo": "Ta opcja nie jest uwzględniana w bazach danych z shardingiem.",
+        "noNodesInfo": "Obecnie nie można wybrać węzła odpowiedzialnego, ponieważ nie ma dostępnych węzłów.",
+        "nodeOption": "Węzeł {{nodeTag}}",
+        "nodeOption_notMember": "Węzeł {{nodeTag}} (nie jest członkiem)",
+        "pinLabel": "Przypnij węzeł",
+        "pinTitle": "Włącz, aby przypiąć wybrany węzeł",
+        "pinnedInfo": "Wybrany węzeł jest teraz przypięty do obsługi tego zadania.<br/>Gdy ten węzeł jest niedostępny, zadanie nie zostanie wykonane, ponieważ żaden inny węzeł nie przejmie jego obsługi.<br/>Jeśli węzeł zostanie usunięty z grupy bazy danych, klaster wybierze inny węzeł do obsługi zadania.",
+        "preferredInfo": "Wybrany węzeł będzie preferowanym węzłem do obsługi zadania.<br/>Gdy ten węzeł jest niedostępny, klaster wybiera inny węzeł z grupy bazy danych do obsługi zadania."
+    }
 }

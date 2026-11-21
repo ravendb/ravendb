@@ -72,7 +72,7 @@ export default function BackupSourceAmazonS3() {
                                 type="text"
                                 control={control}
                                 name="sourceStep.sourceData.amazonS3.customHost"
-                                placeholder="Enter custom server URL"
+                                placeholder="e.g. https://minio.example.com:9000"
                             />
                         </Col>
                     </Row>
@@ -88,7 +88,7 @@ export default function BackupSourceAmazonS3() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.amazonS3.accessKey"
-                        placeholder="Enter access key"
+                        placeholder="e.g. AKIAIOSFODNN7EXAMPLE"
                     />
                 </Col>
             </Row>
@@ -140,7 +140,7 @@ export default function BackupSourceAmazonS3() {
                             type="text"
                             control={control}
                             name="sourceStep.sourceData.amazonS3.awsRegion"
-                            placeholder="Enter an AWS region"
+                            placeholder="e.g. us-east-1"
                             autoComplete="off"
                         />
                     ) : (
@@ -162,7 +162,7 @@ export default function BackupSourceAmazonS3() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.amazonS3.bucketName"
-                        placeholder="Enter bucket name"
+                        placeholder="e.g. company-backups"
                     />
                 </Col>
             </Row>
@@ -179,7 +179,7 @@ export default function BackupSourceAmazonS3() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.amazonS3.remoteFolderName"
-                        placeholder="Enter remote folder name"
+                        placeholder="e.g. backups/orders"
                     />
                 </Col>
             </Row>

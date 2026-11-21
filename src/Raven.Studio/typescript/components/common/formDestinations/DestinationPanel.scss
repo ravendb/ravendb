@@ -1,0 +1,32 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.rich-panel-item.destination-panel {
+    .rich-panel-header {
+        padding: sizes.$gutter-xs;
+    }
+
+    .rich-panel-name i {
+        font-size: 24px;
+        margin-right: sizes.$gutter-xs !important;
+    }
+
+    .rich-panel-details {
+        gap: sizes.$gutter-xxs sizes.$gutter;
+        padding: sizes.$gutter-sm;
+    }
+
+    .rich-panel-detail-item {
+        margin: 0;
+        padding: 0;
+
+        .small-label {
+            font-size: 0.875em;
+            font-weight: 600;
+            line-height: 1.25;
+            text-transform: none;
+            letter-spacing: normal;
+            color: colors.$text-muted-var;
+        }
+    }
+}

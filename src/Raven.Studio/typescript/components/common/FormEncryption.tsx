@@ -6,17 +6,17 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
-import { useServices } from "components/hooks/useServices";
-import { useAsync, useAsyncCallback } from "react-async-hook";
+import { useAsync } from "react-async-hook";
+import { useEncryptionKeyGenerator } from "components/hooks/useEncryptionKeyGenerator";
 import { QRCode } from "qrcodejs";
 import copyToClipboard from "common/copyToClipboard";
 import fileDownloader from "common/fileDownloader";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import RichAlert from "components/common/RichAlert";
 import PopoverWithHoverWrapper from "./PopoverWithHoverWrapper";
+import { encryptionKeyQrCodeUtils } from "components/utils/encryptionKeyQrCodeUtils";
 
 const encryptionImg = require("Content/img/createDatabase/encryption.svg");
-const qrLogo = require("Content/img/qr_logo.png");
 
 export interface FormEncryptionProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
@@ -41,15 +41,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
     triggerEncryptionKey,
     isReadOnly,
 }: FormEncryptionProps<TFieldValues, TName>) {
-    const { databasesService } = useServices();
-
-    const asyncGenerateSecret = useAsyncCallback(async (isRegenerate) => {
-        if (encryptionKey && !isRegenerate) {
-            return;
-        }
-        const generatedKey = await databasesService.generateSecret();
-        setEncryptionKey(generatedKey);
-    });
+    const { isGenerating, regenerate } = useEncryptionKeyGenerator(encryptionKey, setEncryptionKey);
 
     const { result: isEncryptionKeyValid } = useAsync(async () => {
         return await triggerEncryptionKey();
@@ -57,12 +49,6 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
 
     const qrContainerRef = useRef<ElementRef<"div">>(null);
     const [qrCode, setQrCode] = useState<typeof QRCode>(null);
-
-    // Get initial encryption key
-    useEffect(() => {
-        asyncGenerateSecret.execute(false);
-        // only on mount
-    }, []);
 
     useEffect(() => {
         const generateQrCode = async () => {
@@ -72,16 +58,7 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
             }
 
             if (!qrCode) {
-                setQrCode(
-                    new QRCode(qrContainerRef.current, {
-                        text: encryptionKey,
-                        width: 256,
-                        height: 256,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: QRCode.CorrectLevel.Q,
-                    })
-                );
+                setQrCode(encryptionKeyQrCodeUtils.renderQrCode(qrContainerRef.current, encryptionKey, 256));
             } else {
                 qrCode.clear();
                 qrCode.makeCode(encryptionKey);
@@ -117,7 +94,8 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     type="button"
                                     variant="secondary"
                                     title="Regenerate key"
-                                    onClick={() => asyncGenerateSecret.execute(true)}
+                                    onClick={regenerate}
+                                    disabled={isGenerating}
                                 >
                                     <Icon icon="reset" margin="m-0" />
                                 </Button>
@@ -161,7 +139,11 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
                                     variant="secondary"
                                     size="sm"
                                     onClick={() =>
-                                        printEncryptionKey(keyText, fileName, qrContainerRef.current.innerHTML)
+                                        encryptionKeyQrCodeUtils.printEncryptionKey(
+                                            keyText,
+                                            fileName,
+                                            qrContainerRef.current.innerHTML
+                                        )
                                     }
                                     disabled={!isEncryptionKeyValid}
                                     className="mb-2"
@@ -197,61 +179,6 @@ export default function FormEncryption<TFieldValues extends FieldValues, TName e
         </div>
     );
 }
-
-const printEncryptionKey = (keyText: string, fileName: string, qrCodeHtml: string) => {
-    const text = keyText.replace(/\r\n/g, "<br/>");
-
-    const html = `
-        <html>
-            <head>
-                <title>${fileName}</title>
-                <style>
-                    body {
-                        text-align: center;
-                        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-                    }
-                    #encryption_qrcode {
-                        position: relative;
-                        display: inline-block;
-                    }
-
-                    h4 {
-                        font-weight: normal;
-                    }
-                
-                    .qr_logo {
-                        position: absolute;
-                        left: 50%;
-                        top: 50%;
-                        -moz-transform: translateX(-50%) translateY(-50%);
-                        -webkit-transform: translateX(-50%) translateY(-50%);
-                        -o-transform: translateX(-50%) translateY(-50%);
-                        -ms-transform: translateX(-50%) translateY(-50%);
-                        transform: translateX(-50%) translateY(-50%);
-                    }
-                </style>
-            </head>
-            <body>
-                <h4>${text}</h4>
-                <br />
-                <div id="encryption_qrcode">
-                    <img class="qr_logo" src=${qrLogo}>
-                    ${qrCodeHtml}
-                </div>
-            </body>                
-        </html>
-    `;
-
-    const printWindow = window.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-    printWindow.focus();
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 50);
-};
 
 function ActionButton({ children, isEncryptionKeyValid }: PropsWithChildren<{ isEncryptionKeyValid: boolean }>) {
     return (

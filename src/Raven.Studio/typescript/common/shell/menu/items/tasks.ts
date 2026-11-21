@@ -1,9 +1,10 @@
-﻿import reactUtils = require("common/reactUtils");
+import reactUtils = require("common/reactUtils");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import BackupsPage = require("components/pages/database/tasks/backups/BackupsPage");
 import CreateSampleData = require("components/pages/database/tasks/createSampleData/CreateSampleData");
 import EditCdcSinkTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask");
+import EditBackupTask = require("components/pages/database/tasks/backups/editBackupTask/EditBackupTask");
 import EditGenAiTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/EditGenAiTask");
 import ImportDataOptions = require("components/pages/database/tasks/importData/ImportDataOptions");
 import ImportDatabaseFromFile = require("components/pages/database/tasks/importData/importFromFile/ImportDatabaseFromFile");
@@ -28,7 +29,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editPeriodicBackupTask',
-            moduleId: require('viewmodels/database/tasks/editPeriodicBackupTask'),
+            moduleId: reactUtils.bridgeToReact(EditBackupTask.default, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Backup Task',
             nav: false,
@@ -42,7 +43,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         }),
         new leafMenuItem({
             route: 'databases/tasks/editPeriodicBackupTask',
-            moduleId: require('viewmodels/database/tasks/editPeriodicBackupTask'),
+            moduleId: reactUtils.bridgeToReact(EditBackupTask.default, "nonShardedView"),
             shardingMode: "allShards",
             title: 'Backup Task',
             nav: false,

@@ -1,0 +1,25 @@
+@use "Content/scss/colors";
+@use "Content/scss/bs5variables";
+
+.selectable-card {
+    transition: bs5variables.$transition-base;
+
+    &.active {
+        &:hover {
+            cursor: default;
+            border-color: colors.$primary-var !important;
+        }
+    }
+
+    &:hover {
+        cursor: pointer;
+        background-color: var(--faded-secondary);
+        border-color: colors.$secondary-var !important;
+        transition: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid colors.$primary-var;
+        outline-offset: 2px;
+    }
+}

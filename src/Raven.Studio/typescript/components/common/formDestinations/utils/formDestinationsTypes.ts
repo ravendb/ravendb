@@ -28,6 +28,7 @@ export interface S3Destination extends FormDestinationDataBase, AmazonDestinatio
     forcePathStyle?: boolean;
     disableChecksumValidation?: boolean;
     isUseCustomHost?: boolean;
+    storageClass?: Raven.Client.Documents.Operations.Backups.S3StorageClass;
 }
 
 export type AzureAuthType = "accountKey" | "sasToken";
@@ -68,6 +69,8 @@ export interface FormDestinations {
         ftp?: FtpDestination;
     };
 }
+
+export type DestinationType = keyof FormDestinations["destinations"];
 
 export type FormDestinationData =
     | LocalDestination
