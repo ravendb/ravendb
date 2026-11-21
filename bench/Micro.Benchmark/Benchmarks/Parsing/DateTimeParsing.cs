@@ -19,7 +19,11 @@ public class DateTimeParsing
     {
         public Config()
         {
-            AddJob(new Job { Environment = { Runtime = CoreRuntime.Core10_0, Platform = Platform.X64, Jit = Jit.RyuJit, } });
+            AddJob(new Job
+            {
+                Environment = { Platform = Platform.X64, Jit = Jit.RyuJit, },
+                Infrastructure = { Runtime = CoreRuntime.Core11_0, },
+            });
 
             // Exporters for data
             AddExporter(GetExporters().ToArray());

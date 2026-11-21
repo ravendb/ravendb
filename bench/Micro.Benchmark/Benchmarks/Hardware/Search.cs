@@ -29,9 +29,12 @@ namespace Micro.Benchmark.Benchmarks.Hardware
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core10_0,
                         Platform = Platform.X64,
                         Jit = Jit.RyuJit
+                    },
+                    Infrastructure =
+                    {
+                        Runtime = CoreRuntime.Core11_0,
                     }
                 });
 

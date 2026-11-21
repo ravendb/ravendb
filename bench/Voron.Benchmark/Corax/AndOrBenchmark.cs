@@ -53,9 +53,12 @@ namespace Voron.Benchmark.Corax
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core10_0,
                         Platform = BenchmarkDotNet.Environments.Platform.X64,
                         Jit = Jit.RyuJit
+                    },
+                    Infrastructure =
+                    {
+                        Runtime = CoreRuntime.Core11_0,
                     },
                     Run =
                     {
