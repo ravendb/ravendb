@@ -19,6 +19,7 @@ export default function useEditGenAiTaskToolsSection() {
             description: "",
             query: "",
             parametersSchema: "",
+            strict: true,
             isAllowModelQueries: null,
             isAddToInitialContext: null,
             isEditing: true,

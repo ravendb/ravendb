@@ -33,11 +33,13 @@ public sealed class AiToolDescriptor
     public string Name;
     public string Description;
     public string ParametersSchema;
+    public bool Strict;
 
-    public AiToolDescriptor(string name, string description, string parametersSchema)
+    public AiToolDescriptor(string name, string description, string parametersSchema, bool strict)
     {
         Name = name;
         Description = description;
         ParametersSchema = parametersSchema;
+        Strict = strict;
     }
 }
