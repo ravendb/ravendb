@@ -16,6 +16,7 @@ import {
     useReactTable,
 } from "@tanstack/react-table";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
@@ -294,9 +295,7 @@ function useCompareExchangeColumns({
 
                 return (
                     <CellWithCopy value={value}>
-                        <a href={appUrl.forEditCmpXchg(value, databaseName)} className="cell-link">
-                            {String(value)}
-                        </a>
+                        <CellLink href={appUrl.forEditCmpXchg(value, databaseName)}>{String(value)}</CellLink>
                     </CellWithCopy>
                 );
             },

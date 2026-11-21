@@ -12,7 +12,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useRavenLink } from "hooks/useRavenLink";
 import Button from "react-bootstrap/Button";
 import Tooltip from "react-bootstrap/Tooltip";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 
 export function LicenseDetails() {

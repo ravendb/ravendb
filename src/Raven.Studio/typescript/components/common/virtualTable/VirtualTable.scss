@@ -42,7 +42,10 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
 
         .vr {
             align-self: stretch;
-            opacity: 0.5;
+            width: 0;
+            border-left: 1px solid colors.$border-color-light-var;
+            background-color: transparent;
+            opacity: 1;
         }
     }
 
@@ -198,10 +201,43 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
                     background-color: colors.$row-even-bg-var;
                 }
 
-                .cell-link::after {
-                    content: "";
-                    position: absolute;
-                    inset: 0;
+                .cell-link {
+                    transition: color 0.1s;
+                    transition-delay: 0.05s;
+
+                    &::after {
+                        content: "";
+                        position: absolute;
+                        inset: 0;
+                    }
+
+                    &:hover,
+                    &:focus {
+                        transition: color 0.1s;
+                    }
+                }
+
+                .cell-link-text {
+                    position: relative;
+
+                    &::after {
+                        content: "";
+                        position: absolute;
+                        right: 7.5%;
+                        bottom: sizes.$gutter-xxs * -0.25;
+                        left: 7.5%;
+                        border-bottom: sizes.$border-width solid colors.$border-color-light-var;
+                        transform: scaleX(0);
+                        transition: transform 0.2s sizes.$global-easing 0.05s;
+                        pointer-events: none;
+                    }
+                }
+
+                .cell-link:hover .cell-link-text::after,
+                .cell-link:focus .cell-link-text::after {
+                    border-bottom-color: colors.$primary-var;
+                    transform: scaleX(1);
+                    transition: transform 0.35s cubic-bezier(0, 1.7, 0.4, 0.8);
                 }
 
                 .value-string {

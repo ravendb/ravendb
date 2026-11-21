@@ -5,6 +5,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import useConfirm from "components/common/ConfirmDialog";
 import { CustomDropdownToggle } from "components/common/Dropdown";
+import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import {
@@ -22,8 +23,8 @@ import document from "models/database/documents/document";
 import { useRef, useState } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Dropdown from "react-bootstrap/Dropdown";
+import Spinner from "react-bootstrap/Spinner";
 import DeleteDocumentsModal from "viewmodels/database/documents/DeleteDocumentsModal";
 
 interface DocumentsSelectionActionsProps {
@@ -184,7 +185,8 @@ export default function DocumentsSelectionActions({
     });
 
     const isCopyLimitExceeded = selectedCount > COPY_LIMIT;
-    const isCopyDisabled = isCopyLimitExceeded || asyncCopyDocuments.loading || asyncCopyIds.loading;
+    const isCopying = asyncCopyDocuments.loading || asyncCopyIds.loading;
+    const isCopyDisabled = isCopyLimitExceeded || isCopying;
 
     return (
         <>
@@ -208,24 +210,13 @@ export default function DocumentsSelectionActions({
                             message: `You can only copy up to ${COPY_LIMIT} documents`,
                         }}
                     >
-                        <Dropdown as={ButtonGroup}>
-                            <ButtonWithSpinner
-                                variant="text"
-                                icon="copy"
-                                onClick={asyncCopyDocuments.execute}
-                                isSpinning={asyncCopyDocuments.loading}
-                                disabled={isCopyDisabled}
-                            >
+                        <Dropdown>
+                            <Dropdown.Toggle variant="text" as={CustomDropdownToggle} disabled={isCopyDisabled}>
+                                {isCopying ? <Spinner size="sm" className="me-1" /> : <Icon icon="copy" />}
                                 Copy
-                            </ButtonWithSpinner>
-                            <div className="vr my-1" />
-                            <Dropdown.Toggle
-                                variant="text"
-                                as={CustomDropdownToggle}
-                                disabled={isCopyDisabled}
-                                title="More copy options"
-                            />
+                            </Dropdown.Toggle>
                             <Dropdown.Menu>
+                                <Dropdown.Item onClick={asyncCopyDocuments.execute}>Copy documents</Dropdown.Item>
                                 <Dropdown.Item onClick={asyncCopyIds.execute}>Copy IDs</Dropdown.Item>
                             </Dropdown.Menu>
                         </Dropdown>
