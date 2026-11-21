@@ -34,6 +34,8 @@ namespace Raven.Server.ServerWide.Commands
         private long? _backupTaskIdToDelete;
         private string _hubNameToDelete;
 
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSectionsExtensions.ForTaskType(TaskType);
+
         public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         {
             switch (TaskType)

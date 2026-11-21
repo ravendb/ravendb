@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditDatabaseClientConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public ClientConfiguration Configuration { get; set; }
 
         public EditDatabaseClientConfigurationCommand()

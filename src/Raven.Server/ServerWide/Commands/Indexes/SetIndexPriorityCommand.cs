@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class SetIndexPriorityCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public string IndexName;
 
         public IndexPriority Priority;

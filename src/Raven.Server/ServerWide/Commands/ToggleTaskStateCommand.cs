@@ -28,6 +28,8 @@ namespace Raven.Server.ServerWide.Commands
             Disable = disable;
         }
 
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSectionsExtensions.ForTaskType(TaskType);
+
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Debug.Assert(TaskId != 0);

@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class UpdatePullReplicationAsSinkCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Replication;
+
         public PullReplicationAsSink PullReplicationAsSink;
         public bool? UseServerCertificate;
         public UpdatePullReplicationAsSinkCommand()

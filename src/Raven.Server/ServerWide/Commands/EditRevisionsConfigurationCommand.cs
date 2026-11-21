@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditRevisionsConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public RevisionsConfiguration Configuration { get; private set; }
 
         public EditRevisionsConfigurationCommand()

@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands.AI;
 
 public class DeleteAiAgentCommand : UpdateDatabaseCommand
 {
+    public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
     public string Identifier;
 
     public DeleteAiAgentCommand()

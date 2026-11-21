@@ -26,6 +26,12 @@ namespace Raven.Server.ServerWide.Commands
 
         public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
 
+        /// <summary>
+        /// The sections of the database record that are modified by <see cref="UpdateDatabaseRecord"/>.
+        /// Their raft indexes are stamped in <see cref="DatabaseRecord.ClusterState"/>, so the database will handle only the relevant changes.
+        /// </summary>
+        public virtual DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.All;
+
         public virtual void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
         {
 

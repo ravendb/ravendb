@@ -5,6 +5,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes;
 
 public sealed class DeleteIndexHistoryCommand : UpdateDatabaseCommand
 {
+    public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
     public string IndexName { get; set; }
 
     public DeleteIndexHistoryCommand()

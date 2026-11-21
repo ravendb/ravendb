@@ -70,6 +70,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.Sharding),
             nameof(DatabaseRecord.RevisionsBin),
             nameof(DatabaseRecord.CdcSinks),
+            nameof(DatabaseRecord.ClusterState),
         };
 
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ServerWideDebugInfoPackageHandler>();

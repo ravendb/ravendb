@@ -18,6 +18,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public sealed class StartBucketMigrationCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public int? SourceShard;
         public int DestinationShard;
         public int Bucket;

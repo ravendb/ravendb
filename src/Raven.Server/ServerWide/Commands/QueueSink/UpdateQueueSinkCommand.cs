@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.QueueSink
 {
     public class UpdateQueueSinkCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.QueueSinks;
+
         public long TaskId { get; protected set; }
 
         public QueueSinkConfiguration Configuration { get; protected set; }
