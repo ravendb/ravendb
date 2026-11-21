@@ -31,6 +31,7 @@ import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 type SubscriptionPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSubscriptionInfo> & {
     refreshSubscriptionInfo: () => void;
@@ -110,23 +111,33 @@ function ChangeVectorInfo(props: ChangeVectorInfoProps) {
     );
 }
 
+function formatSubscriptionTime(time: string) {
+    return time ? moment.utc(time).local().format(genUtils.dateFormat) : "N/A";
+}
+
+function Summary(props: SubscriptionPanelProps & DetailsToggleProps) {
+    const { data, detailsVisible, toggleDetails } = props;
+
+    return (
+        <RichPanelDetails>
+            <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+            <RichPanelDetailItem label="Last Batch Ack Time">
+                {formatSubscriptionTime(data.shared.lastBatchAckTime)}
+            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Last Client Connection Time">
+                {formatSubscriptionTime(data.shared.lastClientConnectionTime)}
+            </RichPanelDetailItem>
+        </RichPanelDetails>
+    );
+}
+
 function Details(props: SubscriptionPanelProps) {
     const { data, refreshSubscriptionInfo } = props;
-
-    const lastBatchAckTime = data.shared.lastBatchAckTime
-        ? moment.utc(data.shared.lastBatchAckTime).local().format(genUtils.dateFormat)
-        : "N/A";
-
-    const lastClientConnectionTime = data.shared.lastClientConnectionTime
-        ? moment.utc(data.shared.lastClientConnectionTime).local().format(genUtils.dateFormat)
-        : "N/A";
 
     const [changeVectorInfoElement, setChangeVectorInfoElement] = useState<HTMLElement>();
 
     return (
         <RichPanelDetails>
-            <RichPanelDetailItem label="Last Batch Ack Time">{lastBatchAckTime}</RichPanelDetailItem>
-            <RichPanelDetailItem label="Last Client Connection Time">{lastClientConnectionTime}</RichPanelDetailItem>
             <RichPanelDetailItem
                 label="Change vector for next batch"
                 className="d-flex flex-horizontal align-self-baseline"
@@ -270,12 +281,11 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <Summary {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             <Collapse in={detailsVisible}>
                 <div>
                     <Details {...props} />

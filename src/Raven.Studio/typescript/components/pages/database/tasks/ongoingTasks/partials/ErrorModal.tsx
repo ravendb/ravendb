@@ -4,6 +4,8 @@ import Code from "components/common/Code";
 import copyToClipboard from "common/copyToClipboard";
 import React from "react";
 import Modal from "components/common/Modal";
+import useBoolean from "components/hooks/useBoolean";
+import { RichPanelDetailItem } from "components/common/RichPanel";
 
 interface ErrorModalProps {
     toggleErrorModal: () => void;
@@ -31,5 +33,29 @@ export function ErrorModal(props: ErrorModalProps) {
                 </div>
             </Modal.Body>
         </Modal>
+    );
+}
+
+interface ErrorDetailItemProps {
+    error: string;
+    title?: string;
+}
+
+export function ErrorDetailItem({ error, title = "Show error details" }: ErrorDetailItemProps) {
+    const { value: isErrorModalOpen, toggle: toggleErrorModal } = useBoolean(false);
+
+    return (
+        <RichPanelDetailItem>
+            <Button
+                variant="link"
+                onClick={toggleErrorModal}
+                className="d-flex gap-1 align-items-center p-0"
+                title={title}
+            >
+                <Icon icon="warning" color="danger" margin="m-0" />
+                <span className="text-danger">Error</span>
+            </Button>
+            {isErrorModalOpen && <ErrorModal toggleErrorModal={toggleErrorModal} error={error} />}
+        </RichPanelDetailItem>
     );
 }

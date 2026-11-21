@@ -29,7 +29,6 @@ import backupNow = require("viewmodels/database/tasks/backupNow");
 import app from "durandal/app";
 import backupNowPeriodicCommand from "commands/database/tasks/backupNowPeriodicCommand";
 import Badge from "react-bootstrap/Badge";
-import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useAppSelector } from "components/store";
@@ -39,6 +38,11 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import Collapse from "react-bootstrap/Collapse";
+import { useServices } from "hooks/useServices";
+import { useAsync } from "react-async-hook";
+import { ErrorDetailItem } from "../partials/ErrorModal";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 interface PeriodicBackupPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskPeriodicBackupInfo> {
     forceReload: () => void;
@@ -74,8 +78,8 @@ function findBackupNowBlockReason(data: OngoingTaskPeriodicBackupInfo, runningOn
     return null;
 }
 
-function Details(props: PeriodicBackupPanelProps) {
-    const { data, forceReload } = props;
+function Details(props: PeriodicBackupPanelProps & DetailsToggleProps) {
+    const { data, forceReload, detailsVisible, toggleDetails } = props;
 
     const backupDestinationsHumanized = data.shared.backupDestinations.length
         ? data.shared.backupDestinations.join(", ")
@@ -190,43 +194,90 @@ function Details(props: PeriodicBackupPanelProps) {
     const backupTypeLabel = formatBackupType(data.shared.backupType, true);
 
     return (
-        <RichPanelDetails>
-            <RichPanelDetailItem label="Destinations">{backupDestinationsHumanized}</RichPanelDetailItem>
-            <RichPanelDetailItem label="Last executed on node">
-                {data.shared.lastExecutingNodeTag || "N/A"}
-            </RichPanelDetailItem>
-            <RichPanelDetailItem label={"Last " + backupTypeLabel}>{lastFullBackupHumanized}</RichPanelDetailItem>
-            {lastIncrementalBackupHumanized && (
-                <RichPanelDetailItem label="Last Incremental Backup">
-                    {lastIncrementalBackupHumanized}
-                </RichPanelDetailItem>
-            )}
-            <RichPanelDetailItem label="Next Estimated Backup">
-                {nextBackupHumanized}
-                {backupNowVisible && (
-                    <Badge
-                        as="button"
-                        onClick={onBackupNow}
-                        className={classNames("ms-1 rounded-pill backup-now", {
-                            "bg-secondary": !neverBackedUp,
-                            "bg-info": backupNowInProgress,
-                            "bg-progress": backupNowInProgress,
-                            "bg-warning": !backupNowInProgress && neverBackedUp,
-                        })}
-                        disabled={!!backupNowBlockReason}
-                        title={backupNowBlockReason ?? "Click to trigger the backup task now"}
-                        bg="secondary"
-                    >
-                        <Icon icon="backup" />
-                        <span>{isResponsible && backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
-                    </Badge>
+        <>
+            <RichPanelDetails>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Destinations">{backupDestinationsHumanized}</RichPanelDetailItem>
+                <RichPanelDetailItem label={"Last " + backupTypeLabel}>{lastFullBackupHumanized}</RichPanelDetailItem>
+                {lastIncrementalBackupHumanized && (
+                    <RichPanelDetailItem label="Last Incremental Backup">
+                        {lastIncrementalBackupHumanized}
+                    </RichPanelDetailItem>
                 )}
-            </RichPanelDetailItem>
-            {onGoingBackupHumanized && (
-                <RichPanelDetailItem label="Backup Started">{onGoingBackupHumanized}</RichPanelDetailItem>
-            )}
-            <RichPanelDetailItem label="Retention Policy">{retentionPolicyHumanized}</RichPanelDetailItem>
-        </RichPanelDetails>
+                <RichPanelDetailItem label="Next Estimated Backup">
+                    {nextBackupHumanized}
+                    {backupNowVisible && (
+                        <Badge
+                            as="button"
+                            onClick={onBackupNow}
+                            className={classNames("ms-1 rounded-pill backup-now", {
+                                "bg-secondary": !neverBackedUp,
+                                "bg-info": backupNowInProgress,
+                                "bg-progress": backupNowInProgress,
+                                "bg-warning": !backupNowInProgress && neverBackedUp,
+                            })}
+                            disabled={!!backupNowBlockReason}
+                            title={backupNowBlockReason ?? "Click to trigger the backup task now"}
+                            bg="secondary"
+                        >
+                            <Icon icon="backup" />
+                            <span>{isResponsible && backupNowInProgress ? "Show backup progress" : "Backup now"}</span>
+                        </Badge>
+                    )}
+                </RichPanelDetailItem>
+                {onGoingBackupHumanized && (
+                    <RichPanelDetailItem label="Backup Started">{onGoingBackupHumanized}</RichPanelDetailItem>
+                )}
+                <LastBackupErrorItem task={data} isBackupRunning={backupNowInProgress} />
+            </RichPanelDetails>
+            <Collapse in={detailsVisible}>
+                <div>
+                    <RichPanelDetails>
+                        <RichPanelDetailItem label="Last executed on node">
+                            {data.shared.lastExecutingNodeTag || "N/A"}
+                        </RichPanelDetailItem>
+                        <RichPanelDetailItem label="Retention Policy">{retentionPolicyHumanized}</RichPanelDetailItem>
+                    </RichPanelDetails>
+                </div>
+            </Collapse>
+        </>
+    );
+}
+
+interface LastBackupErrorItemProps {
+    task: OngoingTaskPeriodicBackupInfo;
+    isBackupRunning: boolean;
+}
+
+function LastBackupErrorItem({ task, isBackupRunning }: LastBackupErrorItemProps) {
+    const { tasksService } = useServices();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const asyncStatuses = useAsync(
+        () => tasksService.getPeriodicBackupStatus(databaseName, task.shared.taskId),
+        [
+            databaseName,
+            task.shared.taskId,
+            task.shared.lastFullBackup,
+            task.shared.lastIncrementalBackup,
+            isBackupRunning,
+        ]
+    );
+
+    const lastError = (asyncStatuses.result ?? [])
+        .map((x) => x.Error)
+        .filter((x) => x != null)
+        .sort((a, b) => b.At.localeCompare(a.At))[0];
+
+    if (!lastError) {
+        return null;
+    }
+
+    return (
+        <ErrorDetailItem
+            error={lastError.Exception}
+            title={`Last backup failed on ${genUtils.formatUtcDateAsLocal(lastError.At)}. Show error details`}
+        />
     );
 }
 
@@ -299,17 +350,11 @@ export function PeriodicBackupPanel(props: PeriodicBackupPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
-            <Collapse in={detailsVisible}>
-                <div>
-                    <Details {...props} />
-                </div>
-            </Collapse>
+            <Details {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
         </RichPanel>
     );
 }

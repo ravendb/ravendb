@@ -8,60 +8,68 @@ import {
     commonInit,
     mockExternalReplicationProgress,
 } from "components/pages/database/tasks/ongoingTasks/stories/common";
-import OngoingTaskReplication = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 
-export default {
-    title: "Pages/Tasks/Ongoing tasks/External Replication",
-    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
-} satisfies Meta;
-
 interface ExternalReplicationProps {
-    disabled: boolean;
-    completed: boolean;
-    customizeTask: (x: OngoingTaskReplication) => void;
-    runtimeError: boolean;
-    loadError: boolean;
+    isDisabled: boolean;
+    isCompleted: boolean;
+    isServerWide: boolean;
+    hasRuntimeError: boolean;
+    hasLoadError: boolean;
+    hasLongValues: boolean;
     databaseType: "sharded" | "cluster" | "singleNode";
 }
 
-export const Default: StoryObj<ExternalReplicationProps> = {
+export default {
+    title: "Pages/Tasks/Ongoing tasks/External Replication",
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     render: (args: ExternalReplicationProps) => {
         commonInit(args.databaseType);
 
         const { tasksService } = mockServices;
         const mockedValue: MockedValue<OngoingTasksResult> = (x: OngoingTasksResult) => {
             const ongoingTask = TasksStubs.getExternalReplicationListItem();
-            if (args.disabled) {
+            if (args.isDisabled) {
                 ongoingTask.TaskState = "Disabled";
                 ongoingTask.TaskConnectionStatus = "NotActive";
             }
-            if (args.runtimeError) {
+            if (args.hasRuntimeError) {
                 ongoingTask.Error = "This is some error";
             }
-            args.customizeTask?.(ongoingTask);
+            if (args.isServerWide) {
+                ongoingTask.TaskName = "Server Wide External Replication, ext1";
+            }
+            if (args.hasLongValues) {
+                ongoingTask.TaskName =
+                    "External Replication of all customer orders to the disaster recovery data center";
+                ongoingTask.DestinationDatabase = "customer-orders-disaster-recovery-replica-eu-west-2026";
+                ongoingTask.Error =
+                    "System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (dr-replica-eu-west.example.com:8080)";
+            }
             x.OngoingTasks = [ongoingTask];
             x.PullReplications = [];
             x.SubscriptionsCount = 0;
         };
 
-        if (args.loadError) {
+        if (args.hasLoadError) {
             tasksService.withThrowingGetTasks((db, location) => location.nodeTag === "C", mockedValue);
         } else {
             tasksService.withGetTasks(mockedValue);
         }
 
-        mockExternalReplicationProgress(tasksService, args.completed);
+        mockExternalReplicationProgress(tasksService, args.isCompleted);
 
         return <OngoingTasksPage />;
     },
     args: {
-        completed: true,
-        disabled: false,
-        runtimeError: false,
-        loadError: false,
+        isCompleted: true,
+        isDisabled: false,
+        isServerWide: false,
+        hasRuntimeError: false,
+        hasLoadError: false,
+        hasLongValues: false,
         databaseType: "sharded",
     },
     argTypes: {
@@ -71,47 +79,42 @@ export const Default: StoryObj<ExternalReplicationProps> = {
         const container = within(await canvas.findByTestId("replications"));
         await userEvent.click(await container.findByTitle(/Click for details/));
     },
-};
+} satisfies Meta<ExternalReplicationProps>;
+
+export const Default: StoryObj<ExternalReplicationProps> = {};
 
 export const NonSharded: StoryObj<ExternalReplicationProps> = {
-    ...Default,
     args: {
-        ...Default.args,
         databaseType: "cluster",
     },
 };
 
 export const Disabled: StoryObj<ExternalReplicationProps> = {
-    ...Default,
     args: {
-        ...Default.args,
-        disabled: true,
+        isDisabled: true,
     },
 };
 
 export const LoadError: StoryObj<ExternalReplicationProps> = {
-    ...Default,
     args: {
-        ...Default.args,
-        loadError: true,
+        hasLoadError: true,
     },
 };
 
 export const RuntimeError: StoryObj<ExternalReplicationProps> = {
-    ...Default,
     args: {
-        ...Default.args,
-        runtimeError: true,
+        hasRuntimeError: true,
     },
 };
 
 export const ServerWide: StoryObj<ExternalReplicationProps> = {
-    ...Default,
     args: {
-        ...Default.args,
-        disabled: false,
-        customizeTask: (task) => {
-            task.TaskName = "Server Wide External Replication, ext1";
-        },
+        isServerWide: true,
+    },
+};
+
+export const LongValues: StoryObj<ExternalReplicationProps> = {
+    args: {
+        hasLongValues: true,
     },
 };
