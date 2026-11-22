@@ -22,8 +22,10 @@ public class BackupHistory
     public List<BackupHistoryRun> Runs { get; init; } = [];
     public long TotalResults { get; set; }
     public BackupHistoryCounts Counts { get; init; } = new();
+    public List<BackupHistoryUnreachableNode> UnreachableNodes { get; init; } = [];
     
     private readonly Dictionary<(long TaskId, int? ShardNumber, long FullBackupTicks), BackupGroup> _groupsByKey = [];
+    private long _runsOfOtherNodesNotReturned;
 
     public void Add(BackupHistoryEntry entry, long taskId, int? shardNumber, string taskName, bool includeIncrementals)
     {
@@ -39,20 +41,38 @@ public class BackupHistory
         {
             group.FullBackup = entry;
             group.FullBackupInHistory = true;
+            return;
         }
-        else if (includeIncrementals)
-        {
+
+        if (includeIncrementals)
             group.AddIncrementalBackup(entry);
-        }
         else
+            group.CountIncrementalBackup(entry);
+    }
+
+    internal void Join(BackupHistory other)
+    {
+        Counts.Add(other.Counts);
+        Runs.AddRange(other.Runs);
+        _runsOfOtherNodesNotReturned += other.TotalResults - other.Groups.Count - other.Runs.Count;
+
+        foreach (var group in other.Groups)
         {
-            group.IncrementalBackupsCount++;
+            var key = (group.TaskId, group.ShardNumber, group.FullBackup.CreatedAt.Ticks);
+            if (_groupsByKey.TryGetValue(key, out var existingGroup))
+            {
+                existingGroup.Join(group);
+                continue;
+            }
+
+            _groupsByKey.Add(key, group);
+            Groups.Add(group);
         }
     }
 
     public void SortAndPage(BackupHistoryQuery query)
     {
-        TotalResults = Groups.Count + Runs.Count;
+        TotalResults = Groups.Count + Runs.Count + _runsOfOtherNodesNotReturned;
 
         SortAndPage(Groups, query, group => group.FullBackup, group => group.TaskName, group => group.TaskId, group => group.ShardNumber);
         SortAndPage(Runs, query, run => run, run => run.TaskName, run => run.TaskId, run => run.ShardNumber);
@@ -98,7 +118,8 @@ public class BackupHistory
                 new DynamicJsonArray(collection: Groups.Select(group => group.ToJson())),
             [nameof(Runs)] = new DynamicJsonArray(Runs.Select(run => run.ToJson())),
             [nameof(TotalResults)] = TotalResults,
-            [nameof(Counts)] = Counts.ToJson()
+            [nameof(Counts)] = Counts.ToJson(),
+            [nameof(UnreachableNodes)] = new DynamicJsonArray(UnreachableNodes.Select(node => node.ToJson()))
         };
 
     internal string ToString(TransactionContextPool contextPool)

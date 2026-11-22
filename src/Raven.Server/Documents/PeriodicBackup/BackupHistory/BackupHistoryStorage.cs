@@ -231,7 +231,7 @@ public class BackupHistoryStorage
         }
     }
 
-    public static BlittableJsonReaderObject GetBackupHistory(TransactionOperationContext context, RawDatabaseRecord databaseRecord, BackupHistoryQuery query)
+    public static BackupHistory GetBackupHistory(TransactionOperationContext context, RawDatabaseRecord databaseRecord, BackupHistoryQuery query)
     {
         var backupHistory = new BackupHistory(databaseRecord.DatabaseName);
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
@@ -271,30 +271,33 @@ public class BackupHistoryStorage
             }
         }
 
-        foreach (var group in backupHistory.Groups)
-            CompleteGroup(context, table, databaseRecord, group);
+        CompleteGroups(context, databaseRecord.DatabaseName, backupHistory.Groups);
 
-        backupHistory.SortAndPage(query);
-
-        return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
+        return backupHistory;
     }
 
-    private static void CompleteGroup(TransactionOperationContext context, Table table, RawDatabaseRecord databaseRecord, BackupGroup group)
+    public static void CompleteGroups(TransactionOperationContext context, string databaseName, IEnumerable<BackupGroup> groups)
     {
-        var index = BackupHistoryTableSchema.Indexes[ByGroupSlice];
-        var databaseName = group.ShardNumber.HasValue ? ShardHelper.ToShardName(databaseRecord.DatabaseName, group.ShardNumber.Value) : databaseRecord.DatabaseName;
-        var fullBackupTicks = group.FullBackup.CreatedAt.Ticks;
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
-        if (group.FullBackupInHistory == false)
+        foreach (var group in groups)
+            CompleteGroup(context, table, databaseName, group);
+    }
+
+    private static void CompleteGroup(TransactionOperationContext context, Table table, string databaseName, BackupGroup group)
+    {
+        if (group.FullBackupInHistory)
+            return;
+
+        var sourceDatabaseName = group.ShardNumber.HasValue ? ShardHelper.ToShardName(databaseName, group.ShardNumber.Value) : databaseName;
+
+        using (BackupHistorySchema.GetGroupKey(context.Allocator, sourceDatabaseName, group.TaskId, group.FullBackup.CreatedAt.Ticks, BackupKind.Full, out var fullBackupKeySlice))
         {
-            using (BackupHistorySchema.GetGroupKey(context.Allocator, databaseName, group.TaskId, fullBackupTicks, BackupKind.Full, out var fullBackupKeySlice))
+            var fullBackup = table.SeekOneForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByGroupSlice], fullBackupKeySlice);
+            if (fullBackup != null)
             {
-                var fullBackup = table.SeekOneForwardFromPrefix(index, fullBackupKeySlice);
-                if (fullBackup != null)
-                {
-                    group.FullBackup = GetBackupEntry(context, fullBackup.Reader);
-                    group.FullBackupInHistory = true;
-                }
+                group.FullBackup = GetBackupEntry(context, fullBackup.Reader);
+                group.FullBackupInHistory = true;
             }
         }
     }

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -15,7 +14,7 @@ namespace Raven.Server.Web.System.Processors.Backups;
 
 internal abstract class AbstractBackupHistoryHandlerProcessor : AbstractServerHandlerProxyReadProcessor<BlittableJsonReaderObject>
 {
-    private string _databaseName;
+    protected string DatabaseName { get; private set; }
 
     protected AbstractBackupHistoryHandlerProcessor([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
@@ -27,28 +26,11 @@ internal abstract class AbstractBackupHistoryHandlerProcessor : AbstractServerHa
 
     public override async ValueTask ExecuteAsync()
     {
-        _databaseName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("database");
-        if (await RequestHandler.CanAccessDatabaseAsync(_databaseName, requireAdmin: false, requireWrite: false) == false)
+        DatabaseName = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("database");
+        if (await RequestHandler.CanAccessDatabaseAsync(DatabaseName, requireAdmin: false, requireWrite: false) == false)
             return;
 
         await base.ExecuteAsync();
-    }
-
-    protected override async ValueTask HandleCurrentNodeAsync()
-    {
-        var shardNumber = RequestHandler.GetIntValueQueryString(Constants.QueryString.ShardNumber, required: false);
-
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        using (var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, _databaseName))
-        {
-            if (databaseRecord == null)
-                DatabaseDoesNotExistException.Throw(_databaseName);
-
-            AssertShardNumber(databaseRecord, shardNumber);
-
-            await WriteResponseAsync(context, databaseRecord, shardNumber);
-        }
     }
 
     protected override ValueTask<RavenCommand<BlittableJsonReaderObject>> CreateCommandForNodeAsync(string nodeTag, JsonOperationContext context)
@@ -60,11 +42,39 @@ internal abstract class AbstractBackupHistoryHandlerProcessor : AbstractServerHa
     protected override Task HandleRemoteNodeAsync(ProxyCommand<BlittableJsonReaderObject> command, JsonOperationContext context, OperationCancelToken token) =>
         ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
 
-    protected abstract ValueTask WriteResponseAsync(TransactionOperationContext context, RawDatabaseRecord databaseRecord, int? shardNumber);
+    protected int? GetOptionalShardNumber() => TryGetShardNumber(out var shardNumber) ? shardNumber : null;
+
+    protected RawDatabaseRecord ReadDatabaseRecord(TransactionOperationContext context, int? shardNumber)
+    {
+        var databaseRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, DatabaseName);
+        if (databaseRecord == null)
+            DatabaseDoesNotExistException.Throw(DatabaseName);
+
+        try
+        {
+            AssertShardNumber(databaseRecord, shardNumber);
+        }
+        catch
+        {
+            databaseRecord.Dispose();
+            throw;
+        }
+
+        return databaseRecord;
+    }
 
     protected DateTime? GetUtcDateTimeQueryString(string name, bool required)
     {
-        var value = RequestHandler.GetDateTimeQueryString(name, required);
+        DateTime? value;
+        try
+        {
+            value = RequestHandler.GetDateTimeQueryString(name, required);
+        }
+        catch (ArgumentException e)
+        {
+            throw new BadRequestException(e.Message);
+        }
+
         return value?.Kind == DateTimeKind.Local ? value.Value.ToUniversalTime() : value;
     }
 

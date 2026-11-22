@@ -49,6 +49,7 @@ public class BackupGroup
     public BackupHistoryEntry FullBackup { get; set; }
     public bool FullBackupInHistory { get; set; }
     public long IncrementalBackupsCount { get; set; }
+    public Dictionary<string, long> IncrementalBackupsByStatus { get; set; } = [];
     private readonly List<BackupHistoryEntry> _incrementalBackups = [];
     public IReadOnlyList<BackupHistoryEntry> IncrementalBackups
     {
@@ -61,7 +62,31 @@ public class BackupGroup
         Debug.Assert(entry.BackupKind == BackupKind.Incremental);
 
         _incrementalBackups.Add(entry);
+        CountIncrementalBackup(entry);
+    }
+
+    internal void CountIncrementalBackup(BackupHistoryEntry entry)
+    {
         IncrementalBackupsCount++;
+
+        BackupHistoryCounts.AddCount(IncrementalBackupsByStatus, entry.Status.ToString());
+    }
+
+    internal void Join(BackupGroup other)
+    {
+        if (FullBackupInHistory == false && other.FullBackupInHistory)
+        {
+            FullBackup = other.FullBackup;
+            FullBackupInHistory = true;
+        }
+
+        TaskName ??= other.TaskName;
+        IncrementalBackupsCount += other.IncrementalBackupsCount;
+
+        BackupHistoryCounts.AddCounts(IncrementalBackupsByStatus, other.IncrementalBackupsByStatus);
+
+        _incrementalBackups.AddRange(other.IncrementalBackups);
+        _incrementalBackups.Sort((x, y) => x.CreatedAt.CompareTo(y.CreatedAt));
     }
     
     public DynamicJsonValue ToJson()
@@ -73,6 +98,7 @@ public class BackupGroup
             [nameof(FullBackup)] = FullBackup,
             [nameof(FullBackupInHistory)] = FullBackupInHistory,
             [nameof(IncrementalBackupsCount)] = IncrementalBackupsCount,
+            [nameof(IncrementalBackupsByStatus)] = BackupHistoryCounts.ToJson(IncrementalBackupsByStatus),
         };
 
         if (ShardNumber.HasValue)

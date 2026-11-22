@@ -834,9 +834,9 @@ public class BackupHistoryTests : ClusterTestBase
         }
     }
 
-    // #12: the history shows only the node you are connected to
+    // #37: the history doesn't show all the nodes together by default
     [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
-    public async Task BackupHistory_ShouldReturnTheHistoryOfAnotherNode()
+    public async Task BackupHistory_ShouldShowTheHistoryOfAllNodes()
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         var (nodes, leader) = await CreateRaftCluster(2);
@@ -851,9 +851,7 @@ public class BackupHistoryTests : ClusterTestBase
 
         using (queriedNode.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
-            Assert.Empty(await GetHistoryGroupsAsync(context, store, $"database={store.Database}"));
-
-            var group = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}&nodeTag={backupNodeTag}"));
+            var group = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}"));
             Assert.Equal(taskId, GetLong(group, "TaskId"));
             Assert.Equal(backupNodeTag, GetString(GetObject(group, "FullBackup"), "NodeTag"));
 
@@ -861,6 +859,135 @@ public class BackupHistoryTests : ClusterTestBase
             using var details = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId={taskId}&createdAt={Uri.EscapeDataString(createdAt)}&nodeTag={backupNodeTag}");
             Assert.Equal(HttpStatusCode.OK, details.StatusCode);
             Assert.Contains("\"Documents\"", await details.Content.ReadAsStringAsync());
+        }
+    }
+
+    // #37: the history doesn't show all the nodes together by default
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task BackupHistory_ShouldJoinAGroupSplitBetweenNodesAndNameTheNodesThatDidNotAnswer()
+    {
+        var (nodes, leader) = await CreateRaftCluster(3);
+        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+        var followers = nodes.Where(node => node != leader).ToList();
+        var incrementalNode = followers[0];
+        var downNode = followers[1];
+
+        var fullBackup = DateTime.UtcNow.AddHours(-1);
+        await StoreHistoryEntryAsync(leader, store.Database, taskId: 1, fullBackup, lastFullBackup: fullBackup);
+        await StoreHistoryEntryAsync(incrementalNode, store.Database, taskId: 1, fullBackup.AddMinutes(10), lastFullBackup: fullBackup, isFull: false);
+        await StoreHistoryEntryAsync(incrementalNode, store.Database, taskId: 1, fullBackup.AddMinutes(20), lastFullBackup: fullBackup, isFull: false);
+
+        var downNodeTag = downNode.ServerStore.NodeTag;
+        await DisposeServerAndWaitForFinishOfDisposalAsync(downNode);
+
+        using (leader.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var history = await GetHistoryJsonAsync(context, store, $"database={store.Database}");
+            var group = Assert.Single(GetObjects(history, "Groups"));
+
+            Assert.True(GetBool(group, "FullBackupInHistory"));
+            Assert.Equal(leader.ServerStore.NodeTag, GetString(GetObject(group, "FullBackup"), "NodeTag"));
+            Assert.Equal(2, GetLong(group, "IncrementalBackupsCount"));
+            Assert.Equal(2, GetLong(GetObject(group, "IncrementalBackupsByStatus"), "Completed"));
+            var incrementals = GetObjects(group, "IncrementalBackups");
+            Assert.Equal(2, incrementals.Count);
+            Assert.All(incrementals, incremental => Assert.Equal(incrementalNode.ServerStore.NodeTag, GetString(incremental, "NodeTag")));
+            var unreachableNode = Assert.Single(GetObjects(history, "UnreachableNodes"));
+            Assert.Equal(downNodeTag, GetString(unreachableNode, "NodeTag"));
+            Assert.False(string.IsNullOrEmpty(GetString(unreachableNode, "Error")));
+
+            var from = Uri.EscapeDataString(fullBackup.AddMinutes(5).ToString("O"));
+            var filteredGroup = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}&from={from}"));
+            Assert.True(GetBool(filteredGroup, "FullBackupInHistory"));
+            Assert.Equal(leader.ServerStore.NodeTag, GetString(GetObject(filteredGroup, "FullBackup"), "NodeTag"));
+
+            using (var incrementalNodeStore = new DocumentStore { Urls = [incrementalNode.WebUrl], Database = store.Database, Conventions = { DisableTopologyUpdates = true } })
+            {
+                incrementalNodeStore.Initialize();
+
+                var groupFromTheOtherNode = Assert.Single(await GetHistoryGroupsAsync(context, incrementalNodeStore, $"database={store.Database}&from={from}"));
+                Assert.True(GetBool(groupFromTheOtherNode, "FullBackupInHistory"));
+                Assert.Equal(leader.ServerStore.NodeTag, GetString(GetObject(groupFromTheOtherNode, "FullBackup"), "NodeTag"));
+            }
+
+            var runs = await GetHistoryJsonAsync(context, store, $"database={store.Database}&groupBy=None&pageSize=1");
+            Assert.Single(GetObjects(runs, "Runs"));
+            Assert.Equal(3, GetLong(runs, "TotalResults"));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+    public async Task BackupHistory_SortByDurationShouldUseTheFullBackupOfAnotherNode()
+    {
+        var (nodes, leader) = await CreateRaftCluster(2);
+        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 2 });
+        var otherNode = nodes.Single(node => node != leader);
+
+        var fullBackup = DateTime.UtcNow.AddHours(-1);
+        await StoreHistoryEntryAsync(leader, store.Database, taskId: 1, fullBackup, lastFullBackup: fullBackup, durationInMs: 300);
+        await StoreHistoryEntryAsync(otherNode, store.Database, taskId: 1, fullBackup.AddMinutes(10), lastFullBackup: fullBackup, isFull: false);
+        await StoreHistoryEntryAsync(otherNode, store.Database, taskId: 2, fullBackup.AddMinutes(20), lastFullBackup: fullBackup.AddMinutes(20), durationInMs: 100);
+
+        using (var otherNodeStore = new DocumentStore { Urls = [otherNode.WebUrl], Database = store.Database, Conventions = { DisableTopologyUpdates = true } })
+        using (otherNode.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            otherNodeStore.Initialize();
+
+            var from = Uri.EscapeDataString(fullBackup.AddMinutes(5).ToString("O"));
+            var history = await GetHistoryJsonAsync(context, otherNodeStore, $"database={store.Database}&from={from}&sortBy=Duration&descending=false&pageSize=1");
+
+            var group = Assert.Single(GetObjects(history, "Groups"));
+            Assert.Equal(2, GetLong(group, "TaskId"));
+            Assert.Equal(2, GetLong(history, "TotalResults"));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding | RavenTestCategory.Cluster)]
+    public async Task BackupHistory_ShouldShowTheShardsOfEveryNode()
+    {
+        var (nodes, leader) = await CreateRaftCluster(2);
+        using var store = Sharding.GetDocumentStore(new Options { Server = leader });
+
+        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        var shardNumbers = record.Sharding.Shards.Keys.OrderBy(shardNumber => shardNumber).Take(2).ToList();
+        var otherNode = nodes.Single(node => node != leader);
+
+        var createdAt = DateTime.UtcNow.AddHours(-1);
+        await StoreHistoryEntryAsync(leader, ShardHelper.ToShardName(store.Database, shardNumbers[0]), taskId: 1, createdAt, lastFullBackup: createdAt);
+        await StoreHistoryEntryAsync(leader, ShardHelper.ToShardName(store.Database, shardNumbers[0]), taskId: 1, createdAt.AddMinutes(10), lastFullBackup: createdAt, isFull: false);
+        await StoreHistoryEntryAsync(otherNode, ShardHelper.ToShardName(store.Database, shardNumbers[1]), taskId: 1, createdAt, lastFullBackup: createdAt);
+        await StoreHistoryEntryAsync(leader, ShardHelper.ToShardName(store.Database, shardNumbers[1]), taskId: 1, createdAt.AddMinutes(10), lastFullBackup: createdAt, isFull: false);
+
+        using (leader.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var groups = (await GetHistoryGroupsAsync(context, store, $"database={store.Database}")).OrderBy(group => GetLong(group, "ShardNumber")).ToList();
+
+            Assert.Equal(shardNumbers, groups.Select(group => (int)GetLong(group, "ShardNumber")).ToList());
+            Assert.Equal([leader.ServerStore.NodeTag, otherNode.ServerStore.NodeTag], groups.Select(group => GetString(GetObject(group, "FullBackup"), "NodeTag")).ToList());
+
+            using (var leaderStore = new DocumentStore { Urls = [leader.WebUrl], Database = store.Database, Conventions = { DisableTopologyUpdates = true } })
+            {
+                leaderStore.Initialize();
+
+                var from = Uri.EscapeDataString(createdAt.AddMinutes(5).ToString("O"));
+                var shardGroups = (await GetHistoryGroupsAsync(context, leaderStore, $"database={store.Database}&from={from}")).OrderBy(group => GetLong(group, "ShardNumber")).ToList();
+                Assert.Equal(shardNumbers, shardGroups.Select(group => (int)GetLong(group, "ShardNumber")).ToList());
+                Assert.All(shardGroups, group => Assert.True(GetBool(group, "FullBackupInHistory")));
+                Assert.Equal([leader.ServerStore.NodeTag, otherNode.ServerStore.NodeTag], shardGroups.Select(group => GetString(GetObject(group, "FullBackup"), "NodeTag")).ToList());
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldRejectABadSortGroupOrDate()
+    {
+        using var store = GetDocumentStore(new Options { RunInMemory = true });
+
+        foreach (var query in new[] { "sortBy=NotASort", "groupBy=7", "sortBy=Date&sortBy=Node", "from=not-a-date" })
+        {
+            using var response = await GetFromEndpointAsync(store, "history", $"database={store.Database}&{query}");
+            Assert.True(response.StatusCode == HttpStatusCode.BadRequest, $"{query} returned {(int)response.StatusCode}");
         }
     }
 

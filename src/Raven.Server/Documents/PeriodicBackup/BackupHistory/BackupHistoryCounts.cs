@@ -13,14 +13,28 @@ public sealed class BackupHistoryCounts
     {
         Total++;
         if (entry.Trigger.HasValue)
-            Increment(ByTrigger, entry.Trigger.Value.ToString());
+            AddCount(ByTrigger, entry.Trigger.Value.ToString());
 
-        Increment(ByBackupType, entry.BackupType.ToString());
+        AddCount(ByBackupType, entry.BackupType.ToString());
     }
 
-    private static void Increment(Dictionary<string, long> counts, string key)
+    internal void Add(BackupHistoryCounts other)
     {
-        counts[key] = counts.GetValueOrDefault(key) + 1;
+        Total += other.Total;
+
+        AddCounts(ByTrigger, other.ByTrigger);
+        AddCounts(ByBackupType, other.ByBackupType);
+    }
+
+    internal static void AddCount(Dictionary<string, long> counts, string key, long count = 1)
+    {
+        counts[key] = counts.GetValueOrDefault(key) + count;
+    }
+
+    internal static void AddCounts(Dictionary<string, long> counts, Dictionary<string, long> otherCounts)
+    {
+        foreach (var (key, count) in otherCounts)
+            AddCount(counts, key, count);
     }
 
     public DynamicJsonValue ToJson()
@@ -33,7 +47,7 @@ public sealed class BackupHistoryCounts
         };
     }
 
-    private static DynamicJsonValue ToJson(Dictionary<string, long> counts)
+    internal static DynamicJsonValue ToJson(Dictionary<string, long> counts)
     {
         var json = new DynamicJsonValue();
         foreach (var (key, count) in counts)

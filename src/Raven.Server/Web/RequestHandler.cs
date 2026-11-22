@@ -457,6 +457,18 @@ namespace Raven.Server.Web
             return values;
         }
 
+        internal T GetSingleEnumValueQueryString<T>(string name) where T : struct, Enum
+        {
+            var values = GetEnumValuesQueryString<T>(name);
+            if (values.Count > 1)
+                throw new BadRequestException($"'{name}' must have a single value");
+
+            foreach (var value in values)
+                return value;
+
+            return default;
+        }
+
         [DoesNotReturn]
         private static void ThrowSingleCharacterRequired(string name, string value)
         {
