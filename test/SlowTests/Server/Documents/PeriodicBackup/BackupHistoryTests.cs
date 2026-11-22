@@ -405,11 +405,11 @@ public class BackupHistoryTests : ClusterTestBase
 
     // #19: a request for one group without its task id is answered with 500 instead of 400
     [RavenFact(RavenTestCategory.BackupExportImport)]
-    public async Task BackupHistory_ShouldRequireTheTaskIdWithFullBackupTicks()
+    public async Task BackupHistory_ShouldRequireTheTaskIdWithTheFullBackupTime()
     {
         using var store = GetDocumentStore(new Options { RunInMemory = true });
 
-        using var response = await GetFromEndpointAsync(store, "history", $"database={store.Database}&fullBackupTicks=1");
+        using var response = await GetFromEndpointAsync(store, "history", $"database={store.Database}&fullBackupCreatedAt=2026-01-01T00:00:00.0000000Z");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -629,7 +629,7 @@ public class BackupHistoryTests : ClusterTestBase
         using var userStore = GetDocumentStore(new Options { AdminCertificate = adminCertificate, ClientCertificate = userCertificate, ModifyDatabaseName = _ => allowedDatabase });
 
         using var history = await GetFromEndpointAsync(userStore, "history", $"database={otherDatabase}");
-        using var result = await GetFromEndpointAsync(userStore, "result", $"database={otherDatabase}&taskId=1&backupTicks=1");
+        using var result = await GetFromEndpointAsync(userStore, "result", $"database={otherDatabase}&taskId=1&createdAt=2026-01-01T00:00:00.0000000Z");
 
         Assert.Equal(HttpStatusCode.Forbidden, history.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, result.StatusCode);
@@ -641,7 +641,7 @@ public class BackupHistoryTests : ClusterTestBase
     {
         using var store = Sharding.GetDocumentStore();
 
-        using var response = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId=1&backupTicks=1");
+        using var response = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId=1&createdAt=2026-01-01T00:00:00.0000000Z");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -857,8 +857,8 @@ public class BackupHistoryTests : ClusterTestBase
             Assert.Equal(taskId, GetLong(group, "TaskId"));
             Assert.Equal(backupNodeTag, GetString(GetObject(group, "FullBackup"), "NodeTag"));
 
-            var createdAt = DateTime.Parse(GetString(GetObject(group, "FullBackup"), "CreatedAt"), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-            using var details = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId={taskId}&backupTicks={createdAt.Ticks}&nodeTag={backupNodeTag}");
+            var createdAt = GetString(GetObject(group, "FullBackup"), "CreatedAt");
+            using var details = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId={taskId}&createdAt={Uri.EscapeDataString(createdAt)}&nodeTag={backupNodeTag}");
             Assert.Equal(HttpStatusCode.OK, details.StatusCode);
             Assert.Contains("\"Documents\"", await details.Content.ReadAsStringAsync());
         }
@@ -1320,7 +1320,7 @@ public class BackupHistoryTests : ClusterTestBase
         if (parameters.TaskId != 0)
             query["taskId"] = parameters.TaskId.ToString();
         if (parameters.FullBackupId != 0)
-            query["fullBackupTicks"] = parameters.FullBackupId.ToString();
+            query["fullBackupCreatedAt"] = new DateTime(parameters.FullBackupId, DateTimeKind.Utc).ToString("O");
         if (parameters.IncludeIncrementals == false)
             query["includeIncrementals"] = false.ToString();
 
@@ -1348,7 +1348,7 @@ public class BackupHistoryTests : ClusterTestBase
     private static BackupResult GetBackupResultFromEndpoint(JsonOperationContext context, DocumentStore store, string databaseName, long taskId, DateTime createdAt)
     {
         var client = store.GetRequestExecutor().HttpClient;
-        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/periodic-backup/result?database={databaseName}&taskId={taskId}&backupTicks={createdAt.Ticks}"));
+        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/periodic-backup/result?database={databaseName}&taskId={taskId}&createdAt={Uri.EscapeDataString(createdAt.ToString("O"))}"));
         string result = response.Content.ReadAsStringAsync().Result;
 
         var resultBjro = context.Sync.ReadForMemory(result, "Result");

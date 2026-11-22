@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -60,6 +61,12 @@ internal abstract class AbstractBackupHistoryHandlerProcessor : AbstractServerHa
         ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
 
     protected abstract ValueTask WriteResponseAsync(TransactionOperationContext context, RawDatabaseRecord databaseRecord, int? shardNumber);
+
+    protected DateTime? GetUtcDateTimeQueryString(string name, bool required)
+    {
+        var value = RequestHandler.GetDateTimeQueryString(name, required);
+        return value?.Kind == DateTimeKind.Local ? value.Value.ToUniversalTime() : value;
+    }
 
     private void AssertShardNumber(RawDatabaseRecord databaseRecord, int? shardNumber)
     {

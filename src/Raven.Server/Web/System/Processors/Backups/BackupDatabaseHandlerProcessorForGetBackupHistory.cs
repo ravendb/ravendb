@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
@@ -23,19 +22,19 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
     {
         var includeIncrementals = RequestHandler.GetBoolValueQueryString("includeIncrementals", required: false) ?? true;
         var requestedTaskId = RequestHandler.GetLongQueryString("taskId", required: false);
-        var fullBackupTicks = RequestHandler.GetLongQueryString("fullBackupTicks", required: false);
+        var fullBackupCreatedAt = GetUtcDateTimeQueryString("fullBackupCreatedAt", required: false);
 
-        if (fullBackupTicks.HasValue && requestedTaskId.HasValue == false)
-            throw new BadRequestException("'taskId' must be specified when 'fullBackupTicks' is specified");
+        if (fullBackupCreatedAt.HasValue && requestedTaskId.HasValue == false)
+            throw new BadRequestException("'taskId' must be specified when 'fullBackupCreatedAt' is specified");
 
         var query = new BackupHistoryQuery
         {
             ShardNumber = shardNumber,
             TaskId = requestedTaskId,
-            FullBackupTicks = fullBackupTicks,
+            FullBackupTicks = fullBackupCreatedAt?.Ticks,
             IncludeIncrementals = includeIncrementals,
-            From = GetUtcDateTimeQueryString("from"),
-            To = GetUtcDateTimeQueryString("to"),
+            From = GetUtcDateTimeQueryString("from", required: false),
+            To = GetUtcDateTimeQueryString("to", required: false),
             TaskName = RequestHandler.GetStringQueryString("taskName", required: false),
             Triggers = RequestHandler.GetEnumValuesQueryString<BackupTrigger>("trigger"),
             BackupTypes = RequestHandler.GetEnumValuesQueryString<BackupType>("backupType"),
@@ -50,11 +49,5 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
             writer.WriteObject(BackupHistoryStorage.GetBackupHistory(context, databaseRecord, query));
             writer.WriteEndObject();
         }
-    }
-
-    private DateTime? GetUtcDateTimeQueryString(string name)
-    {
-        var value = RequestHandler.GetDateTimeQueryString(name, required: false);
-        return value?.Kind == DateTimeKind.Local ? value.Value.ToUniversalTime() : value;
     }
 }

@@ -20,14 +20,14 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : Abstrac
     protected override async ValueTask WriteResponseAsync(TransactionOperationContext context, RawDatabaseRecord databaseRecord, int? shardNumber)
     {
         var taskId = RequestHandler.GetLongQueryString("taskId");
-        var backupTicks = RequestHandler.GetLongQueryString("backupTicks");
+        var createdAt = GetUtcDateTimeQueryString("createdAt", required: true).Value;
         var databaseName = shardNumber.HasValue ? ShardHelper.ToShardName(databaseRecord.DatabaseName, shardNumber.Value) : databaseRecord.DatabaseName;
 
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(BackupResult));
-            writer.WriteObject(BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, backupTicks));
+            writer.WriteObject(BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, createdAt.Ticks));
             writer.WriteEndObject();
         }
     }
