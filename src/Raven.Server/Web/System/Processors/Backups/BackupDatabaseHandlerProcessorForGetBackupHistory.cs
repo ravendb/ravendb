@@ -39,7 +39,9 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
             Triggers = RequestHandler.GetEnumValuesQueryString<BackupTrigger>("trigger"),
             BackupTypes = RequestHandler.GetEnumValuesQueryString<BackupType>("backupType"),
             Start = RequestHandler.GetStart(),
-            PageSize = RequestHandler.GetPageSize()
+            PageSize = RequestHandler.GetPageSize(),
+            SortBy = RequestHandler.GetEnumQueryString<BackupHistorySortBy>("sortBy", required: false),
+            Descending = RequestHandler.GetBoolValueQueryString("descending", required: false) ?? true
         };
 
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

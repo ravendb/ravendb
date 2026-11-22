@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.ServerWide.Context;
@@ -48,21 +49,38 @@ public class BackupHistory
         }
     }
 
-    public void ApplyPaging(int start, int pageSize)
+    public void SortAndPage(BackupHistoryQuery query)
     {
         TotalResults = Groups.Count;
 
-        var page = Groups
-            .OrderByDescending(group => group.FullBackup.CreatedAt)
-            .ThenBy(group => group.TaskId)
-            .ThenBy(group => group.ShardNumber)
-            .Skip(start)
-            .Take(pageSize)
+        var page = Sort(Groups, query, group => group.FullBackup, group => group.TaskName, group => group.TaskId, group => group.ShardNumber)
+            .Skip(query.Start)
+            .Take(query.PageSize)
             .ToList();
 
         Groups.Clear();
         Groups.AddRange(page);
     }
+
+    private static IEnumerable<T> Sort<T>(IEnumerable<T> items, BackupHistoryQuery query, Func<T, BackupHistoryEntry> getEntry, Func<T, string> getTaskName,
+        Func<T, long> getTaskId, Func<T, int?> getShardNumber)
+    {
+        var ordered = query.SortBy switch
+        {
+            BackupHistorySortBy.TaskName => OrderBy(items, getTaskName, StringComparer.OrdinalIgnoreCase, query.Descending),
+            BackupHistorySortBy.Node => OrderBy(items, item => getEntry(item).NodeTag, StringComparer.Ordinal, query.Descending),
+            BackupHistorySortBy.Duration => OrderBy(items, item => getEntry(item).DurationInMs, Comparer<long?>.Default, query.Descending),
+            _ => OrderBy(items, item => getEntry(item).CreatedAt, Comparer<DateTime>.Default, query.Descending)
+        };
+
+        return ordered
+            .ThenByDescending(item => getEntry(item).CreatedAt)
+            .ThenBy(getTaskId)
+            .ThenBy(getShardNumber);
+    }
+
+    private static IOrderedEnumerable<T> OrderBy<T, TKey>(IEnumerable<T> items, Func<T, TKey> getKey, IComparer<TKey> comparer, bool descending) =>
+        descending ? items.OrderByDescending(getKey, comparer) : items.OrderBy(getKey, comparer);
 
     public DynamicJsonValue ToJson() =>
         new()

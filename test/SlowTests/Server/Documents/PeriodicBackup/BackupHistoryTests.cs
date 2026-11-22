@@ -947,6 +947,30 @@ public class BackupHistoryTests : ClusterTestBase
         }
     }
 
+    // #35: the history can't be sorted, groups always come newest first
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldSortTheGroups()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+
+        var start = DateTime.UtcNow.AddHours(-1);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 1, start, lastFullBackup: start, taskName: "Beta", durationInMs: 300);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 2, start.AddMinutes(1), lastFullBackup: start.AddMinutes(1), taskName: "Alpha", durationInMs: 100);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 3, start.AddMinutes(2), lastFullBackup: start.AddMinutes(2), taskName: "Gamma", durationInMs: 200);
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            Assert.Equal(["Gamma", "Alpha", "Beta"], await GetTaskNamesAsync(context, store, ""));
+            Assert.Equal(["Alpha", "Beta", "Gamma"], await GetTaskNamesAsync(context, store, "&sortBy=TaskName&descending=false"));
+            Assert.Equal(["Beta", "Gamma", "Alpha"], await GetTaskNamesAsync(context, store, "&sortBy=Duration"));
+            Assert.Equal(["Beta", "Alpha", "Gamma"], await GetTaskNamesAsync(context, store, "&sortBy=Date&descending=false"));
+        }
+
+        static async Task<List<string>> GetTaskNamesAsync(JsonOperationContext context, DocumentStore store, string query) =>
+            (await GetHistoryGroupsAsync(context, store, $"database={store.Database}{query}")).Select(group => GetString(group, "TaskName")).ToList();
+    }
+
     // #17: a group whose full backup is not in this node's history disappears without incrementals, and with them it shows a made-up full backup as if it were stored
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistory_ShouldShowAGroupWhoseFullBackupIsNotInThisNodesHistory()
@@ -1508,7 +1532,8 @@ public class BackupHistoryTests : ClusterTestBase
         }
     }
 
-    private static Task StoreHistoryEntryAsync(RavenServer server, string databaseName, long taskId, DateTime createdAt, DateTime? lastFullBackup, bool isFull = true, string error = null)
+    private static Task StoreHistoryEntryAsync(RavenServer server, string databaseName, long taskId, DateTime createdAt, DateTime? lastFullBackup, bool isFull = true, string error = null,
+        string taskName = "RavenDB-19358", long? durationInMs = null)
     {
         var status = new PeriodicBackupStatus
         {
@@ -1516,13 +1541,14 @@ public class BackupHistoryTests : ClusterTestBase
             IsFull = isFull,
             BackupType = BackupType.Backup,
             NodeTag = server.ServerStore.NodeTag,
+            DurationInMs = durationInMs,
             LastFullBackup = lastFullBackup,
             LastFullBackupInternal = isFull ? createdAt : lastFullBackup,
             LastIncrementalBackupInternal = isFull ? null : createdAt,
             Error = error == null ? null : new Error { Exception = error, At = createdAt }
         };
 
-        var entry = new BackupHistoryEntry(status, "RavenDB-19358", BackupTrigger.Scheduled, skipped: false);
+        var entry = new BackupHistoryEntry(status, taskName, BackupTrigger.Scheduled, skipped: false);
         return server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(databaseName, taskId, entry, new BackupResult())]));
     }
 

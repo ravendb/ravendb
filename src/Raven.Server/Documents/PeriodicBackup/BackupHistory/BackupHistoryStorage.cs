@@ -266,10 +266,10 @@ public class BackupHistoryStorage
             }
         }
 
-        backupHistory.ApplyPaging(query.Start, query.PageSize);
-
         foreach (var group in backupHistory.Groups)
             CompleteGroup(context, table, databaseRecord, group);
+
+        backupHistory.SortAndPage(query);
 
         return context.ReadObject(backupHistory.ToJson(), nameof(BackupHistory));
     }
