@@ -90,10 +90,18 @@ loadToOrders(noPartition(), {
             }
         }
 
+        public enum RunFailure
+        {
+            Load,
+            LoadFollowedByForceBatchRetry,
+            BeforeLoad
+        }
+
         [RavenTheory(RavenTestCategory.Etl)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task RestartedOlapEtlProcessShouldRetryAFailedScheduledRunRightAway(bool forceBatchRetryAfterFailure)
+        [InlineData(RunFailure.Load)]
+        [InlineData(RunFailure.LoadFollowedByForceBatchRetry)]
+        [InlineData(RunFailure.BeforeLoad)]
+        public async Task RestartedOlapEtlProcessShouldRetryAFailedScheduledRunRightAway(RunFailure failure)
         {
             using (var store = GetDocumentStore())
             {
@@ -108,13 +116,26 @@ loadToOrders(noPartition(), {
                 var missedLastBatchTime = DateTime.UtcNow.AddDays(-2);
                 await UpdateEtlState(database, missedLastBatchTime);
 
-                process.ForTestingPurposesOnly().SimulateLoadFailure = true;
+                if (failure == RunFailure.BeforeLoad)
+                {
+                    // fails in Transform, so Load() isn't called and the outcome of the previous load is left as is
+                    var failed = 0;
+                    database.ForTestingPurposesOnly().OnEtlItemExtracted = (_, _, _) =>
+                    {
+                        if (Interlocked.Exchange(ref failed, 1) == 0)
+                            throw new InvalidOperationException("Simulating a failure before loading");
+                    };
+                }
+                else
+                {
+                    process.ForTestingPurposesOnly().SimulateLoadFailure = true;
+                }
 
                 var failedRunCompleted = false;
                 process.ForTestingPurposesOnly().OnAfterAllBatchesCompleted = () =>
                 {
                     // a concurrent Retry Batch request clears FallbackTime without a successful export
-                    if (forceBatchRetryAfterFailure)
+                    if (failure == RunFailure.LoadFollowedByForceBatchRetry)
                         process.ForceBatchRetry();
 
                     Volatile.Write(ref failedRunCompleted, true);
@@ -258,6 +279,153 @@ loadToOrders(noPartition(), {
                 // the saved last batch time schedules the next run
                 Assert.Equal(filesAfterSave, await WaitForValueAsync(() => CountFiles(path), filesAfterSave + 1, timeout: 3000));
                 Assert.Equal(3, Volatile.Read(ref saveAttempts));
+            }
+        }
+
+        public enum SaveFailure
+        {
+            NonTimeoutError,
+            TimeoutRetriesExhausted
+        }
+
+        [RavenTheory(RavenTestCategory.Etl)]
+        [InlineData(SaveFailure.NonTimeoutError)]
+        [InlineData(SaveFailure.TimeoutRetriesExhausted)]
+        public async Task FailingToSaveTheLastBatchTimeShouldNotExportOffSchedule(SaveFailure failure)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
+                var filesBefore = CountFiles(path);
+                var storedLastBatchTime = EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime;
+
+                // the failed save is retried after the fallback time
+                database.ForTestingPurposesOnly().EtlFallbackTime = TimeSpan.FromSeconds(1);
+
+                var failingAttempts = failure == SaveFailure.NonTimeoutError ? 1 : 3;
+                var saveAttempts = 0;
+
+                process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
+                {
+                    var attempt = Interlocked.Increment(ref saveAttempts);
+
+                    // a document is modified while the run is saving its time
+                    if (attempt == 1)
+                        ModifyOrder(store).GetAwaiter().GetResult();
+
+                    if (attempt > failingAttempts)
+                        return;
+
+                    if (failure == SaveFailure.NonTimeoutError)
+                        throw new InvalidOperationException("Simulating a rejected save, e.g. RachisApplyException or a leader change");
+
+                    // UpdateEtlProcessState() waits on the cluster command with Task.Wait(), which wraps its TimeoutException
+                    throw new AggregateException(new TimeoutException("Simulating 'Waited for 00:00:15 but the command was not applied in this time'"));
+                };
+
+                // a scheduled run with nothing to export, it only saves its time
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
+
+                // only the save is retried, until it succeeds
+                Assert.True(await WaitForValueAsync(() => EtlProcess.GetProcessState(database, EtlName, TransformationName).LastBatchTime > storedLastBatchTime, true));
+                Assert.Equal(failingAttempts + 1, Volatile.Read(ref saveAttempts));
+
+                // the modified document waits for the next scheduled run (~12 hours away)
+                var files = await WaitForValueAsync(() => CountFiles(path), filesBefore + 1, timeout: 3000);
+
+                Assert.True(files == filesBefore,
+                    $"The document modified while saving the last batch time failed was exported right away, off schedule: files {filesBefore} -> {files}.");
+
+                Assert.Equal(failingAttempts + 1, Volatile.Read(ref saveAttempts));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task StoppedOlapEtlProcessShouldNotRetrySavingTheLastBatchTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                var process = (OlapEtl)database.EtlLoader.Processes.Single();
+
+                var saveAttempts = 0;
+                var attemptsAfterStop = 0;
+                var stoppedDuringFirstAttempt = false;
+                Task restart = null;
+
+                process.ForTestingPurposesOnly().BeforeSavingLastBatchTime = () =>
+                {
+                    if (Interlocked.Increment(ref saveAttempts) > 1)
+                    {
+                        if (process.ForTestingPurposesOnly().IsStopped)
+                            Interlocked.Increment(ref attemptsAfterStop);
+
+                        return;
+                    }
+
+                    // the task is edited while the save waits for the cluster - EtlLoader stops this process
+                    Volatile.Write(ref restart, Task.Run(() => RestartEtlProcess(store, database, taskId, configuration, RestartBy.UpdatingTask)));
+
+                    Volatile.Write(ref stoppedDuringFirstAttempt, SpinWait.SpinUntil(() => process.ForTestingPurposesOnly().IsStopped, Timeout));
+
+                    throw new AggregateException(new TimeoutException("Simulating 'Waited for 00:00:15 but the command was not applied in this time'"));
+                };
+
+                process.ForTestingPurposesOnly().TriggerScheduledRun();
+
+                Assert.True(await WaitForValueAsync(() => Volatile.Read(ref restart) != null, true));
+                await Volatile.Read(ref restart);
+
+                // Stop() joins the process thread, so the old process is fully stopped once it isn't running
+                Assert.False(await WaitForValueAsync(() => process.IsRunning, false));
+                Assert.True(Volatile.Read(ref stoppedDuringFirstAttempt), "The process wasn't stopped while saving the last batch time");
+
+                Assert.True(Volatile.Read(ref attemptsAfterStop) == 0,
+                    $"The stopped process retried saving the last batch time {attemptsAfterStop} time(s) after Stop(), sending another Raft command.");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public async Task StoppedOlapEtlProcessShouldDisposeItsTimer()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var path = NewDataPath(forceCreateDir: true);
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                var (taskId, configuration) = await SetupOlapEtlAndWaitForInitialExport(store, database, path);
+
+                var oldProcess = (OlapEtl)database.EtlLoader.Processes.Single();
+
+                // the next scheduled run, about 12 hours away
+                var timer = oldProcess.ForTestingPurposesOnly().ScheduledRunTimer;
+                Assert.NotNull(timer);
+
+                await RestartEtlProcess(store, database, taskId, configuration, RestartBy.TogglingTaskState);
+
+                Assert.False(await WaitForValueAsync(() => oldProcess.IsRunning, false));
+
+                Assert.True(await WaitForValueAsync(() => IsDisposed(timer), true, timeout: 5000),
+                    "The timer of the stopped OLAP ETL process is still scheduled. It keeps the stopped process in memory until it fires (here ~12 hours).");
+            }
+        }
+
+        private static bool IsDisposed(Timer timer)
+        {
+            try
+            {
+                // Change() returns false / throws on a disposed timer
+                return timer.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite) == false;
+            }
+            catch (ObjectDisposedException)
+            {
+                return true;
             }
         }
 

@@ -837,6 +837,8 @@ namespace Raven.Server.Documents.ETL
 
                     var didWork = false;
 
+                    var batchLoaded = false;
+
                     var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var startEtag = state.GetLastProcessedEtag(Database.DbBase64Id, _serverStore.NodeTag);
@@ -872,6 +874,8 @@ namespace Raven.Server.Documents.ETL
                                     var transformations = Transform(merged, context, stats, state);
 
                                     var noFailures = Load(transformations, context, stats);
+
+                                    batchLoaded = noFailures;
 
                                     var lastLoadedOrFilteredInBatch = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
                                     var lastProcessedInBatch = Math.Max(lastLoadedOrFilteredInBatch, stats.LastTransformationErrorEtag);
@@ -961,7 +965,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     try
                     {
-                        AfterAllBatchesCompleted(runStart);
+                        AfterAllBatchesCompleted(runStart, batchLoaded);
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
@@ -1104,7 +1108,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutHiLoDocument();
 
-        protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime)
+        protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime, bool lastBatchLoaded)
         {
         }
 
