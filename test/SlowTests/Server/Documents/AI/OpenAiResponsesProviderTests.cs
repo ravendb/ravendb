@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Settings;
@@ -258,6 +259,52 @@ namespace SlowTests.Server.Documents.AI
             });
         }
 
+        // Responses sends strict on the same tools as Chat Completions (RavenDB_27249), at the tool level
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task Tools_AreStrictLikeOnChatCompletions()
+        {
+            const string schema = "{\"type\":\"object\",\"properties\":{\"id\":{\"type\":\"string\"}},\"required\":[\"id\"],\"additionalProperties\":false}";
+
+            using var store = GetDocumentStore();
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(new AiConnectionString
+            {
+                Name = "fake-connection",
+                Identifier = "fake-connection",
+                ModelType = AiModelType.Chat,
+                OpenAiSettings = Settings()
+            }));
+
+            var agent = new AiAgentConfiguration("strict-tools", "fake-connection", "You answer questions about orders.")
+            {
+                Queries =
+                [
+                    new AiAgentToolQuery { Name = "FromSample", Description = "d", Query = "from Orders where id() = $id", ParametersSampleObject = "{\"id\": \"orders/1\"}" },
+                    new AiAgentToolQuery { Name = "QueryStrict", Description = "d", Query = "from Orders where id() = $id", ParametersSchema = schema, Strict = true }
+                ],
+                Actions = [new AiAgentToolAction { Name = "ActionNotStrict", Description = "d", ParametersSchema = schema }]
+            };
+            await store.AI.CreateAgentAsync(agent, new { Answer = "a" });
+            var saved = (await store.AI.GetAgentsAsync()).AiAgents.Single();
+
+            var database = await GetDatabase(store.Database);
+            var handler = new ConversationHandler(Server.ServerStore, database) { Authentication = null };
+
+            await WithClient(Settings(), _ => Ok("{}"), (client, ctx) =>
+            {
+                var strictByName = new Dictionary<string, bool>();
+                foreach (var tool in client.PrepareTools(ctx, handler.BuildToolDescriptors(ctx, saved)))
+                {
+                    Assert.True(tool.TryGet("name", out string name));
+                    strictByName[name] = tool.TryGet("strict", out bool strict) && strict;
+                }
+
+                Assert.True(strictByName["FromSample"]);
+                Assert.True(strictByName["QueryStrict"]);
+                Assert.False(strictByName["ActionNotStrict"]);
+                return Task.CompletedTask;
+            });
+        }
+
         // T9
         [RavenFact(RavenTestCategory.Ai)]
         public async Task Agent_ToolRoundTrip_StoresChatCompletionsShape()
@@ -350,10 +397,10 @@ namespace SlowTests.Server.Documents.AI
         // existing connection strings to other servers keep Chat Completions
         [InlineData("https://my.host/v1", null, false)]
         [InlineData("https://api.openai.com.my.host/v1", null, false)]
-        [InlineData(null, OpenAiChatApi.ChatCompletions, false)]
-        [InlineData("https://my.host/v1", OpenAiChatApi.ChatCompletions, false)]
-        [InlineData("https://my.host/v1", OpenAiChatApi.Responses, true)]
-        public void TryGetParameters_PicksTheApi(string endpoint, OpenAiChatApi? chatApi, bool expectResponses)
+        [InlineData(null, OpenAiChatApiType.ChatCompletions, false)]
+        [InlineData("https://my.host/v1", OpenAiChatApiType.ChatCompletions, false)]
+        [InlineData("https://my.host/v1", OpenAiChatApiType.Responses, true)]
+        public void TryGetParameters_PicksTheApi(string endpoint, OpenAiChatApiType? chatApi, bool expectResponses)
         {
             var connection = new AiConnectionString
             {

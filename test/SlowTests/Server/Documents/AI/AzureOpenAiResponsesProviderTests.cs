@@ -52,9 +52,9 @@ namespace SlowTests.Server.Documents.AI
 
         [RavenTheory(RavenTestCategory.Ai)]
         [InlineData(null, true)]
-        [InlineData(OpenAiChatApi.Responses, true)]
-        [InlineData(OpenAiChatApi.ChatCompletions, false)]
-        public void TryGetParameters_Azure_PicksTheApi(OpenAiChatApi? chatApi, bool expectResponses)
+        [InlineData(OpenAiChatApiType.Responses, true)]
+        [InlineData(OpenAiChatApiType.ChatCompletions, false)]
+        public void TryGetParameters_Azure_PicksTheApi(OpenAiChatApiType? chatApi, bool expectResponses)
         {
             var settings = ProviderSettings();
             settings.ChatApi = chatApi;

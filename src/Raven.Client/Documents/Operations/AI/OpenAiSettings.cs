@@ -39,17 +39,17 @@ public sealed class OpenAiSettings : OpenAiChatApiSettings
         return uriBuilder.Uri;
     }
 
-    internal override OpenAiChatApi GetDefaultChatApi()
+    internal override OpenAiChatApiType GetDefaultChatApi()
     {
         if (string.IsNullOrEmpty(Endpoint))
-            return OpenAiChatApi.Responses;
+            return OpenAiChatApiType.Responses;
 
         // OpenAI's own API has /responses. Any other endpoint is a server that may not, and connection strings
         // pointing at one used Chat Completions before ChatApi existed.
         if (Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals(OpenAiBaseUri.Host, StringComparison.OrdinalIgnoreCase))
-            return OpenAiChatApi.Responses;
+            return OpenAiChatApiType.Responses;
 
-        return OpenAiChatApi.ChatCompletions;
+        return OpenAiChatApiType.ChatCompletions;
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public sealed class OpenAiSettings : OpenAiChatApiSettings
 /// <summary>
 /// The API that chat requests are sent to, see <see cref="OpenAiChatApiSettings.ChatApi"/>.
 /// </summary>
-public enum OpenAiChatApi
+public enum OpenAiChatApiType
 {
     /// <summary>The <c>/responses</c> API.</summary>
     Responses,

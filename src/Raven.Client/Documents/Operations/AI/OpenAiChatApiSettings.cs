@@ -20,16 +20,16 @@ public abstract class OpenAiChatApiSettings : OpenAiBaseSettings
     /// <summary>
     /// The API that chat requests are sent to. When not set, the connector's default is used.
     /// </summary>
-    public OpenAiChatApi? ChatApi { get; set; }
+    public OpenAiChatApiType? ChatApi { get; set; }
 
     /// <summary>
     /// The reasoning effort for models that support it, e.g. <c>none</c>, <c>low</c>, <c>medium</c> or <c>high</c>. Sent as is.
     /// </summary>
     public string ReasoningEffort { get; set; }
 
-    internal OpenAiChatApi GetChatApi() => ChatApi ?? GetDefaultChatApi();
+    internal OpenAiChatApiType GetChatApi() => ChatApi ?? GetDefaultChatApi();
 
-    internal abstract OpenAiChatApi GetDefaultChatApi();
+    internal abstract OpenAiChatApiType GetDefaultChatApi();
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {

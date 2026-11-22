@@ -148,7 +148,7 @@ public class AgentActionE2ETests(ITestOutputHelper output, QuillCollectionHost c
         {
             Name = connectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model") { ChatApi = OpenAiChatApi.ChatCompletions }, // the mock serves only /chat/completions
+            OpenAiSettings = new OpenAiSettings("test-key", mock.BaseAddress + "/", "mock-model") { ChatApi = OpenAiChatApiType.ChatCompletions }, // the mock serves only /chat/completions
         });
 
         const string agentId = "support";

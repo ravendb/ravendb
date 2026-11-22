@@ -144,7 +144,7 @@ public class RavenDB_27589 : RavenTestBase
     {
         using var store = GetDocumentStore();
 
-        var ollama = new OllamaResponsesProvider(new OllamaSettings("http://localhost:11434", "qwen") { ChatApi = OpenAiChatApi.Responses });
+        var ollama = new OllamaResponsesProvider(new OllamaSettings("http://localhost:11434", "qwen") { ChatApi = OpenAiChatApiType.Responses });
         var requests = await RunMockConversationAsync(store, ollama,
         [
             ResponsesWire.Response("completed", ResponsesWire.FunctionCall("call_mock", "RecentOrder", "{}")),

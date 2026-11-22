@@ -24,7 +24,7 @@ public sealed class AzureOpenAiSettings : OpenAiChatApiSettings
     /// </summary>
     public string DeploymentName { get; set; }
 
-    internal override OpenAiChatApi GetDefaultChatApi() => OpenAiChatApi.Responses;
+    internal override OpenAiChatApiType GetDefaultChatApi() => OpenAiChatApiType.Responses;
 
     public override void ValidateFields(List<string> errors)
     {
