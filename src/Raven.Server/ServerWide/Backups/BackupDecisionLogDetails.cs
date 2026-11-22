@@ -52,7 +52,13 @@ public sealed class BackupDecision
 
 public sealed class BackupDecisionLog
 {
-    private readonly BackupDecision[] _decisions;
+    private const int InitialSize = 4;
+
+    private readonly object _locker = new();
+
+    private readonly int _maxSize;
+
+    private BackupDecision[] _decisions = Array.Empty<BackupDecision>();
 
     private int _newestIndex = -1;
 
@@ -60,12 +66,12 @@ public sealed class BackupDecisionLog
 
     public BackupDecisionLog(int maxSize)
     {
-        _decisions = new BackupDecision[maxSize];
+        _maxSize = maxSize;
     }
 
     internal BackupDecision Add(BackupDecisionCategory category, string detail, string reason, DateTime time, Func<long> nextId, Func<long> nextEtag)
     {
-        lock (_decisions)
+        lock (_locker)
         {
             if (_count > 0 && _decisions[_newestIndex].IsSameAs(category, detail, reason))
             {
@@ -89,6 +95,9 @@ public sealed class BackupDecisionLog
                 Etag = nextEtag()
             };
 
+            if (_count == _decisions.Length && _decisions.Length < _maxSize)
+                Array.Resize(ref _decisions, Math.Min(Math.Max(InitialSize, _decisions.Length * 2), _maxSize));
+
             _newestIndex = (_newestIndex + 1) % _decisions.Length;
             _decisions[_newestIndex] = decision;
 
@@ -101,7 +110,7 @@ public sealed class BackupDecisionLog
 
     public List<BackupDecision> GetDecisions()
     {
-        lock (_decisions)
+        lock (_locker)
         {
             var decisions = new List<BackupDecision>(_count);
 
@@ -117,7 +126,7 @@ public sealed class BackupDecisionLog
         var decisions = new List<BackupDecision>();
         totalMatches = 0;
 
-        lock (_decisions)
+        lock (_locker)
         {
             for (var i = 0; i < _count; i++)
             {
@@ -144,7 +153,7 @@ public sealed class BackupDecisionLog
 
     public bool TryGetLatest(out BackupDecision decision)
     {
-        lock (_decisions)
+        lock (_locker)
         {
             if (_count == 0)
             {

@@ -913,17 +913,17 @@ public class ServerBackupRunner : IDisposable
 
     public BackupInfo GetBackupInfo(ClusterOperationContext context, string databaseName)
     {
-        List<DatabaseBackupState> BackupStates = null;
+        List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)> periodicBackups = null;
         if (TryGetBackupStates(databaseName, out var backupStates))
         {
-            BackupStates = backupStates.Values.ToList();
+            periodicBackups = backupStates.Values.Select(x => (x.Configuration, x.BackupStatus)).ToList();
         }
 
         return BackupUtils.GetBackupInfo(
             new BackupUtils.BackupInfoParameters
             {
                 Context = context,
-                DatabaseBackupStates = BackupStates,
+                PeriodicBackups = periodicBackups,
                 DatabaseName = databaseName
             }
         );

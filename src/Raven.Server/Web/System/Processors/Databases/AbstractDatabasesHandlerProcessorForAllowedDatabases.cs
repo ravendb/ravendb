@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -11,7 +12,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
@@ -43,20 +43,16 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
     {
         if (database == null)
         {
-            var databaseBackupState = new List<DatabaseBackupState>();
+            var periodicBackups = new List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)>();
 
             foreach (var periodicBackupConfiguration in record.PeriodicBackups)
             {
-                databaseBackupState.Add(new DatabaseBackupState
-                {
-                    Configuration = periodicBackupConfiguration,
-                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)
-                });
+                periodicBackups.Add((periodicBackupConfiguration, BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)));
             }
 
             return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
             {
-                DatabaseBackupStates = databaseBackupState,
+                PeriodicBackups = periodicBackups,
                 DatabaseName = databaseName,
                 Context = context
             });

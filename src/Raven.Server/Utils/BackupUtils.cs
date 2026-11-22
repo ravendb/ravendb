@@ -88,7 +88,7 @@ public static class BackupUtils
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, taskId: 0L);
 
-        if ((parameters.DatabaseBackupStates == null || parameters.DatabaseBackupStates.Count == 0) && oneTimeBackupStatus == null)
+        if ((parameters.PeriodicBackups == null || parameters.PeriodicBackups.Count == 0) && oneTimeBackupStatus == null)
             return null;
 
         var lastBackup = 0L;
@@ -100,7 +100,7 @@ public static class BackupUtils
             lastBackupStatus = oneTimeBackupStatus;
         }
 
-        foreach (var periodicBackup in parameters.DatabaseBackupStates ?? [])
+        foreach (var periodicBackup in parameters.PeriodicBackups ?? [])
         {
             // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
@@ -556,7 +556,7 @@ public static class BackupUtils
     public sealed class BackupInfoParameters
     {
         public ClusterOperationContext Context { get; set; }
-        public List<DatabaseBackupState> DatabaseBackupStates { get; set; }
+        public List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)> PeriodicBackups { get; set; }
         public string DatabaseName { get; set; }
     }
 
