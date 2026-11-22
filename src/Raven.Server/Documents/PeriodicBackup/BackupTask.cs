@@ -243,9 +243,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 operationCanceled = true;
                 throw;
             }
-            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException && TaskCancelToken.Token.IsCancellationRequested)
             {
-                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
+                operationCanceled = true;
 
                 throw;
             }
@@ -269,6 +269,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     AlertReason.PeriodicBackup,
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
+
+                if (e.ExtractSingleInnerException() is OperationCanceledException)
+                    throw new InvalidOperationException($"{message}: the backup was canceled without a cancellation request.", e);
 
                 throw;
             }
