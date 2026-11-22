@@ -39,8 +39,7 @@ public class BackupHistory
 
         if (entry.BackupKind == BackupKind.Full)
         {
-            group.FullBackup = entry;
-            group.FullBackupInHistory = true;
+            group.SetFullBackup(entry);
             return;
         }
 
@@ -58,14 +57,13 @@ public class BackupHistory
 
         foreach (var group in other.Groups)
         {
-            var key = (group.TaskId, group.ShardNumber, group.FullBackup.CreatedAt.Ticks);
-            if (_groupsByKey.TryGetValue(key, out var existingGroup))
+            if (_groupsByKey.TryGetValue(group.Key, out var existingGroup))
             {
                 existingGroup.Join(group);
                 continue;
             }
 
-            _groupsByKey.Add(key, group);
+            _groupsByKey.Add(group.Key, group);
             Groups.Add(group);
         }
     }

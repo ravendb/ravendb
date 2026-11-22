@@ -806,7 +806,7 @@ public class BackupHistoryTests : ClusterTestBase
 
         await hebrewStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(hebrewStore.Database, hardDelete: true));
 
-        Assert.Equal(1L, await WaitForValueAsync(() => Task.FromResult(CountStoredEntries(server)), 1L));
+        await AssertWaitForValueAsync(() => Task.FromResult(CountStoredEntries(server)), 1L);
         using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             Assert.Single(await GetHistoryGroupsAsync(context, spanishStore, $"database={Uri.EscapeDataString(spanishStore.Database)}"));
     }
@@ -1171,7 +1171,7 @@ public class BackupHistoryTests : ClusterTestBase
 
         await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
 
-        Assert.Equal(0L, await WaitForValueAsync(() => Task.FromResult(CountStoredEntries(server)), 0L));
+        await AssertWaitForValueAsync(() => Task.FromResult(CountStoredEntries(server)), 0L);
         Assert.Equal(0, CountStoredDetails(server));
     }
 

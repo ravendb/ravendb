@@ -135,7 +135,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         if (groupsWithoutFullBackup.Count == 0)
             return;
 
-        var groupsByKey = groupsWithoutFullBackup.ToDictionary(group => (group.TaskId, group.ShardNumber, group.FullBackup.CreatedAt.Ticks));
+        var groupsByKey = groupsWithoutFullBackup.ToDictionary(group => group.Key);
         var request = new BackupHistory(DatabaseName)
         {
             Groups = groupsWithoutFullBackup.Select(group => new BackupGroup { TaskId = group.TaskId, ShardNumber = group.ShardNumber, FullBackup = group.FullBackup }).ToList()
@@ -158,11 +158,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
 
                 foreach (var found in fullBackups.Groups)
                 {
-                    if (groupsByKey.TryGetValue((found.TaskId, found.ShardNumber, found.FullBackup.CreatedAt.Ticks), out var group) == false || group.FullBackupInHistory)
-                        continue;
-
-                    group.FullBackup = found.FullBackup;
-                    group.FullBackupInHistory = true;
+                    if (groupsByKey.TryGetValue(found.Key, out var group) && group.FullBackupInHistory == false)
+                        group.SetFullBackup(found.FullBackup);
                 }
             }
         }

@@ -21,25 +21,16 @@ public class BackupGroup
         ShardNumber = shardNumber;
         TaskName = taskName;
 
-        switch (entry.BackupKind)
+        if (entry.BackupKind == BackupKind.Incremental)
         {
-            case BackupKind.Full:
-                FullBackup = entry;
-                FullBackupInHistory = true;
-                _incrementalBackups = [];
-                break;
-            
-            case BackupKind.Incremental:
-                FullBackup = new BackupHistoryEntry
-                {
-                    CreatedAt = entry.LastFullBackup ?? DateTime.MinValue,
-                    DurationInMs = null,
-                    Error = null,
-                    BackupKind = BackupKind.Full,
-                    LastFullBackup = entry.LastFullBackup,
-                };
-
-                break;
+            FullBackup = new BackupHistoryEntry
+            {
+                CreatedAt = entry.LastFullBackup ?? DateTime.MinValue,
+                DurationInMs = null,
+                Error = null,
+                BackupKind = BackupKind.Full,
+                LastFullBackup = entry.LastFullBackup,
+            };
         }
     }
     
@@ -72,13 +63,18 @@ public class BackupGroup
         BackupHistoryCounts.AddCount(IncrementalBackupsByStatus, entry.Status.ToString());
     }
 
+    internal (long TaskId, int? ShardNumber, long FullBackupTicks) Key => (TaskId, ShardNumber, FullBackup.CreatedAt.Ticks);
+
+    internal void SetFullBackup(BackupHistoryEntry fullBackup)
+    {
+        FullBackup = fullBackup;
+        FullBackupInHistory = true;
+    }
+
     internal void Join(BackupGroup other)
     {
         if (FullBackupInHistory == false && other.FullBackupInHistory)
-        {
-            FullBackup = other.FullBackup;
-            FullBackupInHistory = true;
-        }
+            SetFullBackup(other.FullBackup);
 
         TaskName ??= other.TaskName;
         IncrementalBackupsCount += other.IncrementalBackupsCount;
@@ -98,7 +94,7 @@ public class BackupGroup
             [nameof(FullBackup)] = FullBackup,
             [nameof(FullBackupInHistory)] = FullBackupInHistory,
             [nameof(IncrementalBackupsCount)] = IncrementalBackupsCount,
-            [nameof(IncrementalBackupsByStatus)] = BackupHistoryCounts.ToJson(IncrementalBackupsByStatus),
+            [nameof(IncrementalBackupsByStatus)] = DynamicJsonValue.Convert(IncrementalBackupsByStatus),
         };
 
         if (ShardNumber.HasValue)

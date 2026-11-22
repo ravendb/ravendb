@@ -25,9 +25,6 @@ public class BackupHistoryStorage
 {
     private const string JsonDocumentId = "backup-history-entry";
 
-    private StorageEnvironment _environment;
-    private TransactionContextPool _contextPool;
-
     private static readonly TableSchema BackupHistoryTableSchema = new();
     private static readonly TableSchema BackupResultDetailsTableSchema = new();
 
@@ -60,11 +57,8 @@ public class BackupHistoryStorage
 
     public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
     {
-        _environment = environment;
-        _contextPool = contextPool;
-
-        using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (var tx = _environment.WriteTransaction(context.PersistentContext))
+        using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (var tx = environment.WriteTransaction(context.PersistentContext))
         {
             BackupHistoryTableSchema.Create(tx, BackupHistorySchema.TableName, 16);
             BackupResultDetailsTableSchema.Create(tx, BackupResultDetailsSchema.TableName, 16);
@@ -72,14 +66,14 @@ public class BackupHistoryStorage
         }
     }
 
-    public static unsafe void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry) where T : RavenTransaction
+    public static unsafe void StoreBackupHistoryEntry<T>(TransactionOperationContext<T> context, string databaseName, long taskId, BackupHistoryEntry entry) where T : RavenTransaction
     {
         var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
         using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, entry.CreatedAt.Ticks, out var primaryKeySlice))
         using (BackupHistorySchema.GetGroupKey(context.Allocator, databaseName, taskId, entry.GetFullBackupTicks(), entry.BackupKind, out var groupKeySlice))
         using (table.Allocate(out TableValueBuilder tvb))
-        using (var json = context.ReadObject(entry.ToJson(), JsonDocumentId))
+        using (var json = context.ReadObject(entry.ToJson(), JsonDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
         {
             tvb.Add(primaryKeySlice);
             tvb.Add(groupKeySlice);
@@ -295,10 +289,7 @@ public class BackupHistoryStorage
         {
             var fullBackup = table.SeekOneForwardFromPrefix(BackupHistoryTableSchema.Indexes[ByGroupSlice], fullBackupKeySlice);
             if (fullBackup != null)
-            {
-                group.FullBackup = GetBackupEntry(context, fullBackup.Reader);
-                group.FullBackupInHistory = true;
-            }
+                group.SetFullBackup(GetBackupEntry(context, fullBackup.Reader));
         }
     }
 

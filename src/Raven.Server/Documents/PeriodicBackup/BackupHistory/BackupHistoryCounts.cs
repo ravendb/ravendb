@@ -42,17 +42,8 @@ public sealed class BackupHistoryCounts
         return new DynamicJsonValue
         {
             [nameof(Total)] = Total,
-            [nameof(ByTrigger)] = ToJson(ByTrigger),
-            [nameof(ByBackupType)] = ToJson(ByBackupType)
+            [nameof(ByTrigger)] = DynamicJsonValue.Convert(ByTrigger),
+            [nameof(ByBackupType)] = DynamicJsonValue.Convert(ByBackupType)
         };
-    }
-
-    internal static DynamicJsonValue ToJson(Dictionary<string, long> counts)
-    {
-        var json = new DynamicJsonValue();
-        foreach (var (key, count) in counts)
-            json[key] = count;
-
-        return json;
     }
 }
