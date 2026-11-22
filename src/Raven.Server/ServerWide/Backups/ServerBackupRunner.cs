@@ -185,11 +185,12 @@ public class ServerBackupRunner : IDisposable
                 _logger.Error("Server backup runner has stopped due to an unexpected error.", e);
 
             _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                _serverStore.NodeTag,
+                null,
                 "Server Backup Runner",
                 "The server backup runner has stopped unexpectedly. No backups will be scheduled until the server is restarted.",
                 AlertReason.PeriodicBackup,
                 NotificationSeverity.Error,
+                key: nameof(ServerBackupRunner),
                 details: new ExceptionDetails(e)));
         }
     }

@@ -137,7 +137,7 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
             }
         });
 
-        var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, null);
+        var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, nameof(ServerBackupRunner));
         string title = null;
         string exception = null;
 
@@ -176,7 +176,7 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
 
         server.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().BeforeRunnerPass = () => throw new InvalidOperationException("Simulated runner failure");
 
-        var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, null);
+        var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, nameof(ServerBackupRunner));
         string title = null;
         string database = null;
 
