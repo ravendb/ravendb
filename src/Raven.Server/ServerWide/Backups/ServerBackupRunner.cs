@@ -52,6 +52,8 @@ public class ServerBackupRunner : IDisposable
 
     private List<IServerBackupPolicy> _serverBackupPolicies;
 
+    private ServerConcurrentBackupPolicy _concurrentBackupPolicy;
+
     private List<IDatabaseBackupPolicy> _databaseBackupPolicies;
 
     private List<IDatabaseBackupPolicy> _afterDatabaseLoadPolicies;
@@ -79,9 +81,10 @@ public class ServerBackupRunner : IDisposable
             ServerStartupPolicy.Instance,
             new ServerCpuCreditsPolicy(),
             new ServerLowMemoryPolicy(),
-            new ServerHighDirtyMemoryPolicy(),
-            new ServerConcurrentBackupPolicy(_serverStore.ConcurrentBackupsCounter)
+            new ServerHighDirtyMemoryPolicy()
         ];
+
+        _concurrentBackupPolicy = new ServerConcurrentBackupPolicy(_serverStore.ConcurrentBackupsCounter);
 
         _databaseBackupPolicies =
         [
@@ -121,6 +124,7 @@ public class ServerBackupRunner : IDisposable
             while (_serverStore.ServerShutdown.IsCancellationRequested == false)
             {
                 DatabaseBackupState firstState = null;
+                DatabaseBackupState firstRefusedState = null;
                 IServerBackupPolicy failedServerPolicy = null;
                 var now = _serverStore.Server.Time.GetUtcNow();
                 var skippedIncrementalBackups = new List<DatabaseBackupState>();
@@ -142,7 +146,12 @@ public class ServerBackupRunner : IDisposable
                     try
                     {
                         if (AreAllDatabasePoliciesCompliant(backupState, now, out var failedPolicy))
-                            RunScheduledBackup(backupState);
+                        {
+                            if (CanStartUnderConcurrentBackupsLimit(backupState, now, afterRefusal: firstRefusedState != null))
+                                RunScheduledBackup(backupState);
+                            else
+                                firstRefusedState ??= backupState;
+                        }
                         else if (failedPolicy is NoChangesPolicy && TryStartStatusUpdate(backupState))
                             skippedIncrementalBackups.Add(backupState);
                     }
@@ -155,11 +164,13 @@ public class ServerBackupRunner : IDisposable
                     Enqueue(backupState); // so it will go to the end of the queue which is useful when max number of concurrent backups is set
                 }
 
+                MoveToHeadOfQueue(firstRefusedState);
+
                 SaveSkippedIncrementalBackups(skippedIncrementalBackups);
 
                 Decisions.RefreshSummary();
 
-                WaitHandle.WaitAny(waitHandles, GetWaitBeforeNextRun(failedServerPolicy));
+                WaitHandle.WaitAny(waitHandles, GetWaitBeforeNextRun(failedServerPolicy, concurrentBackupsLimitReached: firstRefusedState != null));
                 _wakeUp.Reset();
             }
         }
@@ -933,6 +944,44 @@ public class ServerBackupRunner : IDisposable
         return true;
     }
 
+    private bool CanStartUnderConcurrentBackupsLimit(DatabaseBackupState backupState, DateTime now, bool afterRefusal)
+    {
+        if (afterRefusal)
+        {
+            if (_serverStore.ConcurrentBackupsCounter.HasRunningBackup(backupState.OriginalDatabaseName))
+                return true;
+        }
+        else
+        {
+            if (_concurrentBackupPolicy.CanDoBackup(_serverStore, now, backupState.OriginalDatabaseName, out var reason, out var category))
+                return true;
+
+            if (_logger.IsDebugEnabled)
+                _logger.Debug(reason);
+
+            Decisions.AddServerDecision(category, _concurrentBackupPolicy.Name, reason, now, heldUntil: null);
+        }
+
+        backupState.AddToDecisionLog(BackupDecisionCategory.Waiting, _concurrentBackupPolicy.Name, _concurrentBackupPolicy.Reason, now);
+
+        return false;
+    }
+
+    private void MoveToHeadOfQueue(DatabaseBackupState backupState)
+    {
+        if (backupState == null)
+            return;
+
+        var count = _backupQueue.Count;
+        while (count-- > 0 &&
+               _backupQueue.TryPeek(out var head) &&
+               head != backupState &&
+               _backupQueue.TryDequeue(out head))
+        {
+            _backupQueue.Enqueue(head);
+        }
+    }
+
     private bool AreAllDatabasePoliciesCompliant(DatabaseBackupState backupState, DateTime now, out IDatabaseBackupPolicy failedPolicy)
     {
         failedPolicy = null;
@@ -1609,7 +1658,7 @@ public class ServerBackupRunner : IDisposable
         return serverHeldUntil;
     }
 
-    private TimeSpan GetWaitBeforeNextRun(IServerBackupPolicy failedServerPolicy)
+    private TimeSpan GetWaitBeforeNextRun(IServerBackupPolicy failedServerPolicy, bool concurrentBackupsLimitReached)
     {
         // after a server problem wait the hold (LowMemoryBackupDelayInMin, CpuCreditsExhaustionBackupDelayInMin)
         // or ConcurrentBackupsDelayInSec instead of the regular BackupRunnerFrequencyInSec
@@ -1622,7 +1671,7 @@ public class ServerBackupRunner : IDisposable
             return hold > runnerFrequency ? hold : runnerFrequency;
         }
 
-        if (failedServerPolicy is ServerConcurrentBackupPolicy == false)
+        if (concurrentBackupsLimitReached == false)
             return runnerFrequency;
 
         var concurrentBackupsDelay = _serverStore.Configuration.Backup.ConcurrentBackupsDelay.AsTimeSpan;

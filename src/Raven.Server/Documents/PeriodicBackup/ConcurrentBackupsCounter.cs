@@ -64,6 +64,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        internal bool HasRunningBackup(string databaseName)
+        {
+            lock (_locker)
+            {
+                return _runningBackupsPerDatabase.ContainsKey(databaseName);
+            }
+        }
+
         public void StartBackup(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
         {
             lock (_locker)

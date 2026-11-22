@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.ServerWide.Backups.Policies.Server;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -287,7 +288,6 @@ public sealed class BackupDecisionTracker
         var summary = new BackupDecisionLogSummary();
 
         var activeWindow = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan * 2;
-        var counter = _serverStore.ConcurrentBackupsCounter;
 
         BackupDecision serverDecision;
         DateTime? serverHeldUntil;
@@ -342,6 +342,12 @@ public sealed class BackupDecisionTracker
 
                         continue;
                     }
+
+                    if (latest.Category == BackupDecisionCategory.Waiting && latest.Detail == ServerConcurrentBackupPolicy.PolicyName)
+                    {
+                        summary.Running.WaitingForSlot++;
+                        continue;
+                    }
                 }
 
                 var nextBackup = backupState.NextBackup;
@@ -349,14 +355,7 @@ public sealed class BackupDecisionTracker
                     continue;
 
                 if (nextBackup.DateTime <= now)
-                {
-                    if (counter.CanRunBackup(backupState.OriginalDatabaseName) == false &&
-                        _runner.IsActiveOnThisNode(context, backupState) &&
-                        _runner.CanSkipIncrementalBackup(context, backupState) == false)
-                        summary.Running.WaitingForSlot++;
-
                     continue;
-                }
 
                 if (_runner.IsActiveOnThisNode(context, backupState) == false)
                     continue;

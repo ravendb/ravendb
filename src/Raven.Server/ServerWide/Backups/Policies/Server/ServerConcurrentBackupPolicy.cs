@@ -13,7 +13,11 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
         _concurrentBackupsCounter = concurrentBackupsCounter ?? throw new ArgumentNullException(nameof(concurrentBackupsCounter));
     }
 
-    public string Name => "ConcurrentBackup";
+    internal const string PolicyName = "ConcurrentBackup";
+
+    public string Name => PolicyName;
+
+    internal string Reason => $"The maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
 
     public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
@@ -21,7 +25,7 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
 
         if (_concurrentBackupsCounter.CanRunBackup(databaseName) == false)
         {
-            reason = $"The maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
+            reason = Reason;
             return false;
         }
 
