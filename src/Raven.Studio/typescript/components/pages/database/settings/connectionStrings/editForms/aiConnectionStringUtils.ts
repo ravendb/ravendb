@@ -170,7 +170,7 @@ const schema = yupObjectSchema<FormData>({
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("azureOpenAiSettings"),
         reasoningEffort: yup.string().nullable(),
-        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApiType>().nullable(),
     }),
     googleSettings: yupObjectSchema<FormData["googleSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
@@ -232,7 +232,7 @@ const schema = yupObjectSchema<FormData>({
         temperature: getTemperatureSchema("ollamaSettings"),
         apiKey: yup.string().nullable(),
         reasoningEffort: yup.string().nullable(),
-        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApiType>().nullable(),
         enablePromptCache: yup.boolean().nullable(),
     }),
     embeddedSettings: yupObjectSchema<FormData["embeddedSettings"]>({
@@ -262,7 +262,7 @@ const schema = yupObjectSchema<FormData>({
         enablePromptCache: yup.boolean().nullable(),
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("openAiSettings"),
-        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApi>().nullable(),
+        chatApi: yup.string<Raven.Client.Documents.Operations.AI.OpenAiChatApiType>().nullable(),
     }),
     vertexSettings: yupObjectSchema<FormData["vertexSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.VertexAIVersion>().nullable(),

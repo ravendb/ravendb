@@ -245,7 +245,7 @@ public class AiConnectionStringsTests : RavenTestBase
         Assert.Equal(expectedChat, new Uri(provider.GetBaseEndpointUri(), provider.GetRelativeCompletionUri()).ToString());
 
         // Responses only when asked for
-        settings.ChatApi = OpenAiChatApi.Responses;
+        settings.ChatApi = OpenAiChatApiType.Responses;
         Assert.True(AbstractChatCompletionProvider.TryGetParameters(connectionString, out provider));
         Assert.IsType<OllamaResponsesProvider>(provider);
         Assert.Equal(expectedResponses, new Uri(provider.GetBaseEndpointUri(), provider.GetRelativeCompletionUri()).ToString());

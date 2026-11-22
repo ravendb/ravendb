@@ -155,7 +155,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Name = ConnectionStringName,
                 ModelType = AiModelType.Chat,
                 // the mocked responses are Chat Completions shaped
-                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini") { ChatApi = OpenAiChatApi.ChatCompletions }
+                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini") { ChatApi = OpenAiChatApiType.ChatCompletions }
             };
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(connection));
@@ -256,7 +256,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Name = ConnectionStringName,
                 ModelType = AiModelType.Chat,
                 // the mocked responses are Chat Completions shaped
-                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini") { ChatApi = OpenAiChatApi.ChatCompletions }
+                OpenAiSettings = new OpenAiSettings(apiKey: "sk-test-dummy", endpoint: "https://api.openai.com/", model: "gpt-4.1-mini") { ChatApi = OpenAiChatApiType.ChatCompletions }
             };
 
             Assert.True(AbstractChatCompletionProvider.TryGetParameters(connection, out var settings));

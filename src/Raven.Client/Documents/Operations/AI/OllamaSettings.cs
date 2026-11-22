@@ -42,7 +42,7 @@ public sealed class OllamaSettings : OpenAiChatApiSettings
     public bool? Think { get; set; } = null;
 
     // existing Ollama connection strings keep Chat Completions
-    internal override OpenAiChatApi GetDefaultChatApi() => OpenAiChatApi.ChatCompletions;
+    internal override OpenAiChatApiType GetDefaultChatApi() => OpenAiChatApiType.ChatCompletions;
 
     // No API key rule: local Ollama deployments usually have no key. When set, it is sent as a Bearer token on chat
     // requests (for an Ollama behind an authenticating proxy); embeddings requests do not send it.

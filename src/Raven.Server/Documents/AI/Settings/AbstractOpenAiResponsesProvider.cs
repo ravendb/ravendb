@@ -55,15 +55,20 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
             body[Wire.Reasoning] = new DynamicJsonValue { [Wire.Effort] = reasoningEffort };
     }
 
-    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
+    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema, bool strict)
     {
-        return new DynamicJsonValue
+        var tool = new DynamicJsonValue
         {
             [Wire.Type] = Wire.TypeFunction,
             [Wire.Name] = name,
             [Wire.Description] = description,
             [Wire.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
         };
+
+        if (strict)
+            tool[Wire.Strict] = true;
+
+        return tool;
     }
 
     protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
@@ -561,6 +566,7 @@ internal abstract partial class AbstractOpenAiResponsesProvider : AbstractChatCo
         public const string TypeFunction = "function";
         public const string Description = "description";
         public const string Parameters = "parameters";
+        public const string Strict = "strict";
 
         // input and output items
         public const string Type = "type";

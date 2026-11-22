@@ -276,7 +276,7 @@ public class RavenDB_26944(ITestOutputHelper output) : RavenTestBase(output)
             Name = FakeConnectionStringName,
             Identifier = FakeConnectionStringName,
             ModelType = AiModelType.Chat,
-            OpenAiSettings = new OpenAiSettings("fake-key", provider.Endpoint, "gpt-4o") { ChatApi = OpenAiChatApi.ChatCompletions }
+            OpenAiSettings = new OpenAiSettings("fake-key", provider.Endpoint, "gpt-4o") { ChatApi = OpenAiChatApiType.ChatCompletions }
         };
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(connection));
 
