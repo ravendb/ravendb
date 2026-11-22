@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.ServerWide;
@@ -25,7 +26,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
         var fullBackupTicks = RequestHandler.GetLongQueryString("fullBackupTicks", required: false);
 
         if (fullBackupTicks.HasValue && requestedTaskId.HasValue == false)
-            throw new ArgumentException($"When requesting specific backup ({nameof(fullBackupTicks)}), `taskId` must be specified", nameof(requestedTaskId));
+            throw new BadRequestException("'taskId' must be specified when 'fullBackupTicks' is specified");
 
         var query = new BackupHistoryQuery
         {
