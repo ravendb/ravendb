@@ -71,6 +71,7 @@ public class RavenDB_27817 : RavenTestBase
     [RavenTheory(RavenTestCategory.Core)]
     [InlineData("ẞ\"", new[] { 3 })]
     [InlineData("ẞ\"Ⱥ", new[] { 3 })]
+    [InlineData("Ⱥ\"", new[] { 2 })] // lowercasing grows the char before the escape (2 -> 3 bytes)
     [InlineData("aẞẞb\"c\\d", new[] { 8, 1 })]
     // long enough to reserve a 2-byte length prefix while the actual ID needs only 1 byte
     [InlineData("é\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new[] { 2 })]
@@ -90,11 +91,27 @@ public class RavenDB_27817 : RavenTestBase
         AssertStorageKey(id, expectedId, []);
     }
 
+    [RavenTheory(RavenTestCategory.Core)]
+    // each control char is expanded in place to \u00XX (6 bytes), so later escape positions are relative to the expanded bytes
+    [InlineData("Ⱥ\u0002\"", "Ⱥ\\u0002\"", new[] { 8 })]
+    [InlineData("aẞ\"\u0001ẞ\u0001\\b", "aẞ\"\\u0001ẞ\\u0001\\b", new[] { 4, 15 })]
+    // long enough to reserve a 2-byte length prefix while the actual ID needs only 1 byte
+    [InlineData("ẞ\u0001\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ẞ\\u0001\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new[] { 9 })]
+    public void StorageKeyEscapePositionsPointToTheActualIdBytesAfterControlCharsExpansion(string id, string expectedId, int[] expectedEscapePositions)
+    {
+        AssertStorageKey(id, Encoding.UTF8.GetBytes(expectedId), expectedEscapePositions);
+    }
+
     private static unsafe void AssertStorageKey(string id, byte[] expectedId, int[] expectedEscapePositions)
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out _, out Slice idSlice))
+        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out Slice lowerIdSlice, out Slice idSlice))
         {
+            // the lowered id is the lookup key, so it must match what the read path computes for the same id
+            byte[] lowerId = new ReadOnlySpan<byte>(lowerIdSlice.Content.Ptr, lowerIdSlice.Size).ToArray();
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice readPathLowerIdSlice))
+                Assert.Equal(new ReadOnlySpan<byte>(readPathLowerIdSlice.Content.Ptr, readPathLowerIdSlice.Size).ToArray(), lowerId);
+
             byte* ptr = idSlice.Content.Ptr;
             var pos = 0;
 
