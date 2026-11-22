@@ -1058,6 +1058,33 @@ public class BackupHistoryTests : ClusterTestBase
         Assert.Equal(1, CountStoredDetails(server));
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistoryCleaner_ShouldNotKeepACanceledFullBackupAsTheNewestSuccessfulOne()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+        server.ServerStore.BackupHistoryCleaner.ForTestingPurposesOnly().RetentionPeriod = TimeSpan.FromHours(1);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 1");
+        var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, nodes: [server]);
+
+        var start = DateTime.UtcNow;
+        await StoreHistoryEntryAsync(server, store.Database, result.TaskId, start, lastFullBackup: start);
+
+        var status = new PeriodicBackupStatus { TaskId = result.TaskId, BackupType = BackupType.Backup, LastFullBackup = start };
+        var canceled = BackupHistoryEntry.CreateForCanceledBackup(status, start.AddMinutes(1), isFullBackup: true, durationInMs: 10, server.ServerStore.NodeTag, "RavenDB-19358", BackupTrigger.Scheduled);
+        await server.ServerStore.Engine.TxMerger.Enqueue(new UpdateBackupHistoryCommand([new BackupHistoryUpdate(store.Database, result.TaskId, canceled, new BackupResult())]));
+
+        Assert.Equal(1, await server.ServerStore.BackupHistoryCleaner.CleanupAsync(start.AddHours(2)));
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var fullBackup = GetObject(Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}")), "FullBackup");
+            Assert.Equal("Completed", GetString(fullBackup, "Status"));
+        }
+    }
+
     // #27: a deleted task's history is never removed, because only a successful full backup of the same task removes old rows
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistoryCleaner_ShouldRemoveTheExpiredHistoryOfADeletedTask()

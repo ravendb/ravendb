@@ -4,5 +4,6 @@ public enum BackupRunStatus
 {
     Completed,
     Failed,
-    Skipped
+    Skipped,
+    Canceled
 }

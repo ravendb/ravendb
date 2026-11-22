@@ -310,6 +310,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         testingStuffInternal.AfterBackupBatchCompleted?.Invoke();
                     }
                 }
+                else if (Database.ServerStore.ServerShutdown.IsCancellationRequested == false)
+                {
+                    var historyEntry = BackupHistoryEntry.CreateForCanceledBackup(runningBackupStatus, _startTimeUtc, _isFullBackup, totalSw.ElapsedMilliseconds,
+                        Database.ServerStore.NodeTag, _taskName, _trigger);
+                    BackupHistoryStorage.UpdateBackupHistory(Database.Name, Database.ServerStore, runningBackupStatus.TaskId, historyEntry, BackupResult, _onProgress, _logger, operationCancelToken: null);
+                }
             }
         }
 

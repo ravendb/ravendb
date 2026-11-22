@@ -416,7 +416,7 @@ public class BackupHistoryStorage
 
                 using (var json = new BlittableJsonReaderObject(result.Reader.Read((int)BackupHistorySchema.BackupHistoryColumns.Data, out var size), size, context))
                 {
-                    if (json.TryGet(nameof(BackupHistoryEntry.Error), out string error) && error == null)
+                    if (json.TryGet(nameof(BackupHistoryEntry.Status), out string status) && status == nameof(BackupRunStatus.Completed))
                         return fullBackupTicks;
                 }
 
