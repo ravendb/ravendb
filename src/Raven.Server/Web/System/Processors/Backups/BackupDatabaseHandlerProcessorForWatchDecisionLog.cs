@@ -35,6 +35,7 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
     {
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
+        using (ServerStore.ServerBackupRunner.Decisions.StartWatching())
         {
             try
             {

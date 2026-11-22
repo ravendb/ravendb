@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Backups.Policies.Server;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -39,6 +41,8 @@ public sealed class BackupDecisionTracker
     private TaskCompletionSource<object> _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private BackupDecisionLogSummary _scheduleSummary;
+
+    private int _watchers;
 
     private long _summaryVersion;
 
@@ -136,8 +140,19 @@ public sealed class BackupDecisionTracker
         }
     }
 
+    internal IDisposable StartWatching()
+    {
+        Interlocked.Increment(ref _watchers);
+        RefreshSummary();
+
+        return new DisposableAction(() => Interlocked.Decrement(ref _watchers));
+    }
+
     internal void RefreshSummary()
     {
+        if (Volatile.Read(ref _watchers) == 0)
+            return;
+
         try
         {
             var scheduleSummary = GetScheduleSummary(DateTime.UtcNow);
@@ -258,7 +273,8 @@ public sealed class BackupDecisionTracker
 
     private BackupDecisionLogSummary GetSummary(DateTime now)
     {
-        var scheduleSummary = _scheduleSummary ?? GetScheduleSummary(now);
+        var cachedScheduleSummary = _scheduleSummary;
+        var scheduleSummary = Volatile.Read(ref _watchers) > 0 && cachedScheduleSummary != null ? cachedScheduleSummary : GetScheduleSummary(now);
         var counter = _serverStore.ConcurrentBackupsCounter;
 
         var summary = new BackupDecisionLogSummary

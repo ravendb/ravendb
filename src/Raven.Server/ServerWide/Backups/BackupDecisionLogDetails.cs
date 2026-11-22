@@ -78,7 +78,6 @@ public sealed class BackupDecisionLog
                 var latest = _decisions[_newestIndex];
                 latest.Count++;
                 latest.LastTime = time;
-                latest.Etag = nextEtag();
 
                 return latest;
             }
