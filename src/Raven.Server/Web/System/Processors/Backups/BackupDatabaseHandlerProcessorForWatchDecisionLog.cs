@@ -3,19 +3,24 @@ using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Http;
-using Raven.Client;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Backups;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Web.System.Processors.Backups;
 
-internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : AbstractServerHandlerWebSocketProxyProcessor
+internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : AbstractHandlerProcessor<RequestHandler>
 {
+    private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<BackupDatabaseHandlerProcessorForWatchDecisionLog>();
+
     private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(5);
 
     private const int DefaultPageSize = 512;
@@ -26,14 +31,32 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
     {
     }
 
-    protected override string GetRemoteEndpointUrl()
+    public override async ValueTask ExecuteAsync()
     {
-        var queryString = QueryString.Create(HttpContext.Request.Query.Where(x => string.Equals(x.Key, Constants.QueryString.NodeTag, StringComparison.OrdinalIgnoreCase) == false));
-
-        return $"/admin/periodic-backup/decision-log/watch{queryString.ToUriComponent()}";
+        using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+        using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
+        {
+            try
+            {
+                await WatchAsync(webSocket, token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (WebSocketException)
+            {
+            }
+            catch (Exception e)
+            {
+                await SendErrorAsync(webSocket, e);
+            }
+        }
     }
 
-    protected override async ValueTask HandleCurrentNodeAsync(WebSocket webSocket, OperationCancelToken token)
+    private async ValueTask WatchAsync(WebSocket webSocket, OperationCancelToken token)
     {
         var decisions = ServerStore.ServerBackupRunner.Decisions;
         var filter = GetFilter();
@@ -110,6 +133,29 @@ internal sealed class BackupDatabaseHandlerProcessorForWatchDecisionLog : Abstra
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, token.Token);
+        }
+    }
+
+    private async ValueTask SendErrorAsync(WebSocket webSocket, Exception exception)
+    {
+        try
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ms))
+                {
+                    context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Exception"] = exception.ToString() });
+                }
+
+                ms.TryGetBuffer(out ArraySegment<byte> bytes);
+                await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
+            }
+        }
+        catch (Exception)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info("Failed to send the error of the backup decision log watch to the client", exception);
         }
     }
 }

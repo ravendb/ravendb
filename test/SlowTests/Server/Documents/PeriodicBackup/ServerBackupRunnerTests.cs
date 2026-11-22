@@ -123,7 +123,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         using (var otherWebSocket = new ClientWebSocket())
         using (var otherCts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
         {
-            await otherWebSocket.ConnectAsync(new Uri($"{leader.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?nodeTag={other.ServerStore.NodeTag}&database={store.Database}&taskId={taskId}&take=10"), otherCts.Token);
+            await otherWebSocket.ConnectAsync(new Uri($"{other.WebUrl.Replace("http", "ws")}/admin/periodic-backup/decision-log/watch?database={store.Database}&taskId={taskId}&take=10"), otherCts.Token);
 
             using var json = await ReceiveJsonAsync(otherWebSocket, otherCts.Token);
             var root = json.RootElement;
