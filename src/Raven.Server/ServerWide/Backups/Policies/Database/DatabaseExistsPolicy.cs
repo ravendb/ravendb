@@ -17,7 +17,7 @@ public class DatabaseExistsPolicy : IDatabaseBackupPolicy
     {
         category = BackupDecisionCategory.HeldBack;
 
-        if (serverStore.Cluster.DatabaseExists(context, backupState.DatabaseName) == false)
+        if (ClusterStateMachine.DatabaseExists(context, backupState.DatabaseName) == false)
         {
             reason = "The database doesn't exist.";
             return false;

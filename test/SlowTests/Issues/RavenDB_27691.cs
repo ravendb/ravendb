@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -8,7 +7,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Documents;
 using Raven.Server.Logging;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -59,78 +57,44 @@ namespace SlowTests.Issues
             {
                 CustomSettings = new Dictionary<string, string>
                 {
-                    [RavenConfiguration.GetKey(x => x.Backup.MaxNumberOfConcurrentBackups)] = "1"
+                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                    [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3"
                 }
             });
-            using var store = GetDocumentStore(new Options { Server = server });
-            var (taskId, lastEtag) = await CreateBackedUpDatabaseAsync(server, store);
+            using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+            var taskId = await CreateBackedUpDatabaseAsync(server, store);
 
-            var landlord = server.ServerStore.DatabasesLandlord;
-            landlord._dueTimeOnRetry = 1000;
-            using var rescheduled = new ManualResetEventSlim();
-            landlord.ForTestingPurposesOnly().RescheduleIdleBackupStatusUpdateMre = rescheduled;
+            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+            Assert.True(await WaitForValueAsync(() => server.ServerStore.IdleDatabases.ContainsKey(store.Database), true, timeout: 90_000, interval: 500),
+                "precondition: the database should become idle");
 
-            DateTime? backupTime = DateTime.UtcNow;
-            var slot = server.ServerStore.ConcurrentBackupsCounter.TryStartIdleBackupStatusUpdate();
-            Assert.NotNull(slot);
+            var backupState = BackupTestBase.GetBackupState(server.ServerStore.ServerBackupRunner, store.Database, taskId);
+            Assert.NotNull(backupState);
 
+            Assert.True(await WaitForValueAsync(() => backupState.StatusUpdateInProgress.Raise(), true, timeout: 30_000, interval: 50),
+                "precondition: the backup status update slot should be taken by the test");
+
+            DateTime? backupTime;
             try
             {
-                MakeIdle(server, store.Database, new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, backupTime.Value, taskId, lastEtag));
+                var nextBackup = backupState.NextBackup;
+                Assert.True(nextBackup is { IsFull: false }, "precondition: the next backup should be an incremental backup");
+                backupTime = nextBackup.DateTime;
 
-                Assert.True(await WaitForValueAsync(() => rescheduled.IsSet, true, timeout: 30_000), "The backup status update wasn't rescheduled while there was no free slot");
-                Assert.NotEqual(backupTime, GetLastIncrementalBackup(server, store.Database, taskId));
+                var waitUntil = backupTime.Value + TimeSpan.FromSeconds(5);
+                Assert.False(await WaitForValueAsync(() => GetLastIncrementalBackup(server, store.Database, taskId) == backupTime, true,
+                        timeout: (int)Math.Max(0, (waitUntil - DateTime.UtcNow).TotalMilliseconds), interval: 500),
+                    "The backup status was updated while there was no free slot");
             }
             finally
             {
-                slot.Dispose();
+                backupState.StatusUpdateInProgress.Lower();
             }
 
-            Assert.Equal(backupTime, await WaitForValueAsync(() => Task.FromResult(GetLastIncrementalBackup(server, store.Database, taskId)), backupTime));
+            Assert.Equal(backupTime, await WaitForValueAsync(() => Task.FromResult(GetLastIncrementalBackup(server, store.Database, taskId)), backupTime, timeout: 30_000));
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
-        public async Task IdleDatabaseLoadingWhileItsBackupStatusSaveEndsShouldNotKeepWakeupTimer()
-        {
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
-            var (taskId, lastEtag) = await CreateBackedUpDatabaseAsync(server, store);
-            var landlord = server.ServerStore.DatabasesLandlord;
-            var saved = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            using var release = new ManualResetEventSlim();
-            using var loadGate = new ManualResetEventSlim();
-
-            landlord.ForTestingPurposesOnly().AfterIdleBackupStatusSaved = _ =>
-            {
-                saved.TrySetResult(null);
-                release.Wait(TimeSpan.FromMinutes(1));
-            };
-
-            try
-            {
-                MakeIdle(server, store.Database, new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, DateTime.UtcNow, taskId, lastEtag));
-                Assert.True(await saved.Task.WaitWithoutExceptionAsync(TimeSpan.FromSeconds(30)), "The idle backup status save didn't start");
-
-                landlord.ForTestingPurposesOnly().OnBeforeDocumentDatabaseInitialization = _ => loadGate.Wait(TimeSpan.FromMinutes(1));
-                var loadTask = landlord.TryGetOrCreateResourceStore(store.Database);
-                Assert.True(await WaitForValueAsync(() => landlord.DatabasesCache.TryGetValue(store.Database, out _), true), "The database didn't start loading");
-
-                release.Set();
-                Assert.True(await WaitForValueAsync(() => landlord.ForTestingPurposesOnly().HasWakeupTimer(store.Database), true), "The wakeup timer wasn't rescheduled while the database was still loading");
-
-                loadGate.Set();
-                await loadTask;
-
-                Assert.False(await WaitForValueAsync(() => landlord.ForTestingPurposesOnly().HasWakeupTimer(store.Database), false), "A wakeup timer was left for a loaded database");
-            }
-            finally
-            {
-                release.Set();
-                loadGate.Set();
-            }
-        }
-
-        private async Task<(long TaskId, long LastEtag)> CreateBackedUpDatabaseAsync(RavenServer server, DocumentStore store)
+        private async Task<long> CreateBackedUpDatabaseAsync(RavenServer server, DocumentStore store)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -138,22 +102,8 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 *", incrementalBackupFrequency: "30 * * * *");
-            var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
-
-            var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
-            var activity = database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(store.Database);
-            Assert.Equal(IdleDatabaseActivityType.UpdateBackupStatusOnly, activity.Type);
-
-            return (taskId, activity.LastEtag);
-        }
-
-        private static void MakeIdle(RavenServer server, string databaseName, IdleDatabaseActivity activity)
-        {
-            var landlord = server.ServerStore.DatabasesLandlord;
-            landlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
-            server.ServerStore.IdleDatabases[databaseName] = new Dictionary<string, long>();
-            Assert.True(landlord.UnloadDirectly(databaseName, activity), $"Failed to unload database '{databaseName}'");
+            var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 *", incrementalBackupFrequency: "* * * * *");
+            return await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
         }
 
         private static DateTime? GetLastIncrementalBackup(RavenServer server, string databaseName, long taskId)

@@ -473,7 +473,7 @@ public class ServerBackupRunner : IDisposable
         }
         catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
         {
-            var inMemoryBackupStatus = GetDatabaseStateByTaskId(backupState.DatabaseName, backupState.BackupStatus.TaskId);
+            var inMemoryBackupStatus = GetDatabaseStateByTaskId(backupState.DatabaseName, backupState.Configuration.TaskId);
             if (inMemoryBackupStatus != null)
             {
                 runningBackupStatus.DelayUntil = inMemoryBackupStatus.BackupStatus.DelayUntil;
@@ -1456,8 +1456,8 @@ public class ServerBackupRunner : IDisposable
     {
         try
         {
-            _serverStore.DatabaseInfoCache.BackupStatusStorage.Insert(backupStatus, backupState.DatabaseName);
-            OnBackupStatusSaved(backupState, backupStatus);
+            if (_serverStore.DatabaseInfoCache.BackupStatusStorage.TryInsert(backupStatus, backupState.DatabaseName))
+                OnBackupStatusSaved(backupState, backupStatus);
         }
         catch (Exception e)
         {

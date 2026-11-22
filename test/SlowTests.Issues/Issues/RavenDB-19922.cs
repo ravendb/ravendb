@@ -29,6 +29,7 @@ namespace SlowTests.Issues
         public async Task ResponsibleNodeForBackup_MentorNode()
         {
             DoNotReuseServer();
+
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -56,11 +57,8 @@ namespace SlowTests.Issues
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                string tag1;
-                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                {
-                    tag1 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
-                }
+                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                string tag1 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
                 
@@ -71,10 +69,8 @@ namespace SlowTests.Issues
                 string tag2 = "";
                 await WaitForValueAsync(async () =>
                 {
-                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                    {
-                        tag2 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
-                    }
+                    var dbi = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    tag2 = dbi.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -88,6 +84,7 @@ namespace SlowTests.Issues
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeNotResponding()
         {
             DoNotReuseServer();
+
             const int clusterSize = 3;
             string tag2 = "";
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -115,12 +112,8 @@ namespace SlowTests.Issues
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                string tag1;
-                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                {
-                    tag1 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
-                }
+                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                string tag1 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
@@ -131,10 +124,8 @@ namespace SlowTests.Issues
                 //Wait for new responsible node
                 await WaitForValueAsync(async () =>
                 {
-                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
-                    {
-                        tag2 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
-                    }
+                    var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    tag2 = db.ServerStore.ServerBackupRunner.WhoseTaskIsIt(store.Database, taskId);
                     return tag1.Equals(tag2);
                 }, false);
                 Assert.NotEqual(tag1, tag2);
@@ -156,7 +147,7 @@ namespace SlowTests.Issues
 
                 await WaitForValueAsync(async () =>
                 {
-                    database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     tag2 = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
                     return tag1.Equals(tag2);
                 }, true);
@@ -171,6 +162,7 @@ namespace SlowTests.Issues
         public async Task ResponsibleNodeForBackup_PinnedMentorNode()
         {
             DoNotReuseServer();
+
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -240,7 +232,7 @@ namespace SlowTests.Issues
                 {
                     database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     tag2 = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
-                        return tag1.Equals(tag2);
+                    return tag1.Equals(tag2);
                 }, true);
 
                 Assert.Equal(tag1, tag2);
@@ -251,6 +243,7 @@ namespace SlowTests.Issues
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeRemovedFromTopology()
         {
             DoNotReuseServer();
+
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -307,6 +300,7 @@ namespace SlowTests.Issues
         public async Task ResponsibleNodeForBackup_NonExistingResponsibleNode()
         {
             DoNotReuseServer();
+
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");

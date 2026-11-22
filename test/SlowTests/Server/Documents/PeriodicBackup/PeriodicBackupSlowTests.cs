@@ -4430,14 +4430,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, taskId);
 
             var database = await GetDocumentDatabaseInstanceFor(store);
-            var runner = database.PeriodicBackupRunner;
+            var runner = database.ServerStore.ServerBackupRunner;
 
             var holdTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            runner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = holdTcs;
+            runner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = new TestingStuffInternal { OnBackupTaskRunHoldBackupExecution = holdTcs };
 
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
 
-            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) != null, true),
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(database.Name, taskId) != null, true),
                 "Backup did not start within the expected time");
 
             config.TaskId = taskId;
@@ -4447,7 +4447,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             holdTcs.SetResult(null);
 
-            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) == null, true, timeout: 30_000),
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(database.Name, taskId) == null, true, timeout: 30_000),
                 "Backup did not finish within the expected time");
 
             var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));

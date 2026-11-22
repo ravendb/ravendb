@@ -12,7 +12,6 @@ using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Backups.Policies.Database;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues;
 
