@@ -41,7 +41,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupHistory : Abstra
             Start = RequestHandler.GetStart(),
             PageSize = RequestHandler.GetPageSize(),
             SortBy = RequestHandler.GetEnumQueryString<BackupHistorySortBy>("sortBy", required: false),
-            Descending = RequestHandler.GetBoolValueQueryString("descending", required: false) ?? true
+            Descending = RequestHandler.GetBoolValueQueryString("descending", required: false) ?? true,
+            GroupBy = RequestHandler.GetEnumQueryString<BackupHistoryGroupBy>("groupBy", required: false)
         };
 
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

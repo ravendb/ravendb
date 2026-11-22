@@ -19,6 +19,7 @@ public class BackupHistory
     
     public string DatabaseName { get; init; }
     public List<BackupGroup> Groups { get; init; } = [];
+    public List<BackupHistoryRun> Runs { get; init; } = [];
     public long TotalResults { get; set; }
     public BackupHistoryCounts Counts { get; init; } = new();
     
@@ -51,15 +52,22 @@ public class BackupHistory
 
     public void SortAndPage(BackupHistoryQuery query)
     {
-        TotalResults = Groups.Count;
+        TotalResults = Groups.Count + Runs.Count;
 
-        var page = Sort(Groups, query, group => group.FullBackup, group => group.TaskName, group => group.TaskId, group => group.ShardNumber)
+        SortAndPage(Groups, query, group => group.FullBackup, group => group.TaskName, group => group.TaskId, group => group.ShardNumber);
+        SortAndPage(Runs, query, run => run, run => run.TaskName, run => run.TaskId, run => run.ShardNumber);
+    }
+
+    private static void SortAndPage<T>(List<T> items, BackupHistoryQuery query, Func<T, BackupHistoryEntry> getEntry, Func<T, string> getTaskName,
+        Func<T, long> getTaskId, Func<T, int?> getShardNumber)
+    {
+        var page = Sort(items, query, getEntry, getTaskName, getTaskId, getShardNumber)
             .Skip(query.Start)
             .Take(query.PageSize)
             .ToList();
 
-        Groups.Clear();
-        Groups.AddRange(page);
+        items.Clear();
+        items.AddRange(page);
     }
 
     private static IEnumerable<T> Sort<T>(IEnumerable<T> items, BackupHistoryQuery query, Func<T, BackupHistoryEntry> getEntry, Func<T, string> getTaskName,
@@ -88,6 +96,7 @@ public class BackupHistory
             [nameof(DatabaseName)] = DatabaseName,
             [nameof(Groups)] = 
                 new DynamicJsonArray(collection: Groups.Select(group => group.ToJson())),
+            [nameof(Runs)] = new DynamicJsonArray(Runs.Select(run => run.ToJson())),
             [nameof(TotalResults)] = TotalResults,
             [nameof(Counts)] = Counts.ToJson()
         };

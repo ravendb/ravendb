@@ -971,6 +971,32 @@ public class BackupHistoryTests : ClusterTestBase
             (await GetHistoryGroupsAsync(context, store, $"database={store.Database}{query}")).Select(group => GetString(group, "TaskName")).ToList();
     }
 
+    // #36: every run can't be shown as its own row, the history is always grouped by full backup
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldListEveryRunWhenNotGrouped()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+
+        var start = DateTime.UtcNow.AddHours(-1);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 1, start, lastFullBackup: start);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 1, start.AddMinutes(1), lastFullBackup: start, isFull: false);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 1, start.AddMinutes(2), lastFullBackup: start, isFull: false);
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var history = await GetHistoryJsonAsync(context, store, $"database={store.Database}&groupBy=None&pageSize=2");
+            var runs = GetObjects(history, "Runs");
+
+            Assert.Equal(3, GetLong(history, "TotalResults"));
+            Assert.Empty(GetObjects(history, "Groups"));
+            Assert.Equal(2, runs.Count);
+            Assert.All(runs, run => Assert.Equal("Incremental", GetString(run, "BackupKind")));
+            Assert.All(runs, run => Assert.Equal(1, GetLong(run, "TaskId")));
+            Assert.True(GetDateTime(runs[0], "CreatedAt") > GetDateTime(runs[1], "CreatedAt"));
+        }
+    }
+
     // #17: a group whose full backup is not in this node's history disappears without incrementals, and with them it shows a made-up full backup as if it were stored
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistory_ShouldShowAGroupWhoseFullBackupIsNotInThisNodesHistory()
@@ -1600,6 +1626,11 @@ public class BackupHistoryTests : ClusterTestBase
     private static string GetString(BlittableJsonReaderObject json, string name)
     {
         return json.TryGet(name, out string value) ? value : null;
+    }
+
+    private static DateTime GetDateTime(BlittableJsonReaderObject json, string name)
+    {
+        return DateTime.Parse(GetString(json, name), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
     }
 
     private static long GetLong(BlittableJsonReaderObject json, string name)

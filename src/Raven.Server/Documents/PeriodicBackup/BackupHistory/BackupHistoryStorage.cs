@@ -260,7 +260,12 @@ public class BackupHistoryStorage
 
                     backupHistory.Counts.Add(entry);
 
-                    if (query.MatchesValues(entry))
+                    if (query.MatchesValues(entry) == false)
+                        continue;
+
+                    if (query.GroupBy == BackupHistoryGroupBy.None)
+                        backupHistory.Runs.Add(new BackupHistoryRun(entry, taskId, source.ShardNumber, taskName));
+                    else
                         backupHistory.Add(entry, taskId, source.ShardNumber, taskName, query.IncludeIncrementals);
                 }
             }

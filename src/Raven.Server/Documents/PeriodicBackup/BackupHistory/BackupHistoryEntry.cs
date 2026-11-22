@@ -24,6 +24,20 @@ public class BackupHistoryEntry : IDynamicJson
         Status = Error != null ? BackupRunStatus.Failed : skipped ? BackupRunStatus.Skipped : BackupRunStatus.Completed;
     }
 
+    protected BackupHistoryEntry(BackupHistoryEntry entry)
+    {
+        CreatedAt = entry.CreatedAt;
+        DurationInMs = entry.DurationInMs;
+        Error = entry.Error;
+        BackupType = entry.BackupType;
+        BackupKind = entry.BackupKind;
+        NodeTag = entry.NodeTag;
+        LastFullBackup = entry.LastFullBackup;
+        TaskName = entry.TaskName;
+        Trigger = entry.Trigger;
+        Status = entry.Status;
+    }
+
     internal static BackupHistoryEntry CreateForCanceledBackup(PeriodicBackupStatus status, DateTime startTimeUtc, bool isFullBackup, long durationInMs, string nodeTag,
         string taskName, BackupTrigger trigger) =>
         new()
@@ -52,7 +66,7 @@ public class BackupHistoryEntry : IDynamicJson
 
     internal long GetFullBackupTicks() => BackupKind == BackupKind.Full ? CreatedAt.Ticks : LastFullBackup?.Ticks ?? 0;
 
-    public DynamicJsonValue ToJson() =>
+    public virtual DynamicJsonValue ToJson() =>
         new()
         {
             [nameof(CreatedAt)] = CreatedAt,

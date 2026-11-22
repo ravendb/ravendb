@@ -19,6 +19,7 @@ public sealed class BackupHistoryQuery
     public int PageSize { get; init; } = int.MaxValue;
     public BackupHistorySortBy SortBy { get; init; }
     public bool Descending { get; init; } = true;
+    public BackupHistoryGroupBy GroupBy { get; init; }
 
     internal bool MatchesTaskName(string taskName) =>
         string.IsNullOrEmpty(TaskName) || (taskName?.Contains(TaskName, StringComparison.OrdinalIgnoreCase) ?? false);
