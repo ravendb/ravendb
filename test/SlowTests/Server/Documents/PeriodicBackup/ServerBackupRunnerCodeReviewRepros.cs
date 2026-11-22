@@ -162,7 +162,7 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
     }
 
     // The 'runner stopped' alert passes _serverStore.NodeTag as the 'database' argument of AlertRaised.Create.
-    // Stops the runner the same way as the test above, then reads the stored alert.
+    // Stops the runner through the BeforeRunnerPass test hook (the 25-day setting no longer stops it since the wait is capped), then reads the stored alert.
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task RunnerStoppedAlertMustNotBeAttributedToADatabase()
     {
@@ -170,9 +170,11 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
         {
             CustomSettings = new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Backup.BackupRunnerFrequency)] = (25 * 24 * 3600).ToString()
+                [RavenConfiguration.GetKey(x => x.Backup.BackupRunnerFrequency)] = "1"
             }
         });
+
+        server.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().BeforeRunnerPass = () => throw new InvalidOperationException("Simulated runner failure");
 
         var id = AlertRaised.GetKey(AlertReason.PeriodicBackup, null);
         string title = null;

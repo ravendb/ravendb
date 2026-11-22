@@ -48,6 +48,8 @@ public class ServerBackupRunner : IDisposable
 
     private readonly ManualResetEventSlim _wakeUp = new(false);
 
+    private static readonly TimeSpan MaxWaitBeforeNextRun = TimeSpan.FromMilliseconds(int.MaxValue);
+
     internal readonly ConcurrentDictionary<string, ConcurrentDictionary<long, DatabaseBackupState>> BackupsPerDatabasePerTaskId = new(StringComparer.OrdinalIgnoreCase);
 
     private List<IServerBackupPolicy> _serverBackupPolicies;
@@ -123,6 +125,8 @@ public class ServerBackupRunner : IDisposable
         {
             while (_serverStore.ServerShutdown.IsCancellationRequested == false)
             {
+                _forTestingPurposes?.BeforeRunnerPass?.Invoke();
+
                 DatabaseBackupState firstState = null;
                 DatabaseBackupState firstRefusedState = null;
                 IServerBackupPolicy failedServerPolicy = null;
@@ -170,7 +174,8 @@ public class ServerBackupRunner : IDisposable
 
                 Decisions.RefreshSummary();
 
-                WaitHandle.WaitAny(waitHandles, GetWaitBeforeNextRun(failedServerPolicy, concurrentBackupsLimitReached: firstRefusedState != null));
+                var waitBeforeNextRun = GetWaitBeforeNextRun(failedServerPolicy, concurrentBackupsLimitReached: firstRefusedState != null);
+                WaitHandle.WaitAny(waitHandles, waitBeforeNextRun < MaxWaitBeforeNextRun ? waitBeforeNextRun : MaxWaitBeforeNextRun);
                 _wakeUp.Reset();
             }
         }
@@ -1731,6 +1736,8 @@ public class ServerBackupRunner : IDisposable
         internal ConcurrentDictionary<string, TestingStuffInternal> DatabaseTestingStuffInternals { get; set; }
 
         internal Action BeforeReadingDecisionLogs;
+
+        internal Action BeforeRunnerPass;
 
         internal int CountInQueue(DatabaseBackupState backupState) => _runner._backupQueue.Count(x => ReferenceEquals(x, backupState));
 
