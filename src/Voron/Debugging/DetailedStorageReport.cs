@@ -47,7 +47,7 @@ namespace Voron.Debugging
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public string TotalEncryptionBufferSize { get; set; }
 
-        // set by the summary report only
+        // null when the storage has no streams tree
         public long? UnaccountedSpaceInBytes { get; set; }
     }
 
