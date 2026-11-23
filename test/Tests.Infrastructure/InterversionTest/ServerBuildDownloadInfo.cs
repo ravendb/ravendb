@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using Sparrow.Platform;
 
 namespace Tests.Infrastructure.InterversionTest
@@ -41,16 +43,16 @@ namespace Tests.Infrastructure.InterversionTest
         
         private static string GetPlatformString(string version)
         {
-            if (PlatformDetails.RunningOnLinux
-                && PlatformDetails.Is32Bits == false)
+            if (PlatformDetails.RunningOnLinux)
             {
-                return "linux-x64";
-            }
-
-            if (PlatformDetails.RunningOnLinux && PlatformDetails.Is32Bits)
-            {
-                // we don't have a x86 linux build. All we got is RPi/ARM build.
-                return "raspberry-pi";
+                return RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.X64 => "linux-x64",
+                    Architecture.Arm64 => "linux-arm64",
+                    // we don't have a x86 linux build. All we got is RPi/ARM build.
+                    Architecture.Arm => "raspberry-pi",
+                    _ => throw new PlatformNotSupportedException($"There is no RavenDB {version} server package for Linux {RuntimeInformation.ProcessArchitecture}.")
+                };
             }
 
             if (PlatformDetails.RunningOnMacOsx)

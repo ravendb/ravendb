@@ -1,0 +1,129 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using FastTests;
+using Raven.Server.Documents;
+using Sparrow.Json;
+using Sparrow.Server;
+using Sparrow.Threading;
+using Tests.Infrastructure;
+using Voron;
+using Xunit;
+
+namespace SlowTests.Issues;
+
+public class RavenDB_27817 : RavenTestBase
+{
+    public RavenDB_27817(ITestOutputHelper output) : base(output)
+    {
+    }
+
+    [RavenTheory(RavenTestCategory.Attachments)]
+    [InlineData("ẞ\"")]
+    [InlineData("ß\"")]
+    [InlineData("ss\"")]
+    [InlineData("ẞ")]
+    [InlineData("aẞẞb\"c\\d")]
+    [InlineData("ẞ\"Ⱥ")] // lowercasing shrinks one char and grows another, so the total UTF-8 length is unchanged
+    public void CanLoadDocumentWithAttachmentNameWhoseLowercaseHasDifferentUtf8Length(string attachmentName)
+    {
+        using var store = GetDocumentStore();
+
+        using (var session = store.OpenSession())
+        using (var content = new MemoryStream(new byte[] { 120 }))
+        {
+            session.Store(new { Value = "test" }, "docs/1");
+            session.Advanced.Attachments.Store("docs/1", attachmentName, content, "text/plain");
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var document = session.Load<object>("docs/1");
+            Assert.NotNull(document);
+            Assert.Equal(attachmentName, Assert.Single(session.Advanced.Attachments.GetNames(document)).Name);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("docs/ẞ\"")]
+    [InlineData("docs/aẞẞb\"c\\d")]
+    public void CanLoadDocumentWhoseIdLowercaseHasDifferentUtf8Length(string id)
+    {
+        using var store = GetDocumentStore();
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new { Value = "test" }, id);
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var document = session.Load<object>(id);
+            Assert.NotNull(document);
+            Assert.Equal(id, session.Advanced.GetDocumentId(document));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    [InlineData("ẞ\"", new[] { 3 })]
+    [InlineData("ẞ\"Ⱥ", new[] { 3 })]
+    [InlineData("Ⱥ\"", new[] { 2 })] // lowercasing grows the char before the escape (2 -> 3 bytes)
+    [InlineData("aẞẞb\"c\\d", new[] { 8, 1 })]
+    // long enough to reserve a 2-byte length prefix while the actual ID needs only 1 byte
+    [InlineData("é\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new[] { 2 })]
+    [InlineData("ẞ\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new[] { 3 })]
+    public void StorageKeyEscapePositionsPointToTheActualIdBytes(string id, int[] expectedEscapePositions)
+    {
+        AssertStorageKey(id, Encoding.UTF8.GetBytes(id), expectedEscapePositions);
+    }
+
+    [RavenFact(RavenTestCategory.Core)]
+    public void StorageKeyLengthIsCorrectWhenControlCharsEscapingCrossesVarIntLengthBoundary()
+    {
+        // 28 UTF-8 bytes (1-byte length prefix) become 153 bytes (2-byte length prefix) once each \u0001 is expanded in place
+        var id = "ẞ" + new string('\u0001', 25);
+        var expectedId = Encoding.UTF8.GetBytes("ẞ" + string.Concat(Enumerable.Repeat("\\u0001", 25)));
+
+        AssertStorageKey(id, expectedId, []);
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    // each control char is expanded in place to \u00XX (6 bytes), so later escape positions are relative to the expanded bytes
+    [InlineData("Ⱥ\u0002\"", "Ⱥ\\u0002\"", new[] { 8 })]
+    [InlineData("aẞ\"\u0001ẞ\u0001\\b", "aẞ\"\\u0001ẞ\\u0001\\b", new[] { 4, 15 })]
+    // long enough to reserve a 2-byte length prefix while the actual ID needs only 1 byte
+    [InlineData("ẞ\u0001\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ẞ\\u0001\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", new[] { 9 })]
+    public void StorageKeyEscapePositionsPointToTheActualIdBytesAfterControlCharsExpansion(string id, string expectedId, int[] expectedEscapePositions)
+    {
+        AssertStorageKey(id, Encoding.UTF8.GetBytes(expectedId), expectedEscapePositions);
+    }
+
+    private static unsafe void AssertStorageKey(string id, byte[] expectedId, int[] expectedEscapePositions)
+    {
+        using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, id, out Slice lowerIdSlice, out Slice idSlice))
+        {
+            // the lowered id is the lookup key, so it must match what the read path computes for the same id
+            byte[] lowerId = new ReadOnlySpan<byte>(lowerIdSlice.Content.Ptr, lowerIdSlice.Size).ToArray();
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice readPathLowerIdSlice))
+                Assert.Equal(new ReadOnlySpan<byte>(readPathLowerIdSlice.Content.Ptr, readPathLowerIdSlice.Size).ToArray(), lowerId);
+
+            byte* ptr = idSlice.Content.Ptr;
+            var pos = 0;
+
+            var idSize = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos);
+            Assert.Equal(expectedId, new ReadOnlySpan<byte>(ptr + pos, idSize).ToArray());
+            pos += idSize;
+
+            var escapePositions = new int[BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos)];
+            for (var i = 0; i < escapePositions.Length; i++)
+                escapePositions[i] = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, ref pos);
+
+            Assert.Equal(expectedEscapePositions, escapePositions);
+            Assert.True(pos == idSlice.Size, "The storage key has trailing bytes");
+        }
+    }
+}
