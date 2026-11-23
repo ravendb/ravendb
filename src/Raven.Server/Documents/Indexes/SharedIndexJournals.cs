@@ -81,6 +81,8 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
                         var curJournal = _env.Journal.CurrentFile;
                         using (var txw = _env.WriteTransaction())
                         {
+                            // branch envs track their own LastWorkTime, merging their commits is not work
+                            txw.LowLevelTransaction.DisableLastWorkTimeUpdate();
                             txw.Commit();
                         }
 
@@ -98,6 +100,7 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
                             // we do a dummy change here to force the env
                             // to think that it has an actual transaction and thus
                             // will force it to flush / remove older journal
+                            txw.LowLevelTransaction.DisableLastWorkTimeUpdate();
                             txw.LowLevelTransaction.ModifyPage(0);
                             txw.Commit();
                         }
