@@ -621,6 +621,18 @@ describe("ImportDatabaseFromFile", () => {
             expect(dto.Collections).toEqual(["Orders", "Employees"]);
         });
 
+        it("asks for a name and keeps the list empty when only blanks and commas are added", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, " ,, ");
+
+            expect(await screen.findByText("Enter a collection name")).toBeInTheDocument();
+            expect(screen.getByText(/No collections added/)).toBeInTheDocument();
+        });
+
         it("adds the new names and leaves names already on the list in the field with an error", async () => {
             const rendered = rtlRender(<Default hasAllLicenseFeatures />);
             const { screen, fireClick } = rendered;
@@ -709,6 +721,22 @@ describe("ImportDatabaseFromFile", () => {
             await user.paste("Orders\r\nEmployees\n\nCompanies");
 
             await waitFor(() => expect(input).toHaveValue("Orders, Employees, Companies"));
+        });
+
+        it("clears the error when a multi-line list is pasted", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick, user } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, ",");
+            expect(await screen.findByText("Enter a collection name")).toBeInTheDocument();
+
+            const input = screen.getByRole("textbox", { name: "Collections to import" });
+            await user.clear(input);
+            await user.paste("Orders\nEmployees");
+
+            await waitFor(() => expect(screen.queryByText("Enter a collection name")).not.toBeInTheDocument());
         });
     });
 
