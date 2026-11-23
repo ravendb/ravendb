@@ -3,8 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Debugging;
@@ -123,6 +125,29 @@ public class RavenDB_27401(ITestOutputHelper output) : RavenTestBase(output)
         }
 
         AssertNoUnaccountedSpace(summary);
+    }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.ExpirationRefresh)]
+    public async Task StorageReportCountsNestedMultiValueTreePages()
+    {
+        using var store = GetDocumentStore();
+
+        // every document shares one expiration time, so its multi-value entry grows into a nested tree
+        using (var bulk = store.BulkInsert())
+        {
+            for (var i = 0; i < 2000; i++)
+                await bulk.StoreAsync(new User(), $"users/{i}", new MetadataAsDictionary { [Constants.Documents.Metadata.Expires] = "2100-01-01T00:00:00.0000000Z" });
+        }
+
+        var env = (await Databases.GetDocumentDatabaseInstanceFor(store)).DocumentsStorage.Environment;
+        using (var tx = env.ReadTransaction())
+        {
+            var tree = tx.ReadTree("DocumentsByExpiration");
+            var report = env.GenerateDetailedReport(tx, includeDetails: false).Trees.Single(x => x.Name == "DocumentsByExpiration");
+
+            Assert.True(report.MultiValues.PageCount > 0);
+            Assert.Equal(tree.AllPages().Count * VoronConstants.Storage.PageSize, report.AllocatedSpaceInBytes);
+        }
     }
 
     private class Users_ByNameWithSuggestions : AbstractIndexCreationTask<User>
