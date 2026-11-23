@@ -180,7 +180,9 @@ class storageReport extends shardViewModelBase {
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
 
         if ((report.UnaccountedSpaceInBytes ?? 0) > 0) {
-            d.internalChildren.push(new storageReportItem("Other", "other", false, report.UnaccountedSpaceInBytes, []));
+            const other = new storageReportItem("Other", "other", false, report.UnaccountedSpaceInBytes, []);
+            other.description = "Used space that no table or tree owns, mostly internal storage structures";
+            d.internalChildren.push(other);
         }
     }
 
@@ -609,6 +611,7 @@ class storageReport extends shardViewModelBase {
                     this.node(nodeAfterLoad);
                     
                     this.draw(true, oldLocation);
+                    this.updateTooltips();
                 })
                 .always(() => requestExecution.markCompleted());
 
@@ -661,8 +664,8 @@ class storageReport extends shardViewModelBase {
             html += "<div class='tooltip-li'>Entries: <div class='value'>" + d.numberOfEntries.toLocaleString() + "</div></div>";
         }
         html += "<div class='tooltip-li'>Size: <div class='value'>" + generalUtils.formatBytesToSize(d.size) + "</div></div>";
-        if (d.type === "other") {
-            html += "<div class='tooltip-li'>Used space not listed separately, mostly internal index structures</div>";
+        if (d.description) {
+            html += "<div class='tooltip-li description'>" + d.description + "</div>";
         }
 
         this.tooltip.html(html);
