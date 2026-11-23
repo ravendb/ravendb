@@ -65,6 +65,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.LowMemory;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
@@ -977,6 +978,13 @@ namespace Raven.Server.ServerWide
 
         public static bool ExpectedException(Exception e)
         {
+            // OOM is node-local: retry the command instead of skipping it, even when it is wrapped
+            for (var current = e; current != null; current = current.InnerException)
+            {
+                if (current is OutOfMemoryException or EarlyOutOfMemoryException)
+                    return false;
+            }
+
             return e is RachisException ||
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
