@@ -2877,6 +2877,58 @@ namespace FastTests.Client
             }
         }
 
+        private class TrimmingConstructor
+        {
+            public TrimmingConstructor(string name, int unboundParameter)
+            {
+                Name = name?.Trim();
+            }
+
+            public string Name { get; set; }
+
+            public TrimmingConstructor Inner { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void ValuePassedThroughAPartlyBoundConstructorIsNotSetAgainLikeNewtonsoft()
+        {
+            const string text = "{\"Name\":\"  x  \",\"Inner\":{\"Name\":\"  y  \"}}";
+            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
+            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "partly"))
+            {
+                var expected = newtonsoft.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
+                var loaded = systemTextJson.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
+
+                Assert.Equal("x", expected.Name);
+                Assert.Equal("y", expected.Inner.Name);
+                Assert.Equal(expected.Name, loaded.Name);
+                Assert.Equal(expected.Inner.Name, loaded.Inner.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void PopulatingAnExistingInstanceSetsMembersOfAPartlyBoundConstructorLikeNewtonsoft()
+        {
+            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
+            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"  x  \"}", "partly"))
+            {
+                var expected = new TrimmingConstructor("old", 0);
+                newtonsoft.Serialization.DefaultConverter.PopulateEntity(expected, json);
+
+                var populated = new TrimmingConstructor("old", 0);
+                systemTextJson.Serialization.DefaultConverter.PopulateEntity(populated, json);
+
+                Assert.Equal("  x  ", expected.Name);
+                Assert.Equal(expected.Name, populated.Name);
+            }
+        }
+
         private record CaseOnlyRecord(string Name, string name, int Count);
 
         [RavenFact(RavenTestCategory.ClientApi)]

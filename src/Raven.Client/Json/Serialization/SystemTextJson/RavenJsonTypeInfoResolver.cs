@@ -71,6 +71,28 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static object[] _pendingConstructorArguments;
 
         [ThreadStatic]
+        private static object _constructedFromArguments;
+
+        [ThreadStatic]
+        private static Type _populateSourceType;
+
+        [ThreadStatic]
+        private static bool _settersOverrideConstructor;
+
+        internal static object DeserializePopulateSource(ReadOnlySpan<byte> utf8Json, Type type, JsonSerializerOptions options)
+        {
+            _populateSourceType = type;
+            try
+            {
+                return JsonSerializer.Deserialize(utf8Json, type, options);
+            }
+            finally
+            {
+                _populateSourceType = null;
+            }
+        }
+
+        [ThreadStatic]
         private static (JsonConverter Converter, JsonElement Json, PresentMembers Present) _capturedMember;
 
         [ThreadStatic]
@@ -208,7 +230,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 using (JsonDocument document = JsonDocument.ParseValue(ref reader))
                 {
                     JsonElement json = document.RootElement;
-                    _pendingConstructorArguments = json.ValueKind == JsonValueKind.Object ? constructor.CreateArguments(json, options) : null;
+                    object outer = _constructedFromArguments;
+                    bool populateSource = _populateSourceType == typeof(T);
+                    if (populateSource)
+                        _populateSourceType = null;
+
+                    object[] arguments = json.ValueKind == JsonValueKind.Object ? constructor.CreateArguments(json, options) : null;
+                    _pendingConstructorArguments = arguments;
+                    _settersOverrideConstructor = populateSource;
                     try
                     {
                         return (T)JsonSerializer.Deserialize(json, objectTypeInfo);
@@ -216,6 +245,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     finally
                     {
                         _pendingConstructorArguments = null;
+                        _settersOverrideConstructor = false;
+                        _constructedFromArguments = outer;
                     }
                 }
             }
@@ -431,6 +462,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             typeInfo.PolymorphismOptions = null;
             AddTypeNameProperty(typeInfo);
             AssertNewtonsoftConstructorIsUsed(typeInfo.Type);
+            KeepConstructorSuppliedValues(constructorProperties);
+        }
+
+        private static void KeepConstructorSuppliedValues(JsonPropertyInfo[] constructorProperties)
+        {
+            if (constructorProperties == null)
+                return;
+
+            foreach (JsonPropertyInfo property in constructorProperties)
+            {
+                Action<object, object> set = property.Set;
+                if (set == null)
+                    continue;
+
+                property.Set = (target, value) =>
+                {
+                    if (ReferenceEquals(target, _constructedFromArguments) == false)
+                        set(target, value);
+                };
+            }
         }
 
         private static void AssertNotNewtonsoftLinqType(Type type)
@@ -1430,9 +1481,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             typeInfo.CreateObject = () =>
             {
-                object[] arguments = _pendingConstructorArguments ?? defaults;
+                object[] arguments = _pendingConstructorArguments;
                 _pendingConstructorArguments = null;
-                return constructor.Invoke(arguments);
+                if (arguments == null)
+                    return constructor.Invoke(defaults);
+
+                object instance = constructor.Invoke(arguments);
+                if (_settersOverrideConstructor == false)
+                    _constructedFromArguments = instance;
+
+                _settersOverrideConstructor = false;
+                return instance;
             };
 
             if (anyBound)
