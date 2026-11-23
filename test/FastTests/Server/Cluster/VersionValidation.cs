@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Xunit;
 using Tests.Infrastructure;
 
@@ -55,6 +56,19 @@ namespace FastTests.Server.Cluster
 
             versionManager.SetClusterVersion(72_001);
             Assert.True(versionManager.CanPutCommand(nameof(ModifyDatabaseSupportedFeaturesCommand)));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster)]
+        public void RenameIndexCommandRequires72_002()
+        {
+            Assert.Equal(72_002, ClusterCommandsVersionManager.ClusterCommandsVersions[nameof(RenameIndexCommand)]);
+
+            var versionManager = new ClusterCommandsVersionManager();
+            versionManager.SetClusterVersion(72_001);
+            Assert.False(versionManager.CanPutCommand(nameof(RenameIndexCommand)));
+
+            versionManager.SetClusterVersion(72_002);
+            Assert.True(versionManager.CanPutCommand(nameof(RenameIndexCommand)));
         }
 
         [RavenFact(RavenTestCategory.Cluster)]

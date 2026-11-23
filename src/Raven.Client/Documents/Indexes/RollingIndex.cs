@@ -9,12 +9,15 @@ namespace Raven.Client.Documents.Indexes
         public Dictionary<string, RollingIndexDeployment> ActiveDeployments = new Dictionary<string, RollingIndexDeployment>(StringComparer.OrdinalIgnoreCase);
 
         public long RaftCommandIndex;
+        public string RenamedFrom;
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ActiveDeployments)] = DynamicJsonValue.Convert(ActiveDeployments),
-                [nameof(RaftCommandIndex)] = RaftCommandIndex
+                [nameof(RaftCommandIndex)] = RaftCommandIndex,
+                [nameof(RenamedFrom)] = RenamedFrom
             };
         }
     }

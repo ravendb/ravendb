@@ -87,6 +87,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             public void Validate(IndexDefinition definition)
             {
+                RenameIndexCommand.ThrowIfRenameInProgress(_record, definition.Name);
+
                 if (_record.Indexes.TryGetValue(definition.Name, out _))
                     return;
 
@@ -94,8 +96,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 // - directory name collisions
                 // - index name case sensitivity
 
-                _indexNames ??= _record.Indexes.Select(x => x.Value.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-                _safeFileSystemIndexNames ??= _record.Indexes.Select(x => IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(x.Value.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                _indexNames ??= _record.Indexes.Select(x => x.Value.Name).Concat(RenameIndexCommand.GetOldNamesOfRenamesInProgress(_record)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                _safeFileSystemIndexNames ??= _indexNames.Select(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
                 if (_indexNames.Add(definition.Name) == false)
                 {

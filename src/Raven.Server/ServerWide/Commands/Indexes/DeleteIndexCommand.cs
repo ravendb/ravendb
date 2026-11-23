@@ -20,6 +20,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            RenameIndexCommand.ThrowIfRenameInProgress(record, IndexName, allowNewName: true);
+
             record.DeleteIndex(IndexName);
         }
 

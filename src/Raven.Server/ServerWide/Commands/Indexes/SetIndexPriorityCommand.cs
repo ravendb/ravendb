@@ -24,6 +24,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            RenameIndexCommand.ThrowIfRenameInProgress(record, IndexName);
+
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.Priority = Priority;
