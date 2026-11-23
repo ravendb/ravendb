@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Debugging;
@@ -87,6 +88,49 @@ public class RavenDB_27401(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Equal(0, summaryTree.Streams.AllocatedSpaceInBytes);
             Assert.Equal(detailedTree.AllocatedSpaceInBytes, summaryTree.AllocatedSpaceInBytes);
             AssertNoUnaccountedSpace(summary);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Indexes)]
+    public async Task SummaryStorageReportSizesEveryStreamsTree()
+    {
+        var options = Options.ForSearchEngine(RavenSearchEngineMode.Lucene);
+        options.RunInMemory = false;
+        using var store = GetDocumentStore(options);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            for (var i = 0; i < 100; i++)
+                await session.StoreAsync(new User { Name = $"name-{i}" });
+            await session.SaveChangesAsync();
+        }
+
+        var indexDefinition = new Users_ByNameWithSuggestions();
+        await indexDefinition.ExecuteAsync(store);
+        Indexes.WaitForIndexing(store);
+
+        var index = (await Databases.GetDocumentDatabaseInstanceFor(store)).IndexStore.GetIndex(indexDefinition.IndexName);
+        var summary = index.GenerateStorageReport(calculateExactSizes: false);
+
+        // Lucene keeps the index files and each suggestions field in separate streams trees
+        var streamsTrees = summary.Trees.Where(x => x.Streams != null).ToList();
+        Assert.True(streamsTrees.Count >= 2, $"Expected at least 2 streams trees, got: {string.Join(", ", streamsTrees.Select(x => x.Name))}");
+
+        foreach (var tree in streamsTrees)
+        {
+            Assert.Equal(tree.OverflowPages * VoronConstants.Storage.PageSize, tree.Streams.AllocatedSpaceInBytes);
+            Assert.Equal(tree.Streams.AllocatedSpaceInBytes, tree.Streams.Streams.Single().AllocatedSpaceInBytes);
+        }
+
+        AssertNoUnaccountedSpace(summary);
+    }
+
+    private class Users_ByNameWithSuggestions : AbstractIndexCreationTask<User>
+    {
+        public Users_ByNameWithSuggestions()
+        {
+            Map = users => from u in users select new { u.Name };
+            Suggestion(x => x.Name);
         }
     }
 
