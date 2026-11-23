@@ -10,8 +10,11 @@ import {
     RichPanelName,
 } from "components/common/RichPanel";
 import { DestinationUrlItem, OngoingTaskResponsibleNode } from "../../shared/shared";
-import { ExternalReplicationTaskDistribution } from "../partials/ExternalReplicationTaskDistribution";
-import { ReplicationSummaryItems } from "../partials/ReplicationSummaryItems";
+import {
+    ExternalReplicationTaskDistribution,
+    getVisibleNodes,
+    ReplicationTaskSummaryProgress,
+} from "../partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
@@ -24,6 +27,7 @@ interface ReplicationHubConnectedSinkPanelProps {
 
 export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedSinkPanelProps) {
     const { data, isExpanded, toggleExpanded } = props;
+    const visibleNodes = getVisibleNodes(data);
 
     return (
         <RichPanel className="well">
@@ -53,11 +57,15 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                     </Button>
                 </RichPanelDetailItem>
                 <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Sink URL" />
-                <ReplicationSummaryItems task={data} />
+                {visibleNodes.length > 0 && (
+                    <RichPanelDetailItem>
+                        <ReplicationTaskSummaryProgress task={data} nodesInfo={visibleNodes} />
+                    </RichPanelDetailItem>
+                )}
             </RichPanelDetails>
             <Collapse in={isExpanded} mountOnEnter>
                 <div>
-                    <ExternalReplicationTaskDistribution task={data} />
+                    <ExternalReplicationTaskDistribution task={data} canReportConnectionHealth={false} />
                 </div>
             </Collapse>
         </RichPanel>

@@ -134,13 +134,6 @@ const sinkSites = [
     "SanFrancisco-Regional-Warehouse",
 ];
 
-const sinkConnectionStatuses: OngoingTaskPullReplicationAsHub["TaskConnectionStatus"][] = [
-    "Active",
-    "Active",
-    "NotActive",
-    "Reconnect",
-];
-
 function getSinkHandlerId(index: number) {
     return `hub-handler-${index}`;
 }
@@ -179,8 +172,6 @@ function getConnectedSinks(
             HandlerId: getSinkHandlerId(index),
             DestinationDatabase: `Sink-${site}`,
             DestinationUrl: `http://${site.toLowerCase()}.example.com:8080`,
-            TaskConnectionStatus: sinkConnectionStatuses[index % sinkConnectionStatuses.length],
-            Error: index % 5 === 4 ? "Unable to connect to the sink" : null,
         };
     });
 }

@@ -30,7 +30,7 @@ describe("Kafka Sink", function () {
         const { screen } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
 
-        expect(await container.findByText("Reconnect")).toBeInTheDocument();
+        expect(await container.findByText("Reconnect")).toHaveClass("text-warning");
     });
 
     it("can render disabled", async () => {

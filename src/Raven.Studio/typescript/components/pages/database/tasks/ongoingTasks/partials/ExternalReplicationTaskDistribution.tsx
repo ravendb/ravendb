@@ -22,9 +22,11 @@ import { ReplicationProgressDetailsSheet } from "components/pages/database/tasks
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
 import { SheetPortalOutlet, useViewSheet } from "components/common/splitView/ViewSheet";
+import { taskConnectionStatusLabels } from "components/pages/database/tasks/ongoingTasks/partials/taskConnectionStatusLabels";
 
 interface ExternalReplicationTaskDistributionProps {
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
+    canReportConnectionHealth?: boolean;
 }
 
 interface TaskDistributionRowProps {
@@ -32,6 +34,7 @@ interface TaskDistributionRowProps {
     allNodes: OngoingReplicationProgressAwareTaskNodeInfo<OngoingTaskAbstractReplicationNodeInfoDetails>[];
     sharded: boolean;
     task: OngoingTaskExternalReplicationInfo | OngoingTaskReplicationHubInfo | OngoingTaskReplicationSinkInfo;
+    canReportConnectionHealth: boolean;
     isActive: boolean;
     setActiveNodeIndex: (index: number | null) => void;
     ownerId: string;
@@ -47,7 +50,8 @@ function getTaskTypeLabel(taskType: StudioTaskType): string {
 }
 
 function TaskDistributionRow(props: TaskDistributionRowProps) {
-    const { nodeInfo, allNodes, sharded, task, isActive, setActiveNodeIndex, ownerId } = props;
+    const { nodeInfo, allNodes, sharded, task, canReportConnectionHealth, isActive, setActiveNodeIndex, ownerId } =
+        props;
 
     const shard = (
         <div className="top shard">
@@ -100,20 +104,28 @@ function TaskDistributionRow(props: TaskDistributionRowProps) {
 
                     {nodeInfo.location.nodeTag}
                 </div>
-                <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
+                {canReportConnectionHealth && (
+                    <div>
+                        {nodeInfo.status === "success"
+                            ? taskConnectionStatusLabels[nodeInfo.details.taskConnectionStatus]
+                            : ""}
+                    </div>
+                )}
                 <div>
                     {nodeInfo.details?.lastDatabaseEtag ? nodeInfo.details.lastDatabaseEtag.toLocaleString() : "-"}
                 </div>
                 <div>{nodeInfo.details?.lastSentEtag ? nodeInfo.details.lastSentEtag.toLocaleString() : "-"}</div>
-                <div>
-                    {hasError ? (
-                        <a href="#" onClick={withPreventDefault(toggleErrorModal)}>
-                            <Icon icon="warning" color="danger" margin="m-0" />
-                        </a>
-                    ) : (
-                        "-"
-                    )}
-                </div>
+                {canReportConnectionHealth && (
+                    <div>
+                        {hasError ? (
+                            <a href="#" onClick={withPreventDefault(toggleErrorModal)}>
+                                <Icon icon="warning" color="danger" margin="m-0" />
+                            </a>
+                        ) : (
+                            "-"
+                        )}
+                    </div>
+                )}
                 <ExternalReplicationTaskProgress
                     task={task}
                     nodeInfo={nodeInfo}
@@ -163,7 +175,7 @@ function useCloseOwnedSheetOnUnmount(isSheetOwner: boolean, closeSheet: () => vo
 }
 
 export function ExternalReplicationTaskDistribution(props: ExternalReplicationTaskDistributionProps) {
-    const { task } = props;
+    const { task, canReportConnectionHealth = true } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
     const [activeNodeIndex, setActiveNodeIndex] = useState<number | null>(null);
     const ownerId = useId();
@@ -182,6 +194,7 @@ export function ExternalReplicationTaskDistribution(props: ExternalReplicationTa
                 allNodes={visibleNodes}
                 sharded={sharded}
                 task={task}
+                canReportConnectionHealth={canReportConnectionHealth}
                 isActive={activeSheetOwnerId === ownerId && activeNodeIndex === index}
                 setActiveNodeIndex={setActiveNodeIndex}
                 ownerId={ownerId}
@@ -199,18 +212,22 @@ export function ExternalReplicationTaskDistribution(props: ExternalReplicationTa
                             <Icon icon="node" /> Node
                         </div>
                     )}
-                    <div>
-                        <Icon icon="connected" /> Status
-                    </div>
+                    {canReportConnectionHealth && (
+                        <div>
+                            <Icon icon="connected" /> Status
+                        </div>
+                    )}
                     <div>
                         <Icon icon="etag" /> Last DB Etag
                     </div>
                     <div>
                         <Icon icon="etag" /> Last Sent Etag
                     </div>
-                    <div>
-                        <Icon icon="warning" /> Error
-                    </div>
+                    {canReportConnectionHealth && (
+                        <div>
+                            <Icon icon="warning" /> Error
+                        </div>
+                    )}
                     <div>
                         <Icon icon="changes" /> State
                     </div>

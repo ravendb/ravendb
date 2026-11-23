@@ -40,9 +40,13 @@ function Summary(props: ReplicationSinkPanelProps & DetailsToggleProps) {
     return (
         <RichPanelDetails>
             <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-            <RichPanelDetailItem label="Hub Name">{data.shared.hubName}</RichPanelDetailItem>
+            <RichPanelDetailItem label="Hub Name" title={data.shared.hubName}>
+                <div className="detail-item-value-truncate">{data.shared.hubName}</div>
+            </RichPanelDetailItem>
             {data.shared.destinationDatabase && (
-                <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Hub Database" title={data.shared.destinationDatabase}>
+                    <div className="detail-item-value-truncate">{data.shared.destinationDatabase}</div>
+                </RichPanelDetailItem>
             )}
             <ReplicationSummaryItems task={data} />
         </RichPanelDetails>

@@ -14,7 +14,7 @@ export type ReplicationTaskInfo =
     | OngoingTaskReplicationHubInfo
     | OngoingTaskReplicationSinkInfo;
 
-export function getReplicationError(task: ReplicationTaskInfo): string | null {
+function getReplicationError(task: ReplicationTaskInfo): string | null {
     return getVisibleNodes(task).find((x) => x.details.error)?.details.error ?? null;
 }
 
@@ -24,7 +24,7 @@ export function ReplicationSummaryItems({ task }: { task: ReplicationTaskInfo })
 
     return (
         <>
-            <TaskConnectionStatusItem task={task} label="Replication Status" />
+            <TaskConnectionStatusItem task={task} />
             {error && <ErrorDetailItem error={error} />}
             {visibleNodes.length > 0 && (
                 <RichPanelDetailItem>

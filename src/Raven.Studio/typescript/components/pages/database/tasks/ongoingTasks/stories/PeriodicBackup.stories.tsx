@@ -52,18 +52,22 @@ export default {
     argTypes: {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
-    play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("backups"));
-        await userEvent.click(await container.findByTitle(/Click for details/));
-    },
 } satisfies Meta<PeriodBackupProps>;
 
-export const Default: StoryObj<PeriodBackupProps> = {};
+const expandTaskDetails: StoryObj<PeriodBackupProps>["play"] = async ({ canvas }) => {
+    const container = within(await canvas.findByTestId("backups"));
+    await userEvent.click(await container.findByTitle(/Click for details/));
+};
+
+export const Default: StoryObj<PeriodBackupProps> = {
+    play: expandTaskDetails,
+};
 
 export const Disabled: StoryObj<PeriodBackupProps> = {
     args: {
         isDisabled: true,
     },
+    play: expandTaskDetails,
 };
 
 export const LastBackupFailed: StoryObj<PeriodBackupProps> = {
@@ -76,4 +80,5 @@ export const Encrypted: StoryObj<PeriodBackupProps> = {
     args: {
         isEncrypted: true,
     },
+    play: expandTaskDetails,
 };

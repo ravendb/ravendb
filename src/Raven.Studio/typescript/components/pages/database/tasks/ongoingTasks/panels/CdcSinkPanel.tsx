@@ -25,8 +25,12 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import { Icon } from "components/common/Icon";
 import moment from "moment";
 import genUtils from "common/generalUtils";
-import RichAlert from "components/common/RichAlert";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { ErrorDetailItem } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import { WarningDetails } from "components/pages/database/tasks/ongoingTasks/partials/WarningDetails";
+import {
+    getTaskConnectionStatus,
+    TaskConnectionStatusItem,
+} from "components/pages/database/tasks/ongoingTasks/partials/TaskConnectionStatus";
 import {
     DetailsToggleProps,
     TaskPanelErrors,
@@ -63,30 +67,31 @@ function Details(props: CdcSinkPanelProps & DetailsToggleProps & { canEdit: bool
         data.responsibleLocations
     );
     const goToTaskErrors = appUrl.forTasksErrors(databaseName, { taskName: data.shared.taskName });
+    const isReconnecting = getTaskConnectionStatus(data) === "Reconnect";
 
     return (
         <>
             <RichPanelDetails>
                 <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <TaskConnectionStatusItem task={data} reconnectDetails={data.shared.healthIssue} />
                 <RichPanelDetailItem label="Last activity time">{lastActivityTime}</RichPanelDetailItem>
+                <RichPanelDetailItem label="Time since last activity">{secondsSinceLastActivity}</RichPanelDetailItem>
                 <TaskPanelErrors
                     errorCount={errorCount}
                     errorsByLocation={errorsByLocation}
                     goToTaskErrors={goToTaskErrors}
                 />
+                {data.shared.error && <ErrorDetailItem error={data.shared.error} />}
+                {data.shared.healthIssue && !isReconnecting && (
+                    <RichPanelDetailItem label="Health Issue">
+                        <WarningDetails details={data.shared.healthIssue} title="Show health issue">
+                            <span className="detail-item-value-truncate">{data.shared.healthIssue}</span>
+                        </WarningDetails>
+                    </RichPanelDetailItem>
+                )}
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    {data.shared.error && (
-                        <div className="mx-3 mt-3">
-                            <RichAlert variant="danger">{data.shared.error}</RichAlert>
-                        </div>
-                    )}
-                    {data.shared.healthIssue && (
-                        <div className="mx-3 mt-3">
-                            <RichAlert variant="warning">{data.shared.healthIssue}</RichAlert>
-                        </div>
-                    )}
                     <RichPanelDetails className="d-block">
                         <div className="hstack flex-wrap">
                             <ConnectionStringItem
@@ -111,9 +116,6 @@ function Details(props: CdcSinkPanelProps & DetailsToggleProps & { canEdit: bool
                             <RichPanelDetailItem label="Last batch time">{lastBatchTime}</RichPanelDetailItem>
                             <RichPanelDetailItem label="Time since last batch">
                                 {secondsSinceLastBatch}
-                            </RichPanelDetailItem>
-                            <RichPanelDetailItem label="Time since last activity">
-                                {secondsSinceLastActivity}
                             </RichPanelDetailItem>
                         </div>
                     </RichPanelDetails>
@@ -148,16 +150,6 @@ export function CdcSinkPanel(props: CdcSinkPanelProps) {
                         </RichPanelSelect>
                     )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
-                    {data.shared.error && (
-                        <PopoverWithHoverWrapper message={data.shared.error}>
-                            <Icon icon="danger" color="danger" margin="mx-1" />
-                        </PopoverWithHoverWrapper>
-                    )}
-                    {data.shared.healthIssue && (
-                        <PopoverWithHoverWrapper message={data.shared.healthIssue}>
-                            <Icon icon="warning" color="warning" margin="mx-1" />
-                        </PopoverWithHoverWrapper>
-                    )}
                 </RichPanelInfo>
                 <RichPanelActions>
                     <span>

@@ -54,16 +54,17 @@ export function markReplicationProcessCompleted(progress: ReplicationProcessProg
     progress.NumberOfTimeSeriesDeletedRangesToProcess = 0;
 }
 
-export function mockExternalReplicationProgress(tasksService: MockTasksService, completed: boolean) {
-    if (completed) {
-        tasksService.withGetExternalReplicationProgress((dto) => {
-            dto.Results.forEach((x) => {
+export function mockExternalReplicationProgress(tasksService: MockTasksService, completed: boolean, taskName?: string) {
+    tasksService.withGetExternalReplicationProgress((dto) => {
+        dto.Results.forEach((x) => {
+            if (taskName) {
+                x.TaskName = taskName;
+            }
+            if (completed) {
                 x.ProcessesProgress.forEach(markReplicationProcessCompleted);
-            });
+            }
         });
-    } else {
-        tasksService.withGetExternalReplicationProgress();
-    }
+    });
 }
 
 export function mockEtlProgress(

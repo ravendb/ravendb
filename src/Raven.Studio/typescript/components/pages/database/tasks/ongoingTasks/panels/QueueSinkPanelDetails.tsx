@@ -31,22 +31,22 @@ export function QueueSinkPanelDetails(props: QueueSinkPanelDetailsProps) {
         <>
             <RichPanelDetails>
                 <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <TaskConnectionStatusItem task={task} label="Connection Status" />
+                <TaskConnectionStatusItem task={task} />
+                <ConnectionStringItem
+                    connectionStringDefined
+                    canEdit={canEdit}
+                    connectionStringName={task.shared.connectionStringName}
+                    connectionStringType={connectionStringType}
+                    databaseName={databaseName}
+                />
                 <RichPanelDetailItem label={queuesLabel} title={queues}>
-                    <div className="queue-sink-queues text-truncate">{queues}</div>
+                    <div className="detail-item-value-truncate">{queues}</div>
                 </RichPanelDetailItem>
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
                     <RichPanelDetails>
                         {urlLabel && <RichPanelDetailItem label={urlLabel}>{task.shared.url}</RichPanelDetailItem>}
-                        <ConnectionStringItem
-                            connectionStringDefined
-                            canEdit={canEdit}
-                            connectionStringName={task.shared.connectionStringName}
-                            connectionStringType={connectionStringType}
-                            databaseName={databaseName}
-                        />
                         <RichPanelDetailItem label="Scripts">
                             {task.shared.enabledScriptsCount.toLocaleString()} /{" "}
                             {task.shared.scriptsCount.toLocaleString()} enabled

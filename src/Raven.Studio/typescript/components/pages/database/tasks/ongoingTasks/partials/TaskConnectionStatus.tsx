@@ -1,24 +1,11 @@
 import React from "react";
 import { RichPanelDetailItem } from "components/common/RichPanel";
 import { OngoingTaskInfo } from "components/models/tasks";
+import { Icon } from "components/common/Icon";
 import { getVisibleNodes } from "./ExternalReplicationTaskDistribution";
+import { connectionStatusRanks, taskConnectionStatusLabels } from "./taskConnectionStatusLabels";
+import { WarningDetails } from "./WarningDetails";
 import OngoingTaskConnectionStatus = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
-
-export const taskConnectionStatusLabels: Record<OngoingTaskConnectionStatus, string> = {
-    None: "None",
-    Active: "Active",
-    NotActive: "Not active",
-    Reconnect: "Reconnect",
-    NotOnThisNode: "Not on this node",
-};
-
-export const connectionStatusRanks: Record<OngoingTaskConnectionStatus, number> = {
-    Reconnect: 1,
-    NotActive: 2,
-    None: 3,
-    NotOnThisNode: 4,
-    Active: 5,
-};
 
 export function getTaskConnectionStatus(task: OngoingTaskInfo): OngoingTaskConnectionStatus | null {
     const statuses = getVisibleNodes(task).map((x) => x.details.taskConnectionStatus);
@@ -30,12 +17,46 @@ export function getTaskConnectionStatus(task: OngoingTaskInfo): OngoingTaskConne
     return statuses.reduce((worst, x) => (connectionStatusRanks[x] < connectionStatusRanks[worst] ? x : worst));
 }
 
-export function TaskConnectionStatusItem({ task, label }: { task: OngoingTaskInfo; label: string }) {
+function isProblemConnectionStatus(task: OngoingTaskInfo, connectionStatus: OngoingTaskConnectionStatus) {
+    return (
+        connectionStatus === "Reconnect" || (connectionStatus === "NotActive" && task.shared.taskState === "Enabled")
+    );
+}
+
+interface TaskConnectionStatusItemProps {
+    task: OngoingTaskInfo;
+    reconnectDetails?: string;
+}
+
+export function TaskConnectionStatusItem({ task, reconnectDetails }: TaskConnectionStatusItemProps) {
     const connectionStatus = getTaskConnectionStatus(task);
 
     if (!connectionStatus) {
         return null;
     }
 
-    return <RichPanelDetailItem label={label}>{taskConnectionStatusLabels[connectionStatus]}</RichPanelDetailItem>;
+    const label = taskConnectionStatusLabels[connectionStatus];
+
+    if (connectionStatus === "Reconnect" && reconnectDetails) {
+        return (
+            <RichPanelDetailItem label="Connection Status">
+                <WarningDetails details={reconnectDetails} title="Show reconnect details">
+                    {label}
+                </WarningDetails>
+            </RichPanelDetailItem>
+        );
+    }
+
+    return (
+        <RichPanelDetailItem label="Connection Status">
+            {isProblemConnectionStatus(task, connectionStatus) ? (
+                <span className="text-warning">
+                    <Icon icon="warning" margin="me-1" />
+                    {label}
+                </span>
+            ) : (
+                label
+            )}
+        </RichPanelDetailItem>
+    );
 }

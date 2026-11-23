@@ -39,8 +39,8 @@ function Summary(props: ExternalReplicationPanelProps & DetailsToggleProps) {
         <RichPanelDetails>
             <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             {data.shared.destinationDatabase && (
-                <RichPanelDetailItem label="Destination Database">
-                    {data.shared.destinationDatabase}
+                <RichPanelDetailItem label="Destination Database" title={data.shared.destinationDatabase}>
+                    <div className="detail-item-value-truncate">{data.shared.destinationDatabase}</div>
                 </RichPanelDetailItem>
             )}
             <ReplicationSummaryItems task={data} />
