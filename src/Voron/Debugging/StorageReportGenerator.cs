@@ -73,7 +73,6 @@ namespace Voron.Debugging
     public sealed unsafe class StorageReportGenerator
     {
         private readonly LowLevelTransaction _tx;
-        private StreamDetails _skippedStreamsDetailsEntry;
 
         public const string SkippedStreamsDetailsName = "Stream details summary info";
 
@@ -176,8 +175,7 @@ namespace Voron.Debugging
                 if (input.IncludeDetails)
                     continue;
 
-                if (treeReport.Streams == null)
-                    treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
             }
 
             foreach (PostingList postingList in input.PostingLists)
@@ -249,25 +247,9 @@ namespace Voron.Debugging
             var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
             var preAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.IncludeDetails);
 
-            long? unaccountedSpaceInBytes = null;
-            if (input.IncludeDetails == false && _skippedStreamsDetailsEntry != null)
-            {
-                foreach (var tree in trees)
-                {
-                    if (tree.Streams?.Streams != null && tree.Streams.Streams.Count > 0 && tree.Streams.Streams[0].Name == SkippedStreamsDetailsName)
-                    {
-                        // chunked streams are counted in OverflowPages, inline streams (stored in leaf pages) in PageCount
-                        var streamsSpaceInBytes = PagesToBytes(tree.OverflowPages);
-                        _skippedStreamsDetailsEntry.AllocatedSpaceInBytes = streamsSpaceInBytes;
-                        _skippedStreamsDetailsEntry.Length = streamsSpaceInBytes;
-                        tree.Streams.AllocatedSpaceInBytes = streamsSpaceInBytes;
-                        tree.Streams.TotalNumberOfAllocatedPages = tree.OverflowPages;
-                        tree.AllocatedSpaceInBytes = PagesToBytes(tree.PageCount) + streamsSpaceInBytes;
-                        unaccountedSpaceInBytes = dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes - tree.AllocatedSpaceInBytes;
-                        break;
-                    }
-                }
-            }
+            long? unaccountedSpaceInBytes = input.IncludeDetails == false && trees.Any(x => x.Streams != null)
+                ? dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes
+                : null;
 
             return new DetailedStorageReport
             {
@@ -610,30 +592,27 @@ namespace Voron.Debugging
         {
             if (includeDetails == false)
             {
-                // there are cases we don't need/want to pull the entire data for the report
-                // so we create a report that includes the metadata info
-                // without reading the actual data 
-
-                // we may have multiple such entries, in theory. We intentionally 
-                // override it and will use the last one. RavenDB at the time of writing
-                // this used just one
-
-                _skippedStreamsDetailsEntry = new StreamDetails
-                {
-                    Name = SkippedStreamsDetailsName,
-                    AllocatedSpaceInBytes = 0,
-                    ChunksTree = new TreeReport(),
-                    Length = 0,
-                    NumberOfAllocatedPages = 0,
-                    Version = 1
-                };
+                // chunked streams are counted in OverflowPages, inline streams (stored in leaf pages) in PageCount
+                var numberOfAllocatedPages = tree.State.Header.OverflowPages;
+                var allocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages);
 
                 return new StreamsReport
                 {
-                    AllocatedSpaceInBytes = -1,
+                    AllocatedSpaceInBytes = allocatedSpaceInBytes,
                     NumberOfStreams = tree.State.Header.NumberOfEntries,
-                    Streams = [_skippedStreamsDetailsEntry],
-                    TotalNumberOfAllocatedPages = -1
+                    Streams =
+                    [
+                        new StreamDetails
+                        {
+                            Name = SkippedStreamsDetailsName,
+                            AllocatedSpaceInBytes = allocatedSpaceInBytes,
+                            ChunksTree = new TreeReport(),
+                            Length = allocatedSpaceInBytes,
+                            NumberOfAllocatedPages = numberOfAllocatedPages,
+                            Version = 1
+                        }
+                    ],
+                    TotalNumberOfAllocatedPages = numberOfAllocatedPages
                 };
             }
 
