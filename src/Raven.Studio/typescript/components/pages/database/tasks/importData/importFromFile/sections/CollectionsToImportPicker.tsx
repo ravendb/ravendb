@@ -1,4 +1,4 @@
-import React, { ClipboardEvent, useEffect, useRef, useState } from "react";
+import React, { ClipboardEvent, useEffect, useState } from "react";
 import { useForm, useFormContext, useFormState, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -8,6 +8,7 @@ import { Icon } from "components/common/Icon";
 import { Switch } from "components/common/Checkbox";
 import { FormInput } from "components/common/Form";
 import InnerForm from "components/common/InnerForm";
+import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 
 export default function CollectionsToImportPicker() {
@@ -18,8 +19,6 @@ export default function CollectionsToImportPicker() {
     const [manualCollections, setManualCollections] = useState<string[]>(
         () => getValues("collections.includedCollections") ?? []
     );
-    const latestManualCollections = useRef(manualCollections);
-    latestManualCollections.current = manualCollections;
     const [addedCount, setAddedCount] = useState(0);
 
     const addCollectionForm = useForm({
@@ -42,13 +41,11 @@ export default function CollectionsToImportPicker() {
         setValue("collections.includedCollections", names, { shouldDirty: true });
 
     const addCollections = ({ collectionName }: AddCollectionFormData) => {
-        const existing = latestManualCollections.current;
         const names = parseCollectionNames(collectionName);
-        const added = names.filter((name) => !containsIgnoreCase(existing, name));
-        const duplicates = names.filter((name) => containsIgnoreCase(existing, name));
+        const added = names.filter((name) => !containsIgnoreCase(manualCollections, name));
+        const duplicates = names.filter((name) => containsIgnoreCase(manualCollections, name));
 
-        latestManualCollections.current = [...existing, ...added];
-        setManualCollections(latestManualCollections.current);
+        setManualCollections([...manualCollections, ...added]);
         setIncludedCollections([...(getValues("collections.includedCollections") ?? []), ...added]);
         setAddedCount((prev) => prev + 1);
         setAddValue("collectionName", duplicates.join(", "));
@@ -72,7 +69,8 @@ export default function CollectionsToImportPicker() {
 
         setAddValue(
             "collectionName",
-            [before, splitNames(pasted).join(", "), after].filter((x) => x.trim()).join(", ")
+            [before, splitNames(pasted).join(", "), after].filter((x) => x.trim()).join(", "),
+            { shouldValidate: true }
         );
     };
 
@@ -139,7 +137,8 @@ export default function CollectionsToImportPicker() {
             <div className="import-collections-list">
                 {manualCollections.length === 0 && (
                     <div className="import-list-item text-muted">
-                        No collections added. Type a collection name from the imported file above and click Add.
+                        No collections added. Type or paste collection names from the imported file above, separated by
+                        commas, and click Add.
                     </div>
                 )}
                 {manualCollections.map((name) => (
@@ -189,8 +188,7 @@ const parseCollectionNames = (text: string) =>
 
 const getAlreadyOnListMessage = (duplicates: string[]) => {
     const quoted = duplicates.map((x) => `"${x}"`).join(", ");
-    const verb = duplicates.length === 1 ? "is" : "are";
-    return `${quoted} ${verb} already on the list`;
+    return `${quoted} ${pluralizeHelpers.pluralize(duplicates.length, "is", "are", true)} already on the list`;
 };
 
 const addCollectionSchema = yup.object({
