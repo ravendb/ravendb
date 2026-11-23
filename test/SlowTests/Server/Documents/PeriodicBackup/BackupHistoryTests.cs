@@ -414,6 +414,52 @@ public class BackupHistoryTests : ClusterTestBase
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldFindTheDetailsAndTheGroupByATimeRoundedToMilliseconds()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = true });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = true });
+
+        var createdAt = DateTime.UtcNow.AddDays(-1).Date.AddTicks(12_345_678);
+        await StoreHistoryEntryAsync(server, store.Database, taskId: 1, createdAt, lastFullBackup: createdAt);
+        var rounded = Uri.EscapeDataString(createdAt.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture));
+
+        using var details = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId=1&createdAt={rounded}");
+        Assert.Equal(HttpStatusCode.OK, details.StatusCode);
+        Assert.Contains("\"Documents\"", await details.Content.ReadAsStringAsync());
+
+        using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var group = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}&taskId=1&fullBackupCreatedAt={rounded}"));
+            Assert.Equal(createdAt, GetDateTime(GetObject(group, "FullBackup"), "CreatedAt"));
+        }
+
+        var nextMillisecond = Uri.EscapeDataString(createdAt.AddMilliseconds(1).ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture));
+        using var detailsOfTheNextMillisecond = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId=1&createdAt={nextMillisecond}");
+        Assert.Equal(HttpStatusCode.NotFound, detailsOfTheNextMillisecond.StatusCode);
+
+        using var detailsOfAnotherTask = await GetFromEndpointAsync(store, "result", $"database={store.Database}&taskId=2&createdAt={rounded}");
+        Assert.Equal(HttpStatusCode.NotFound, detailsOfAnotherTask.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task BackupHistory_ShouldFindTheGroupOfTheExactTimeWhenTwoFullBackupsShareAMillisecond()
+    {
+        using var store = GetDocumentStore(new Options { RunInMemory = true });
+
+        var firstFullBackup = DateTime.UtcNow.AddDays(-1).Date.AddTicks(12_345_678);
+        var secondFullBackup = firstFullBackup.AddTicks(100);
+        await StoreHistoryEntryAsync(Server, store.Database, taskId: 1, firstFullBackup, lastFullBackup: firstFullBackup);
+        await StoreHistoryEntryAsync(Server, store.Database, taskId: 1, secondFullBackup, lastFullBackup: secondFullBackup);
+
+        using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        {
+            var exact = Uri.EscapeDataString(secondFullBackup.ToString("O"));
+            var group = Assert.Single(await GetHistoryGroupsAsync(context, store, $"database={store.Database}&taskId=1&fullBackupCreatedAt={exact}"));
+            Assert.Equal(secondFullBackup, GetDateTime(GetObject(group, "FullBackup"), "CreatedAt"));
+        }
+    }
+
     // #20: a backup stopped by a cancellation we didn't request (a direct upload timeout) is recorded as completed, without its error
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task BackupHistory_UnrequestedCancellationShouldBeRecordedAsFailed()

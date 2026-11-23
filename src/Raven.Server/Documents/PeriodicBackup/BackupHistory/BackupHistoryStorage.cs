@@ -112,6 +112,63 @@ public class BackupHistoryStorage
         }
     }
 
+    public static bool TryFindBackupTicks(TransactionOperationContext context, string databaseName, long taskId, long createdAtTicks, out long storedTicks)
+    {
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, createdAtTicks, out var primaryKeySlice))
+        {
+            if (table.ReadByKey(primaryKeySlice, out _))
+            {
+                storedTicks = createdAtTicks;
+                return true;
+            }
+        }
+
+        var millisecondStartTicks = createdAtTicks - createdAtTicks % TimeSpan.TicksPerMillisecond;
+
+        using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
+        using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, millisecondStartTicks - 1, out var startAfterSlice))
+        {
+            foreach (var (key, _) in table.SeekByPrimaryKeyPrefix(taskPrefixSlice, startAfterSlice, skip: 0))
+            {
+                storedTicks = BackupHistorySchema.ReadValue(key, positionFromEnd: 0);
+                return IsInMillisecond(storedTicks, millisecondStartTicks);
+            }
+        }
+
+        storedTicks = 0;
+        return false;
+    }
+
+    private static long FindFullBackupTicks(TransactionOperationContext context, Table table, string databaseName, long taskId, long fullBackupTicks)
+    {
+        var index = BackupHistoryTableSchema.Indexes[ByGroupSlice];
+
+        using (BackupHistorySchema.GetGroupKeyPrefix(context.Allocator, databaseName, taskId, fullBackupTicks, out var fullBackupPrefixSlice))
+        {
+            if (table.SeekOneForwardFromPrefix(index, fullBackupPrefixSlice) != null)
+                return fullBackupTicks;
+        }
+
+        var millisecondStartTicks = fullBackupTicks - fullBackupTicks % TimeSpan.TicksPerMillisecond;
+
+        using (BackupHistorySchema.GetTaskKeyPrefix(context.Allocator, databaseName, taskId, out var taskPrefixSlice))
+        using (BackupHistorySchema.GetGroupKeyPrefix(context.Allocator, databaseName, taskId, millisecondStartTicks, out var startSlice))
+        {
+            foreach (var result in table.SeekForwardFromPrefix(index, startSlice, taskPrefixSlice, skip: 0))
+            {
+                var storedTicks = BackupHistorySchema.ReadValue(result.Key, positionFromEnd: 1);
+                return IsInMillisecond(storedTicks, millisecondStartTicks) ? storedTicks : fullBackupTicks;
+            }
+        }
+
+        return fullBackupTicks;
+    }
+
+    private static bool IsInMillisecond(long ticks, long millisecondStartTicks) =>
+        ticks < millisecondStartTicks + TimeSpan.TicksPerMillisecond;
+
     internal static void UpdateBackupHistory(string databaseName, ServerStore serverStore, long taskId, BackupHistoryEntry entry, BackupResult backupResult,
         Action<IOperationProgress> onProgress, RavenLogger logger, OperationCancelToken operationCancelToken)
     {
@@ -243,7 +300,7 @@ public class BackupHistoryStorage
                     continue;
 
                 var entries = query.FullBackupTicks.HasValue
-                    ? ReadGroupEntries(context, table, source.DatabaseName, taskId, query.FullBackupTicks.Value)
+                    ? ReadGroupEntries(context, table, source.DatabaseName, taskId, FindFullBackupTicks(context, table, source.DatabaseName, taskId, query.FullBackupTicks.Value))
                     : ReadTaskEntries(context, table, source.DatabaseName, taskId, query.From, query.To);
 
                 foreach (var entry in entries)

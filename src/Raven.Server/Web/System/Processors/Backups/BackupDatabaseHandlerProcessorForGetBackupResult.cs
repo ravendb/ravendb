@@ -1,3 +1,4 @@
+using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
@@ -27,12 +28,19 @@ internal sealed class BackupDatabaseHandlerProcessorForGetBackupResult : Abstrac
         using (var databaseRecord = ReadDatabaseRecord(context, shardNumber))
         {
             var databaseName = shardNumber.HasValue ? ShardHelper.ToShardName(databaseRecord.DatabaseName, shardNumber.Value) : databaseRecord.DatabaseName;
+            if (BackupHistoryStorage.TryFindBackupTicks(context, databaseName, taskId, createdAt.Ticks, out var createdAtTicks) == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return;
+            }
+
+            var backupResult = BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, createdAtTicks);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(BackupResult));
-                writer.WriteObject(BackupHistoryStorage.GetBackupResult(context, databaseName, taskId, createdAt.Ticks));
+                writer.WriteObject(backupResult);
                 writer.WriteEndObject();
             }
         }
