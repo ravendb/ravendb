@@ -53,7 +53,7 @@ public class RavenDB_27401(ITestOutputHelper output) : RavenTestBase(output)
             Assert.InRange(summaryTree.AllocatedSpaceInBytes - detailedTree.AllocatedSpaceInBytes, -tolerance, tolerance);
             Assert.InRange(summaryTree.Streams.AllocatedSpaceInBytes - detailedTree.Streams.AllocatedSpaceInBytes, -tolerance, tolerance);
             AssertNoUnaccountedSpace(summary);
-            Assert.Null(detailed.UnaccountedSpaceInBytes);
+            Assert.Equal(summary.UnaccountedSpaceInBytes, detailed.UnaccountedSpaceInBytes);
         }
 
         using (var session = store.OpenAsyncSession())

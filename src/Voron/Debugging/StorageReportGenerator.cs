@@ -172,10 +172,10 @@ namespace Voron.Debugging
                     }
                 }
 
-                if (input.IncludeDetails)
-                    continue;
-
-                treesAllocatedSpaceInBytes += treeReport.AllocatedSpaceInBytes;
+                // the detailed report estimates stream sizes, the counters are exact in both modes
+                treesAllocatedSpaceInBytes += treeReport.Streams == null
+                    ? treeReport.AllocatedSpaceInBytes
+                    : PagesToBytes(treeReport.PageCount + treeReport.OverflowPages);
             }
 
             foreach (PostingList postingList in input.PostingLists)
@@ -247,7 +247,7 @@ namespace Voron.Debugging
             var tempBuffers = GenerateTempBuffersReport(input.TempPath, input.JournalPath);
             var preAllocatedBuffers = GetReport(new NewPageAllocator(_tx, _tx.RootObjects), input.IncludeDetails);
 
-            long? unaccountedSpaceInBytes = input.IncludeDetails == false && trees.Any(x => x.Streams != null)
+            long? unaccountedSpaceInBytes = trees.Any(x => x.Streams != null)
                 ? dataFile.UsedSpaceInBytes - _tablesAllocatedSpaceInBytes - preAllocatedBuffers.AllocatedSpaceInBytes - treesAllocatedSpaceInBytes
                 : null;
 
