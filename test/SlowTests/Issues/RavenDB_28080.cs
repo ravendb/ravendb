@@ -5,13 +5,17 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -301,6 +305,43 @@ namespace SlowTests.Issues
 
                 Assert.False(Directory.Exists(directory));
                 Assert.Equal(new[] { "marker.txt" }, Directory.GetFiles(otherCase).Select(Path.GetFileName));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void RenameOperationStartsTheRename()
+        {
+            using var store = GetDocumentStore();
+            new UsersByName().Execute(store);
+
+            store.Maintenance.Send(new RenameIndexOperation("UsersByName", "Users/ByName"));
+
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            Assert.False(record.Indexes.ContainsKey("UsersByName"));
+            Assert.Equal("UsersByName", record.Indexes["Users/ByName"].RenamedFrom());
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public void RenameOperationIsRefusedWhenTheRulesAreNotMet()
+        {
+            using var store = GetDocumentStore();
+            new UsersByName().Execute(store);
+            store.Maintenance.Send(new PutIndexesOperation(MapDefinition("Users/ByAge")));
+
+            Assert.Throws<IndexDoesNotExistException>(() => store.Maintenance.Send(new RenameIndexOperation("Users/ByEmail", "Users/ByMail")));
+            Assert.Throws<IndexAlreadyExistException>(() => store.Maintenance.Send(new RenameIndexOperation("UsersByName", "Users/ByAge")));
+
+            using var sharded = Sharding.GetDocumentStore();
+            new UsersByName().Execute(sharded);
+            var e = Assert.ThrowsAny<RavenException>(() => sharded.Maintenance.Send(new RenameIndexOperation("UsersByName", "Users/ByName")));
+            Assert.Contains("does not support renaming an index", e.Message);
+        }
+
+        private class UsersByName : AbstractIndexCreationTask<User>
+        {
+            public UsersByName()
+            {
+                Map = users => from user in users select new { user.Name };
             }
         }
 

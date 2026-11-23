@@ -9,9 +9,11 @@ using Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
@@ -65,6 +67,38 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (var processor = new AdminIndexHandlerProcessorForState(IndexState.Disabled, this))
                 await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/admin/indexes/rename", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task Rename()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var newName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("newName");
+
+            if (RavenLogManager.Instance.IsAuditEnabled)
+                LogAuditForDatabase("CHANGE", $"Rename index '{name}' to '{newName}'");
+
+            if (ServerStore.Engine.CommandsVersionManager.CanPutCommand(nameof(RenameIndexCommand)) == false)
+                throw new InvalidOperationException($"Cannot rename the index '{name}' because not all nodes in the cluster support the index rename. Upgrade all nodes first.");
+
+            // Fail fast on this node. The command checks again when it is applied, and that result is final.
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                RenameIndexCommand.Validate(record, name, newName);
+            }
+
+            var command = new RenameIndexCommand(Database.Name, name, newName, Database.Time.GetUtcNow(), Database.Configuration.Indexing.HistoryRevisionsNumber,
+                GetRaftRequestIdFromQuery());
+
+            var (index, _) = await ServerStore.SendToLeaderAsync(command);
+
+            // The rename itself finishes later, one node at a time.
+            using (var token = CreateHttpRequestBoundOperationToken())
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, token.Token);
+
+            NoContentStatus();
         }
 
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]
