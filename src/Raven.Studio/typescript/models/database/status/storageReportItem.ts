@@ -23,6 +23,7 @@ class storageReportItem {
     isGrouped: boolean;
     
     recyclableJournal = false;
+    description: string = null;
 
     link: string = null;
     dataSize: number = null;
