@@ -1,4 +1,5 @@
 import { TimeInSeconds } from "common/constants/timeInSeconds";
+import { schemaStrictModeUtils } from "components/common/sampleObjectAndSchemaFields/schemaStrictModeUtils";
 import { EditGenAiTaskFormData } from "./editGenAiTaskValidation";
 
 const DEFAULT_TRACING_EXPIRATION_IN_SECONDS = TimeInSeconds.Day * 14;
@@ -66,7 +67,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
-                strict: x.Strict ?? !x.ParametersSchema,
+                isStrict: schemaStrictModeUtils.getIsStrictFromSaved(x.ParametersSchema, x.Strict),
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -111,8 +112,8 @@ const mapToDto = (
                 Description: x.description,
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
-                ParametersSchema: x.parametersSchema || null,
-                Strict: !!x.parametersSchema && (x.strict ?? true),
+                ParametersSchema: schemaStrictModeUtils.getWrittenSchemaOrNull(x.parametersSchema),
+                Strict: schemaStrictModeUtils.getIsStrictToSave(x.parametersSchema, x.isStrict),
                 Options: {
                     AddToInitialContext: x.isAddToInitialContext,
                     AllowModelQueries: x.isAllowModelQueries,

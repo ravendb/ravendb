@@ -36,4 +36,29 @@
             }
         }
     }
+
+    .schema-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        column-gap: sizes.$gutter-sm;
+        row-gap: sizes.$gutter-xxs;
+        margin-top: sizes.$gutter-xs;
+
+        &:empty {
+            display: none;
+        }
+    }
+
+    .strict-mode-switch {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-xxs;
+        margin-left: auto;
+
+        &.is-locked .form-check-input:disabled ~ .form-check-label {
+            opacity: 1;
+        }
+    }
 }

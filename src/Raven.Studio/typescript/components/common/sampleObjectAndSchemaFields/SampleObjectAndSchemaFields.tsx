@@ -2,7 +2,8 @@ import "./SampleObjectAndSchemaFields.scss";
 import { Icon } from "components/common/Icon";
 import AceEditor, { AceEditorProps } from "../ace/AceEditor";
 import ButtonWithSpinner from "../ButtonWithSpinner";
-import { FormAceEditor, FormErrorIcon, useErrorMessage } from "../Form";
+import { FormAceEditor, FormErrorIcon, FormSwitch, useErrorMessage } from "../Form";
+import { Switch } from "../Checkbox";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue, useWatch } from "react-hook-form";
 import ReactAce from "react-ace";
@@ -15,6 +16,8 @@ import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
 import messagePublisher from "common/messagePublisher";
 import { AceEditorSamplesPanelConfig } from "../ace/AceEditorSamplesPanel";
+import Badge from "react-bootstrap/Badge";
+import { schemaStrictModeUtils } from "./schemaStrictModeUtils";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
@@ -35,6 +38,8 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
     helpActionTooltipTitle?: string;
     canRegenerateSchemaName: TName;
+    isStrictName?: TName;
+    isStrict?: boolean;
 }
 
 export default function SampleObjectAndSchemaFields<
@@ -59,6 +64,8 @@ export default function SampleObjectAndSchemaFields<
     schemaType,
     helpActionTooltipTitle,
     canRegenerateSchemaName,
+    isStrictName,
+    isStrict,
 }: SampleObjectAndSchemaFieldsProps<TFieldValues, TName>) {
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
@@ -72,10 +79,25 @@ export default function SampleObjectAndSchemaFields<
 
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>(sampleObjectValue);
 
+    const hasStrictMode = !!isStrictName;
+    const hasWrittenSchema = schemaStrictModeUtils.getHasWrittenSchema(jsonSchema);
+    const isSchemaGeneratedByServer = schemaStrictModeUtils.getIsSchemaGeneratedByServer(sampleObject, jsonSchema);
+    const isWrittenSchemaStrict = hasStrictMode && schemaStrictModeUtils.getIsStrictToSave(jsonSchema, isStrict);
+
+    const turnStrictModeOn = () => {
+        if (hasStrictMode) {
+            setValue(isStrictName, true as TFieldValues[TName], { shouldDirty: true });
+        }
+    };
+
     const asyncGenerateSchema = useAsyncCallback(async () => {
         try {
             const result = await tasksService.getJsonSchemaFromSampleObject(JSON.parse(sampleObject), schemaType);
-            setValue(jsonSchemaName, result.Result as TFieldValues[TName], { shouldValidate: true });
+            setValue(jsonSchemaName, result.Result as TFieldValues[TName], {
+                shouldValidate: true,
+                shouldDirty: true,
+            });
+            turnStrictModeOn();
             setLastSampleObjectForGenerate(sampleObject);
         } catch (e) {
             console.error(e);
@@ -83,7 +105,7 @@ export default function SampleObjectAndSchemaFields<
         }
     });
 
-    const canRegenerateSchema = !!sampleObject && !!jsonSchema && lastSampleObjectForGenerate !== sampleObject;
+    const canRegenerateSchema = !!sampleObject && hasWrittenSchema && lastSampleObjectForGenerate !== sampleObject;
 
     useEffect(() => {
         if (_.get(formState.dirtyFields, sampleObjectName)) {
@@ -96,17 +118,19 @@ export default function SampleObjectAndSchemaFields<
 
     const tabsId = useUniqueId("sample-object-and-schema-fields-tabs");
 
-    const defaultActiveTab = jsonSchema ? "json-schema" : "sample-object";
+    const defaultActiveTab = hasWrittenSchema ? "json-schema" : "sample-object";
 
     const sampleObjectActions = buildEditorActions({
-        onLoadFile: (value) => setValue(sampleObjectName, value as TFieldValues[TName], { shouldValidate: true }),
+        onLoadFile: (value) =>
+            setValue(sampleObjectName, value as TFieldValues[TName], { shouldValidate: true, shouldDirty: true }),
         syntaxHelp: sampleObjectSyntaxHelp,
         samplesPanel: sampleObjectSamplesPanel,
         helpTooltipTitle: helpActionTooltipTitle,
     });
 
     const jsonSchemaActions = buildEditorActions({
-        onLoadFile: (value) => setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true }),
+        onLoadFile: (value) =>
+            setValue(jsonSchemaName, value as TFieldValues[TName], { shouldValidate: true, shouldDirty: true }),
         syntaxHelp: jsonSchemaSyntaxHelp,
         samplesPanel: jsonSchemaSamplesPanel,
     });
@@ -139,12 +163,15 @@ export default function SampleObjectAndSchemaFields<
                             samplesPanel={sampleObjectSamplesPanel}
                             isFullScreenLabelHidden
                         />
-                        {!!sampleObject && !jsonSchema && (
-                            <div className="mt-2">
-                                <Icon icon="info" color="info" />
-                                The server will auto-generate a schema from this object
-                            </div>
-                        )}
+                        <div className="schema-footer">
+                            {isSchemaGeneratedByServer && (
+                                <div>
+                                    <Icon icon="info" color="info" />
+                                    The server will auto-generate a schema from this object
+                                </div>
+                            )}
+                            {hasStrictMode && !hasWrittenSchema && <GeneratedSchemaStrictModeSwitch />}
+                        </div>
                     </div>
                 </Tab>
                 <Tab
@@ -158,6 +185,11 @@ export default function SampleObjectAndSchemaFields<
                                 <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                             <FormErrorIcon control={control} paths={[jsonSchemaName]} />
+                            {isWrittenSchemaStrict && (
+                                <Badge bg="info" pill className="ms-1 text-uppercase">
+                                    Strict
+                                </Badge>
+                            )}
                         </div>
                     }
                 >
@@ -172,7 +204,7 @@ export default function SampleObjectAndSchemaFields<
                             isFullScreenLabelHidden
                             overlaySlot={
                                 <>
-                                    {!!sampleObject && !jsonSchema && (
+                                    {isSchemaGeneratedByServer && (
                                         <ButtonWithSpinner
                                             className="rounded-pill position-absolute top-50 start-50 translate-middle"
                                             variant="primary"
@@ -202,12 +234,25 @@ export default function SampleObjectAndSchemaFields<
                                 </>
                             }
                         />
-                        {!!jsonSchema && (
-                            <div className="mt-2">
-                                <Icon icon="info" color="info" />
-                                This schema will be sent to the model
-                            </div>
-                        )}
+                        <div className="schema-footer">
+                            {hasWrittenSchema && (
+                                <div>
+                                    <Icon icon="info" color="info" />
+                                    {isWrittenSchemaStrict
+                                        ? "This schema will be sent to the model in strict mode"
+                                        : "This schema will be sent to the model"}
+                                </div>
+                            )}
+                            {hasStrictMode && !hasWrittenSchema && <GeneratedSchemaStrictModeSwitch />}
+                            {hasStrictMode && hasWrittenSchema && (
+                                <div className="strict-mode-switch">
+                                    <FormSwitch control={control} name={isStrictName}>
+                                        Strict mode
+                                    </FormSwitch>
+                                    <StrictModeInfoIcon />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </Tab>
             </Tabs>
@@ -241,6 +286,40 @@ function buildEditorActions({
               ]
             : []),
     ];
+}
+
+function GeneratedSchemaStrictModeSwitch() {
+    return (
+        <div className="strict-mode-switch is-locked">
+            <Switch color="primary" selected disabled toggleSelection={() => {}}>
+                Strict mode (always on for a generated schema)
+            </Switch>
+            <StrictModeInfoIcon />
+        </div>
+    );
+}
+
+function StrictModeInfoIcon() {
+    return (
+        <PopoverWithHoverWrapper message={<StrictModeTooltip />}>
+            <Icon icon="info-new" margin="m-0" />
+        </PopoverWithHoverWrapper>
+    );
+}
+
+function StrictModeTooltip() {
+    return (
+        <>
+            In strict mode the arguments that the model sends must match the schema exactly.
+            <br />
+            <br />
+            The schema must follow the strict rules of the provider, otherwise the provider rejects the request. For
+            example, OpenAI needs <code>&quot;additionalProperties&quot;: false</code> on every object and every
+            property listed in <code>required</code>.
+            <br />
+            <br />A schema generated from the sample object is always sent in strict mode.
+        </>
+    );
 }
 
 function DefaultSampleObjectTooltip() {

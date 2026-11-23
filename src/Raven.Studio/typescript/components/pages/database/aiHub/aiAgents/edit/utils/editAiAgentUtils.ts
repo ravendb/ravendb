@@ -1,3 +1,4 @@
+import { schemaStrictModeUtils } from "components/common/sampleObjectAndSchemaFields/schemaStrictModeUtils";
 import { AiAgentTrimmingMethod, EditAiAgentFormData } from "./editAiAgentValidation";
 
 function mapFromDto(
@@ -58,7 +59,7 @@ function mapFromDto(
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
-                strict: x.Strict ?? !x.ParametersSchema,
+                isStrict: schemaStrictModeUtils.getIsStrictFromSaved(x.ParametersSchema, x.Strict),
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -68,7 +69,7 @@ function mapFromDto(
                 description: x.Description,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
-                strict: x.Strict ?? !x.ParametersSchema,
+                isStrict: schemaStrictModeUtils.getIsStrictFromSaved(x.ParametersSchema, x.Strict),
                 canRegenerateSchema: false,
                 isEditing: false,
             })) ?? [],
@@ -126,8 +127,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Description: x.description,
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
-                ParametersSchema: x.parametersSchema || null,
-                Strict: !!x.parametersSchema && (x.strict ?? true),
+                ParametersSchema: schemaStrictModeUtils.getWrittenSchemaOrNull(x.parametersSchema),
+                Strict: schemaStrictModeUtils.getIsStrictToSave(x.parametersSchema, x.isStrict),
                 Options: {
                     AddToInitialContext: x.isAddToInitialContext,
                     AllowModelQueries: x.isAllowModelQueries,
@@ -138,8 +139,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Name: x.name,
                 Description: x.description,
                 ParametersSampleObject: x.parametersSampleObject || null,
-                ParametersSchema: x.parametersSchema || null,
-                Strict: !!x.parametersSchema && (x.strict ?? true),
+                ParametersSchema: schemaStrictModeUtils.getWrittenSchemaOrNull(x.parametersSchema),
+                Strict: schemaStrictModeUtils.getIsStrictToSave(x.parametersSchema, x.isStrict),
             })) ?? [],
         MaxModelIterationsPerCall: null,
         ChatTrimming:
