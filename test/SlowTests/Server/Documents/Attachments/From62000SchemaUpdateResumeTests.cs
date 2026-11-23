@@ -20,6 +20,12 @@ using AttachmentsSchemas = Raven.Server.Documents.Schemas.Attachments;
 
 namespace SlowTests.Server.Documents.Attachments
 {
+    [CollectionDefinition(nameof(From62000SchemaUpdateResumeTests), DisableParallelization = true)]
+    public class From62000SchemaUpdateResumeTestsCollection
+    {
+    }
+
+    [Collection(nameof(From62000SchemaUpdateResumeTests))]
     public class From62000SchemaUpdateResumeTests : RavenTestBase
     {
         public From62000SchemaUpdateResumeTests(ITestOutputHelper output) : base(output)
