@@ -1638,6 +1638,13 @@ namespace Raven.Server.Documents.Indexes
                     if (Logger.IsDebugEnabled)
                         Logger.Debug($"Initialized static index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
+                else
+                {
+                    OpenOldIndexIfRenamed(record, definition, prefix: string.Empty, path, exceptions, startIndex, addToInitLog);
+                }
+
+                // a stop between the rename of the index and the rename of its side-by-side index
+                OpenOldIndexIfRenamed(record, definition, Constants.Documents.Indexing.SideBySideIndexNamePrefix, path, exceptions, startIndex, addToInitLog);
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -1727,6 +1734,23 @@ namespace Raven.Server.Documents.Indexes
                 throw new AggregateException("Could not load some of the indexes", exceptions);
         }
 
+        private void OpenOldIndexIfRenamed(DatabaseRecord record, IndexDefinition definition, string prefix, PathSetting path, List<Exception> exceptions,
+            bool startIndex, Action<LogLevel, string> addToInitLog)
+        {
+            var oldName = definition.ClusterState?.RenamedFrom;
+            if (oldName == null || record.Indexes.ContainsKey(oldName))
+                return;
+
+            var oldPath = path.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(prefix + oldName)).FullPath;
+            var newPath = path.Combine(IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(prefix + definition.Name)).FullPath;
+
+            if (Directory.Exists(newPath) || Directory.Exists(oldPath) == false)
+                return;
+
+            addToInitLog(LogLevel.Debug, $"Initializing static index: `{prefix + oldName}`, which is renamed to `{prefix + definition.Name}`");
+            OpenIndex(path, oldPath, exceptions, prefix + oldName, startIndex, definition);
+        }
+
         public void OpenFaultyIndex(Index index)
         {
             Debug.Assert(index is FaultyInMemoryIndex);
@@ -1759,6 +1783,15 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 index = Index.Open(indexPath, _documentDatabase, generateNewDatabaseId: false, out searchEngineType);
+
+                // Can happen during index renamed, we moved the data on disk, but didn't update the name in storage yet
+                if (string.Equals(index.Name, name, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"The index at '{indexPath}' has the name '{index.Name}' in its storage. Changing it to '{name}'.");
+
+                    index.Rename(name);
+                }
 
                 var differences = IndexDefinitionCompareDifferences.None;
 
@@ -2298,10 +2331,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
-                    var raftCommandIndexToReport = RenameIndexLocally(oldName, newName, out var renamed);
+                    var raftCommandIndexToReport = RenameIndexLocally(oldName, newName, out var changed);
 
-                    // process the record again, now with the new local name
-                    if (renamed)
+                    // process the record again, now with the new local names
+                    if (changed)
                         await _documentDatabase.RefreshFeaturesAsync();
 
                     if (raftCommandIndexToReport != null)
@@ -2347,9 +2380,9 @@ namespace Raven.Server.Documents.Indexes
         }
 
         // Returns the raft index of the rename to report as done, or null.
-        private long? RenameIndexLocally(string oldName, string newName, out bool renamed)
+        private long? RenameIndexLocally(string oldName, string newName, out bool changed)
         {
-            renamed = false;
+            changed = false;
 
             // Fixed order for taking locks, ensure we cannot have a deadlock
             var (first, second) = StringComparer.OrdinalIgnoreCase.Compare(oldName, newName) < 0 ? (oldName, newName) : (newName, oldName);
@@ -2377,10 +2410,16 @@ namespace Raven.Server.Documents.Indexes
                 if (state == RollingIndexState.Pending)
                     return null;
 
+                if (DeleteIfFaulty(oldName))
+                    changed = true;
+
+                if (DeleteIfFaulty(Constants.Documents.Indexing.SideBySideIndexNamePrefix + oldName))
+                    changed = true;
+
                 if (_indexes.TryGetByName(newName, out _) == false && _indexes.TryGetByName(oldName, out var index))
                 {
                     RenameIndexInstance(index, newName);
-                    renamed = true;
+                    changed = true;
                 }
 
                 // a side-by-side index - we rename *both* the index & its replacement at the same time
@@ -2389,17 +2428,29 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexes.TryGetByName(newReplacementName, out _) == false && _indexes.TryGetByName(oldReplacementName, out var replacement))
                 {
                     RenameIndexInstance(replacement, newReplacementName);
-                    renamed = true;
+                    changed = true;
                 }
 
                 return state == RollingIndexState.Running ? raftCommandIndex : null;
             }
         }
 
+        // A faulty index cannot be renamed. The new name is created from the record, and is built from the start.
+        private bool DeleteIfFaulty(string name)
+        {
+            if (_indexes.TryGetByName(name, out var index) == false || index is not FaultyInMemoryIndex)
+                return false;
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Deleting the faulty index '{name}' instead of renaming it");
+
+            DeleteIndexInternal(index);
+            return true;
+        }
+
         private void RenameIndexInstance(Index index, string newName)
         {
-            if (index is FaultyInMemoryIndex)
-                throw new InvalidOperationException($"Cannot rename the index '{index.Name}' to '{newName}' because it is faulty");
+            ForTestingPurposes?.BeforeIndexRename?.Invoke(index);
 
             var oldName = index.Name;
 
@@ -2493,6 +2544,7 @@ namespace Raven.Server.Documents.Indexes
 
             internal Action BeforeHandleDatabaseRecordChange;
 
+            internal Action<Index> BeforeIndexRename;
             internal Action<Index> DuringIndexRename_AfterDirectoryMove;
             internal Action<string> BeforeIndexRenameReport;
 

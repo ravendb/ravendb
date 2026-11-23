@@ -94,6 +94,8 @@ namespace Raven.Server.Documents
 
         private readonly CancellationTokenSource _databaseShutdown;
 
+        private readonly TaskCompletionSource _loadCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
         private readonly object _idleLocker = new object();
 
         private readonly SemaphoreSlim _updateValuesLocker = new(1, 1);
@@ -559,10 +561,16 @@ namespace Raven.Server.Documents
                 _serverStore.LicenseManager.LicenseChanged += LoadTimeSeriesPolicyRunnerConfigurations;
                 IoChanges.OnIoChange += CheckWriteRateAndNotifyIfNecessary;
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                _loadCompleted.TrySetException(e); // before Dispose, which completes it too
+
                 Dispose();
                 throw;
+            }
+            finally
+            {
+                _loadCompleted.TrySetResult();
             }
         }
 
@@ -969,6 +977,7 @@ namespace Raven.Server.Documents
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
             _databaseShutdown.SafeCancel(_logger, $"{nameof(DocumentDatabase)}: {Name}");
+            _loadCompleted.TrySetResult();
 
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
@@ -1888,18 +1897,32 @@ namespace Raven.Server.Documents
 
         public ValueTask RefreshFeaturesAsync()
         {
-            if (_databaseShutdown.IsCancellationRequested)
-                ThrowDatabaseShutdown();
+            if (_loadCompleted.Task.IsCompleted)
+                return RefreshFeaturesInternalAsync();
 
-            DatabaseRecord record;
-            long index;
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            return WaitForLoadAndRefreshFeaturesAsync();
+
+            async ValueTask WaitForLoadAndRefreshFeaturesAsync()
             {
-                record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
+                await _loadCompleted.Task; // ensure we aren't running this before the database is fully loaded
+                await RefreshFeaturesInternalAsync();
             }
 
-            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(RefreshFeaturesAsync));
+            ValueTask RefreshFeaturesInternalAsync()
+            {
+                if (_databaseShutdown.IsCancellationRequested)
+                    ThrowDatabaseShutdown();
+
+                DatabaseRecord record;
+                long index;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
+                }
+
+                return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(RefreshFeaturesAsync));
+            }
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)

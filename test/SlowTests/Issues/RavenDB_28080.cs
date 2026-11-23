@@ -17,6 +17,7 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
@@ -530,6 +531,137 @@ namespace SlowTests.Issues
             {
                 Assert.False(await WaitForValueAsync(() => database.IndexStore.GetIndexes().Any(), false));
             }
+        }
+
+        public enum CrashPoint
+        {
+            BeforeRename,
+            AfterDirectoryMove,
+            BeforeReport
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [InlineData(CrashPoint.BeforeRename)]
+        [InlineData(CrashPoint.AfterDirectoryMove)]
+        [InlineData(CrashPoint.BeforeReport)]
+        public async Task RenameCompletesAfterRestart(CrashPoint crashPoint)
+        {
+            using var store = GetDocumentStore(new Options { RunInMemory = false });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            Indexes.WaitForIndexing(store);
+
+            var database = await GetDatabase(store.Database);
+            var createdAt = database.IndexStore.GetIndex(nameof(UsersByName)).GetStats().CreatedTimestamp;
+
+            using var hit = new ManualResetEventSlim();
+            var testing = database.IndexStore.ForTestingPurposesOnly();
+            switch (crashPoint)
+            {
+                case CrashPoint.BeforeRename:
+                    testing.BeforeIndexRename = _ => WaitForShutdown(hit, database);
+                    break;
+                case CrashPoint.AfterDirectoryMove:
+                    testing.DuringIndexRename_AfterDirectoryMove = _ => WaitForShutdown(hit, database);
+                    break;
+                case CrashPoint.BeforeReport:
+                    testing.BeforeIndexRenameReport = _ => WaitForShutdown(hit, database);
+                    break;
+            }
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+            Assert.True(hit.Wait(TimeSpan.FromSeconds(30)));
+
+            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database));
+            database = await GetDatabase(store.Database);
+
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+            Assert.True(await WaitForValueAsync(() => database.IndexStore.GetIndex("Users/ByName") != null, true));
+
+            var index = database.IndexStore.GetIndex("Users/ByName");
+            Assert.Equal("Users/ByName", index.Name);
+            Assert.Equal(createdAt, index.GetStats().CreatedTimestamp);
+            Assert.Null(database.IndexStore.GetIndex(nameof(UsersByName)));
+
+            var storagePath = database.Configuration.Indexing.StoragePath;
+            Assert.True(Directory.Exists(storagePath.Combine("Users_ByName").FullPath));
+            Assert.False(Directory.Exists(storagePath.Combine(nameof(UsersByName)).FullPath));
+
+            Indexes.WaitForIndexing(store);
+            using (var session = store.OpenAsyncSession())
+            {
+                var users = await session.Query<User>("Users/ByName").Where(x => x.Name == "user/3").ToListAsync();
+                Assert.Single(users);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task RenameOfTheSideBySideIndexCompletesAfterRestart()
+        {
+            using var store = GetDocumentStore(new Options { RunInMemory = false });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            Indexes.WaitForIndexing(store);
+
+            var database = await GetDatabase(store.Database);
+            database.IndexStore.StopIndexing();
+            await store.Maintenance.SendAsync(new ResetIndexOperation(nameof(UsersByName), IndexResetMode.SideBySide));
+
+            // stop after the directory of the index moved, before its side-by-side index is renamed
+            using var hit = new ManualResetEventSlim();
+            database.IndexStore.ForTestingPurposesOnly().DuringIndexRename_AfterDirectoryMove = _ => WaitForShutdown(hit, database);
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+            Assert.True(hit.Wait(TimeSpan.FromSeconds(30)));
+
+            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database));
+            database = await GetDatabase(store.Database);
+
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+            Assert.True(await WaitForValueAsync(() => database.IndexStore.GetIndex("Users/ByName") != null &&
+                                                      database.IndexStore.GetIndex("ReplacementOf/Users/ByName") == null, true));
+            Assert.Null(database.IndexStore.GetIndex(nameof(UsersByName)));
+            Assert.Null(database.IndexStore.GetIndex("ReplacementOf/" + nameof(UsersByName)));
+
+            var storagePath = database.Configuration.Indexing.StoragePath;
+            Assert.False(Directory.Exists(storagePath.Combine(nameof(UsersByName)).FullPath));
+            Assert.False(Directory.Exists(storagePath.Combine("ReplacementOf_" + nameof(UsersByName)).FullPath));
+
+            Indexes.WaitForIndexing(store);
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task IndexDirectoryDecidesTheName()
+        {
+            using var store = GetDocumentStore(new Options { RunInMemory = false });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            Indexes.WaitForIndexing(store);
+
+            var database = await GetDatabase(store.Database);
+            var createdAt = database.IndexStore.GetIndex(nameof(UsersByName)).GetStats().CreatedTimestamp;
+            var storagePath = database.Configuration.Indexing.StoragePath;
+
+            // the node stopped after it moved the directory, and before it wrote the new name into the index storage
+            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database));
+            await Server.ServerStore.SendToLeaderAsync(new RenameIndexCommand(store.Database, nameof(UsersByName), "Users/ByName", DateTime.UtcNow, revisionsToKeep: 10, RaftIdGenerator.NewId()));
+            Directory.Move(storagePath.Combine(nameof(UsersByName)).FullPath, storagePath.Combine("Users_ByName").FullPath);
+
+            database = await GetDatabase(store.Database);
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+
+            var index = database.IndexStore.GetIndex("Users/ByName");
+            Assert.NotNull(index);
+            Assert.Equal("Users/ByName", index.Name);
+            Assert.Equal(createdAt, index.GetStats().CreatedTimestamp);
+            Assert.Null(database.IndexStore.GetIndex(nameof(UsersByName)));
+        }
+
+        private static void WaitForShutdown(ManualResetEventSlim hit, DocumentDatabase database)
+        {
+            hit.Set();
+            database.DatabaseShutdown.WaitHandle.WaitOne();
+            database.DatabaseShutdown.ThrowIfCancellationRequested();
         }
 
         private static async Task StoreUsersAsync(IDocumentStore store, int count)
