@@ -1,17 +1,24 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Server.Config;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
@@ -19,6 +26,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
+using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Issues
 {
@@ -335,6 +343,241 @@ namespace SlowTests.Issues
             new UsersByName().Execute(sharded);
             var e = Assert.ThrowsAny<RavenException>(() => sharded.Maintenance.Send(new RenameIndexOperation("UsersByName", "Users/ByName")));
             Assert.Contains("does not support renaming an index", e.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task RenameKeepsTheIndexData()
+        {
+            using var store = GetDocumentStore(new Options { RunInMemory = false });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            await new UserCountsByLastName().ExecuteAsync(store);
+            Indexes.WaitForIndexing(store);
+
+            var database = await GetDatabase(store.Database);
+            var index = database.IndexStore.GetIndex(nameof(UsersByName));
+            var mapReduceIndex = database.IndexStore.GetIndex(nameof(UserCountsByLastName));
+            var createdAt = index.GetStats().CreatedTimestamp;
+            var outputIds = await GetOutputDocumentIdsAsync(store);
+            Assert.NotEmpty(outputIds);
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UserCountsByLastName), "Users/CountsByLastName"));
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+            await WaitForRenameToCompleteAsync(store, "Users/CountsByLastName");
+
+            Assert.Same(index, database.IndexStore.GetIndex("Users/ByName"));
+            Assert.Same(mapReduceIndex, database.IndexStore.GetIndex("Users/CountsByLastName"));
+            Assert.Null(database.IndexStore.GetIndex(nameof(UsersByName)));
+            Assert.Equal("Users/ByName", index.Name);
+            Assert.Equal(createdAt, index.GetStats().CreatedTimestamp);
+
+            var storagePath = database.Configuration.Indexing.StoragePath;
+            Assert.True(Directory.Exists(storagePath.Combine("Users_ByName").FullPath));
+            Assert.False(Directory.Exists(storagePath.Combine(nameof(UsersByName)).FullPath));
+
+            Indexes.WaitForIndexing(store);
+            Assert.Equal(outputIds, await GetOutputDocumentIdsAsync(store));
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var users = await session.Query<User>("Users/ByName").Where(x => x.Name == "user/3").ToListAsync();
+                Assert.Single(users);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
+        [InlineData(IndexDeploymentMode.Parallel)]
+        [InlineData(IndexDeploymentMode.Rolling)]
+        public async Task NodesRenameOneAtATime(IndexDeploymentMode deploymentMode)
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            using var store = GetDocumentStore(new Options
+            {
+                Server = leader,
+                ReplicationFactor = 3,
+                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexDeploymentMode)] = deploymentMode.ToString()
+            });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            await WaitForRenameToCompleteAsync(store, nameof(UsersByName)); // the rolling deployment of the index
+            await Indexes.WaitForIndexingInTheClusterAsync(store);
+
+            var originals = new Dictionary<string, Index>();
+            var databases = new Dictionary<string, DocumentDatabase>();
+            var reports = new BlockingCollection<string>();
+            using var proceed = new SemaphoreSlim(0);
+
+            foreach (var node in nodes)
+            {
+                var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var tag = node.ServerStore.NodeTag;
+                databases[tag] = database;
+                originals[tag] = database.IndexStore.GetIndex(nameof(UsersByName));
+                database.IndexStore.ForTestingPurposesOnly().BeforeIndexRenameReport = _ =>
+                {
+                    reports.Add(tag);
+                    proceed.Wait(database.DatabaseShutdown);
+                };
+            }
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+
+            var renamed = new HashSet<string>();
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.True(reports.TryTake(out var tag, TimeSpan.FromSeconds(30)), $"No node reported after {string.Join(", ", renamed)}");
+                renamed.Add(tag);
+
+                var rollingIndex = (await GetRecordAsync(store)).RollingIndexes["Users/ByName"];
+                Assert.Equal(RollingIndexState.Running, rollingIndex.ActiveDeployments[tag].State);
+                Assert.Equal(1, rollingIndex.ActiveDeployments.Values.Count(x => x.State == RollingIndexState.Running));
+
+                // a record change while other nodes wait for their turn
+                if (i == 0)
+                    await store.Maintenance.SendAsync(new PutIndexesOperation(MapDefinition("Users/ByAge", "from u in docs.Users select new { u.Age }")));
+
+                foreach (var (nodeTag, database) in databases)
+                {
+                    var expectedName = renamed.Contains(nodeTag) ? "Users/ByName" : nameof(UsersByName);
+                    Assert.Same(originals[nodeTag], database.IndexStore.GetIndex(expectedName));
+                    Assert.Equal(expectedName, originals[nodeTag].Name);
+                    Assert.False(originals[nodeTag].IsPending, nodeTag);
+                }
+
+                proceed.Release();
+            }
+
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+
+            foreach (var (nodeTag, database) in databases)
+            {
+                Assert.Same(originals[nodeTag], database.IndexStore.GetIndex("Users/ByName"));
+                Assert.Null(database.IndexStore.GetIndex(nameof(UsersByName)));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
+        public async Task RenameAlsoRenamesTheSideBySideIndex()
+        {
+            using var store = GetDocumentStore(new Options { RunInMemory = false });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            Indexes.WaitForIndexing(store);
+
+            var database = await GetDatabase(store.Database);
+            var index = database.IndexStore.GetIndex(nameof(UsersByName));
+
+            // the side-by-side index is created, but does not run
+            database.IndexStore.StopIndexing();
+            await store.Maintenance.SendAsync(new ResetIndexOperation(nameof(UsersByName), IndexResetMode.SideBySide));
+            var replacement = database.IndexStore.GetIndex("ReplacementOf/" + nameof(UsersByName));
+            Assert.NotNull(replacement);
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+            await WaitForRenameToCompleteAsync(store, "Users/ByName");
+
+            Assert.Same(index, database.IndexStore.GetIndex("Users/ByName"));
+            Assert.Same(replacement, database.IndexStore.GetIndex("ReplacementOf/Users/ByName"));
+            Assert.Null(database.IndexStore.GetIndex("ReplacementOf/" + nameof(UsersByName)));
+
+            database.IndexStore.StartIndexing();
+
+            Assert.True(await WaitForValueAsync(() => ReferenceEquals(database.IndexStore.GetIndex("Users/ByName"), replacement), true));
+            Assert.Null(database.IndexStore.GetIndex("ReplacementOf/Users/ByName"));
+            Indexes.WaitForIndexing(store);
+        }
+
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
+        public async Task DeleteDuringTheRenameDeletesTheIndexOnAllNodes()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            await Indexes.WaitForIndexingInTheClusterAsync(store);
+
+            var databases = new List<DocumentDatabase>();
+            var reports = new BlockingCollection<string>();
+            using var hold = new ManualResetEventSlim();
+
+            foreach (var node in nodes)
+            {
+                var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                databases.Add(database);
+                database.IndexStore.ForTestingPurposesOnly().BeforeIndexRenameReport = _ =>
+                {
+                    reports.Add(node.ServerStore.NodeTag);
+                    hold.Wait(database.DatabaseShutdown);
+                };
+            }
+
+            await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+            Assert.True(reports.TryTake(out _, TimeSpan.FromSeconds(30)));
+
+            // the old name is refused on every node
+            var e = await Assert.ThrowsAnyAsync<RavenException>(() => store.Maintenance.SendAsync(new DeleteIndexOperation(nameof(UsersByName))));
+            Assert.Contains("Use the new name 'Users/ByName'", e.Message);
+
+            await store.Maintenance.SendAsync(new DeleteIndexOperation("Users/ByName"));
+            hold.Set();
+
+            var record = await GetRecordAsync(store);
+            Assert.Empty(record.Indexes);
+            Assert.False(record.RollingIndexes?.ContainsKey("Users/ByName") ?? false);
+
+            foreach (var database in databases)
+            {
+                Assert.False(await WaitForValueAsync(() => database.IndexStore.GetIndexes().Any(), false));
+            }
+        }
+
+        private static async Task StoreUsersAsync(IDocumentStore store, int count)
+        {
+            using var session = store.OpenAsyncSession();
+            for (var i = 0; i < count; i++)
+                await session.StoreAsync(new User { Name = "user/" + i, LastName = "last/" + (i % 3), Age = i });
+
+            await session.SaveChangesAsync();
+        }
+
+        private static async Task<DatabaseRecordWithEtag> GetRecordAsync(IDocumentStore store)
+        {
+            return await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+        }
+
+        private async Task WaitForRenameToCompleteAsync(IDocumentStore store, string name)
+        {
+            var complete = await WaitForValueAsync(async () =>
+            {
+                var record = await GetRecordAsync(store);
+                return record.RollingIndexes == null || record.RollingIndexes.ContainsKey(name) == false;
+            }, true, timeout: 30_000);
+
+            Assert.True(complete, $"The rolling entry of '{name}' was not removed");
+        }
+
+        private static async Task<List<string>> GetOutputDocumentIdsAsync(IDocumentStore store)
+        {
+            using var session = store.OpenAsyncSession();
+            var results = await session.Advanced.AsyncRawQuery<object>("from UserCounts").ToListAsync();
+            return results.Select(x => session.Advanced.GetDocumentId(x)).Order().ToList();
+        }
+
+        private class UserCountsByLastName : AbstractIndexCreationTask<User, UserCountsByLastName.Result>
+        {
+            public class Result
+            {
+                public string LastName { get; set; }
+                public int Count { get; set; }
+            }
+
+            public UserCountsByLastName()
+            {
+                Map = users => from user in users select new Result { LastName = user.LastName, Count = 1 };
+                Reduce = results => from result in results group result by result.LastName into g select new Result { LastName = g.Key, Count = g.Sum(x => x.Count) };
+                OutputReduceToCollection = "UserCounts";
+            }
         }
 
         private class UsersByName : AbstractIndexCreationTask<User>

@@ -38,6 +38,7 @@ using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -144,14 +145,16 @@ namespace Raven.Server.Documents.Indexes
                 HandleSorters(record, raftIndex);
                 HandleAnalyzers(record, raftIndex);
 
-                HandleDeletes(record, raftIndex);
+                var renamesInProgress = HandleRenames(record);
+
+                HandleDeletes(record, raftIndex, renamesInProgress);
 
                 var newIndexesToStart = new List<Index>();
                 ConcurrentSet<Index> indexesToDelete = null;
 
                 try
                 {
-                    HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart);
+                    HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart, renamesInProgress);
                     HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
 
                     if (newIndexesToStart.Count <= 0)
@@ -429,7 +432,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart, HashSet<string> renamesInProgress)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -437,6 +440,9 @@ namespace Raven.Server.Documents.Indexes
 
                 var name = kvp.Key;
                 var definition = kvp.Value;
+
+                if (renamesInProgress?.Contains(name) == true)
+                    continue;
 
                 try
                 {
@@ -525,6 +531,12 @@ namespace Raven.Server.Documents.Indexes
             if (record.RollingIndexes.TryGetValue(originalName, out var rollingIndex) == false)
             {
                 reason = "I'm not a rolling index";
+                return false;
+            }
+
+            if (rollingIndex.RenamedFrom != null)
+            {
+                reason = "The index is being renamed";
                 return false;
             }
 
@@ -812,7 +824,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
+        private void HandleDeletes(DatabaseRecord record, long raftLogIndex, HashSet<string> renamesInProgress)
         {
             foreach (var index in _indexes)
             {
@@ -825,6 +837,9 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
+                    continue;
+
+                if (renamesInProgress?.Contains(indexNormalizedName) == true)
                     continue;
 
                 try
@@ -891,6 +906,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (rollingIndex.RaftCommandIndex != lastRollingDeploymentIndex)
                     return false;
+
+                if (rollingIndex.RenamedFrom != null)
+                    return false; // the rename task reports it
 
                 if (rollingIndex.ActiveDeployments.TryGetValue(nodeTag, out var currentDeployment) == false)
                     return false;
@@ -2201,9 +2219,209 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        // Until this node renames an index, its old name must not be deleted and its new name must not be created. Returns these names.
+        private HashSet<string> HandleRenames(DatabaseRecord record)
+        {
+            HashSet<string> renamesInProgress = null;
+
+            foreach (var definition in record.Indexes.Values)
+            {
+                var oldName = definition.ClusterState?.RenamedFrom;
+                if (oldName == null)
+                    continue;
+
+                // The old index name is valid (a new index with the same name?), we'll treat it as separate instances
+                // worst case, we'll have to reindex it instead of rename. Can happen if a node missed the rename operation completely
+                if (record.Indexes.ContainsKey(oldName))
+                    continue;
+
+                var newName = definition.Name;
+                var hasOldName = _indexes.TryGetByName(oldName, out _) || HasReplacement(oldName);
+
+                if (hasOldName)
+                {
+                    renamesInProgress ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    renamesInProgress.Add(oldName);
+                    renamesInProgress.Add(newName);
+                }
+                else if (_indexes.TryGetByName(newName, out _) == false)
+                {
+                    continue; // the index is created under the new name
+                }
+
+                var state = GetRenameState(record.RollingIndexes, oldName, newName, out _);
+                if (state == RollingIndexState.Pending)
+                    continue; // not my turn
+
+                if (hasOldName == false && state != RollingIndexState.Running)
+                    continue; // renamed, and nothing to report
+
+                StartRenameTask(oldName, newName);
+            }
+
+            return renamesInProgress;
+        }
+
+        private RollingIndexState? GetRenameState(Dictionary<string, RollingIndex> rollingIndexes, string oldName, string newName, out long raftCommandIndex)
+        {
+            raftCommandIndex = 0;
+
+            if (rollingIndexes == null || rollingIndexes.TryGetValue(newName, out var rollingIndex) == false)
+                return null;
+
+            if (string.Equals(rollingIndex.RenamedFrom, oldName, StringComparison.Ordinal) == false)
+                return null;
+
+            if (rollingIndex.ActiveDeployments.TryGetValue(_serverStore.NodeTag, out var deployment) == false)
+                return null;
+
+            raftCommandIndex = rollingIndex.RaftCommandIndex;
+            return deployment.State;
+        }
+
+        private readonly ConcurrentDictionary<string, Task> _renameTasks = new(StringComparer.OrdinalIgnoreCase);
+
+        private void StartRenameTask(string oldName, string newName)
+        {
+            if (_renameTasks.TryGetValue(newName, out var task) && task.IsCompleted == false)
+                return;
+
+            _renameTasks[newName] = Task.Run(() => RenameIndexAsync(oldName, newName));
+        }
+
+        private async Task RenameIndexAsync(string oldName, string newName)
+        {
+            var alertKey = $"{oldName}->{newName}";
+            var delay = TimeSpan.FromMilliseconds(500);
+
+            while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                try
+                {
+                    var raftCommandIndexToReport = RenameIndexLocally(oldName, newName, out var renamed);
+
+                    // process the record again, now with the new local name
+                    if (renamed)
+                        await _documentDatabase.RefreshFeaturesAsync();
+
+                    if (raftCommandIndexToReport != null)
+                    {
+                        ForTestingPurposes?.BeforeIndexRenameReport?.Invoke(newName);
+
+                        var command = new PutRollingIndexCommand(_documentDatabase.Name, newName, _serverStore.NodeTag, _documentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId())
+                        {
+                            DeploymentRaftCommandIndex = raftCommandIndexToReport
+                        };
+
+                        var (index, _) = await _serverStore.SendToLeaderAsync(command);
+                        await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
+                    }
+
+                    _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Indexing_RenameFailed, alertKey));
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                        return;
+
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error($"Failed to rename index '{oldName}' to '{newName}'. Retrying ...", e);
+
+                    _documentDatabase.NotificationCenter.Add(AlertRaised.Create(_documentDatabase.Name, $"Could not rename index '{oldName}' to '{newName}'",
+                        $"The rename will be tried again. Queries by the new name on this node fail until the rename is done. Error: {e.Message}",
+                        AlertReason.Indexing_RenameFailed, NotificationSeverity.Error, key: alertKey, details: new ExceptionDetails(e)));
+                }
+
+                try
+                {
+                    await Task.Delay(delay, _documentDatabase.DatabaseShutdown);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 30_000));
+            }
+        }
+
+        // Returns the raft index of the rename to report as done, or null.
+        private long? RenameIndexLocally(string oldName, string newName, out bool renamed)
+        {
+            renamed = false;
+
+            // Fixed order for taking locks, ensure we cannot have a deadlock
+            var (first, second) = StringComparer.OrdinalIgnoreCase.Compare(oldName, newName) < 0 ? (oldName, newName) : (newName, oldName);
+
+            using (IndexLock(first))
+            using (IndexLock(second))
+            {
+                RollingIndexState? state;
+                long raftCommandIndex;
+
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(context, _documentDatabase.Name))
+                {
+                    // the record can change after this task started
+                    if (record?.Indexes == null ||
+                        record.Indexes.TryGetValue(newName, out var definition) == false ||
+                        string.Equals(definition.ClusterState?.RenamedFrom, oldName, StringComparison.Ordinal) == false ||
+                        record.Indexes.ContainsKey(oldName))
+                        return null;
+
+                    state = GetRenameState(record.RollingIndexes, oldName, newName, out raftCommandIndex);
+                }
+
+                if (state == RollingIndexState.Pending)
+                    return null;
+
+                if (_indexes.TryGetByName(newName, out _) == false && _indexes.TryGetByName(oldName, out var index))
+                {
+                    RenameIndexInstance(index, newName);
+                    renamed = true;
+                }
+
+                // a side-by-side index - we rename *both* the index & its replacement at the same time
+                var oldReplacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + oldName;
+                var newReplacementName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + newName;
+                if (_indexes.TryGetByName(newReplacementName, out _) == false && _indexes.TryGetByName(oldReplacementName, out var replacement))
+                {
+                    RenameIndexInstance(replacement, newReplacementName);
+                    renamed = true;
+                }
+
+                return state == RollingIndexState.Running ? raftCommandIndex : null;
+            }
+        }
+
+        private void RenameIndexInstance(Index index, string newName)
+        {
+            if (index is FaultyInMemoryIndex)
+                throw new InvalidOperationException($"Cannot rename the index '{index.Name}' to '{newName}' because it is faulty");
+
+            var oldName = index.Name;
+
+            index.RenameTo(newName);
+
+            _indexes.Rename(oldName, newName, index);
+
+            _documentDatabase.Changes.RaiseNotifications(new IndexRenameChange { Name = newName, OldIndexName = oldName, Type = IndexChangeTypes.Renamed });
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Renamed index '{oldName}' to '{newName}'");
+        }
+
         private SemaphoreSlim GetIndexLock(string name)
         {
             return _indexLocks.GetOrAdd(name, n => new SemaphoreSlim(1, 1));
+        }
+
+        internal bool IsIndexLockHeld(string name)
+        {
+            // The lock has no owner, so this tells only that someone holds it.
+            return _indexLocks.TryGetValue(name, out var indexLock) && indexLock.CurrentCount == 0;
         }
 
         private void ExecuteIndexAction(Action action)
@@ -2274,6 +2492,9 @@ namespace Raven.Server.Documents.Indexes
             internal Action<Index> BeforeIndexStart;
 
             internal Action BeforeHandleDatabaseRecordChange;
+
+            internal Action<Index> DuringIndexRename_AfterDirectoryMove;
+            internal Action<string> BeforeIndexRenameReport;
 
             public TestingStuff(IndexStore parent)
             {

@@ -3036,6 +3036,83 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
+        internal void RenameTo(string newName)
+        {
+            Debug.Assert(DocumentDatabase.IndexStore.IsIndexLockHeld(NormalizedName) &&
+                        // a side-by-side index is under the lock of its original index
+                         DocumentDatabase.IndexStore.IsIndexLockHeld(newName.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty)),
+                $"Renaming the index '{Name}' to '{newName}' requires the index locks of both names");
+
+            if (string.Equals(Name, newName, StringComparison.Ordinal))
+                return;
+
+            // Stop outside the drain: the indexing thread can need the drain before it exits (RavenDB-10909).
+            var needToStop = Status == IndexRunningStatus.Running;
+            if (needToStop)
+                Stop(disableIndex: false);
+
+            _isReplacing = true; // waiting queries use the longer timeout
+
+            try
+            {
+                while (true)
+                {
+                    try
+                    {
+                        using (DrainRunningQueries())
+                        {
+                            try
+                            {
+                                RenameStorage(newName);
+                            }
+                            finally
+                            {
+                                // inside the drain, so it does not wait for queries
+                                if (needToStop)
+                                    Start();
+                            }
+                        }
+
+                        return;
+                    }
+                    catch (TimeoutException)
+                    {
+                        // queries still run
+                        DocumentDatabase.DatabaseShutdown.ThrowIfCancellationRequested();
+                    }
+                }
+            }
+            finally
+            {
+                _isReplacing = false;
+            }
+        }
+
+        private void RenameStorage(string newName)
+        {
+            if (Configuration.RunInMemory)
+            {
+                Rename(newName);
+                return;
+            }
+
+            var oldPath = _environment.Options.BasePath.FullPath;
+            var oldTempPath = _environment.Options.TempPath.FullPath;
+            var newDirectoryName = IndexDefinitionBaseServerSide.GetIndexNameSafeForFileSystem(newName);
+
+            using (RestartEnvironment())
+            {
+                IOExtensions.MoveDirectory(oldPath, Configuration.StoragePath.Combine(newDirectoryName).FullPath);
+
+                Definition.SetName(newName); // in memory, RestartEnvironment.Dispose handles persistence with the new name
+
+                DocumentDatabase.IndexStore.ForTestingPurposes?.DuringIndexRename_AfterDirectoryMove?.Invoke(this);
+
+                if (Configuration.TempPath != null)
+                    IOExtensions.MoveDirectory(oldTempPath, Configuration.TempPath.Combine(newDirectoryName).FullPath);
+            }
+        }
+
         internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, Stopwatch overallDuration, bool? isStale = null)
         {
             using (CurrentlyInUse(out var valid))

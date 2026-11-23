@@ -60,6 +60,11 @@ namespace Raven.Server.Documents.Indexes
             Persist(context, options);
         }
 
+        internal void SetName(string name)
+        {
+            Name = name;
+        }
+
         public abstract void Persist(TransactionOperationContext context, StorageEnvironmentOptions options);
 
         protected abstract void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
