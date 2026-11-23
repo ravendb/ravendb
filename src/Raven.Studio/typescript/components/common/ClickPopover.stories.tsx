@@ -40,7 +40,7 @@ export default {
         containerWidth: null,
     },
     play: async ({ canvas }) => {
-        await userEvent.click(canvas.getByTitle("Show details"));
+        await userEvent.click(await canvas.findByTitle("Show details"));
     },
 } satisfies Meta<ClickPopoverStoryArgs>;
 
