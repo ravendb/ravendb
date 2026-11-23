@@ -3,15 +3,18 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Client.ServerWide;
@@ -530,6 +533,101 @@ namespace SlowTests.Issues
             foreach (var database in databases)
             {
                 Assert.False(await WaitForValueAsync(() => database.IndexStore.GetIndexes().Any(), false));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
+        public async Task FinishRollingMovesTheRenameOn()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+            await StoreUsersAsync(store, 10);
+            await new UsersByName().ExecuteAsync(store);
+            await Indexes.WaitForIndexingInTheClusterAsync(store);
+
+            var databases = new Dictionary<string, DocumentDatabase>();
+            var originals = new Dictionary<string, Index>();
+            var reports = new BlockingCollection<string>();
+            using var hold = new ManualResetEventSlim();
+
+            foreach (var node in nodes)
+            {
+                var database = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var tag = node.ServerStore.NodeTag;
+                databases[tag] = database;
+                originals[tag] = database.IndexStore.GetIndex(nameof(UsersByName));
+                database.IndexStore.ForTestingPurposesOnly().BeforeIndexRenameReport = _ =>
+                {
+                    reports.Add(tag);
+                    hold.Wait(database.DatabaseShutdown);
+                };
+            }
+
+            try
+            {
+                await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+                Assert.True(reports.TryTake(out var running, TimeSpan.FromSeconds(30)));
+
+                foreach (var database in databases.Values)
+                    Assert.Equal(nameof(UsersByName), database.IndexStore.GetRollingProgress("Users/ByName")?.RenamedFrom);
+
+                // the Running node does not report yet, and a Pending node goes now
+                var pending = databases.Keys.First(x => x != running);
+                await store.Maintenance.SendAsync(new FinishRollingOperation("Users/ByName", pending));
+
+                Assert.True(await WaitForValueAsync(() => ReferenceEquals(databases[pending].IndexStore.GetIndex("Users/ByName"), originals[pending]), true));
+                var rollingIndex = (await GetRecordAsync(store)).RollingIndexes["Users/ByName"];
+                Assert.Equal(RollingIndexState.Done, rollingIndex.ActiveDeployments[pending].State);
+                Assert.Equal(RollingIndexState.Running, rollingIndex.ActiveDeployments[running].State);
+
+                // all nodes go now
+                await store.Maintenance.SendAsync(new FinishRollingOperation("Users/ByName", node: null));
+                await WaitForRenameToCompleteAsync(store, "Users/ByName");
+
+                foreach (var (tag, database) in databases)
+                    Assert.True(await WaitForValueAsync(() => ReferenceEquals(database.IndexStore.GetIndex("Users/ByName"), originals[tag]), true), tag);
+            }
+            finally
+            {
+                hold.Set();
+            }
+        }
+
+        private class FinishRollingOperation : IMaintenanceOperation
+        {
+            private readonly string _indexName;
+            private readonly string _node;
+
+            public FinishRollingOperation(string indexName, string node)
+            {
+                _indexName = indexName;
+                _node = node;
+            }
+
+            public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new FinishRollingCommand(_indexName, _node);
+            }
+
+            private class FinishRollingCommand : RavenCommand
+            {
+                private readonly string _indexName;
+                private readonly string _node;
+
+                public FinishRollingCommand(string indexName, string node)
+                {
+                    _indexName = indexName;
+                    _node = node;
+                }
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/indexes/finish-rolling?name={Uri.EscapeDataString(_indexName)}";
+                    if (_node != null)
+                        url += $"&node={_node}";
+
+                    return new HttpRequestMessage { Method = HttpMethod.Post };
+                }
             }
         }
 

@@ -40,17 +40,25 @@ namespace Raven.Server.Documents.Handlers
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", required: false);
 
-            var index = Database.IndexStore.GetIndex(name);
+            var rollingIndexName = name;
 
-            if (index == null)
-                throw new IndexDoesNotExistException($"Could not find '{name}' index.");
+            // A rename runs as a rolling deployment of the new name, for an index in any deployment mode.
+            if (Database.IndexStore.GetRollingProgress(name)?.RenamedFrom == null)
+            {
+                var index = Database.IndexStore.GetIndex(name);
 
-            if (index.IsRolling == false)
-                throw new InvalidOperationException($"'{name}' isn't a rolling index");
+                if (index == null)
+                    throw new IndexDoesNotExistException($"Could not find '{name}' index.");
+
+                if (index.IsRolling == false)
+                    throw new InvalidOperationException($"'{name}' isn't a rolling index");
+
+                rollingIndexName = index.NormalizedName;
+            }
 
             var command = node == null ?
-                new PutRollingIndexCommand(Database.Name, index.NormalizedName, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) :
-                new PutRollingIndexCommand(Database.Name, index.NormalizedName, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
+                new PutRollingIndexCommand(Database.Name, rollingIndexName, Database.Time.GetUtcNow(), RaftIdGenerator.NewId()) :
+                new PutRollingIndexCommand(Database.Name, rollingIndexName, node, Database.Time.GetUtcNow(), RaftIdGenerator.NewId());
 
             var result = await ServerStore.SendToLeaderAsync(command);
 

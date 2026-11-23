@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Indexes
             get
             {
                 if (IsRolling == false)
-                    return true;
+                    return DocumentDatabase.IndexStore.GetRollingProgress(NormalizedName)?.RenamedFrom == null; // a rename is a rolling deployment of any index
 
                 // if we have no replacement - we are deploying, otherwise the replacement is deploying
                 if (DocumentDatabase.IndexStore.HasReplacement(Name))
