@@ -4,13 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -43,15 +43,11 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
     {
         if (database == null)
         {
-            var periodicBackups = new List<PeriodicBackup>();
+            var periodicBackups = new List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)>();
 
             foreach (var periodicBackupConfiguration in record.PeriodicBackups)
             {
-                periodicBackups.Add(new PeriodicBackup
-                {
-                    Configuration = periodicBackupConfiguration,
-                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)
-                });
+                periodicBackups.Add((periodicBackupConfiguration, BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)));
             }
 
             return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
@@ -62,7 +58,7 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
             });
         }
 
-        return database.PeriodicBackupRunner.GetBackupInfo(context);
+        return database.ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName);
     }
 
     protected static TimeSpan? GetUpTime(DocumentDatabase database)

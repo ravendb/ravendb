@@ -61,6 +61,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Number of seconds to delay the backup after hitting the maximum number of concurrent backups limit")]
         [DefaultValue(30)]
+        [MinValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Backup.ConcurrentBackupsDelayInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting ConcurrentBackupsDelay { get; set; }
@@ -113,6 +114,54 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
+
+        [Description("Interval at which the server backup runner evaluates all scheduled backup tasks.")]
+        [DefaultValue(60)]
+        [MinValue(1)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.BackupRunnerFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting BackupRunnerFrequency { get; set; }
+
+        [Description("Grace period after a database is loaded during which scheduled backups are skipped, to allow the database to fully initialize.")]
+        [DefaultValue(60)]
+        [MinValue(0)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.DatabaseLoadedGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting DatabaseLoadedGracePeriod { get; set; }
+
+        [Description("Grace period after the server starts during which scheduled backups are held, to allow the server to fully initialize.")]
+        [DefaultValue(300)]
+        [MinValue(0)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.ServerStartupGracePeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ServerStartupGracePeriod { get; set; }
+
+        [Description("Maximum number of backup statuses of idle databases that are sent to the cluster in a single command when their incremental backups are skipped because nothing changed.")]
+        [DefaultValue(100)]
+        [MinValue(1)]
+        [ConfigurationEntry("Backup.MaxStatusUpdatesPerBatch", ConfigurationEntryScope.ServerWideOnly)]
+        public int MaxStatusUpdatesPerBatch { get; set; }
+
+        [Description("Keep an idle database loaded when its next backup is due within this number of minutes and it has changes since its last backup or its next backup is a full backup.")]
+        [DefaultValue(5)]
+        [MinValue(0)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.KeepIdleDatabaseLoadedBeforeBackupInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting KeepIdleDatabaseLoadedBeforeBackup { get; set; }
+
+        [Description("Number of days to keep backup history entries. An entry is removed when it is older than this period, except the most recent successful full backup of an existing backup task on a node that hosts the database.")]
+        [DefaultValue(30)]
+        [MinValue(1)]
+        [TimeUnit(TimeUnit.Days)]
+        [ConfigurationEntry("Backup.BackupHistoryRetentionPeriodInDays", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting BackupHistoryRetentionPeriod { get; set; }
+
+        [Description("How often the server removes backup history entries that are older than the backup history retention period.")]
+        [DefaultValue(1440)]
+        [MinValue(1)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Backup.BackupHistoryCleanupIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting BackupHistoryCleanupInterval { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {

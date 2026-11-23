@@ -224,6 +224,8 @@ namespace Raven.Server.ServerWide
             [nameof(PutServerWideConnectionStringCommand)] = 72_001,
             [nameof(RemoveServerWideConnectionStringCommand)] = 72_001,
             [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
+
+            [nameof(UpdatePeriodicBackupStatusBatchCommand)] = 72_002
         };
 
         public bool CanPutCommand(string command)

@@ -13,6 +13,7 @@ using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using static Raven.Server.Utils.BackupUtils;
 
 namespace StressTests.Server.Documents.PeriodicBackup
@@ -26,13 +27,16 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.Smuggler)]
         public async Task WillRunBackupAfterGettingMissingResponsibleNode()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             {
                 var gotMissingResponsibleNode = false;
                 var documentDatabase = await GetDatabase(store.Database);
-                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().OnMissingResponsibleNode = () => gotMissingResponsibleNode = true;
+
+                var testingStuff = new TestingStuffInternal() { OnMissingResponsibleNode = () => gotMissingResponsibleNode = true };
+                documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -118,19 +122,22 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(responsibleDatabase);
                 Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, taskId);
 
-                var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
                 Assert.Equal(server.ServerStore.NodeTag, tag);
 
-                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_Reschedule = true;
-                var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.First();
+                var testingStuff = new TestingStuffInternal() { SimulateActiveByOtherNodeStatus_Reschedule = true };
+                responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
+
+                var pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).First();
                 Assert.NotNull(pb);
 
-                var val = WaitForValue(() => pb.HasScheduledBackup(), false, timeout: 66666, interval: 444);
+                var val = WaitForValue(() => pb.NextBackup != null, false, timeout: 66666, interval: 444);
                 Assert.False(val, "PeriodicBackup should cancel the ScheduledBackup if the task status is ActiveByOtherNode, " +
                                   "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
 
-                responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
+                responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
+                var serverWideConfiguration = (await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation())).Single();
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideConfiguration));
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
 
                 val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
@@ -179,19 +186,19 @@ namespace StressTests.Server.Documents.PeriodicBackup
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     Assert.NotNull(database);
 
-                    var actualNodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    var actualNodeTag = database.ServerStore.ServerBackupRunner.WhoseTaskIsIt(database.Name, taskId);
                     Assert.Equal(mentorNode.ServerStore.NodeTag, actualNodeTag);
 
-                    var backup = database.PeriodicBackupRunner.PeriodicBackups.SingleOrDefault();
+                    var backup = database.ServerStore.ServerBackupRunner.GetDatabaseBackups(database.Name).SingleOrDefault();
                     Assert.True(backup != null,
                         $"Expected single backup task on Node '{server.ServerStore.NodeTag}' for database '{database.Name}' " +
-                        $"Number of backup tasks: '{database.PeriodicBackupRunner.PeriodicBackups.Count}'.");
+                        $"Number of backup tasks: '{database.ServerStore.ServerBackupRunner.GetDatabaseBackups(database.Name).Count}'.");
+                    Assert.True(backup?.NextBackup == null,
+                        $"Expected PeriodicBackup with pinned to mentor node '{mentorNode}' to have no scheduled next backup " +
+                        $"on Node '{server.ServerStore.NodeTag}', but it did.");
 
-                    Assert.False(backup.HasScheduledBackup(),
-                        $"Expected PeriodicBackup with pinned to mentor node '{mentorNode}' to cancel " +
-                        $"the ScheduledBackup on Node '{server.ServerStore.NodeTag}', but it didn't.");
-
-                    Assert.True(backup.BackupStatus == null,
+                    Assert.True(backup.BackupStatus?.LastFullBackup == null && backup.BackupStatus?.LastIncrementalBackup == null && backup.BackupStatus?.LastOperationId == null &&
+                                backup.BackupStatus?.Error == null && backup.BackupStatus?.LastFullBackupInternal == null && backup.BackupStatus?.LastIncrementalBackupInternal == null,
                         $"Expected no backup on Node '{server.ServerStore.NodeTag}' as " +
                         $"PeriodicBackup is pinned to mentor node '{mentorNode}', but a backup was performed.");
                 }
@@ -204,6 +211,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(5)] // after the next scheduled backup.
         public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)
         {
+            DoNotReuseServer();
             const string fullBackupFrequency = "*/2 * * * *";
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -215,7 +223,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
 
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(database);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     WaitForValue(() =>
                         {
@@ -264,6 +272,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task NextCronScheduleOccurence_BasedOnLastBackup_ShouldBeCorrect()
         {
+            DoNotReuseServer();
+
             const string endpoint = "/studio-tasks/next-cron-expression-occurrence";
             const string cronExpression = "*/2 * * * *";
             using var store = GetDocumentStore();

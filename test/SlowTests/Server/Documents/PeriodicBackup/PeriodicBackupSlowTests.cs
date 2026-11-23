@@ -5,7 +5,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +41,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -54,6 +54,7 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Data.Tables;
 using Xunit;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
@@ -113,17 +114,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
-
-                // get by reflection the maxTimerTimeoutInMilliseconds field
-                // this field is the maximum interval acceptable in .Net's threading timer
-                // if the requested backup interval is bigger than this maximum interval,
-                // a timer with maximum interval will be used several times until the interval cumulatively
-                // will be equal to requested interval
-                typeof(PeriodicBackupRunner)
-                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
-                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(100));
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren" }, "users/1");
@@ -165,17 +155,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
-
-                // get by reflection the maxTimerTimeoutInMilliseconds field
-                // this field is the maximum interval acceptable in .Net's threading timer
-                // if the requested backup interval is bigger than this maximum interval,
-                // a timer with maximum interval will be used several times until the interval cumulatively
-                // will be equal to requested interval
-                typeof(PeriodicBackupRunner)
-                    .GetField(nameof(PeriodicBackupRunner.MaxTimerTimeout), BindingFlags.Instance | BindingFlags.Public)
-                    .SetValue(periodicBackupRunner, TimeSpan.FromMilliseconds(100));
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "oren 1" }, "users/1");
@@ -448,12 +427,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, backup.TaskId);
 
-                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(store));
+                var documentDatabase = (await Databases.GetDocumentDatabaseInstanceFor(Server, store));
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 var now = DateTime.UtcNow;
-                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First(), new PeriodicBackupStatus
+
+                var nextBackupDetails = Server.ServerStore.ServerBackupRunner.GetNextBackupDetails(backup.TaskId, store.Database, new PeriodicBackupStatus
                 {
-                    LastFullBackupInternal = now.AddDays(-360)
+                    TaskId = backup.TaskId,
+                    BackupType = config.BackupType,
+                    LastFullBackupInternal = now.AddDays(-360),
+                    NodeTag = Server.ServerStore.NodeTag
                 }, out var responsibleNode);
 
                 Assert.NotNull(nextBackupDetails);
@@ -617,7 +600,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                                SkipIndexes = true
                            }))
                     {
-                        var database = await GetDatabase(restoredDatabaseName);
+                        var database = await GetDatabase(restoredDatabaseName, Server);
                         var pathToIndexes = database.Configuration.Indexing.StoragePath;
                         Assert.Equal(0, Directory.GetDirectories(pathToIndexes.FullPath).Length);
 
@@ -742,6 +725,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenImportWithoutCompareExchange_ShouldNotFailOnAfterImportModification()
         {
+            DoNotReuseServer();
             const string id = "test/1";
 
             var file = GetTempFileName();
@@ -807,7 +791,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var sourceStats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
-                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 var databasePath = database.Configuration.Core.DataDirectory.FullPath;
                 var compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                 Assert.Equal(2, compressionRecovery.Length);
@@ -839,7 +823,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     Assert.Equal(sourceStats.CountOfDocuments, restoreStats.CountOfDocuments);
 
-                    database = await Databases.GetDocumentDatabaseInstanceFor(store, restoredDatabaseName);
+                    database = await Databases.GetDocumentDatabaseInstanceFor(Server, store, restoredDatabaseName);
                     databasePath = database.Configuration.Core.DataDirectory.FullPath;
                     compressionRecovery = Directory.GetFiles(databasePath, TableValueCompressor.CompressionRecoveryExtensionGlob);
                     Assert.Equal(2, compressionRecovery.Length);
@@ -1591,7 +1575,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
 
-                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase))
+                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase, server: Server))
                 using (releaseDatabase)
                 {
                     var stats = await restored.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -1623,6 +1607,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task BackupTaskShouldStayOnTheOriginalNode()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var cluster = await CreateRaftCluster(5);
 
@@ -2111,8 +2096,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanAbortOneTimeBackupAndRestore()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+            using (var store = GetDocumentStore(new Options { Server = server, DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2129,10 +2116,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 };
 
-                var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupOperationId = await store.Maintenance.SendAsync(new BackupOperation(config));
                     var operationId = backupOperationId.Id;
@@ -2871,7 +2858,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(documentDatabase);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -2881,14 +2868,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var taskId = backups1.First().TaskId;
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
-                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
+                    var testingStuff = new TestingStuffInternal() { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
+                    documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
+
+                    config.TaskId = taskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
@@ -2925,7 +2915,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(documentDatabase);
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
                     var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -2935,14 +2925,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var taskId = backups1.First().TaskId;
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     Assert.NotNull(responsibleDatabase);
-                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, taskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
-                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateDisableNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
+                    var testingStuff = new TestingStuffInternal() { SimulateDisableNodeStatus_UpdateConfigurations = true };
+                    responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[responsibleDatabase.Name] = testingStuff;
+
+                    config.TaskId = taskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var val = WaitForValue(() =>
                     {
                         var ongoingTaskBackup = store.Maintenance.Send(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
@@ -2975,7 +2968,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(database);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                     var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
@@ -3023,7 +3016,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
@@ -3069,8 +3062,51 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task CanDelayBackupTaskThatWasDisabledWhileRunning()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                using (var session = store.OpenAsyncSession())
+                    await Backup.FillDatabaseWithRandomDataAsync(databaseSizeInMb: 10, session);
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                Assert.NotNull(database);
+
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
+                {
+                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
+
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId);
+
+                    await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Backup, disable: true));
+
+                    var backupState = server.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(database.Name, taskId);
+                    Assert.NotNull(backupState);
+                    Assert.True(await WaitForValueAsync(() => backupState.Configuration.Disabled, true),
+                        "The disabled configuration was not applied to the in-memory backup state.");
+                    Assert.NotNull(backupState.RunningTask);
+
+                    await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, TimeSpan.FromDays(1)));
+
+                    OngoingTaskBackup afterDelayTaskBackupInfo = null;
+                    Assert.True(await WaitForValueAsync(async () =>
+                    {
+                        afterDelayTaskBackupInfo =
+                            await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+
+                        return afterDelayTaskBackupInfo != null && afterDelayTaskBackupInfo.OnGoingBackup == null;
+                    }, true), "The running backup was not killed by the delay operation.");
+                }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldDelayBackupOnNotResponsibleNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3094,8 +3130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
-
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var now = DateTime.UtcNow;
                     var expectedNextBackupDateTime = now.Date
@@ -3139,13 +3174,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
                     // The next backup should be scheduled in almost 1 hour on the current periodic backup task
-                    Raven.Server.Documents.PeriodicBackup.PeriodicBackup periodicBackup = null;
+                    DatabaseBackupState periodicBackup = null;
                     NextBackup nextBackup = default;
+
                     WaitForValue(() =>
                     {
-                        periodicBackup = responsibleDatabase.PeriodicBackupRunner?.PeriodicBackups.Single(x => x.BackupStatus.TaskId == taskId);
+                        periodicBackup = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseStateByTaskId(databaseName, taskId);
 
-                        nextBackup = periodicBackup?.GetNextBackup();
+                        nextBackup = periodicBackup?.NextBackup;
 
                         if(nextBackup == null)
                             return false;
@@ -3261,6 +3297,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldScheduleNextBackupAfterServerRestartCorrectly()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3286,7 +3323,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     await Backup.RunBackupAsync(leaderServer, taskId, leaderStore, opStatus: OperationStatus.InProgress);
 
@@ -3358,6 +3395,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task EveryNodeHasDelayInMemory()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3383,7 +3421,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     await Backup.RunBackupInClusterAsync(leaderStore, taskId, opStatus: OperationStatus.InProgress);
 
@@ -3408,12 +3446,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             store.Initialize();
 
                             var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                            documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().BackupStatusFromMemoryOnly = true;
+                            var testingStuff = new TestingStuffInternal(){ BackupStatusFromMemoryOnly = true};
+                            documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
                             PeriodicBackupStatus inMemoryStatus = null;
                             WaitForValue(() =>
                             {
-                                inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(taskId);
+                                inMemoryStatus = documentDatabase.ServerStore.ServerBackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, taskId);
                                 return inMemoryStatus != null;
                             }, true);
 
@@ -3431,6 +3470,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldDelayOnCurrentNodeIfClusterDown()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3452,7 +3492,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var responsibleDatabase = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(leaderStore.Database);
                 Assert.NotNull(responsibleDatabase);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(responsibleDatabase.Name, responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: leaderServer.ServerStore.NodeTag);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(leaderServer, config, leaderStore, opStatus: OperationStatus.InProgress);
@@ -3507,7 +3547,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 Assert.NotNull(database);
 
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
@@ -3547,6 +3587,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+     
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
         {
@@ -3570,15 +3611,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(documentDatabase);
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                     Assert.NotNull(responsibleDatabase);
-                    
+
                     var backupTaskId = await Backup.UpdateConfigAsync(server, config, store);
-                    var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    var pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
                     Assert.NotNull(pb);
-                    var backupScheduled = await WaitForValueAsync(() => pb.HasScheduledBackup(), true, timeout: 8000);
+                    var backupScheduled = await WaitForValueAsync(() => pb.NextBackup != null, true, timeout: 8000);
                     Assert.True(backupScheduled, "Backup is not scheduled");
 
                     await Backup.RunBackupAsync(server, backupTaskId, store, opStatus: OperationStatus.InProgress);
@@ -3588,17 +3629,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Equal(1, backups1.Count);
                     Assert.Equal(backupTaskId, backups1.First().TaskId);
 
-                    var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(backupTaskId);
+                    var tag = responsibleDatabase.ServerStore.ServerBackupRunner.WhoseTaskIsIt(responsibleDatabase.Name, backupTaskId);
                     Assert.Equal(server.ServerStore.NodeTag, tag);
 
-                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
-                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
-                    responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByCurrentNode_UpdateConfigurations = true;
-                    responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1.PeriodicBackups);
+                    var dbTestingStuff = new TestingStuffInternal { SimulateActiveByOtherNodeStatus_UpdateConfigurations = true };
+                    responsibleDatabase.ServerStore.ServerBackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = dbTestingStuff;
+                    config.TaskId = backupTaskId;
+                    await Backup.UpdateConfigAsync(server, config, store);
+                    dbTestingStuff.SimulateActiveByOtherNodeStatus_UpdateConfigurations = false;
+                    dbTestingStuff.SimulateActiveByCurrentNode_UpdateConfigurations = true;
+                    await Backup.UpdateConfigAsync(server, config, store);
                     tcs.TrySetResult(null);
 
-                    responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                    responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                     var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                     PeriodicBackupStatus status = null;
                     var val = WaitForValue(() =>
@@ -3610,9 +3653,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.Null(status.Error);
                     Assert.True(val, "Failed to complete the backup in time");
 
-                    pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault();
+                    pb = responsibleDatabase.ServerStore.ServerBackupRunner.GetDatabaseBackups(responsibleDatabase.Name).FirstOrDefault();
                     Assert.NotNull(pb);
-                    Assert.True(pb.HasScheduledBackup(), "Completed backup didn't schedule next one.");
+                    Assert.True(pb?.NextBackup != null, "Completed backup didn't schedule next one.");
                 }, tcs);
             }
         }
@@ -4057,12 +4100,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 WaitHandle[] waitHandles;
                 if (options.DatabaseMode == RavenDatabaseMode.Sharded)
                 {
-                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(new[] { store });
+                    waitHandles = await Sharding.Backup.WaitForBackupsToComplete(new[] { store }, new List<RavenServer> { Server });
                     await Sharding.Backup.RunBackupAsync(store, backupTaskId, isFullBackup : false);
                 }
                 else
                 {
-                    waitHandles = await Backup.WaitForBackupToComplete(store);
+                    waitHandles = await Backup.WaitForBackupToComplete(store, Server);
                     await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup : false);
                 }
 
@@ -4132,7 +4175,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    // delete the document to create a timeseries deleted range 
+                    // delete the document to create a timeseries deleted range
                     session.Delete(id);
                     await session.SaveChangesAsync();
                 }
@@ -4218,7 +4261,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    // delete the document to create a timeseries deleted range 
+                    // delete the document to create a timeseries deleted range
                     session.Delete(id);
                     await session.SaveChangesAsync();
                 }
@@ -4387,14 +4430,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, taskId);
 
             var database = await GetDocumentDatabaseInstanceFor(store);
-            var runner = database.PeriodicBackupRunner;
+            var runner = database.ServerStore.ServerBackupRunner;
 
             var holdTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            runner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = holdTcs;
+            runner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = new TestingStuffInternal { OnBackupTaskRunHoldBackupExecution = holdTcs };
 
             await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
 
-            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) != null, true),
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(database.Name, taskId) != null, true),
                 "Backup did not start within the expected time");
 
             config.TaskId = taskId;
@@ -4404,7 +4447,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             holdTcs.SetResult(null);
 
-            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) == null, true, timeout: 30_000),
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(database.Name, taskId) == null, true, timeout: 30_000),
                 "Backup did not finish within the expected time");
 
             var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -4429,7 +4472,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             });
         }
 
-        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null)
+        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null, RavenServer server = null)
         {
             var restoredDatabaseName = GetDatabaseName();
 
@@ -4441,6 +4484,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             return GetDocumentStore(new Options
             {
+                Server = server,
                 ModifyDatabaseName = s => restoredDatabaseName,
                 CreateDatabase = false,
                 DeleteDatabaseOnDispose = true

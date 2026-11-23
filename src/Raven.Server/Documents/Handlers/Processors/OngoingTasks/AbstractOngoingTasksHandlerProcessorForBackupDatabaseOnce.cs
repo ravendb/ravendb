@@ -34,6 +34,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
         protected abstract AbstractNotificationCenter GetNotificationCenter();
 
+        protected string OriginalDatabaseName => ShardHelper.ToDatabaseName(RequestHandler.DatabaseName);
+
         protected virtual void AssertBackup(BackupConfiguration configuration)
         {
             var authConnection = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
@@ -56,11 +58,13 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 AssertBackup(backupConfiguration);
 
                 var sw = Stopwatch.StartNew();
-                ServerStore.ConcurrentBackupsCounter.StartBackup(RequestHandler.DatabaseName, backupName, Logger);
+                ServerStore.ConcurrentBackupsCounter.StartBackup(OriginalDatabaseName, backupName, Logger, enforceLimit: true);
+                var scheduled = false;
                 try
                 {
                     var cancelToken = RequestHandler.CreateBackgroundOperationToken();
                     ScheduleBackup(backupConfiguration, operationId, backupName, sw, startTime, cancelToken);
+                    scheduled = true;
 
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
@@ -80,7 +84,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 }
                 catch (Exception e)
                 {
-                    ServerStore.ConcurrentBackupsCounter.FinishBackup(RequestHandler.DatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
+                    if (scheduled == false)
+                        ServerStore.ConcurrentBackupsCounter.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
 
                     var message = $"Failed to run backup: '{backupName}'";
 

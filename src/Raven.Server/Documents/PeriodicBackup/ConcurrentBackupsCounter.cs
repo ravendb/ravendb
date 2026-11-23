@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
@@ -16,12 +13,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly LicenseManager _licenseManager;
         private readonly Dictionary<string, int> _runningBackupsPerDatabase = new();
-        private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
-        private SemaphoreSlim _concurrentDatabaseWakeup;
-        private SemaphoreSlim _concurrentIdleBackupStatusUpdates;
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
+
+        internal event Action<bool> RunningBackupsChanged;
 
         public int CurrentNumberOfRunningBackups
         {
@@ -51,9 +47,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             MaxNumberOfConcurrentBackups = numberOfCoresToUse;
-            _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
-            _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(numberOfCoresToUse);
-            _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
         }
 
@@ -71,7 +64,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void StartBackup(string databaseName, string backupName, RavenLogger logger)
+        internal bool HasRunningBackup(string databaseName)
+        {
+            lock (_locker)
+            {
+                return _runningBackupsPerDatabase.ContainsKey(databaseName);
+            }
+        }
+
+        public void StartBackup(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
         {
             lock (_locker)
             {
@@ -81,19 +82,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                if (MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
+                if (enforceLimit && MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
                 {
                     throw new BackupDelayException(
                         $"Failed to start Backup Task: '{backupName}'. " +
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}")
-                    {
-                        DelayPeriod = _concurrentBackupsDelay
-                    };
+                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
                 }
 
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
+
+            RunningBackupsChanged?.Invoke(false);
 
             if (logger.IsInfoEnabled)
                 logger.Info($"Starting backup task '{backupName}'");
@@ -101,10 +101,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
         {
+            bool fullLimitFreed;
+
             lock (_locker)
             {
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups) == false)
                     throw new InvalidOperationException("Tried to finish a backup which wasn't even started!");
+
+                var wasFull = _runningBackupsPerDatabase.Count >= MaxNumberOfConcurrentBackups;
 
                 if (runningBackups - 1 == 0)
                 {
@@ -114,7 +118,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups - 1;
                 }
+
+                fullLimitFreed = wasFull && _runningBackupsPerDatabase.Count < MaxNumberOfConcurrentBackups;
             }
+
+            RunningBackupsChanged?.Invoke(fullLimitFreed);
 
             if (logger.IsInfoEnabled)
             {
@@ -158,27 +166,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public IDisposable TryStartDatabaseForBackup()
-        {
-            return TryEnter(_concurrentDatabaseWakeup);
-        }
-
-        public IDisposable TryStartIdleBackupStatusUpdate()
-        {
-            return TryEnter(_concurrentIdleBackupStatusUpdates);
-        }
-
-        private static IDisposable TryEnter(SemaphoreSlim sm)
-        {
-            if (sm.Wait(TimeSpan.Zero) == false)
-                return null;
-
-            return new DisposableAction(() =>
-            {
-                sm.Release();
-            });
-        }
-
         public void ModifyMaxConcurrentBackups()
         {
             if (_skipModifications)
@@ -193,8 +180,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             lock (_locker)
             {
                 MaxNumberOfConcurrentBackups = newMaxConcurrentBackups;
-                _concurrentDatabaseWakeup = new SemaphoreSlim(newMaxConcurrentBackups);
-                _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(newMaxConcurrentBackups);
             }
         }
 

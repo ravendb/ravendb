@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;

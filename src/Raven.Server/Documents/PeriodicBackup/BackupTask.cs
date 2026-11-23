@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.PeriodicBackup.Retention;
@@ -20,6 +21,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -48,7 +50,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly PeriodicBackupStatus _previousBackupStatus;
         internal readonly bool _isFullBackup;
-        private readonly bool _isOneTimeBackup;
+        private readonly BackupTrigger _trigger;
         protected readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
@@ -58,19 +60,19 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _isBackupEncrypted;
         protected Action<IOperationProgress> _onProgress;
         protected readonly string _taskName;
-        internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
+        internal ServerBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
         protected Action OnBackupException;
         protected void RegisterOnBackupException(Action handler) => OnBackupException += handler;
 
-        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null)
         {
             Database = database;
             _taskName = backupParameters.Name;
             _operationId = backupParameters.OperationId;
             _previousBackupStatus = backupParameters.BackupStatus;
             _startTimeUtc = backupParameters.StartTimeUtc;
-            _isOneTimeBackup = backupParameters.IsOneTimeBackup;
+            _trigger = backupParameters.Trigger;
             _isFullBackup = backupParameters.IsFullBackup;
             _backupToLocalFolder = backupParameters.BackupToLocalFolder;
             _tempBackupPath = backupParameters.TempBackupPath;
@@ -96,35 +98,41 @@ namespace Raven.Server.Documents.PeriodicBackup
         public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress, BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
         {
             runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupType };
-            return Run(onProgress, periodicBackup: null, task: null, ref runningBackupStatus);
+            return Run(onProgress, null, task: null, ref runningBackupStatus);
         }
 
-        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
+        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, DatabaseBackupState backupState, Task task, ref PeriodicBackupStatus runningBackupStatus)
         {
-            return Run(onProgress, periodicBackup, task, ref runningBackupStatus);
+            return Run(onProgress, backupState, task, ref runningBackupStatus);
         }
 
-        private BackupResult Run(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
+        private BackupResult Run(Action<IOperationProgress> onProgress, DatabaseBackupState backupState, Task task, ref PeriodicBackupStatus runningBackupStatus)
         {
             _onProgress = onProgress;
             AddInfo($"Started task: '{_taskName}'");
 
             var totalSw = Stopwatch.StartNew();
             var operationCanceled = false;
+            var skipped = false;
 
             try
             {
                 runningBackupStatus.IsFull = _isFullBackup;
 
-                // The PeriodicBackupRunner.OnGoingBackup method checks that RunningTask is not null and then returns RunningBackup,
-                // which contains the backup process's start time and whether it's a full backup or not.
-                // Therefore, it's crucial to assign RunningTask only after those fields in runningBackupStatus have been populated.
-                if (periodicBackup != null && task != null)
-                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask { Id = _operationId, Task = task };
+                if (backupState != null && task != null)
+                {
+                    backupState.RunningTask = new ServerBackupRunner.RunningBackupTask { Id = backupState.OperationId, Task = task };
+                }
 
-                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
-                if (_forTestingPurposes?.SimulateFailedBackup == true)
-                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+                if (_forTestingPurposes != null &&
+                    _forTestingPurposes.DatabaseTestingStuffInternals != null &&
+                    _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(Database.Name, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                {
+                    testingStuffInternal.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
+                    if (testingStuffInternal.SimulateFailedBackup)
+                        throw new Exception(nameof(testingStuffInternal.SimulateFailedBackup));
+                }
+
                 Database.ForTestingPurposes?.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
                 runningBackupStatus.LocalBackup ??= new LocalBackup();
@@ -145,9 +153,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var (currentLastEtag, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
                     var currentLastRaftIndex = GetDatabaseEtagForBackup();
 
-                    if (currentLastEtag == _previousBackupStatus.LastEtag
-                        && currentChangeVector == _previousBackupStatus.LastDatabaseChangeVector
-                        && currentLastRaftIndex == _previousBackupStatus.LastRaftIndex.LastEtag)
+                    if (BackupUtils.HasChangesSinceLastBackup(_previousBackupStatus, currentLastEtag, currentChangeVector, currentLastRaftIndex) == false)
                     {
                         var message = $"Skipping incremental backup because no changes were made from last full backup on {_previousBackupStatus.LastFullBackup}.";
 
@@ -159,6 +165,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         SmugglerBase.EnsureProcessed(BackupResult);
                         AddInfo(message);
+                        skipped = true;
 
                         return BackupResult;
                     }
@@ -236,9 +243,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 operationCanceled = true;
                 throw;
             }
-            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException oce)
+            catch (Exception e) when (e.ExtractSingleInnerException() is OperationCanceledException && TaskCancelToken.Token.IsCancellationRequested)
             {
-                operationCanceled = TaskCancelToken.Token.IsCancellationRequested;
+                operationCanceled = true;
 
                 throw;
             }
@@ -263,6 +270,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     NotificationSeverity.Error,
                     details: new ExceptionDetails(e)));
 
+                if (e.ExtractSingleInnerException() is OperationCanceledException)
+                    throw new InvalidOperationException($"{message}: the backup was canceled without a cancellation request.", e);
+
                 throw;
             }
             finally
@@ -281,7 +291,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
                     UpdateOperationId(runningBackupStatus);
 
-                    if (_isOneTimeBackup == false)
+                    if (_trigger != BackupTrigger.OneTime)
                     {
                         runningBackupStatus.Version = ++_previousBackupStatus.Version;
                         // save the backup status
@@ -290,7 +300,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                         BackupUtils.SaveBackupStatus(status, Database.Name, Database.ServerStore, _logger, BackupResult, _onProgress, TaskCancelToken);
                     }
 
-                    _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
+                    var historyEntry = new BackupHistoryEntry(runningBackupStatus, _taskName, _trigger, skipped);
+                    BackupHistoryStorage.UpdateBackupHistory(Database.Name, Database.ServerStore, runningBackupStatus.TaskId, historyEntry, BackupResult, _onProgress, _logger, TaskCancelToken);
+
+                    if (_forTestingPurposes != null &&
+                        _forTestingPurposes.DatabaseTestingStuffInternals != null &&
+                        _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(Database.Name, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                    {
+                        testingStuffInternal.AfterBackupBatchCompleted?.Invoke();
+                    }
+                }
+                else if (Database.ServerStore.ServerShutdown.IsCancellationRequested == false)
+                {
+                    var historyEntry = BackupHistoryEntry.CreateForCanceledBackup(runningBackupStatus, _startTimeUtc, _isFullBackup, totalSw.ElapsedMilliseconds,
+                        Database.ServerStore.NodeTag, _taskName, _trigger);
+                    BackupHistoryStorage.UpdateBackupHistory(Database.Name, Database.ServerStore, runningBackupStatus.TaskId, historyEntry, BackupResult, _onProgress, _logger, operationCancelToken: null);
                 }
             }
         }

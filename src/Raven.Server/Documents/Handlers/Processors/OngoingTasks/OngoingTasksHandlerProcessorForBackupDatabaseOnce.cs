@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             {
                 RetentionPolicy = null,
                 StartTimeUtc = startTime,
-                IsOneTimeBackup = true,
+                Trigger = BackupTrigger.OneTime,
                 BackupStatus = new PeriodicBackupStatus { TaskId = -1 },
                 OperationId = operationId,
                 BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 Name = backupName,
             };
 
-            var backupTask = BackupUtils.GetBackupTask(RequestHandler.Database, backupParameters, backupConfiguration, token, Logger, RequestHandler.Database.PeriodicBackupRunner._forTestingPurposes);
+            var backupTask = BackupUtils.GetBackupTask(RequestHandler.Database, backupParameters, backupConfiguration, token, Logger, RequestHandler.Database.ServerStore.ServerBackupRunner._forTestingPurposes);
             var threadName = $"Backup thread {backupName} for database '{RequestHandler.Database.Name}'";
 
             var t = RequestHandler.Database.Operations.AddLocalOperation(
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                         }
                         finally
                         {
-                            ServerStore.ConcurrentBackupsCounter.FinishBackup(RequestHandler.DatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
+                            ServerStore.ConcurrentBackupsCounter.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
                         }
                     }, null, ThreadNames.ForBackup(threadName, backupName, RequestHandler.DatabaseName));
                     return tcs.Task;

@@ -1,10 +1,8 @@
 ﻿using System.Threading.Tasks;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System.Processors.Backups;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System
@@ -25,6 +23,27 @@ namespace Raven.Server.Web.System
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/periodic-backup/result", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetBackupResult()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForGetBackupResult(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/periodic-backup/history", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetBackupHistory()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForGetBackupHistory(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/periodic-backup/history/full-backups", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetFullBackupsOfBackupHistoryGroups()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForGetFullBackups(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllPeriodicBackupsTimers()
         {
@@ -34,17 +53,8 @@ namespace Raven.Server.Web.System
             {
                 var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse();
 
-                foreach ((StringSegment _, Task<DocumentDatabase> task) in ServerStore.DatabasesLandlord.DatabasesCache)
-                {
-                    if (task.Status != TaskStatus.RanToCompletion)
-                        continue;
-
-                    var database = await task;
-
-                    var backups = database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
-
-                    result.Timers.AddRange(backups);
-                }
+                foreach (var databaseName in ServerStore.ServerBackupRunner.BackupsPerDatabasePerTaskId.Keys)
+                    result.Timers.AddRange(ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(databaseName));
 
                 result.Count = result.Timers.Count;
 
@@ -52,6 +62,13 @@ namespace Raven.Server.Web.System
 
                 context.Write(writer, json);
             }
+        }
+
+        [RavenAction("/admin/periodic-backup/decision-log/watch", "GET", AuthorizationStatus.Operator)]
+        public async Task WatchBackupDecisionLog()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForWatchDecisionLog(this))
+                await processor.ExecuteAsync();
         }
     }
 }
