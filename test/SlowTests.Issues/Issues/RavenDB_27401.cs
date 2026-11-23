@@ -118,10 +118,14 @@ public class RavenDB_27401(ITestOutputHelper output) : RavenTestBase(output)
         var streamsTrees = summary.Trees.Where(x => x.Streams != null).ToList();
         Assert.True(streamsTrees.Count >= 2, $"Expected at least 2 streams trees, got: {string.Join(", ", streamsTrees.Select(x => x.Name))}");
 
-        foreach (var tree in streamsTrees)
+        using (var tx = index._environment.ReadTransaction())
         {
-            Assert.Equal(tree.OverflowPages * VoronConstants.Storage.PageSize, tree.Streams.AllocatedSpaceInBytes);
-            Assert.Equal(tree.Streams.AllocatedSpaceInBytes, tree.Streams.Streams.Single().AllocatedSpaceInBytes);
+            foreach (var tree in streamsTrees)
+            {
+                // AllPages walks the tree, its chunk lists and every stream page
+                Assert.Equal(tx.ReadTree(tree.Name).AllPages().Count * VoronConstants.Storage.PageSize, tree.AllocatedSpaceInBytes);
+                Assert.Equal(tree.Streams.AllocatedSpaceInBytes, tree.Streams.Streams.Single().AllocatedSpaceInBytes);
+            }
         }
 
         AssertNoUnaccountedSpace(summary);
@@ -161,7 +165,7 @@ public class RavenDB_27401(ITestOutputHelper output) : RavenTestBase(output)
 
     private static void AssertNoUnaccountedSpace(DetailedStorageReport report)
     {
-        // a few pages are never itemized (RootObjects, large chunk lists)
+        // RootObjects and nested index entries aren't listed separately, only a few pages in these small databases
         Assert.NotNull(report.UnaccountedSpaceInBytes);
         Assert.InRange(report.UnaccountedSpaceInBytes.Value, -16 * VoronConstants.Storage.PageSize, 16 * VoronConstants.Storage.PageSize);
     }
