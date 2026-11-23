@@ -28,9 +28,8 @@ import { EmptySet } from "components/common/EmptySet";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
-import { ReplicationHubSinksHeader } from "../partials/ReplicationHubSinksHeader";
+import { DISCONNECTED_SINKS_HINT, ReplicationHubSinksHeader } from "../partials/ReplicationHubSinksHeader";
 import { getSinkKey, useReplicationHubSinks } from "../partials/useReplicationHubSinks";
-import { getReplicationError } from "../partials/ReplicationSummaryItems";
 import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
@@ -84,20 +83,10 @@ function restoreSinkPosition(sinksList: HTMLElement, { sinkIndex, top }: SinkPos
 function Summary(props: ReplicationHubPanelProps & DetailsToggleProps) {
     const { connectedSinks, detailsVisible, toggleDetails } = props;
 
-    const sinksWithErrorCount = connectedSinks.filter((x) => getReplicationError(x)).length;
-
     return (
         <RichPanelDetails>
             <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-            <RichPanelDetailItem label="Connected Sinks">
-                {connectedSinks.length.toLocaleString()}
-                {sinksWithErrorCount > 0 && (
-                    <span className="text-danger ms-2">
-                        <Icon icon="warning" color="danger" margin="me-1" />
-                        {sinksWithErrorCount.toLocaleString()} with errors
-                    </span>
-                )}
-            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Connected Sinks">{connectedSinks.length.toLocaleString()}</RichPanelDetailItem>
         </RichPanelDetails>
     );
 }
@@ -177,7 +166,12 @@ function Details(props: ReplicationHubPanelProps) {
                     {visibleSinks.length === 0 && <EmptySet>No sinks match the selected filters</EmptySet>}
                 </div>
             )}
-            <div className="margin-left">{connectedSinks.length === 0 && <EmptySet>No sinks connected</EmptySet>}</div>
+            {connectedSinks.length === 0 && (
+                <div className="margin-left">
+                    <EmptySet>No sinks connected</EmptySet>
+                    <p className="small text-muted text-center mb-3">{DISCONNECTED_SINKS_HINT}</p>
+                </div>
+            )}
         </div>
     );
 }

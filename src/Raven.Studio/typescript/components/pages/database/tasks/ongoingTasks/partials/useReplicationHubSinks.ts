@@ -6,24 +6,19 @@ import {
     CheckboxListFilterCategory,
     FilterCategory,
     isFilterCategoryActive,
-    SingleChoiceFilterCategory,
 } from "components/common/filterMenu/FilterMenu";
 import {
     getReplicationProgressState,
     getVisibleNodes,
     ReplicationProgressState,
 } from "./ExternalReplicationTaskDistribution";
-import { connectionStatusRanks, taskConnectionStatusLabels } from "./TaskConnectionStatus";
-import OngoingTaskConnectionStatus = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus;
 
-export type SinkSortField = "databaseName" | "url" | "status" | "node";
+export type SinkSortField = "databaseName" | "url" | "node";
 
 interface SinkFilters {
     databaseName: string;
     url: string;
     states: ReplicationProgressState[];
-    statuses: OngoingTaskConnectionStatus[];
-    hasErrors: boolean | null;
     nodeTags: string[];
 }
 
@@ -41,11 +36,10 @@ interface SinkSortFieldInfo {
 export const sinkSortFields: SinkSortFieldInfo[] = [
     { field: "databaseName", label: "Sink database name", icon: "database" },
     { field: "url", label: "Actual sink URL", icon: "server" },
-    { field: "status", label: "Replication status", icon: "connected" },
     { field: "node", label: "Node processing the sink", icon: "node" },
 ];
 
-const defaultSinkSort: SinkSort = { field: "status", direction: "asc" };
+const defaultSinkSort: SinkSort = { field: "databaseName", direction: "asc" };
 
 const sinkReplicationStateLabels: Record<ReplicationProgressState, string> = {
     UpToDate: "Up to date",
@@ -58,8 +52,6 @@ const emptyFilters: SinkFilters = {
     databaseName: "",
     url: "",
     states: [],
-    statuses: [],
-    hasErrors: null,
     nodeTags: [],
 };
 
@@ -97,27 +89,6 @@ function getSinkFilterCategories(
             selectedValues: filters.states,
             onChange: (states) => updateFilters({ states }),
         } satisfies CheckboxListFilterCategory<ReplicationProgressState>,
-        {
-            key: "status",
-            label: "Replication status",
-            icon: "connected",
-            type: "checkboxList",
-            options: toFilterOptions(taskConnectionStatusLabels),
-            selectedValues: filters.statuses,
-            onChange: (statuses) => updateFilters({ statuses }),
-        } satisfies CheckboxListFilterCategory<OngoingTaskConnectionStatus>,
-        {
-            key: "hasErrors",
-            label: "Has errors",
-            icon: "warning",
-            type: "singleChoice",
-            options: [
-                { value: true, label: "Yes" },
-                { value: false, label: "No" },
-            ],
-            selectedValue: filters.hasErrors,
-            onChange: (hasErrors) => updateFilters({ hasErrors }),
-        } satisfies SingleChoiceFilterCategory<boolean>,
         {
             key: "url",
             label: "Actual sink URL",
@@ -159,32 +130,11 @@ function matchesFilters(sink: OngoingTaskReplicationHubInfo, filters: SinkFilter
         return false;
     }
 
-    if (
-        filters.statuses.length > 0 &&
-        !visibleNodes.some((x) => filters.statuses.includes(x.details.taskConnectionStatus))
-    ) {
-        return false;
-    }
-
-    if (filters.hasErrors != null && visibleNodes.some((x) => !!x.details.error) !== filters.hasErrors) {
-        return false;
-    }
-
     if (filters.nodeTags.length > 0 && !visibleNodes.some((x) => filters.nodeTags.includes(x.location.nodeTag))) {
         return false;
     }
 
     return true;
-}
-
-const sinkWithErrorRank = 0;
-
-function getStatusRank(sink: OngoingTaskReplicationHubInfo): number {
-    const nodeRanks = getVisibleNodes(sink).map((x) =>
-        x.details.error ? sinkWithErrorRank : connectionStatusRanks[x.details.taskConnectionStatus]
-    );
-
-    return nodeRanks.length > 0 ? Math.min(...nodeRanks) : connectionStatusRanks.None;
 }
 
 function compareText(a: string, b: string): number {
@@ -197,8 +147,6 @@ function compareByField(a: OngoingTaskReplicationHubInfo, b: OngoingTaskReplicat
             return compareText(a.shared.destinationDatabase, b.shared.destinationDatabase);
         case "url":
             return compareText(a.shared.destinationUrl, b.shared.destinationUrl);
-        case "status":
-            return getStatusRank(a) - getStatusRank(b);
         case "node":
             return compareText(getVisibleNodes(a)[0]?.location.nodeTag, getVisibleNodes(b)[0]?.location.nodeTag);
     }

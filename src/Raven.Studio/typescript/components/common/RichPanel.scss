@@ -147,6 +147,13 @@
             }
         }
 
+        .detail-item-value-truncate {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .rich-panel-detail-item-sm {
             display: flex;
             flex-direction: column;

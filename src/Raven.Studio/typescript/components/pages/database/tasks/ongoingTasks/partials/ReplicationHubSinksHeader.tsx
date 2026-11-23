@@ -15,7 +15,11 @@ import Select, {
 import { SortDirection } from "components/models/common";
 import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
 import { ReplicationHubSinksState, SinkSortField, sinkSortFields } from "./useReplicationHubSinks";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import "./ReplicationHubSinksHeader.scss";
+
+export const DISCONNECTED_SINKS_HINT =
+    "Only sinks connected right now are listed. To check a sink that disconnected, open the sink's own database.";
 
 interface ReplicationHubSinksHeaderProps {
     sinksState: ReplicationHubSinksState;
@@ -34,6 +38,15 @@ export function ReplicationHubSinksHeader({ sinksState, onToggleAllExpanded }: R
                     <Badge pill bg="secondary">
                         {totalSinksCount}
                     </Badge>
+                    <PopoverWithHoverWrapper
+                        message={DISCONNECTED_SINKS_HINT}
+                        wrapperClassName="d-flex"
+                        isOpenedOnFocus
+                    >
+                        <Button variant="link" size="sm" className="p-0 d-flex" aria-label="About this list">
+                            <Icon icon="info" color="info" margin="m-0" />
+                        </Button>
+                    </PopoverWithHoverWrapper>
                 </div>
                 <ButtonGroup size="sm" className="sinks-header-actions">
                     <SortDropdown sinksState={sinksState} />
@@ -79,20 +92,10 @@ const sortDirectionOptions: SelectOption<SortDirection>[] = [
     { value: "desc", label: "Descending" },
 ];
 
-const statusSortDirectionOptions: SelectOption<SortDirection>[] = [
-    { value: "asc", label: "Problems first" },
-    { value: "desc", label: "Healthy first" },
-];
-
-function getSortDirectionOptions(field: SinkSortField) {
-    return field === "status" ? statusSortDirectionOptions : sortDirectionOptions;
-}
-
 function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) {
     const { sort } = sinksState;
     const fieldLabel = getSortFieldInfo(sort.field).label;
-    const directionLabel = getSortDirectionOptions(sort.field).find((x) => x.value === sort.direction).label;
-    const isDirectionSpelledOut = sort.field === "status";
+    const directionLabel = sortDirectionOptions.find((x) => x.value === sort.direction).label;
 
     return (
         <Dropdown as={ButtonGroup} autoClose="outside" align="end" className="sinks-sort-dropdown">
@@ -104,11 +107,7 @@ function SortDropdown({ sinksState }: { sinksState: ReplicationHubSinksState }) 
             >
                 <span className="sinks-sort-button-label">Sort by:</span>
                 <span className="sinks-sort-button-value">{fieldLabel}</span>
-                {isDirectionSpelledOut ? (
-                    <span>, {directionLabel.toLowerCase()}</span>
-                ) : (
-                    <Icon icon={sort.direction === "asc" ? "arrow-thin-top" : "arrow-thin-bottom"} margin="ms-1" />
-                )}
+                <Icon icon={sort.direction === "asc" ? "arrow-thin-top" : "arrow-thin-bottom"} margin="ms-1" />
             </Dropdown.Toggle>
             <Dropdown.Menu className="sinks-sort-menu" popperConfig={sortMenuPopperConfig}>
                 <SortMenu sinksState={sinksState} />
@@ -133,7 +132,6 @@ function useEscapeClosesOnlyOpenList() {
 
 function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
     const { sort, setSort, isDefaultSort, resetSort } = sinksState;
-    const directionOptions = getSortDirectionOptions(sort.field);
     const fieldListEscape = useEscapeClosesOnlyOpenList();
     const directionListEscape = useEscapeClosesOnlyOpenList();
 
@@ -155,8 +153,8 @@ function SortMenu({ sinksState }: { sinksState: ReplicationHubSinksState }) {
                 <Select<SelectOption<SortDirection>>
                     aria-label="Sort direction"
                     className="sinks-sort-direction-select"
-                    options={directionOptions}
-                    value={directionOptions.find((x) => x.value === sort.direction)}
+                    options={sortDirectionOptions}
+                    value={sortDirectionOptions.find((x) => x.value === sort.direction)}
                     onChange={(x) => setSort({ ...sort, direction: x.value })}
                     isSearchable={false}
                     menuPortalTarget={null}

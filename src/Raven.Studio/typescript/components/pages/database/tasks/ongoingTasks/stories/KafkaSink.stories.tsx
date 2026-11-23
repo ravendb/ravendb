@@ -63,18 +63,22 @@ export default {
     argTypes: {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
-    play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("sinks"));
-        await userEvent.click(await container.findByTitle(/Click for details/));
-    },
 } satisfies Meta<KafkaSinkProps>;
 
-export const Default: StoryObj<KafkaSinkProps> = {};
+const expandTaskDetails: StoryObj<KafkaSinkProps>["play"] = async ({ canvas }) => {
+    const container = within(await canvas.findByTestId("sinks"));
+    await userEvent.click(await container.findByTitle(/Click for details/));
+};
+
+export const Default: StoryObj<KafkaSinkProps> = {
+    play: expandTaskDetails,
+};
 
 export const Disabled: StoryObj<KafkaSinkProps> = {
     args: {
         isDisabled: true,
     },
+    play: expandTaskDetails,
 };
 
 export const Reconnecting: StoryObj<KafkaSinkProps> = {

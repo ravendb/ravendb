@@ -111,9 +111,7 @@ export function GenAiPanel(props: GenAiPanelProps) {
                 )}
                 {nextBatchStartingPoint && (
                     <RichPanelDetailItem label="Next Batch Starting Point" contentClassName="d-flex align-items-center">
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                            {nextBatchStartingPoint}
-                        </div>
+                        <div className="detail-item-value-truncate">{nextBatchStartingPoint}</div>
                         <PopoverWithHoverWrapper
                             wrapperClassName="ms-1"
                             message={nextBatchStartingPoint

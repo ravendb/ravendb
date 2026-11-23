@@ -102,18 +102,14 @@ export function RavenEtlPanel(props: RavenEtlPanelProps) {
                     databaseName={databaseName}
                 />
                 <RichPanelDetailItem label="Destination Database" title={data.shared.destinationDatabase}>
-                    <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                        {data.shared.destinationDatabase}
-                    </div>
+                    <div className="detail-item-value-truncate">{data.shared.destinationDatabase}</div>
                 </RichPanelDetailItem>
                 <DestinationUrlItem destinationUrl={data.shared.destinationUrl} />
                 <RichPanelDetailItem
                     label="Topology Discovery URLs"
                     title={data.shared.topologyDiscoveryUrls.join(", ")}
                 >
-                    <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                        {data.shared.topologyDiscoveryUrls.join(", ")}
-                    </div>
+                    <div className="detail-item-value-truncate">{data.shared.topologyDiscoveryUrls.join(", ")}</div>
                 </RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
                 <TaskPanelErrors

@@ -29,6 +29,10 @@ export default {
         commonInit(args.databaseType);
 
         const { tasksService } = mockServices;
+        const taskName = args.hasLongValues
+            ? "External Replication of all customer orders to the disaster recovery data center"
+            : undefined;
+
         const mockedValue: MockedValue<OngoingTasksResult> = (x: OngoingTasksResult) => {
             const ongoingTask = TasksStubs.getExternalReplicationListItem();
             if (args.isDisabled) {
@@ -42,8 +46,7 @@ export default {
                 ongoingTask.TaskName = "Server Wide External Replication, ext1";
             }
             if (args.hasLongValues) {
-                ongoingTask.TaskName =
-                    "External Replication of all customer orders to the disaster recovery data center";
+                ongoingTask.TaskName = taskName;
                 ongoingTask.DestinationDatabase = "customer-orders-disaster-recovery-replica-eu-west-2026";
                 ongoingTask.Error =
                     "System.Net.Http.HttpRequestException: No connection could be made because the target machine actively refused it. (dr-replica-eu-west.example.com:8080)";
@@ -59,7 +62,7 @@ export default {
             tasksService.withGetTasks(mockedValue);
         }
 
-        mockExternalReplicationProgress(tasksService, args.isCompleted);
+        mockExternalReplicationProgress(tasksService, args.isCompleted, taskName);
 
         return <OngoingTasksPage />;
     },
@@ -75,30 +78,36 @@ export default {
     argTypes: {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
-    play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("replications"));
-        await userEvent.click(await container.findByTitle(/Click for details/));
-    },
 } satisfies Meta<ExternalReplicationProps>;
 
-export const Default: StoryObj<ExternalReplicationProps> = {};
+const expandTaskDetails: StoryObj<ExternalReplicationProps>["play"] = async ({ canvas }) => {
+    const container = within(await canvas.findByTestId("replications"));
+    await userEvent.click(await container.findByTitle(/Click for details/));
+};
+
+export const Default: StoryObj<ExternalReplicationProps> = {
+    play: expandTaskDetails,
+};
 
 export const NonSharded: StoryObj<ExternalReplicationProps> = {
     args: {
         databaseType: "cluster",
     },
+    play: expandTaskDetails,
 };
 
 export const Disabled: StoryObj<ExternalReplicationProps> = {
     args: {
         isDisabled: true,
     },
+    play: expandTaskDetails,
 };
 
 export const LoadError: StoryObj<ExternalReplicationProps> = {
     args: {
         hasLoadError: true,
     },
+    play: expandTaskDetails,
 };
 
 export const RuntimeError: StoryObj<ExternalReplicationProps> = {
@@ -111,6 +120,7 @@ export const ServerWide: StoryObj<ExternalReplicationProps> = {
     args: {
         isServerWide: true,
     },
+    play: expandTaskDetails,
 };
 
 export const LongValues: StoryObj<ExternalReplicationProps> = {

@@ -22,6 +22,7 @@ export interface PopoverWithHoverProps extends PopoverProps {
     overlayProps?: Omit<OverlayProps, "target" | "show" | "placement" | "children">;
     prepare?: () => Promise<unknown>;
     openDelayInMs?: number;
+    isOpenedOnFocus?: boolean;
 }
 
 function tooltipMutex(target: HTMLDivElement, onClose: () => void) {
@@ -43,6 +44,7 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
         overlayProps,
         prepare,
         openDelayInMs,
+        isOpenedOnFocus = false,
         ...rest
     } = props;
 
@@ -142,13 +144,19 @@ export function PopoverWithHover(props: PopoverWithHoverProps) {
         if (div) {
             div.addEventListener("mouseenter", onEnter);
             div.addEventListener("mouseleave", onLeave);
+            if (isOpenedOnFocus) {
+                div.addEventListener("focusin", onEnter);
+                div.addEventListener("focusout", onLeave);
+            }
 
             return () => {
                 div.removeEventListener("mouseenter", onEnter);
                 div.removeEventListener("mouseleave", onLeave);
+                div.removeEventListener("focusin", onEnter);
+                div.removeEventListener("focusout", onLeave);
             };
         }
-    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div]);
+    }, [maybeCancelShow, target, scheduleHide, maybeCancelHide, div, isOpenedOnFocus]);
 
     useEffect(() => maybeCancelShow, [maybeCancelShow]);
 

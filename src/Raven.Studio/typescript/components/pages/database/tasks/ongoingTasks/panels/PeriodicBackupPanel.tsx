@@ -204,6 +204,7 @@ function Details(props: PeriodicBackupPanelProps & DetailsToggleProps) {
                         {lastIncrementalBackupHumanized}
                     </RichPanelDetailItem>
                 )}
+                <LastBackupErrorItem task={data} isBackupRunning={backupNowInProgress} />
                 <RichPanelDetailItem label="Next Estimated Backup">
                     {nextBackupHumanized}
                     {backupNowVisible && (
@@ -228,7 +229,6 @@ function Details(props: PeriodicBackupPanelProps & DetailsToggleProps) {
                 {onGoingBackupHumanized && (
                     <RichPanelDetailItem label="Backup Started">{onGoingBackupHumanized}</RichPanelDetailItem>
                 )}
-                <LastBackupErrorItem task={data} isBackupRunning={backupNowInProgress} />
             </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
@@ -273,12 +273,9 @@ function LastBackupErrorItem({ task, isBackupRunning }: LastBackupErrorItemProps
         return null;
     }
 
-    return (
-        <ErrorDetailItem
-            error={lastError.Exception}
-            title={`Last backup failed on ${genUtils.formatUtcDateAsLocal(lastError.At)}. Show error details`}
-        />
-    );
+    const failedOn = `Last backup failed on ${genUtils.formatUtcDateAsLocal(lastError.At)}`;
+
+    return <ErrorDetailItem error={lastError.Exception} title={`${failedOn}. Show error details`} heading={failedOn} />;
 }
 
 function BackupEncryption(props: { encrypted: boolean }) {

@@ -101,15 +101,11 @@ export function OlapEtlPanel(props: OlapEtlPanelProps) {
                 />
                 {data.shared.destinations.map((dst) => (
                     <RichPanelDetailItem data-testid="destination" label="Destination" key={dst} title={dst}>
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                            {dst}
-                        </div>
+                        <div className="detail-item-value-truncate">{dst}</div>
                     </RichPanelDetailItem>
                 ))}
                 <RichPanelDetailItem label="Destination Description" title={data.shared.destinationDescription}>
-                    <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                        {data.shared.destinationDescription}
-                    </div>
+                    <div className="detail-item-value-truncate">{data.shared.destinationDescription}</div>
                 </RichPanelDetailItem>
                 <EtlPanelHealthBadge taskHealth={taskHealth} />
                 <TaskPanelErrors

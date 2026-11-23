@@ -32,6 +32,8 @@ describe("Periodic Backup", function () {
 
         await fireClick(await container.findByTitle(/Last backup failed/));
 
-        expect(await screen.findByRole("dialog")).toHaveTextContent("Unable to connect to the remote server");
+        const errorDialog = await screen.findByRole("dialog");
+        expect(errorDialog).toHaveTextContent("Last backup failed on");
+        expect(errorDialog).toHaveTextContent("Unable to connect to the remote server");
     });
 });
