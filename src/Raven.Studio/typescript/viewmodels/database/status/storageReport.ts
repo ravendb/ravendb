@@ -661,6 +661,9 @@ class storageReport extends shardViewModelBase {
             html += "<div class='tooltip-li'>Entries: <div class='value'>" + d.numberOfEntries.toLocaleString() + "</div></div>";
         }
         html += "<div class='tooltip-li'>Size: <div class='value'>" + generalUtils.formatBytesToSize(d.size) + "</div></div>";
+        if (d.type === "other") {
+            html += "<div class='tooltip-li'>Used space not listed separately, mostly internal index structures</div>";
+        }
 
         this.tooltip.html(html);
         this.onMouseMove();
