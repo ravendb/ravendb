@@ -2460,6 +2460,9 @@ namespace Raven.Server.Documents.Indexes
 
             _documentDatabase.Changes.RaiseNotifications(new IndexRenameChange { Name = newName, OldIndexName = oldName, Type = IndexChangeTypes.Renamed });
 
+            _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.Indexing_UnexpectedIndexingThreadError, oldName));
+            _documentDatabase.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertReason.IndexStore_IndexCouldNotBeOpened, oldName));
+
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Renamed index '{oldName}' to '{newName}'");
         }

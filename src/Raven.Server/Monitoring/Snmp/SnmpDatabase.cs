@@ -170,7 +170,7 @@ namespace Raven.Server.Monitoring.Snmp
 
         private void AddIndexIfNecessary(IndexChange change)
         {
-            if (change.Type != IndexChangeTypes.IndexAdded)
+            if (change.Type != IndexChangeTypes.IndexAdded && change.Type != IndexChangeTypes.Renamed)
                 return;
 
             Task.Factory.StartNew(async () =>

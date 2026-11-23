@@ -7,7 +7,9 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -628,6 +630,34 @@ namespace SlowTests.Issues
 
                     return new HttpRequestMessage { Method = HttpMethod.Post };
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.ChangesApi)]
+        public async Task ChangesApiSendsTheOldName()
+        {
+            using var store = GetDocumentStore();
+            await new UsersByName().ExecuteAsync(store);
+
+            var changes = new BlockingCollection<IndexChange>();
+            var databaseChanges = store.Changes();
+            await databaseChanges.EnsureConnectedNow();
+
+            var observable = databaseChanges.ForAllIndexes();
+            using (observable.Subscribe(change =>
+                   {
+                       if (change.Type == IndexChangeTypes.Renamed)
+                           changes.Add(change);
+                   }))
+            {
+                await observable.EnsureSubscribedNow();
+
+                await store.Maintenance.SendAsync(new RenameIndexOperation(nameof(UsersByName), "Users/ByName"));
+
+                Assert.True(changes.TryTake(out var change, TimeSpan.FromSeconds(30)));
+                var rename = Assert.IsType<IndexRenameChange>(change);
+                Assert.Equal("Users/ByName", rename.Name);
+                Assert.Equal(nameof(UsersByName), rename.OldIndexName);
             }
         }
 
