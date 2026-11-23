@@ -10,9 +10,7 @@ namespace Raven.Client.Documents.Operations.Indexes
     /// <summary>
     /// Renames a static index. The index data stays as it is: nothing is re-indexed.
     ///
-    /// <para><strong>Note:</strong> The operation returns when the cluster accepted the rename. The nodes of the database group then rename the index
-    /// one at a time. Until all nodes are done, a query by the new name on a node that did not rename yet, or by the old name on a node that did,
-    /// gets an error, and the client tries another node.</para>
+    /// <para><strong>Note:</strong> The operation returns when the cluster accepted the rename. Renaming across all nodes in the cluster happens in async manner.</para>
     /// </summary>
     public sealed class RenameIndexOperation : IMaintenanceOperation
     {
