@@ -578,7 +578,7 @@ namespace Voron.Debugging
                 OverflowPages = state.OverflowPages,
                 PageCount = state.PageCount,
                 Density = density,
-                AllocatedSpaceInBytes = PagesToBytes(state.PageCount) + (streams?.AllocatedSpaceInBytes ?? 0),
+                AllocatedSpaceInBytes = PagesToBytes(state.PageCount + (multiValues?.PageCount ?? 0)) + (streams?.AllocatedSpaceInBytes ?? 0),
                 UsedSpaceInBytes = includeDetails ? (long)(PagesToBytes(state.PageCount) * density) : -1,
                 MultiValues = multiValues,
                 Streams = streams,
