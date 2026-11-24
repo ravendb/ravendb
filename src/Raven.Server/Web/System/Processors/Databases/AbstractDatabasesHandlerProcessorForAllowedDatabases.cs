@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -37,28 +36,6 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
     protected override Task HandleRemoteNodeAsync(ProxyCommand<TResult> command, JsonOperationContext context, OperationCancelToken token)
     {
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
-    }
-
-    protected static BackupInfo GetBackupInfo(string databaseName, RawDatabaseRecord record, DocumentDatabase database, ServerStore serverStore, ClusterOperationContext context)
-    {
-        if (database == null)
-        {
-            var periodicBackups = new List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)>();
-
-            foreach (var periodicBackupConfiguration in record.PeriodicBackups)
-            {
-                periodicBackups.Add((periodicBackupConfiguration, BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)));
-            }
-
-            return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
-            {
-                PeriodicBackups = periodicBackups,
-                DatabaseName = databaseName,
-                Context = context
-            });
-        }
-
-        return database.ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName);
     }
 
     protected static TimeSpan? GetUpTime(DocumentDatabase database)

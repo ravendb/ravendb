@@ -154,7 +154,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
             var database = status == StudioDatabaseStatus.Online ? dbTask.Result : null;
             var indexingStatus = GetIndexingStatus(record, database);
             var upTime = GetUpTime(database);
-            var backupInfo = GetBackupInfo(databaseName, record, database, ServerStore, context);
+            var backupInfo = ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName, record);
             var state = StudioDatabaseState.From(databaseName, status, database, ServerStore.DatabaseInfoCache, backupInfo, upTime, indexingStatus);
 
             context.Write(writer, state.ToJson());

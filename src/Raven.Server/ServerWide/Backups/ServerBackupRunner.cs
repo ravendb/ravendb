@@ -1032,12 +1032,18 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    public BackupInfo GetBackupInfo(ClusterOperationContext context, string databaseName)
+    public BackupInfo GetBackupInfo(ClusterOperationContext context, string databaseName, RawDatabaseRecord record = null)
     {
         List<(PeriodicBackupConfiguration Configuration, PeriodicBackupStatus BackupStatus)> periodicBackups = null;
         if (TryGetBackupStates(databaseName, out var backupStates))
         {
             periodicBackups = backupStates.Values.Select(x => (x.Configuration, x.BackupStatus)).ToList();
+        }
+        else if (record != null)
+        {
+            periodicBackups = record.PeriodicBackups
+                .Select(x => (x, BackupUtils.GetBackupStatusFromCluster(context, databaseName, x.TaskId)))
+                .ToList();
         }
 
         return BackupUtils.GetBackupInfo(
