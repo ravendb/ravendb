@@ -37,8 +37,10 @@ public abstract class AbstractAiSettings : IDynamicJson
     }
 
     /// <summary>
-    /// Maximum number of query embedding batches that can be processed concurrently.
-    /// Allow users to override the database global value 
+    /// Maximum number of concurrent embedding batches for each embeddings generation task that uses this
+    /// connection string. RavenDB can run up to this number of source-document batches and up to the same
+    /// number of search-term batches at the same time.
+    /// Overrides the server or database default set by <c>Ai.Embeddings.MaxConcurrentBatches</c>.
     /// </summary>
     public int? EmbeddingsMaxConcurrentBatches { get; set; }
 }

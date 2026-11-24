@@ -20,7 +20,9 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Embeddings.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public TimeSetting EmbeddingsGenerationMaxFallbackTime { get; set; }
     
-    [Description("Maximum number of query embedding batches that can be processed concurrently. Controls the degree of parallelism when sending query embedding requests to AI providers. " +
+    [Description("Maximum number of concurrent embedding batches for each embeddings generation task. " +
+                 "RavenDB can run up to this number of source-document batches and up to the same number of search-term batches at the same time. " +
+                 "The 'EmbeddingsMaxConcurrentBatches' setting on an AI connection string overrides this value. " +
                  "Higher values improve throughput but increase resource usage and may trigger rate limits.")]
     [DefaultValue(4)]
     [ConfigurationEntry("Ai.Embeddings.MaxConcurrentBatches", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -50,7 +52,7 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationResultPrefix", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationResultPrefix { get; set; }
 
-    [Description("The recommanded token threshold for a tool response to the LLM. If the response exceeds this threshold, a notification will be raised.")]
+    [Description("The recommended token threshold for a tool response to the LLM. If the response exceeds this threshold, a notification will be raised.")]
     [DefaultValue(10_000)]
     [ConfigurationEntry("Ai.Agent.Tools.TokenUsageThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public int ToolsTokenUsageThreshold { get; set; }
