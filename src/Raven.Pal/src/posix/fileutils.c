@@ -106,13 +106,14 @@ _pwrite(int32_t fd, void *buffer, uint64_t count, uint64_t offset, int32_t *deta
 }
 
 PRIVATE int32_t
-_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
+_allocate_file_space(int32_t fd, int64_t from, int64_t size, int32_t *detailed_error_code)
 {
     int32_t result;
     int32_t retries;
     for (retries = 0; retries < 1024; retries++)
     {
-        result = _rvn_fallocate(fd, 0, size);
+        // allocating below 'from' would re-allocate punched holes
+        result = _rvn_fallocate(fd, from, size - from);
 
         switch (result)
         {
@@ -138,7 +139,7 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
                 return FAIL_ALLOC_FILE;
         }
     }
-    return result; /* return EINTR */
+    return FAIL_ALLOC_FILE; /* detailed_error_code holds EINTR */
 }
 
 PRIVATE int32_t
@@ -276,7 +277,7 @@ _resize_file(const char *file_name, int32_t fd, int64_t size, int32_t *detailed_
 
     if (size > st.st_size)
     {
-        int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+        int32_t rc = _allocate_file_space(fd, st.st_size, size, detailed_error_code);
         if (rc != SUCCESS)
         {
             return rc;

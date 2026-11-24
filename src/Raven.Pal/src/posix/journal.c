@@ -301,7 +301,7 @@ rvn_create_zeroed_file(const char *path, int64_t size,
     if (fd == -1)
         return FAIL_OPEN_FILE;
 
-    int32_t rc = _allocate_file_space(fd, size, detailed_error_code);
+    int32_t rc = _allocate_file_space(fd, 0, size, detailed_error_code);
     if (rc != SUCCESS)
         goto error;
 

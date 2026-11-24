@@ -201,7 +201,7 @@ PRIVATE int32_t
 _sync_directory_maybe_symblink(char *dir_path, int32_t *detailed_error_code);
 
 PRIVATE int32_t
-_allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code);
+_allocate_file_space(int32_t fd, int64_t from, int64_t size, int32_t *detailed_error_code);
 
 PRIVATE int32_t
 _open_file_to_read(const char *file_name, int32_t *fd, int32_t *detailed_error_code);
