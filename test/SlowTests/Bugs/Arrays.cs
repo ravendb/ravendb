@@ -13,7 +13,7 @@ namespace SlowTests.Bugs
         [RavenFact(RavenTestCategory.ClientApi)]
         public void CanRetrieveMultiDimensionalArray()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
             {
                 var arrayValue = new double[,] 
                 {

@@ -1116,38 +1116,25 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         public int[,,] Cube { get; set; }
     }
 
-    [RavenTheory(RavenTestCategory.ClientApi)]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void MultidimensionalArraysRoundTripLikeNewtonsoft(bool useSystemTextJson)
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonRejectsMultidimensionalArrays()
     {
-        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
         var matrices = new WithMatrices
         {
-            Matrix = new double[,] { { 1, 2 }, { 3, 4 }, { 5, 6 } },
+            Matrix = new double[,] { { 1, 2 }, { 3, 4 } },
             Cube = new int[,,] { { { 1, 2 }, { 3, 4 } }, { { 5, 6 }, { 7, 8 } } }
         };
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
-        using (BlittableJsonReaderObject expected = Newtonsoft.Serialization.DefaultConverter.ToBlittable(matrices, context))
-        using (BlittableJsonReaderObject json = conventions.Serialization.DefaultConverter.ToBlittable(matrices, context))
+        using (BlittableJsonReaderObject json = Newtonsoft.Serialization.DefaultConverter.ToBlittable(matrices, context))
         {
-            Assert.Equal(expected.ToString(), json.ToString());
+            var write = Assert.ThrowsAny<Exception>(() => SystemTextJson.Serialization.DefaultConverter.ToBlittable(matrices, context));
+            Assert.Contains("System.Double[,]", write.ToString());
+            Assert.Contains(nameof(NotSupportedException), write.ToString());
 
-            var read = conventions.Serialization.DefaultConverter.FromBlittable<WithMatrices>(json);
-            Assert.Equal(matrices.Matrix, read.Matrix);
-            Assert.Equal(matrices.Cube, read.Cube);
-        }
-    }
-
-    [RavenFact(RavenTestCategory.ClientApi)]
-    public void JaggedJsonIsRejectedForMultidimensionalArrays()
-    {
-        using (var context = JsonOperationContext.ShortTermSingleUse())
-        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Matrix\":[[1,2],[3]]}", "jagged"))
-        {
-            var exception = Assert.Throws<InvalidOperationException>(() => SystemTextJson.Serialization.DefaultConverter.FromBlittable<WithMatrices>(json));
-            Assert.IsType<System.Text.Json.JsonException>(exception.InnerException);
+            var read = Assert.ThrowsAny<Exception>(() => SystemTextJson.Serialization.DefaultConverter.FromBlittable<WithMatrices>(json));
+            Assert.Contains("System.Double[,]", read.ToString());
+            Assert.Contains(nameof(NotSupportedException), read.ToString());
         }
     }
 
@@ -2800,11 +2787,6 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         public AnimalBag Bag { get; set; }
     }
 
-    private class AnimalGrid
-    {
-        public Animal[,] Cells { get; set; }
-    }
-
     [RavenFact(RavenTestCategory.ClientApi)]
     public void SystemTextJsonWritesDerivedItemsOfConvertedCollectionsLikeNewtonsoft()
     {
@@ -2818,10 +2800,6 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         var bag = AssertWritesLikeNewtonsoft(new HoldsAnimalBag { Bag = new AnimalBag([new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" }]) });
         Assert.True(Assert.IsType<Dog>(bag.Bag.First()).Barks);
         Assert.IsType<Animal>(bag.Bag.Last());
-
-        var grid = AssertWritesLikeNewtonsoft(new AnimalGrid { Cells = new Animal[,] { { new Dog { Name = "Rex", Barks = true }, new Animal { Name = "Cat" } } } });
-        Assert.True(Assert.IsType<Dog>(grid.Cells[0, 0]).Barks);
-        Assert.IsType<Animal>(grid.Cells[0, 1]);
     }
 
     private class WithSystemTextJsonExtensionData
