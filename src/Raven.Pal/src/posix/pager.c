@@ -396,7 +396,7 @@ rvn_init_pager(const char *filename,
     }
 
     int flags = ((open_flags & OPEN_FILE_READ_ONLY) | (open_flags & OPEN_FILE_COPY_ON_WRITE)) ? O_RDONLY : O_RDWR | O_CREAT;
-    fd = open(filename, flags, S_IWUSR | S_IRUSR);
+    fd = open(filename, flags | O_CLOEXEC, S_IWUSR | S_IRUSR);
     if (fd == -1)
     {
         rc = FAIL_OPEN_FILE;
@@ -610,7 +610,7 @@ rvn_increase_pager_size(void *handle,
     *memory = NULL;
     *memory_size = 0;
 
-    int new_fd = dup(handle_ptr->file_fd);
+    int new_fd = fcntl(handle_ptr->file_fd, F_DUPFD_CLOEXEC, 0);
     if (new_fd == -1)
     {
         *new_handle = NULL;
@@ -719,7 +719,7 @@ int32_t rvn_pager_get_file_handle(
     int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
-    int new_fd = dup(handle_ptr->file_fd);
+    int new_fd = fcntl(handle_ptr->file_fd, F_DUPFD_CLOEXEC, 0);
     if (new_fd == -1)
     {
         *file_handle = NULL;

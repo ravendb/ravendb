@@ -65,7 +65,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
         goto error_cleanup;
     }
 
-    jfh->fd = open(file_name, flags | O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
+    jfh->fd = open(file_name, flags | O_WRONLY | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
 
     if (jfh->fd == -1)
     {
@@ -272,7 +272,7 @@ static int32_t
 _open_file_for_zeroing(const char *path, int32_t *detailed_error_code)
 {
     // we intentionally skip the page cache with O_DIRECT, to avoid polluting it with lot of nonesense.
-    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_DIRECT, S_IWUSR | S_IRUSR);
+    int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_DIRECT | O_CLOEXEC, S_IWUSR | S_IRUSR);
     if (fd == -1)
     {
         *detailed_error_code = errno;
@@ -419,7 +419,7 @@ rvn_sync_directories_sync(void* handle, char** folders, int32_t count, int32_t *
 {
     for (size_t i = 0; i < count; i++)
     {
-        int fd = open(folders[i], O_RDONLY);
+        int fd = open(folders[i], O_RDONLY | O_CLOEXEC);
         if(fd < 0)
         {
             // it is _fine_ if the directory does not exist

@@ -229,7 +229,7 @@ void *do_ring_work(void *arg)
                 switch (work->type)
                 {
                 case workitem_open_folders:
-                    io_uring_prep_open(sqe, work->op.folder_sync.path, O_RDONLY, 0);
+                    io_uring_prep_open(sqe, work->op.folder_sync.path, O_RDONLY | O_CLOEXEC, 0);
                     break;
                 case workitem_fsync_folders:
                 {

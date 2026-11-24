@@ -217,7 +217,7 @@ cleanup:
 PRIVATE int32_t
 _open_file_to_read(const char *file_name, int32_t *fd, int32_t *detailed_error_code)
 {
-    *fd = open(file_name, O_RDONLY, S_IRUSR);
+    *fd = open(file_name, O_RDONLY | O_CLOEXEC, S_IRUSR);
     if (*fd != -1)
         return SUCCESS;
 
