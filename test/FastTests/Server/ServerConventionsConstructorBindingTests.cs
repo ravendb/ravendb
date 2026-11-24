@@ -1,5 +1,12 @@
+using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Server.Documents.Commands.Queries;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Queries;
 using Raven.Server.SqlMigration.Model;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -118,6 +125,86 @@ public class ServerConventionsConstructorBindingTests(ITestOutputHelper output) 
         Assert.Equal("script", transformation.TransformationName);
         Assert.Equal(5, transformation.Statistics.LastProcessedEtag);
         Assert.NotNull(transformation.Metrics.BatchSizeMeter);
+    }
+
+    [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Sharding)]
+    public void WritesTimeSeriesIncludesWithBlittableMember()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject includes = context.Sync.ReadForMemory("""{ "users/1": { "Name": "Oren" } }""", "includes"))
+        {
+            var values = new Dictionary<string, List<TimeSeriesRangeResult>>
+            {
+                ["HeartRate"] =
+                [
+                    new TimeSeriesRangeResult
+                    {
+                        From = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                        To = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                        Entries = [new TimeSeriesEntry { Timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc), Values = [61.5], Tag = "watches/1" }],
+                        TotalResults = 1,
+                        Includes = includes
+                    }
+                ]
+            };
+
+            using (BlittableJsonReaderObject json = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(values, context))
+            {
+                Assert.True(json.TryGet("HeartRate", out BlittableJsonReaderArray ranges));
+                var range = (BlittableJsonReaderObject)Assert.Single(ranges);
+
+                Assert.True(range.TryGet(nameof(TimeSeriesRangeResult.TotalResults), out long total));
+                Assert.Equal(1, total);
+
+                Assert.True(range.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries));
+                Assert.True(((BlittableJsonReaderObject)Assert.Single(entries)).TryGet(nameof(TimeSeriesEntry.Tag), out string tag));
+                Assert.Equal("watches/1", tag);
+
+                Assert.True(range.TryGet(nameof(TimeSeriesRangeResult.Includes), out BlittableJsonReaderObject writtenIncludes));
+                Assert.True(writtenIncludes.TryGet("users/1", out BlittableJsonReaderObject user));
+                Assert.True(user.TryGet("Name", out string name));
+                Assert.Equal("Oren", name);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+    public void ReadsPatchByQueryTestResponseWithDocuments()
+    {
+        const string json = """
+            {
+              "Status": "Patched",
+              "ModifiedDocument": { "Name": "Modified" },
+              "OriginalDocument": { "Name": "Original" },
+              "Debug": { "Info": ["line"] },
+              "DebugActions": { "PutDocument": ["users/1"] },
+              "Output": ["line"],
+              "ChangeVector": "A:1",
+              "Collection": "Users"
+            }
+            """;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject response = context.Sync.ReadForMemory(json, "response"))
+        {
+            var command = new PatchByQueryTestCommand(DocumentConventions.DefaultForServer, "users/1", new IndexQueryServerSide("from Users"));
+            command.SetResponse(context, response, fromCache: false);
+
+            PatchByQueryTestCommand.Response result = command.Result;
+            Assert.Equal(PatchStatus.Patched, result.Status);
+            Assert.Equal("A:1", result.ChangeVector);
+            Assert.Equal("Users", result.Collection);
+            Assert.Equal(["line"], result.Output);
+
+            Assert.True(result.ModifiedDocument.TryGet("Name", out string modified));
+            Assert.Equal("Modified", modified);
+            Assert.True(result.OriginalDocument.TryGet("Name", out string original));
+            Assert.Equal("Original", original);
+            Assert.True(result.Debug.TryGet("Info", out BlittableJsonReaderArray info));
+            Assert.Equal("line", Assert.Single(info).ToString());
+            Assert.True(result.DebugActions.TryGet("PutDocument", out BlittableJsonReaderArray puts));
+            Assert.Equal("users/1", Assert.Single(puts).ToString());
+        }
     }
 
     private static T Read<T>(string json)

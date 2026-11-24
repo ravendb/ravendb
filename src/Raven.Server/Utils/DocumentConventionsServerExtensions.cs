@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Raven.Server.Json.Converters;
 using Sparrow;
 using Sparrow.Platform;
 
@@ -18,7 +19,16 @@ internal static class DocumentConventionsServerExtensions
     {
         var conventions = new DocumentConventions
         {
-            Serialization = new SystemTextJsonSerializationConventions(),
+            Serialization = new SystemTextJsonSerializationConventions
+            {
+                IgnoreUnsafeMembers = true,
+                CustomizeJsonSerializerOptions = options =>
+                {
+                    options.Converters.Insert(0, BlittableJsonConverter.Instance);
+                    options.Converters.Insert(0, BlittableJsonReaderArrayConverter.Instance);
+                    options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);
+                }
+            },
             SendApplicationIdentifier = false,
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes),
             HttpPooledConnectionLifetime = GetHttpPooledConnectionLifetime(),

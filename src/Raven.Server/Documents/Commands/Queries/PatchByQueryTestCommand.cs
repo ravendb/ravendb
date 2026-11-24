@@ -8,6 +8,7 @@ using Raven.Client.Json;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
+using Raven.Server.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Commands.Queries;
@@ -61,6 +62,7 @@ public sealed class PatchByQueryTestCommand : RavenCommand<PatchByQueryTestComma
         if (response == null)
             ThrowInvalidResponse();
 
-        Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<Response>(response);
+        using (RecordingJson.EnterContext(context))
+            Result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<Response>(response);
     }
 }
