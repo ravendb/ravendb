@@ -2292,6 +2292,41 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class PrivateMemberBehindPublicOneWithOtherMembers
+    {
+        private string url { get; set; }
+
+        public string Url { get; set; }
+
+        public string Title { get; set; }
+
+        public Person Owner { get; set; }
+
+        public string GetUrl() => url;
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("{\"url\":\"private\",\"Url\":\"public\",\"title\":\"t\",\"Owner\":{\"name\":\"n\"}}")]
+    [InlineData("{\"owner\":{\"NAME\":\"n\"},\"TITLE\":\"t\",\"Url\":\"public\",\"url\":\"private\"}")]
+    public void SystemTextJsonReadsOtherMembersOfATypeWithAPrivateCaseOnlyCollisionCaseInsensitivelyLikeNewtonsoft(string text)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "item"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<PrivateMemberBehindPublicOneWithOtherMembers>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<PrivateMemberBehindPublicOneWithOtherMembers>(json);
+
+            Assert.Equal("public", actual.Url);
+            Assert.Equal("private", actual.GetUrl());
+            Assert.Equal("t", actual.Title);
+            Assert.Equal("n", actual.Owner.Name);
+            Assert.Equal(expected.Url, actual.Url);
+            Assert.Equal(expected.GetUrl(), actual.GetUrl());
+            Assert.Equal(expected.Title, actual.Title);
+            Assert.Equal(expected.Owner.Name, actual.Owner.Name);
+        }
+    }
+
     private class PolymorphicValuesByNonStringKeys
     {
         public Dictionary<int, Animal> ByNumber { get; set; }
