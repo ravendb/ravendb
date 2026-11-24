@@ -672,8 +672,14 @@ namespace Voron.Impl
             switch (_getPageMethod)
             {
                 case GetPageMethod.WriteScratchFirst:
-                    if (_scratchPagesInUse.TryGetValue(pageNumber, out var pageInUse))
-                        return *(T*)pageInUse.ReadWritableRawPagePointer(ref PagerTransactionState);
+                    if (_scratchPagesInUse.TryGetValue(pageNumber, out PageFromScratchBuffer pageInUse))
+                    {
+                        // encrypted pages changed in this tx live in the encryption buffer until commit
+                        byte* header = _env.Options.Encryption.IsEnabled && _dirtyPages.Contains(pageNumber)
+                            ? pageInUse.ReadWritable(ref PagerTransactionState)
+                            : pageInUse.ReadWritableRawPagePointer(ref PagerTransactionState);
+                        return *(T*)header;
+                    }
 
                     return GetPageHeaderFromDataFile<T>(pageNumber);
 
