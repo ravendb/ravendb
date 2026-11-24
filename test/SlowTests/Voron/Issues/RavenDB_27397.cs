@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Linq;
@@ -285,7 +286,9 @@ public class RavenDB_27397 : StorageTest
         // every entry of that journal decodes to a foreign id and the journal contributes nothing
         CorruptFirst4Kb(Path.Combine(journalPath, StorageEnvironmentOptions.JournalName(lastJournal)));
 
-        StartDatabaseAfterDisposeOnly();
+        var recoveryErrors = new List<string>();
+        StartDatabaseAfterDisposeOnly(o => o.OnRecoveryError += (_, e) => recoveryErrors.Add(e.Message));
+        Assert.Contains(recoveryErrors, e => e.Contains("unreadable header record"));
 
         // the synced prefix must survive; the unsynced suffix may be cut, but only as a clean prefix -
         // a hole (a lost transaction followed by a recovered one) would mean silent corruption
@@ -336,7 +339,7 @@ public class RavenDB_27397 : StorageTest
         // transactions expose a sequence gap - the recovery must fail loudly, not lose data silently
         CorruptFirst4Kb(Path.Combine(journalPath, StorageEnvironmentOptions.JournalName(middleJournal)));
 
-        Assert.Throws<InvalidJournalException>(StartDatabaseAfterDisposeOnly);
+        Assert.Throws<InvalidJournalException>(() => StartDatabaseAfterDisposeOnly());
     }
 
     private static void CorruptFirst4Kb(string journalFile)
@@ -414,7 +417,7 @@ public class RavenDB_27397 : StorageTest
         StopDatabase(shouldDisposeOptions: true);
     }
 
-    private void StartDatabaseAfterDisposeOnly()
+    private void StartDatabaseAfterDisposeOnly(Action<StorageEnvironmentOptions> configure = null)
     {
         var manualFlush = Options.ManualFlushing;
         var manualSync = Options.ManualSyncing;
@@ -423,6 +426,7 @@ public class RavenDB_27397 : StorageTest
         Options.ManualSyncing = manualSync;
         Options.ManualFlushing = manualFlush;
         Configure(Options);
+        configure?.Invoke(Options);
 
         StartDatabase();
     }

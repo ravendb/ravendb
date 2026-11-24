@@ -236,6 +236,37 @@ public class JournalIncarnationAndHoles(ITestOutputHelper output) : RavenTestBas
         AssertKeys(env, present: ["k1"], missing: [$"k{TransactionsOverSeveralJournals}"]);
     }
 
+    [RavenTheory(RavenTestCategory.Voron)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void UnreadableHeaderRecordOfAJournalWithOurTransactionsIsARecoveryErrorAndTheJournalTakesNoWrites(bool encrypted)
+    {
+        // the newest journal holds only transactions that are not synced yet
+        var path = NewDataPath();
+        var (journals, _) = WriteTransactionsOverSeveralJournals(path, encrypted);
+
+        var (file, _) = journals[^1];
+        var bytes = File.ReadAllBytes(file);
+        Array.Clear(bytes, 0, 4 * 1024);
+        File.WriteAllBytes(file, bytes);
+
+        var recoveryErrors = new List<string>();
+        using var options = CreateOptions(path, recoveryErrors, encrypted, SmallJournals);
+        using var env = new StorageEnvironment(options);
+
+        Assert.Contains(recoveryErrors, e => e.Contains("unreadable header record"));
+        AssertKeys(env, present: ["k1"], missing: [$"k{TransactionsOverSeveralJournals}"]);
+
+        var damagedJournal = env.CurrentStateRecord.Journal.Number;
+        using (var tx = env.WriteTransaction())
+        {
+            tx.CreateTree("t").Add("after", "v");
+            tx.Commit();
+        }
+
+        Assert.True(env.CurrentStateRecord.Journal.Number > damagedJournal, "a journal with an unreadable header record must not take further writes");
+    }
+
     private const long SmallJournals = 256 * 1024;
     private const int TransactionsOverSeveralJournals = 24;
 
