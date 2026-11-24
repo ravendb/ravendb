@@ -15,9 +15,13 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
 
     public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason, out BackupDecisionCategory category)
     {
-        category = BackupDecisionCategory.Waiting;
-
         var taskStatus = serverStore.ServerBackupRunner.GetTaskStatus(backupState.Configuration, backupState.DatabaseName, out var nodeTag, context);
+        return CanRunOnThisNode(taskStatus, nodeTag, backupState, out reason, out category);
+    }
+
+    internal static bool CanRunOnThisNode(ServerBackupRunner.TaskStatus taskStatus, string responsibleNodeTag, DatabaseBackupState backupState, out string reason, out BackupDecisionCategory category)
+    {
+        category = BackupDecisionCategory.Waiting;
 
         switch (taskStatus)
         {
@@ -31,7 +35,7 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
                 return false;
 
             case ServerBackupRunner.TaskStatus.ActiveByOtherNode:
-                reason = $"Node '{nodeTag}' is responsible for the task.";
+                reason = $"Node '{responsibleNodeTag}' is responsible for the task.";
                 return false;
 
             case ServerBackupRunner.TaskStatus.ActiveByCurrentNode:

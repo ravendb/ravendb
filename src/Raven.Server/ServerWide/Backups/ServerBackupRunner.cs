@@ -266,6 +266,12 @@ public class ServerBackupRunner : IDisposable
 
             try
             {
+                if (ReferenceEquals(GetDatabaseStateByTaskId(backupState.DatabaseName, backupState.Configuration.TaskId), backupState) == false)
+                {
+                    FinishRunning(backupState, BackupDecisionCategory.Cancelled, CancelReasonTaskDeleted, GetCancelReasonText(CancelReasonTaskDeleted));
+                    return;
+                }
+
                 if (CanStartAfterDatabaseLoad(backupState, out var category, out var detail, out var reason) == false)
                 {
                     FinishRunning(backupState, category, detail, reason);
@@ -781,7 +787,46 @@ public class ServerBackupRunner : IDisposable
             }
         }
 
+        var wasStale = existingBackupState != null && existingBackupState.Stale;
+
         UpdatePeriodicBackup(databaseName, configuration.TaskId, configuration, taskState);
+
+        AddTaskStatusDecision(databaseName, configuration.TaskId, taskState, responsibleNodeTag, wasStale);
+    }
+
+    private void AddTaskStatusDecision(string databaseName, long taskId, TaskStatus taskState, string responsibleNodeTag, bool wasStale)
+    {
+        var backupState = GetDatabaseStateByTaskId(databaseName, taskId);
+        if (backupState == null)
+            return;
+
+        var now = DateTime.UtcNow;
+
+        switch (taskState)
+        {
+            case TaskStatus.Disabled:
+                BackupDisabledPolicy.IsDisabled(backupState.Configuration, out var reason, out var category);
+                AddDecisionIfChanged(backupState, category, BackupDisabledPolicy.Instance.Name, reason, now);
+                break;
+
+            case TaskStatus.ActiveByOtherNode:
+            case TaskStatus.MissingResponsibleNode:
+                BackupShouldRunOnThisNodePolicy.CanRunOnThisNode(taskState, responsibleNodeTag, backupState, out reason, out category);
+                AddDecisionIfChanged(backupState, category, BackupShouldRunOnThisNodePolicy.Instance.Name, reason, now);
+                break;
+
+            case TaskStatus.ActiveByCurrentNode when wasStale:
+                backupState.AddToDecisionLog(BackupDecisionCategory.Waiting, BackupShouldRunOnThisNodePolicy.Instance.Name, $"The task is active on node '{_serverStore.NodeTag}' again.", now);
+                break;
+        }
+    }
+
+    private static void AddDecisionIfChanged(DatabaseBackupState backupState, BackupDecisionCategory category, string detail, string reason, DateTime now)
+    {
+        if (backupState.TryGetLatestDecision(out var latest) && latest.IsSameAs(category, detail, reason))
+            return;
+
+        backupState.AddToDecisionLog(category, detail, reason, now);
     }
 
     private void UpdatePeriodicBackup(string databaseName, long taskId,
