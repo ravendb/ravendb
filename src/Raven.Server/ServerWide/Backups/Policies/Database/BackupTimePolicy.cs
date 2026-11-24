@@ -20,12 +20,6 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
 
         if (backupState.NextBackup == null)
         {
-            var backupStatus = backupState.GetMostUpdatedLocalBackupStatus(backupState.BackupStatus);
-            backupState.NextBackup = backupState.CalculateNextBackup(backupStatus, raiseAlerts: false);
-        }
-
-        if (backupState.NextBackup == null)
-        {
             reason = "The next backup time can't be calculated.";
             category = BackupDecisionCategory.HeldBack;
             return false;

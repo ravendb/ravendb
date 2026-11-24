@@ -397,26 +397,33 @@ public class ServerBackupRunner : IDisposable
             value.HoldBackupFromFinishing?.WaitOne();
         }
 
-        try
-        {
-            if (backupState.Stale)
-                backupState.NextBackup = null;
-            else if (reschedule)
-                backupState.NextBackup = backupState.GetNextBackupIfActive(backupState.BackupStatus, out _);
-        }
-        catch (Exception e)
-        {
-            backupState.NextBackup = null;
-
-            if (_logger.IsWarnEnabled)
-                _logger.Warn($"Failed to schedule the next backup for {backupState}.", e);
-        }
-
         var runningBackupStatus = backupState.RunningBackupStatus;
 
-        backupState.RunningTask = null;
-        backupState.RunningBackupStatus = null;
-        backupState.RunningCancel = null;
+        if (TryGetBackupStates(backupState.DatabaseName, out var backupStates))
+        {
+            lock (backupStates)
+            {
+                try
+                {
+                    if (backupState.Stale)
+                        backupState.NextBackup = null;
+                    else if (reschedule || backupState.NextBackup == null)
+                        backupState.NextBackup = backupState.GetNextBackupIfActive(backupState.BackupStatus, out _);
+                }
+                catch (Exception e)
+                {
+                    backupState.NextBackup = null;
+                    TrackAgainOnNextPass(backupState.DatabaseName);
+
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Failed to schedule the next backup for {backupState}, it will be calculated again on the next pass.", e);
+                }
+
+                backupState.RunningTask = null;
+                backupState.RunningBackupStatus = null;
+                backupState.RunningCancel = null;
+            }
+        }
 
         try
         {

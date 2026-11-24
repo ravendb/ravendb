@@ -117,8 +117,8 @@ namespace Raven.Server.ServerWide.Backups
                 details: new ExceptionDetails(parameters.Exception)));
         }
 
-        // raiseAlerts: the runner recalculates the next backup on every pass (BackupTimePolicy) and after each backup,
-        // so the alerts are raised only when the configuration changes, otherwise the same alert is stored again every pass.
+        // raiseAlerts: the runner recalculates the next backup after each backup,
+        // so the alerts are raised only when the configuration changes, otherwise the same alert is stored again after every backup.
         internal NextBackup CalculateNextBackup(PeriodicBackupStatus backupStatus, bool raiseAlerts)
         {
             return BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
