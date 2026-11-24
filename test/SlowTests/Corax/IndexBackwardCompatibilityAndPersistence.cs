@@ -91,8 +91,8 @@ namespace SlowTests.Corax
                 Assert.NotNull(_indexStoragePath2);
             }
 
-            DeleteAndExtractFiles(_indexStoragePath2, "Precorax.Orders_ByOrderBy.zip");
-            DeleteAndExtractFiles(_indexStoragePath1, "Precorax.Auto_Orders_ByOrderedAt.zip");
+            DeleteAndExtractFiles(_indexStoragePath1, "Precorax.Orders_ByOrderBy.zip");
+            DeleteAndExtractFiles(_indexStoragePath2, "Precorax.Auto_Orders_ByOrderedAt.zip");
 
             using (var server = GetNewServer(new ServerCreationOptions {DataDirectory = _serverPath, RunInMemory = false}))
             using (var store = GetDocumentStore(new Options {Server = server, RunInMemory = false, Path = _databasePath, ModifyDatabaseName = _ => _databaseName}))
