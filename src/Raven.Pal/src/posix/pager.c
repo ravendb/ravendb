@@ -128,8 +128,8 @@ int32_t _open_pager_file(int fd,
 
     if (min_file_size > st.st_size && !(global_state->open_flags & OPEN_FILE_READ_ONLY))
     {
+        rc = _allocate_file_space(fd, st.st_size, min_file_size, detailed_error_code);
         st.st_size = min_file_size;
-        rc = _allocate_file_space(fd, st.st_size, detailed_error_code);
         if (rc != SUCCESS)
         {
             // Errno is not supported by _allocate_file_space; the correct value is already set.
