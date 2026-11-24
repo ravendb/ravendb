@@ -328,7 +328,9 @@ namespace Voron
 
             if (hadIntegrityIssues)
             {
-                var message = _journal.Files.Count == 0 ? "Unrecoverable database" : "Database recovered partially. Some data was lost.";
+                var message = _journal.Files.Count == 0 && _journal.PartialRecoveryDetails == null
+                    ? "Unrecoverable database"
+                    : "Database recovered partially. Some data was lost.";
                 if (_journal.PartialRecoveryDetails != null)
                     message += " " + _journal.PartialRecoveryDetails;
 

@@ -546,7 +546,7 @@ namespace Voron.Impl.Journal
                         };
                         jrnlFile.DoneWriting = new SingleUseFlag();
                 
-                        if (journalReader.BypassedInvalidRegion)
+                        if (journalReader.BypassedInvalidRegion || journalReader.UnreadableHeaderRecordDetails != null)
                         {
                             jrnlFile.DoneWriting.Raise();
 
@@ -606,6 +606,7 @@ namespace Voron.Impl.Journal
 
                     if (partialRecovery) //this should prevent further load of transactions
                     {
+                        PartialRecoveryDetails ??= journalReader.UnreadableHeaderRecordDetails;
                         requireHeaderUpdate = true;
                         break;
                     }
@@ -687,6 +688,15 @@ namespace Voron.Impl.Journal
                             _env.ValidateInMemoryPageChecksum(modifiedPage, ptr);
 
                             overflowDetector.SetPageChecked(modifiedPage);
+                        }
+                        catch (InvalidDataException e) when (PartialRecoveryDetails != null)
+                        {
+                            // The data file may already hold flushed changes of the transactions we did not replay. Replaying only
+                            // the earlier diffs over such a page mixes two versions of it, so the checksum fails.
+                            throw new InvalidDataException(
+                                $"Page {modifiedPage} of {dataPager.FileName} does not match the replayed journals because recovery stopped early. {PartialRecoveryDetails} " +
+                                "The data file likely already holds changes of the transactions that were not replayed. " +
+                                $"Reset the index, or restore the database from a backup or another node. Original error: {e.Message}", e);
                         }
                         finally
                         {

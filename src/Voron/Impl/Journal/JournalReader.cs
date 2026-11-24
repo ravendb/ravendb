@@ -707,6 +707,7 @@ namespace Voron.Impl.Journal
                 {
                     Debug.Assert(current != null, "current != null");
 
+                    long invalidAt4Kb = _readAt4Kb;
                     if (TryFindNextValidTransaction(options, ref txState))
                     {
                         // resume from the next transaction that fully validates - the regular routing and
@@ -717,6 +718,21 @@ namespace Voron.Impl.Journal
                         RequireHeaderUpdate = false;
                         _readAt4Kb--;
                         continue;
+                    }
+
+                    // Unreadable header record makes the whole journal look empty. An entry in slot 1 means it was not.
+                    // Earlier journals are caught by the sequence check of the next one.
+                    if (invalidAt4Kb == 0 && _journalPagerNumberOfAllocated4Kb > 1)
+                    {
+                        byte* firstPage = _journalPager.AcquirePagePointer(_journalPagerState, ref txState, 0);
+                        TransactionHeader* firstEntryAfterHeaderRecord = (TransactionHeader*)(firstPage + 4 * Constants.Size.Kilobyte);
+
+                        if (firstEntryAfterHeaderRecord->HeaderMarker == Constants.TransactionHeaderMarker && options.JournalExists(_journalNumber + 1) == false)
+                        {
+                            UnreadableHeaderRecordDetails = $"Journal {_journalPager.FileName} has an unreadable header record, so none of its transactions can be replayed.";
+                            RequireHeaderUpdate = true;
+                            options.InvokeRecoveryError(this, UnreadableHeaderRecordDetails, null);
+                        }
                     }
 
                     // no valid transaction until the end of the file - the regular torn-tail handling
@@ -906,6 +922,8 @@ namespace Voron.Impl.Journal
 
             return null;
         }
+
+        public string UnreadableHeaderRecordDetails { get; private set; }
 
         private static bool IsWellFormedJournalHeaderRecord(TransactionHeader* current)
         {
