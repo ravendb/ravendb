@@ -8,6 +8,9 @@ import { Icon } from "components/common/Icon";
 import useBoolean from "components/hooks/useBoolean";
 import CollapseButton from "components/common/CollapseButton";
 import Collapse from "react-bootstrap/Collapse";
+import Accordion from "react-bootstrap/Accordion";
+import AccordionButton from "react-bootstrap/AccordionButton";
+import configurationConstants from "configuration";
 
 export default function EditAiAgentTrimmingSection() {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
@@ -136,7 +139,97 @@ function TokensFields() {
                 />
             </FormGroup>
             <HistoryFields />
+            <SummarizationPromptsFields />
         </>
+    );
+}
+
+function SummarizationPromptsFields() {
+    return (
+        <Accordion className="mt-3">
+            <Accordion.Item eventKey="advanced-settings" className="border border-secondary rounded-2 panel-bg-2">
+                <Accordion.Header
+                    as={() => <AccordionButton className="rounded-2 panel-bg-2">Advanced settings</AccordionButton>}
+                ></Accordion.Header>
+                <Accordion.Body className="pt-0">
+                    <hr className="my-0 mb-2" />
+                    <SummarizationTextField
+                        name="trimming.summarizationTaskBeginningPrompt"
+                        label="Summarization beginning prompt"
+                        description="The instruction sent to the LLM before the conversation when a summary is requested. Use it to set the structure, tone and depth of the summary."
+                        configurationKey={configurationConstants.ai.summarizationTaskBeginningPrompt}
+                        rows={6}
+                    />
+                    <SummarizationTextField
+                        name="trimming.summarizationTaskEndPrompt"
+                        label="Summarization end prompt"
+                        description="The message sent to the LLM after the conversation. It asks the LLM to write the summary."
+                        configurationKey={configurationConstants.ai.summarizationTaskEndPrompt}
+                        rows={4}
+                    />
+                    <SummarizationTextField
+                        name="trimming.summarizationResultPrefix"
+                        label="Summary prefix"
+                        description="The text placed before the generated summary in the conversation."
+                        configurationKey={configurationConstants.ai.summarizationResultPrefix}
+                        marginClass="mb-0"
+                    />
+                </Accordion.Body>
+            </Accordion.Item>
+        </Accordion>
+    );
+}
+
+interface SummarizationTextFieldProps {
+    name: `trimming.${"summarizationTaskBeginningPrompt" | "summarizationTaskEndPrompt" | "summarizationResultPrefix"}`;
+    label: string;
+    description: string;
+    configurationKey: string;
+    rows?: number;
+    marginClass?: string;
+}
+
+function SummarizationTextField({
+    name,
+    label,
+    description,
+    configurationKey,
+    rows,
+    marginClass,
+}: SummarizationTextFieldProps) {
+    const { control } = useFormContext<EditAiAgentFormData>();
+
+    return (
+        <FormGroup marginClass={marginClass}>
+            <FormLabel>
+                {label}
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
+                            {description}
+                            <br />
+                            <br />
+                            When empty, the value of the <code className="text-break">{configurationKey}</code>{" "}
+                            configuration key is used.
+                        </>
+                    }
+                >
+                    <Icon icon="info-new" />
+                </PopoverWithHoverWrapper>
+            </FormLabel>
+            {rows ? (
+                <FormInput
+                    type="textarea"
+                    as="textarea"
+                    control={control}
+                    name={name}
+                    placeholder={CONFIGURATION_DEFAULT_PLACEHOLDER}
+                    rows={rows}
+                />
+            ) : (
+                <FormInput type="text" control={control} name={name} placeholder={CONFIGURATION_DEFAULT_PLACEHOLDER} />
+            )}
+        </FormGroup>
     );
 }
 
@@ -235,3 +328,4 @@ function HistoryFields() {
 // const defaultMessagesLengthAfterTruncate = defaultMessagesLengthBeforeTruncate / 2;
 const defaultMaxTokensBeforeSummarization = 32 * 1024;
 const defaultMaxTokensAfterSummarization = 1024;
+const CONFIGURATION_DEFAULT_PLACEHOLDER = "Default (from the configuration)";

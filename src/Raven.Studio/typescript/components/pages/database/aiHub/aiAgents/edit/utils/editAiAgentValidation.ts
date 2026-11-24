@@ -127,6 +127,7 @@ const editSchema = yup.object({
             isEditing: yup.boolean(),
         })
     ),
+    maxModelIterationsPerCall: yup.number().nullable().integer().min(0),
 
     // Trimming
     trimming: yup
@@ -154,6 +155,9 @@ const editSchema = yup.object({
             // Tokens
             maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
+            summarizationTaskBeginningPrompt: yup.string().nullable(),
+            summarizationTaskEndPrompt: yup.string().nullable(),
+            summarizationResultPrefix: yup.string().nullable(),
         })
         .nullable(),
 
