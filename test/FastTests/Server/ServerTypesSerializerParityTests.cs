@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using FastTests.Client;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Replication;
@@ -26,6 +27,8 @@ namespace FastTests.Server;
 
 public class ServerTypesSerializerParityTests(ITestOutputHelper output) : SerializerParityTestBase(output)
 {
+    private static DocumentConventions ServerConventions => DocumentConventions.DefaultForServer;
+
     public static TheoryData<Type> WrittenThroughConventions => new()
     {
         typeof(DatabaseRecord),
@@ -34,7 +37,15 @@ public class ServerTypesSerializerParityTests(ITestOutputHelper output) : Serial
         typeof(RestorePoints),
         typeof(ImportInfo),
         typeof(StorageIoAnalysisInfo),
-        typeof(ConflictSolver)
+        typeof(ConflictSolver),
+        typeof(Raven.Server.Documents.Indexes.Test.TestIndexParameters),
+        typeof(Raven.Server.Documents.Commands.ValidateUnusedIdsCommand.Parameters),
+        typeof(Raven.Server.Documents.Revisions.RevertRevisionsRequest),
+        typeof(Raven.Server.Smuggler.Migration.LastEtagsInfo),
+        typeof(Raven.Client.Documents.Operations.TimeSeries.TimeSeriesRangeResult),
+        typeof(Raven.Client.Documents.Operations.Revisions.DeleteRevisionsOperation.Parameters),
+        typeof(Raven.Client.Documents.Operations.Revisions.AdoptOrphanedRevisionsOperation.Parameters),
+        typeof(Raven.Client.Documents.Operations.Revisions.EnforceRevisionsConfigurationOperation.Parameters)
     };
 
     public static TheoryData<Type> ReadThroughConventions => new()
@@ -54,7 +65,29 @@ public class ServerTypesSerializerParityTests(ITestOutputHelper output) : Serial
         typeof(ConflictSolver),
         typeof(IncomingConnectionInfo),
         typeof(ConnectionShutdownInfo),
-        typeof(GetIndexStalenessCommand.IndexStaleness)
+        typeof(GetIndexStalenessCommand.IndexStaleness),
+        typeof(Raven.Server.SqlMigration.Model.MigrationRequest),
+        typeof(Raven.Server.SqlMigration.Model.MigrationTestRequest),
+        typeof(Raven.Server.Documents.TasksErrors.TaskErrors),
+        typeof(Raven.Client.Documents.Indexes.IndexProgress),
+        typeof(Raven.Client.Documents.Indexes.IndexesProgress),
+        typeof(Raven.Server.Documents.Commands.Indexes.GetIndexesTotalTimeCommand.IndexesTotalTime),
+        typeof(Raven.Server.Documents.Commands.Attachments.GetAttachmentHashCountCommand.Response),
+        typeof(Raven.Server.Documents.Commands.Attachments.GetAttachmentMetadataWithCountsCommand.Response),
+        typeof(Raven.Server.Documents.Commands.Queries.PatchByQueryTestCommand.Response),
+        typeof(Raven.Client.Documents.Operations.OperationIdResult),
+        typeof(Raven.Client.Documents.Queries.Facets.FacetOptions),
+        typeof(Raven.Client.Documents.Queries.Suggestions.SuggestionOptions),
+        typeof(Raven.Client.Documents.Queries.Highlighting.HighlightingOptions),
+        typeof(Raven.Client.Documents.Queries.Explanation.ExplanationOptions),
+        typeof(Raven.Client.Documents.Queries.Facets.FacetResult),
+        typeof(Raven.Client.Documents.Queries.Suggestions.SuggestionResult),
+        typeof(Raven.Server.Documents.Sharding.Queries.Suggestions.ShardedSuggestionResult.Popularity),
+        typeof(Raven.Server.NotificationCenter.Notifications.Details.EtlTaskHealthChangeDetails),
+        typeof(Raven.Server.NotificationCenter.Notifications.Details.EtlWarningDetails),
+        typeof(Raven.Server.NotificationCenter.Notifications.Details.QueueSinkErrorsDetails),
+        typeof(Raven.Server.NotificationCenter.Notifications.Details.SlowSqlDetails),
+        typeof(Raven.Server.NotificationCenter.Notifications.Details.RemoteAttachmentsErrorsDetails)
     };
 
     [RavenTheory(RavenTestCategory.ClientApi)]
@@ -64,12 +97,12 @@ public class ServerTypesSerializerParityTests(ITestOutputHelper output) : Serial
         object value = new SampleValues().Create(type);
 
         string expected = Write(value, Newtonsoft);
-        AssertSameJson(expected, Write(value, SystemTextJson));
+        AssertSameJson(expected, Write(value, ServerConventions));
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
         using (BlittableJsonReaderObject json = Newtonsoft.Serialization.DefaultConverter.ToBlittable(value, context))
         {
-            object readBack = SystemTextJson.Serialization.DefaultConverter.FromBlittable(type, json);
+            object readBack = ServerConventions.Serialization.DefaultConverter.FromBlittable(type, json);
             AssertSameJson(expected, Write(readBack, Newtonsoft));
         }
     }
@@ -81,7 +114,7 @@ public class ServerTypesSerializerParityTests(ITestOutputHelper output) : Serial
 
         using (var context = JsonOperationContext.ShortTermSingleUse())
         using (BlittableJsonReaderObject fromNewtonsoft = Newtonsoft.Serialization.DefaultConverter.ToBlittable(record, context))
-        using (BlittableJsonReaderObject fromSystemTextJson = SystemTextJson.Serialization.DefaultConverter.ToBlittable(record, context))
+        using (BlittableJsonReaderObject fromSystemTextJson = ServerConventions.Serialization.DefaultConverter.ToBlittable(record, context))
         {
             DatabaseRecord expected = JsonDeserializationCluster.DatabaseRecord(fromNewtonsoft);
             DatabaseRecord actual = JsonDeserializationCluster.DatabaseRecord(fromSystemTextJson);
@@ -100,7 +133,7 @@ public class ServerTypesSerializerParityTests(ITestOutputHelper output) : Serial
         using (BlittableJsonReaderObject json = ToStoredJson(value, context))
         {
             object expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable(type, json);
-            object actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable(type, json);
+            object actual = ServerConventions.Serialization.DefaultConverter.FromBlittable(type, json);
 
             AssertSameJson(Write(expected, Newtonsoft), Write(actual, Newtonsoft));
         }
