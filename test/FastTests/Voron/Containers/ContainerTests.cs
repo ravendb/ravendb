@@ -262,6 +262,73 @@ namespace FastTests.Voron.Containers
             }
         }
 
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FreeListSearchContinuesAfterThePageFoundEarlierInTheTransaction()
+        {
+            const int bigSize = 4000, smallSize = 1000;
+            ContainerId containerId;
+            long firstPage, secondPage;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = Container.Create(wtx.LowLevelTransaction);
+                firstPage = AllocateOnPage(wtx.LowLevelTransaction, containerId, bigSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 2);
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                secondPage = AllocateOnPage(wtx.LowLevelTransaction, containerId, bigSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 2);
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                long page = AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                Assert.Equal(firstPage, page);
+
+                while (page == firstPage)
+                    page = AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                Assert.Equal(secondPage, page);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void BigAllocationDoesNotHideFreeListPagesFromSmallAllocations()
+        {
+            const int bigSize = 4000, smallSize = 1000;
+            ContainerId containerId;
+            long pageWithSpace;
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                containerId = Container.Create(wtx.LowLevelTransaction);
+                pageWithSpace = AllocateOnPage(wtx.LowLevelTransaction, containerId, bigSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 2);
+                wtx.Commit();
+            }
+
+            using (var wtx = Env.WriteTransaction())
+            {
+                // pageWithSpace has no room for a big item, so the free list scan passes over it
+                long bigPage = AllocateOnPage(wtx.LowLevelTransaction, containerId, bigSize, pageLevelMetadata: 1);
+                Assert.NotEqual(pageWithSpace, bigPage);
+
+                long page = bigPage;
+                while (page == bigPage)
+                    page = AllocateOnPage(wtx.LowLevelTransaction, containerId, smallSize, pageLevelMetadata: 1);
+                Assert.Equal(pageWithSpace, page);
+            }
+        }
+
+        private static long AllocateOnPage(LowLevelTransaction llt, ContainerId containerId, int size, long pageLevelMetadata) =>
+            (long)Container.Allocate(llt, containerId, size, pageLevelMetadata, out _) / Constants.Storage.PageSize;
+
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1337)]
         [InlineData(42)]

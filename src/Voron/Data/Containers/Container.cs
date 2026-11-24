@@ -96,6 +96,7 @@ namespace Voron.Data.Containers
             public HashSet<long> Additions = new();
 
             public Dictionary<long, long> LastFreePageByPageLevelMetadata = new();
+            public Dictionary<long, long> FreeListScanPositionByPageLevelMetadata = new();
 
             public ContainerId ContainerId;
 
@@ -939,7 +940,7 @@ namespace Voron.Data.Containers
             bool isBigEntry = size >= (Constants.Storage.PageSize / 6);
             int tries = isBigEntry ? 4 : 128;
 
-            var it = new FreeListIterator(llt, txState, pageLevelMetadata);
+            var it = new FreeListIterator(llt, txState, pageLevelMetadata, rememberScanPosition: isBigEntry == false);
             for (int i =0; i < tries; i++)
             {
                 if (it.MoveNext(out var pageNum) == false)
@@ -986,12 +987,14 @@ namespace Voron.Data.Containers
             private Dictionary<long, long>.Enumerator _inMemEnum;
             private Lookup<Int64LookupKey>.ForwardIterator _persistentEnum;
             private bool _hasPersistentIt;
+            private readonly bool _rememberScanPosition;
 
-            public FreeListIterator(LowLevelTransaction llt, TransactionState txState, long pageLevelMetadata)
+            public FreeListIterator(LowLevelTransaction llt, TransactionState txState, long pageLevelMetadata, bool rememberScanPosition)
             {
                 _llt = llt;
                 _txState = txState;
                 _pageLevelMetadata = pageLevelMetadata;
+                _rememberScanPosition = rememberScanPosition;
                 _inMemEnum = _txState.FreeListAdditions.GetEnumerator();
                 _persistentEnum = default;
             }
@@ -1012,10 +1015,16 @@ namespace Voron.Data.Containers
                 {
                     _hasPersistentIt = true;
                     _persistentEnum = _txState.GetFreePages(_llt).Iterate();
-                    _persistentEnum.Reset();
+                    // the pages before the scan position were already scanned in this transaction
+                    if (_txState.FreeListScanPositionByPageLevelMetadata.TryGetValue(_pageLevelMetadata, out long scanPosition))
+                        _persistentEnum.Seek(new Int64LookupKey(scanPosition + 1));
+                    else
+                        _persistentEnum.Reset();
                 }
 
-                while (_persistentEnum.MoveNext(out Int64LookupKey key, out var pageLevelMetadata, out _))
+                pageNum = -1;
+                bool found = false;
+                while (found == false && _persistentEnum.MoveNext(out Int64LookupKey key, out var pageLevelMetadata, out _))
                 {
                     pageNum = key.Value;
                     if(_txState.Removals.Contains(pageNum)) // skip removals from the list
@@ -1025,12 +1034,15 @@ namespace Voron.Data.Containers
                     if (_txState.FreeListRemovals.Contains(pageNum)) // was removed from free list, probably for a good reason
                         continue;
                     
-                    if (_pageLevelMetadata == -1 || _pageLevelMetadata == pageLevelMetadata)
-                        return true;
+                    found = _pageLevelMetadata == -1 || _pageLevelMetadata == pageLevelMetadata;
                 }
 
-                pageNum = -1;
-                return false;
+                if (_rememberScanPosition && pageNum != -1)
+                    _txState.FreeListScanPositionByPageLevelMetadata[_pageLevelMetadata] = pageNum;
+
+                if (found == false)
+                    pageNum = -1;
+                return found;
             }
         }
 
