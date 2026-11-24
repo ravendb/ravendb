@@ -251,6 +251,9 @@ public sealed partial class ClusterStateMachine
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
+        // The leader runs this before the command is in the log, so it may read the topology: Apply() never checks it
+        AssertClusterSizeAndCores(serverStore.GetClusterTopology(context).AllNodes.Count, newLicenseLimits);
+
         var emptySubscriptionExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var databaseName in serverStore.Cluster.GetDatabaseNames(context))
@@ -1290,6 +1293,16 @@ public sealed partial class ClusterStateMachine
                 serverStore.Engine.StateMachine.AssertLicenseLimits(command, serverStore, databaseRecord, items, context);
             }
         }
+    }
+
+    private static void AssertClusterSizeAndCores(int numberOfNodes, LicenseStatus licenseStatus)
+    {
+        if (numberOfNodes > licenseStatus.MaxClusterSize)
+            throw new LicenseLimitException(LimitType.ClusterSize, $"Your license supports a cluster size of {licenseStatus.MaxClusterSize}, while the current cluster size is {numberOfNodes}.");
+
+        // Not the utilized cores: UpdateLicenseLimitsCommand rebalances them under the new license, but each node keeps at least one
+        if (numberOfNodes > licenseStatus.MaxCores)
+            throw new LicenseLimitException(LimitType.Cores, $"Your license is limited to {licenseStatus.MaxCores} cores, while the current cluster has {numberOfNodes} nodes (each node requires at least one core).");
     }
 
     private void AssertToggleTaskStateLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand)
