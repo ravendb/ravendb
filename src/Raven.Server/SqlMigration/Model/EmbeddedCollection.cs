@@ -8,9 +8,9 @@ namespace Raven.Server.SqlMigration.Model
         public RelationType Type { get; set; }
         public EmbeddedDocumentSqlKeysStorage SqlKeysStorage { get; set; }
         
-        public EmbeddedCollection(string sourceTableSchema, string sourceTableName, RelationType type, List<string> columns, string name, EmbeddedDocumentSqlKeysStorage sqlKeysStorage = EmbeddedDocumentSqlKeysStorage.None) : base(sourceTableSchema, sourceTableName, name)
+        public EmbeddedCollection(string sourceTableSchema, string sourceTableName, RelationType type, List<string> joinColumns, string name, EmbeddedDocumentSqlKeysStorage sqlKeysStorage = EmbeddedDocumentSqlKeysStorage.None) : base(sourceTableSchema, sourceTableName, name)
         {
-            JoinColumns = columns;
+            JoinColumns = joinColumns;
             Type = type;
             SqlKeysStorage = sqlKeysStorage;
         }
