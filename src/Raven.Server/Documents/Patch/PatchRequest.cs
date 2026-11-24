@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Serialization;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
@@ -46,6 +47,11 @@ namespace Raven.Server.Documents.Patch
             Script = script;
             _functions = functions;
             Type = type;
+        }
+
+        [JsonConstructor]
+        private PatchRequest(string script, PatchRequestType type) : this(script, type, functions: null)
+        {
         }
 
         private bool Equals(PatchRequest other)
