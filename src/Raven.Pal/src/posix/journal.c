@@ -54,6 +54,7 @@ rvn_open_journal_for_writes(const char *file_name, int32_t transaction_mode, int
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+    jfh->fd = -1;
 
     jfh->delete_on_close = transaction_mode == JOURNAL_MODE_PURE_MEMORY;
 
@@ -429,6 +430,7 @@ rvn_sync_directories_sync(void* handle, char** folders, int32_t count, int32_t *
         if(fsync(fd) == -1)
         {
             *detailed_error_code = errno;
+            close(fd);
             return FAIL_SYNC_FILE;
         }
         if(close(fd) == -1)

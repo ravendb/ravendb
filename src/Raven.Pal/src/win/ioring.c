@@ -340,7 +340,7 @@ int32_t rvn_write_io_ring(
         void *ptr = realloc(handle_ptr->global_state->arena, size);
         if (!ptr)
         {
-            *detailed_error_code = errno;
+            *detailed_error_code = ERROR_NOT_ENOUGH_MEMORY; // a Win32 code, rvn_get_error_meaning reads it as one
             rc = FAIL_NOMEM;
             goto exit;
         }

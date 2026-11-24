@@ -99,7 +99,7 @@ _commit_anonymous_file(int fd, int64_t size, int32_t *detailed_error_code)
 PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {
-    return 1;
+    return SYNC_DIR_ALLOWED;
 }
 
 PRIVATE int32_t
@@ -119,10 +119,10 @@ _rvn_fallocate(int32_t fd, int64_t offset, int64_t size)
 PRIVATE char *
 _get_strerror_r(int32_t error, char *tmp_buff, int32_t buf_size)
 {
-    int32_t non_gnu_compliant_rc = strerror_r(error, tmp_buff, buf_size);
-    if (non_gnu_compliant_rc != 0)
-        return tmp_buff;
-    return NULL;
+    /* XSI strerror_r: 0 on success */
+    if (strerror_r(error, tmp_buff, buf_size) != 0)
+        return NULL;
+    return tmp_buff;
 }
 
 EXPORT int32_t

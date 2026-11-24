@@ -138,22 +138,22 @@ rvn_test_storage_durability(
     int rc = SUCCESS;
     if (fd == -1)
     {
+        *detailed_error_code = errno;
         rc = FAIL_OPEN_FILE;
         goto error_cleanup;
     }
 
+    // posix_fallocate returns its error without setting errno, so only detailed_error_code holds the reason
     rc = _allocate_file_space(fd, 0, 64 * 1024, detailed_error_code);
     if (rc != SUCCESS)
     {
         rc = FAIL_ALLOC_FILE;
-        if (errno == EINVAL)
+        if (*detailed_error_code == EINVAL)
             rc = FAIL_TEST_DURABILITY;
         goto error_cleanup;
     }
 
 error_cleanup:
-    if (rc != SUCCESS)
-        *detailed_error_code = errno;
     if (fd != -1)
     {
         close(fd);

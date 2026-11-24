@@ -100,6 +100,7 @@ int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t 
         goto Exit;
     }
 
+    rc = FAIL_LOCK_MEMORY; // unless one of the attempts succeeds
     for (int i = 0; i < 10; ++i)
     {
         if (VirtualLock(mem, (SIZE_T)size) ||
@@ -368,7 +369,7 @@ int32_t rvn_map_memory(void *handle,
     {
         // intentionally returning the error code & rc from the lock_memory call
         int mem_lock_rc = rvn_lock_memory(handle_ptr, *mem, size, detailed_error_code);
-        if (rc != SUCCESS)
+        if (mem_lock_rc != SUCCESS)
         {
             UnmapViewOfFile(*mem);
             *mem = NULL;
@@ -418,6 +419,7 @@ void delete_global_state(struct handle_global_state *global_state)
     {
         free(global_state->file_path);
     }
+    free(global_state->arena);
     _free_dirty_bitmaps(global_state->dirty_bitmap);
     DeleteCriticalSection(&global_state->lock);
     free(global_state);
@@ -896,7 +898,7 @@ rvn_close_pager(
             }
         }
     }
-    else // OPEN_FILE_DO_NOT_MAP
+    else if (handle_ptr->file_mapping_handle != INVALID_HANDLE_VALUE) // OPEN_FILE_DO_NOT_MAP; a zero length read-only file has no mapping
     {
         if (!CloseHandle(handle_ptr->file_mapping_handle))
         {
@@ -975,15 +977,17 @@ int32_t rvn_write_file_io(
     {
         int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
         int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        char *ptr = buffers[i].ptr;
         while (size > 0)
         {
             ov.Offset = (DWORD)offset;
             ov.OffsetHigh = (DWORD)(offset >> 32);
 
             int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
-            if (WriteFile(handle_ptr->file_handle, buffers[i].ptr, size_to_write, NULL, &ov))
+            if (WriteFile(handle_ptr->file_handle, ptr, size_to_write, NULL, &ov))
             {
                 offset += size_to_write;
+                ptr += size_to_write;
                 size -= size_to_write;
                 continue;
             }
