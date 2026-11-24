@@ -63,8 +63,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         private static readonly ConcurrentDictionary<Type, DictionaryComparerKeeper> _comparerKeepers = new();
 
-        private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> _caseSensitiveOptions = new();
-
         [ThreadStatic]
         private static (JsonConverter Converter, JsonElement Json, PresentMembers Present) _capturedMember;
 
@@ -141,10 +139,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertNoNewtonsoftNamingStrategy(type, container);
             AssertNoNewtonsoftItemConverter(type, container);
 
-            if (options.PropertyNameCaseInsensitive && HasPublicMembersWithCaseOnlyDifferentNames(type))
-                return CreateCaseSensitiveRedirect(type, options);
-
-            return RedirectCaseOnlyNameCollisions(CreateTypeInfo(type, options, sourceGenerationContext));
+            return CreateTypeInfo(type, options, sourceGenerationContext);
         }
 
         private JsonTypeInfo CreateTypeInfo(Type type, JsonSerializerOptions options, IJsonTypeInfoResolver sourceGenerationContext)
@@ -155,100 +150,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             ModifyTypeInfo(typeInfo);
             return typeInfo;
-        }
-
-        internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type)
-        {
-            JsonTypeInfo typeInfo = options.GetTypeInfo(type);
-            return typeInfo.Converter is IObjectTypeInfoRedirect redirect ? redirect.ObjectTypeInfo : typeInfo;
-        }
-
-        private static JsonTypeInfo CreateRedirect(Type converterDefinition, Type type, JsonSerializerOptions options, params object[] arguments)
-        {
-            var redirect = (IObjectTypeInfoRedirect)Activator.CreateInstance(converterDefinition.MakeGenericType(type), arguments);
-            return redirect.CreateTypeInfo(options);
-        }
-
-        private interface IObjectTypeInfoRedirect
-        {
-            JsonTypeInfo ObjectTypeInfo { get; }
-
-            JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options);
-        }
-
-        private abstract class RedirectConverter<T> : JsonConverter<T>, IObjectTypeInfoRedirect
-        {
-            public abstract JsonTypeInfo ObjectTypeInfo { get; }
-
-            public JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options) => JsonMetadataServices.CreateValueInfo<T>(options, this);
-        }
-
-        private static JsonTypeInfo RedirectCaseOnlyNameCollisions(JsonTypeInfo typeInfo)
-        {
-            if (typeInfo.Options.PropertyNameCaseInsensitive == false || typeInfo.Kind != JsonTypeInfoKind.Object || HasCaseOnlyNameCollision(typeInfo) == false)
-                return typeInfo;
-
-            return CreateCaseSensitiveRedirect(typeInfo.Type, typeInfo.Options);
-        }
-
-        private static JsonTypeInfo CreateCaseSensitiveRedirect(Type type, JsonSerializerOptions options)
-        {
-            JsonSerializerOptions caseSensitiveOptions = _caseSensitiveOptions.GetValue(options, static o => new JsonSerializerOptions(o) { PropertyNameCaseInsensitive = false });
-            return CreateRedirect(typeof(CaseSensitiveConverter<>), type, options, caseSensitiveOptions);
-        }
-
-        private static bool HasCaseOnlyNameCollision(JsonTypeInfo typeInfo)
-        {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < typeInfo.Properties.Count; i++)
-            {
-                JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.IsExtensionData == false && names.Add(property.Name) == false)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool HasPublicMembersWithCaseOnlyDifferentNames(Type type)
-        {
-            Dictionary<string, string> names = null;
-            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (property.GetIndexParameters().Length == 0 && AddsCaseOnlyDifferentName(ref names, property))
-                    return true;
-            }
-
-            foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
-            {
-                if (AddsCaseOnlyDifferentName(ref names, field))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool AddsCaseOnlyDifferentName(ref Dictionary<string, string> names, MemberInfo member)
-        {
-            if (IsIgnoredBySystemTextJson(member))
-                return false;
-
-            string name = member.GetCustomAttribute<JsonPropertyNameAttribute>(inherit: true)?.Name ?? member.Name;
-            names ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (names.TryGetValue(name, out string existing))
-                return string.Equals(existing, name, StringComparison.Ordinal) == false;
-
-            names[name] = name;
-            return false;
-        }
-
-        private sealed class CaseSensitiveConverter<T>(JsonSerializerOptions caseSensitiveOptions) : RedirectConverter<T>
-        {
-            public override JsonTypeInfo ObjectTypeInfo => GetObjectTypeInfo(caseSensitiveOptions, typeof(T));
-
-            public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => JsonSerializer.Deserialize<T>(ref reader, caseSensitiveOptions);
-
-            public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, caseSensitiveOptions);
         }
 
         private void AssertMembersCanBeResolved(Type type)
@@ -1179,7 +1080,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         internal static bool ReadsMetadataIdentity(JsonSerializerOptions options, Type type)
         {
-            JsonTypeInfo typeInfo = GetObjectTypeInfo(options, type);
+            JsonTypeInfo typeInfo = options.GetTypeInfo(type);
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return false;
 
@@ -1485,7 +1386,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             {
                 PresentMembers present = ReadsIntoExisting
                     ? ReadPropertyNames(reader, options) is { } names ? new PresentMembers(names) : null
-                    : ReadPresentMembers(reader, _typeInfo ??= GetObjectTypeInfo(options, typeof(T)), options);
+                    : ReadPresentMembers(reader, _typeInfo ??= options.GetTypeInfo(typeof(T)), options);
                 if (ReadsIntoExisting && (reader.TokenType == JsonTokenType.StartArray || present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false))
                 {
                     using (JsonDocument document = JsonDocument.ParseValue(ref reader))
@@ -1579,7 +1480,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (contractType == null)
                 return;
 
-            JsonTypeInfo typeInfo = GetObjectTypeInfo(options, contractType);
+            JsonTypeInfo typeInfo = options.GetTypeInfo(contractType);
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return;
 

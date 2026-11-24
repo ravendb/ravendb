@@ -15,12 +15,10 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanQueryOnCaseSensitiveFields(Options options, bool useNewtonsoftJson)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveFields(Options options)
         {
-            if (useNewtonsoftJson)
-                options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             using (var store = GetDocumentStore(options))
             {
@@ -49,12 +47,10 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void ShouldExtendMappingDueToCaseSensitiveFields(Options options, bool useNewtonsoftJson)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldExtendMappingDueToCaseSensitiveFields(Options options)
         {
-            if (useNewtonsoftJson)
-                options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             options.ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
 
@@ -153,12 +149,10 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanQueryOnCaseSensitiveFields_UsingSearch(Options options, bool useNewtonsoftJson)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveFields_UsingSearch(Options options)
         {
-            if (useNewtonsoftJson)
-                options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             using (var store = GetDocumentStore(options))
             {

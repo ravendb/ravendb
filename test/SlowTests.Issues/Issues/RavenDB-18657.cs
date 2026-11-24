@@ -15,12 +15,10 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(false, DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(true, DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
-        public async Task Can_Get_Fields_With_Different_Casing(Options options, bool useNewtonsoftJson)
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.All)]
+        public async Task Can_Get_Fields_With_Different_Casing(Options options)
         {
-            if (useNewtonsoftJson)
-                options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             using var store = GetDocumentStore(options);
 

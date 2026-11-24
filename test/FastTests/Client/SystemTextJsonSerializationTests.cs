@@ -2918,12 +2918,9 @@ namespace FastTests.Client
             public string Tag { get; }
         }
 
-        private record CaseOnlyRecord(string Name, string name, int Count);
-
         [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(typeof(UnboundConstructorParameter), "{\"Name\":\"x\"}")]
         [InlineData(typeof(WiderConstructorParameters), "{\"Items\":[1,2],\"Tag\":\"t\"}")]
-        [InlineData(typeof(CaseOnlyRecord), "{\"name\":\"lower\",\"Name\":\"upper\",\"Count\":3}")]
         public void ConstructorWhoseParametersDoNotEachBindAMemberIsRejected(Type type, string text)
         {
             var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
