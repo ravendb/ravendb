@@ -99,12 +99,10 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-        public void CanQueryOnCaseSensitiveGroupByFields(Options options, bool useNewtonsoftJson)
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanQueryOnCaseSensitiveGroupByFields(Options options)
         {
-            if (useNewtonsoftJson)
-                options.ModifyDocumentStore = Options.UseNewtonsoftJson;
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
 
             using (var store = GetDocumentStore(options))
             {
