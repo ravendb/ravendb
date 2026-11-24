@@ -396,7 +396,7 @@ public class ServerBackupRunner : IDisposable
             if (backupState.Stale)
                 backupState.NextBackup = null;
             else if (reschedule)
-                backupState.NextBackup = backupState.GetNextBackupDetails(backupState.BackupStatus, out _);
+                backupState.NextBackup = backupState.GetNextBackupIfActive(backupState.BackupStatus, out _);
         }
         catch (Exception e)
         {
@@ -604,7 +604,7 @@ public class ServerBackupRunner : IDisposable
             if (runningTask == null || runningTask.Id != operationId)
                 continue;
 
-            var nextBackup = databaseBackupState.Value.GetNextBackupDetails(databaseBackupState.Value.BackupStatus, skipErrorLog: true);
+            var nextBackup = databaseBackupState.Value.CalculateNextBackup(databaseBackupState.Value.BackupStatus, raiseAlerts: false);
 
             var originalBackupTime = nextBackup != null && delayUntil > nextBackup.DateTime
                 ? nextBackup.DateTime
@@ -634,7 +634,7 @@ public class ServerBackupRunner : IDisposable
             }
             databaseBackupState.Value.BackupStatus.DelayUntil = delayUntil;
             databaseBackupState.Value.BackupStatus.OriginalBackupTime = originalBackupTime;
-            databaseBackupState.Value.NextBackup = databaseBackupState.Value.GetNextBackupDetails(databaseBackupState.Value.BackupStatus, out string _);
+            databaseBackupState.Value.NextBackup = databaseBackupState.Value.GetNextBackupIfActive(databaseBackupState.Value.BackupStatus, out string _);
 
             if (TryGetTestingStuff(databaseName, out var testingStuffInternal))
             {
@@ -797,7 +797,7 @@ public class ServerBackupRunner : IDisposable
             var backupState = new DatabaseBackupState(databaseName, newConfiguration, ShardHelper.IsShardName(databaseName), _serverStore);
 
             if (taskState == TaskStatus.ActiveByCurrentNode)
-                backupState.NextBackup = backupState.GetNextBackupDetails(backupState.GetMostUpdatedLocalBackupStatus(backupState.BackupStatus), skipErrorLog: false);
+                backupState.NextBackup = backupState.CalculateNextBackup(backupState.GetMostUpdatedLocalBackupStatus(backupState.BackupStatus), raiseAlerts: true);
             else if (taskState is TaskStatus.Disabled or TaskStatus.ActiveByOtherNode)
                 backupState.Stale.Raise();
 
@@ -867,7 +867,7 @@ public class ServerBackupRunner : IDisposable
                 try
                 {
                     var localBackupStatus = existingBackupState.GetMostUpdatedLocalBackupStatus(inMemoryBackupStatus: null);
-                    existingBackupState.NextBackup = existingBackupState.GetNextBackupDetails(localBackupStatus, skipErrorLog: false);
+                    existingBackupState.NextBackup = existingBackupState.CalculateNextBackup(localBackupStatus, raiseAlerts: true);
                 }
                 catch
                 {
@@ -967,7 +967,7 @@ public class ServerBackupRunner : IDisposable
         tag = null;
 
         var state = GetDatabaseStateByTaskId(databaseName, taskId);
-        return state == null ? null : state.GetNextBackupDetails(backupStatus, out tag);
+        return state == null ? null : state.GetNextBackupIfActive(backupStatus, out tag);
     }
 
     public enum TaskStatus
@@ -1633,7 +1633,7 @@ public class ServerBackupRunner : IDisposable
     private void OnBackupStatusSaved(DatabaseBackupState backupState, PeriodicBackupStatus backupStatus)
     {
         backupState.BackupStatus = backupStatus;
-        backupState.NextBackup = backupState.Stale ? null : backupState.GetNextBackupDetails(backupStatus, out _);
+        backupState.NextBackup = backupState.Stale ? null : backupState.GetNextBackupIfActive(backupStatus, out _);
     }
 
     private bool CanStartAfterDatabaseLoad(DatabaseBackupState backupState, out BackupDecisionCategory category, out string detail, out string reason)

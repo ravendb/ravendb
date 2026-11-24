@@ -21,7 +21,7 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
         if (backupState.NextBackup == null)
         {
             var backupStatus = backupState.GetMostUpdatedLocalBackupStatus(backupState.BackupStatus);
-            backupState.NextBackup = backupState.GetNextBackupDetails(backupStatus, skipErrorLog: true);
+            backupState.NextBackup = backupState.CalculateNextBackup(backupStatus, raiseAlerts: false);
         }
 
         if (backupState.NextBackup == null)

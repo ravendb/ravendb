@@ -74,10 +74,10 @@ namespace Raven.Server.ServerWide.Backups
             _serverStore = serverStore;
         }
 
-        public NextBackup GetNextBackupDetails(PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
+        public NextBackup GetNextBackupIfActive(PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
         {
             var taskStatus = _serverStore.ServerBackupRunner.GetTaskStatus(Configuration, DatabaseName, out responsibleNodeTag);
-            return taskStatus == ServerBackupRunner.TaskStatus.Disabled ? null : GetNextBackupDetails(backupStatus, skipErrorLog: true);
+            return taskStatus == ServerBackupRunner.TaskStatus.Disabled ? null : CalculateNextBackup(backupStatus, raiseAlerts: false);
         }
 
         /// <summary>Posts a warning notification when the backup schedule cannot be computed from the configuration.</summary>
@@ -117,17 +117,17 @@ namespace Raven.Server.ServerWide.Backups
                 details: new ExceptionDetails(parameters.Exception)));
         }
 
-        // skipErrorLog: the runner recalculates the next backup on every pass (BackupTimePolicy) and after each backup,
+        // raiseAlerts: the runner recalculates the next backup on every pass (BackupTimePolicy) and after each backup,
         // so the alerts are raised only when the configuration changes, otherwise the same alert is stored again every pass.
-        internal NextBackup GetNextBackupDetails(PeriodicBackupStatus backupStatus, bool skipErrorLog = false)
+        internal NextBackup CalculateNextBackup(PeriodicBackupStatus backupStatus, bool raiseAlerts)
         {
             return BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
             {
-                OnParsingError = skipErrorLog ? null : OnParsingError,
+                OnParsingError = raiseAlerts ? OnParsingError : null,
                 Configuration = Configuration,
                 BackupStatus = backupStatus,
                 NodeTag = _serverStore.NodeTag,
-                OnMissingNextBackupInfo = skipErrorLog ? null : OnMissingNextBackupInfo
+                OnMissingNextBackupInfo = raiseAlerts ? OnMissingNextBackupInfo : null
             });
         }
 
