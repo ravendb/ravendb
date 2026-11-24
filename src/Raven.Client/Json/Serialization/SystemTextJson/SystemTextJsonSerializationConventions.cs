@@ -174,7 +174,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             return _jsonProperties.GetOrAdd(type, t =>
             {
-                JsonTypeInfo typeInfo = Options.GetTypeInfo(t);
+                JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t);
                 StringComparer comparer = typeInfo.Options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
                 var properties = new Dictionary<string, JsonPropertyInfo>(comparer);
 
@@ -197,7 +197,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             return _missingPropertiesShapes.TryGetValue(type, out MissingPropertiesShape shape)
                 ? shape
-                : _missingPropertiesShapes.GetOrAdd(type, t => new MissingPropertiesShape(Options.GetTypeInfo(t), GetJsonProperties(t)));
+                : _missingPropertiesShapes.GetOrAdd(type, t => new MissingPropertiesShape(RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t), GetJsonProperties(t)));
         }
 
         private JsonSerializerOptions CreateJsonSerializerOptions(TypeNameHandling typeNameHandling)

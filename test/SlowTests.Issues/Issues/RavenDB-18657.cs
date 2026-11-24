@@ -56,10 +56,12 @@ namespace SlowTests.Issues
         }
 
 
-        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
-        public async Task DocumentQuery_RQL_Expression_Should_Not_Include_Private_Members()
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DocumentQuery_RQL_Expression_Should_Not_Include_Private_Members(bool useNewtonsoftJson)
         {
-            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
+            using var store = GetDocumentStore(useNewtonsoftJson ? Options.ForNewtonsoftJson() : null);
 
             using (var session = store.OpenSession())
             {

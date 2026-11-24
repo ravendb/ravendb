@@ -370,7 +370,7 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
 
     private bool IsObject(Type type)
     {
-        return Conventions.Options.GetTypeInfo(type).Kind == JsonTypeInfoKind.Object;
+        return RavenJsonTypeInfoResolver.GetObjectTypeInfo(Conventions.Options, type).Kind == JsonTypeInfoKind.Object;
     }
 
     private bool RegisterMissingProperties(object o, string id, object value)
