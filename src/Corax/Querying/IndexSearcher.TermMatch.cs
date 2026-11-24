@@ -33,17 +33,14 @@ public partial class IndexSearcher
         if (typeof(TNumeric) == typeof(long))
         {
             numericalField = field.GetNumericFieldMetadata<long>(_transaction.Allocator);
-            _fieldsTree
-                ?.LookupFor<Int64LookupKey>(numericalField.FieldName)
-                ?.TryGetValue((long)(object)term, out containerId);
-
+            if (_fieldsTree != null && _fieldsTree.TryGetLookupFor<Int64LookupKey>(numericalField.FieldName, out var longLookup))
+                longLookup.TryGetValue((long)(object)term, out containerId);
         }
         else if (typeof(TNumeric) == typeof(double))
         {
             numericalField = field.GetNumericFieldMetadata<double>(_transaction.Allocator);
-             _fieldsTree
-                 ?.LookupFor<DoubleLookupKey>(numericalField.FieldName)
-                ?.TryGetValue((double)(object)term, out containerId);
+            if (_fieldsTree != null && _fieldsTree.TryGetLookupFor<DoubleLookupKey>(numericalField.FieldName, out var doubleLookup))
+                doubleLookup.TryGetValue((double)(object)term, out containerId);
         }
 
         return containerId;

@@ -18,8 +18,7 @@ public partial class IndexSearcher
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public IAggregationProvider TextualAggregation(in FieldMetadata field, bool forward = true, bool streamingEnabled = false, in CancellationToken token = default)
     {
-        var compactTree = _fieldsTree?.CompactTreeFor(field.FieldName);
-        if (compactTree is null)
+        if (_fieldsTree == null || _fieldsTree.TryGetCompactTreeFor(field.FieldName, out var compactTree) == false)
             return new EmptyAggregationProvider();
         
         return forward
@@ -156,7 +155,7 @@ public partial class IndexSearcher
         where TLookupKey : struct, ILookupKey
     {
         field = field.GetNumericFieldMetadata<TTermType>(Allocator);
-        var set = _fieldsTree?.LookupFor<TLookupKey>(field.FieldName);
+        var set = _fieldsTree != null && _fieldsTree.TryGetLookupFor<TLookupKey>(field.FieldName, out var lookup) ? lookup : null;
         if (set is null || set.NumberOfEntries == 0)
             return new EmptyAggregationProvider();
 
