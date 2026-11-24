@@ -181,7 +181,7 @@ public class ServerBackupRunner : IDisposable
                         if (AreAllDatabasePoliciesCompliant(backupState, now, out var failedPolicy))
                         {
                             if (TryTakeConcurrentBackupsPlace(backupState, now, afterRefusal: firstRefusedState != null))
-                                RunScheduledBackup(backupState);
+                                RunScheduledBackup(backupState, now);
                             else
                                 firstRefusedState ??= backupState;
                         }
@@ -230,7 +230,7 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    private void RunScheduledBackup(DatabaseBackupState backupState)
+    private void RunScheduledBackup(DatabaseBackupState backupState, DateTime now)
     {
         var nextBackup = backupState.NextBackup;
         if (nextBackup == null || backupState.Running.Raise() == false)
@@ -240,6 +240,8 @@ public class ServerBackupRunner : IDisposable
         }
 
         backupState.ResetCancelReason();
+
+        var startTimeInUtc = now - nextBackup.DateTime > _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan ? now : nextBackup.DateTime;
 
         _ = Task.Run(async () =>
         {
@@ -258,7 +260,7 @@ public class ServerBackupRunner : IDisposable
             }
             catch (Exception e)
             {
-                OnDatabaseLoadFailure(backupState, nextBackup, e);
+                OnDatabaseLoadFailure(backupState, nextBackup.IsFull, startTimeInUtc, e);
                 return;
             }
 
@@ -282,12 +284,12 @@ public class ServerBackupRunner : IDisposable
             }
             catch (Exception e)
             {
-                OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, e);
+                OnBackupStartFailure(backupState, nextBackup.IsFull, startTimeInUtc, e);
                 FinishRunning(backupState, BackupDecisionCategory.Failed, detail: null, e.AllInnerMessages(), reschedule: true);
                 return;
             }
 
-            StartBackup(database, backupState, nextBackup.IsFull, nextBackup.DateTime, operationId, isBackupNow: false);
+            StartBackup(database, backupState, nextBackup.IsFull, startTimeInUtc, operationId, isBackupNow: false);
         });
     }
 
@@ -1394,7 +1396,7 @@ public class ServerBackupRunner : IDisposable
             _backupQueue.Enqueue(backupState);
     }
 
-    private void OnDatabaseLoadFailure(DatabaseBackupState backupState, NextBackup nextBackup, Exception exception)
+    private void OnDatabaseLoadFailure(DatabaseBackupState backupState, bool isFullBackup, DateTime startTimeInUtc, Exception exception)
     {
         switch (exception.ExtractSingleInnerException())
         {
@@ -1426,7 +1428,7 @@ public class ServerBackupRunner : IDisposable
                 break;
         }
 
-        OnBackupStartFailure(backupState, nextBackup.IsFull, nextBackup.DateTime, exception);
+        OnBackupStartFailure(backupState, isFullBackup, startTimeInUtc, exception);
         FinishRunning(backupState, BackupDecisionCategory.Failed, detail: null, exception.AllInnerMessages(), reschedule: true);
     }
 
