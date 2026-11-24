@@ -42,8 +42,11 @@ namespace Sparrow.Server.Json.Sync
                 // If the framework does indeed improves the implementation to work natively, we will
                 // miss it because of it. 
                 // https://issues.hibernatingrhinos.com/issue/RavenDB-20321
-                Encodings.Utf8.GetBytes(jsonString, buffer);
-                using (var ms = new MemoryStream(buffer))
+                int length = Encodings.Utf8.GetBytes(jsonString, buffer);
+
+                // the rented array is usually larger than requested and its tail holds whatever the previous user
+                // of the pool left there, so expose only the bytes we wrote (RavenDB-27502)
+                using (var ms = new MemoryStream(buffer, 0, length, writable: false))
                 {
                     return ReadForMemory(syncContext, ms, documentId);
                 }
