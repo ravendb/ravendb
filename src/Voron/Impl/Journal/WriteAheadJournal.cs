@@ -1015,6 +1015,7 @@ namespace Voron.Impl.Journal
                 }
             }
             private long _totalWrittenButUnsyncedBytes;
+            private HashSet<long> _unsyncedPages = []; // data file pages flushed since the last sync started, under _flushingLock
             private bool _ignoreLockAlreadyTaken;
             private Func<LowLevelTransaction, bool> _updateJournalStateAfterFlush;
             private bool _updateJournalStateApplied;// only ever touched under the write tx lock
@@ -1820,6 +1821,13 @@ namespace Voron.Impl.Journal
 
                     _lastFlushed.DoneFlag.Raise();
 
+                    // a set that a heavy cycle grew is dropped, not cleared: hundreds of idle indexes must not keep megabytes each
+                    const int MaxRetainedUnsyncedPages = 8 * 1024;
+                    if (parent._unsyncedPages.Capacity > MaxRetainedUnsyncedPages)
+                        parent._unsyncedPages = [];
+                    else
+                        parent._unsyncedPages.Clear();
+
                     parent._waj._env.Options.SetLastReusedJournalCountOnSync(_lastFlushed.JournalsToDelete.Count);
 
                     return true;
@@ -1946,9 +1954,29 @@ namespace Voron.Impl.Journal
                 }
             }
 
+            // We track the pages individually: flushes rewrite the same pages over and over (an index does it on every batch), but
+            // a sync writes each page once. Past the mandatory threshold the sync runs anyway, so we stop tracking and count every page.
+            private long MarkUnsyncedPages(ReadOnlySpan<Pal.page_to_write> pages)
+            {
+                long maxTrackedPages = _waj._env.Options.MaxUnsyncedBytesBeforeMandatorySync / Constants.Storage.PageSize;
+
+                long unsyncedPages = 0;
+                foreach (ref readonly var page in pages)
+                {
+                    for (long pageNumber = page.page_num; pageNumber < page.page_num + page.count_of_pages; pageNumber++)
+                    {
+                        if (_unsyncedPages.Count > maxTrackedPages || _unsyncedPages.Add(pageNumber))
+                            unsyncedPages++;
+                    }
+                }
+
+                return unsyncedPages * Constants.Storage.PageSize;
+            }
+
             private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges)
             {
                 long written = 0;
+                long unsynced;
                 var sp = Stopwatch.StartNew();
                 var options = _waj._env.Options;
                 var dataPager = _waj._env.DataPager;
@@ -1978,6 +2006,8 @@ namespace Voron.Impl.Journal
                             }
                         }
 
+                        unsynced = MarkUnsyncedPages(pages);
+
                         TrickleWriteback(dataPager, dataPagerState);
                     }
                     finally
@@ -1994,7 +2024,7 @@ namespace Voron.Impl.Journal
                 else if (_waj._logger.IsWarnEnabled && sp.Elapsed > options.LongRunningFlushingWarning)
                     _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {pagesFlushed:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
 
-                Interlocked.Add(ref _totalWrittenButUnsyncedBytes, written);
+                Interlocked.Add(ref _totalWrittenButUnsyncedBytes, unsynced);
 
                 return dataPagerState;
             }
