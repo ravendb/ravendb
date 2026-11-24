@@ -338,8 +338,12 @@ namespace Voron.Impl
         {
             _multiValueTrees ??= new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
 
+            var keyOwnedByTransaction = key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable);
+
             mvTree.IsMultiValueTree = true;
-            _multiValueTrees.Add(Tuple.Create(tree, key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable)), mvTree);
+            mvTree.SetNameOwnedByTransaction(keyOwnedByTransaction);
+
+            _multiValueTrees.Add(Tuple.Create(tree, keyOwnedByTransaction), mvTree);
         }
 
         internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)

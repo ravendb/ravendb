@@ -1694,6 +1694,12 @@ namespace Voron.Data.BTrees
             State.Modify();
         }
 
+        // Not Rename: MultiRead registers a multi-tree in read transactions too, where State.Modify() throws.
+        internal void SetNameOwnedByTransaction(Slice name)
+        {
+            Name = name;
+        }
+
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
         {
             Debug.Assert(newPageAllocator != null);
