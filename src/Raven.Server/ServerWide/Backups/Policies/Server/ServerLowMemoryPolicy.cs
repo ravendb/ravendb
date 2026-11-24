@@ -13,7 +13,7 @@ public class ServerLowMemoryPolicy : ServerHealthBackupPolicy
 
     protected override bool IsTriggered(ServerStore serverStore)
     {
-        return LowMemoryNotification.Instance.LowMemoryState;
+        return LowMemoryNotification.Instance.LowMemoryState || serverStore.ForTestingPurposes?.SimulateLowMemory == true;
     }
 
     protected override TimeSpan GetHoldDuration(ServerStore serverStore)

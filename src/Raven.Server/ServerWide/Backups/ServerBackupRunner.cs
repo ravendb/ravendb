@@ -1274,6 +1274,8 @@ public class ServerBackupRunner : IDisposable
 
     private void UpdateBackupTracking(string databaseName)
     {
+        _forTestingPurposes?.BeforeUpdatingBackupTracking?.Invoke(databaseName);
+
         var name = ShardHelper.ToDatabaseName(databaseName);
         var trackedDatabases = GetTrackedDatabasesOf(name);
 
@@ -1879,6 +1881,8 @@ public class ServerBackupRunner : IDisposable
         internal Action BeforeReadingDecisionLogs;
 
         internal Action BeforeRunnerPass;
+
+        internal Action<string> BeforeUpdatingBackupTracking;
 
         internal int CountInQueue(DatabaseBackupState backupState) => _runner._backupQueue.Count(x => ReferenceEquals(x, backupState));
 

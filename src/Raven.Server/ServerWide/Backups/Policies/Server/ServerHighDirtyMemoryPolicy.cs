@@ -13,7 +13,7 @@ public class ServerHighDirtyMemoryPolicy : ServerHealthBackupPolicy
 
     protected override bool IsTriggered(ServerStore serverStore)
     {
-        return LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty;
+        return LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty || serverStore.ForTestingPurposes?.SimulateHighDirtyMemory == true;
     }
 
     protected override TimeSpan GetHoldDuration(ServerStore serverStore)

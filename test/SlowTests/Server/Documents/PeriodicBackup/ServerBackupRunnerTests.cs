@@ -16,14 +16,18 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Backups.Policies.Database;
+using Raven.Server.ServerWide.Backups.Policies.Server;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -655,6 +659,367 @@ public class ServerBackupRunnerTests : ClusterTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task IdleDatabaseChangedWhileUnloadingMustNotSkipItsNextIncrementalBackup()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, CustomSettings = IdleSettings() });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        await StoreDocument(store);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 *", incrementalBackupFrequency: "* * * * *");
+        var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+
+        var changed = 0;
+        server.ServerStore.ForTestingPurposesOnly().BeforeUnloadingIdleDatabase = database =>
+        {
+            if (database.Name != store.Database || Interlocked.Exchange(ref changed, 1) == 1)
+                return;
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User { Name = "Changed while unloading" }, "users/changed");
+                session.SaveChanges();
+            }
+        };
+
+        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+
+        Assert.True(WaitForValue(() => Volatile.Read(ref changed) == 1 && server.ServerStore.IdleDatabases.ContainsKey(store.Database), true, timeout: 90_000, interval: 250),
+            "precondition: the database should be changed while it unloads, then unloaded");
+        var unloadedUtc = DateTime.UtcNow;
+
+        Assert.True(WaitForValue(() => Decisions(server, store.Database, taskId).Any(d => d.Category == BackupDecisionCategory.Completed && d.LastTime > unloadedUtc), true,
+                timeout: 150_000, interval: 1000),
+            $"The incremental backup after the change wasn't made.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+        var skipped = Decisions(server, store.Database, taskId).Where(d => d.Detail == "NoChanges" && d.LastTime > unloadedUtc).ToList();
+        Assert.True(skipped.Count == 0, $"The incremental backup after the change was skipped.{Environment.NewLine}{Dump(skipped)}");
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task RunnerMustKeepSchedulingBackupsAfterAFailedPass()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var failed = 0;
+        runner.ForTestingPurposesOnly().BeforeRunnerPass = () =>
+        {
+            if (Interlocked.Exchange(ref failed, 1) == 0)
+                throw new InvalidOperationException("Simulated runner pass failure");
+        };
+
+        var alertId = AlertRaised.GetKey(AlertReason.PeriodicBackup, nameof(ServerBackupRunner));
+        Assert.True(await WaitForValueAsync(() =>
+        {
+            using (server.ServerStore.NotificationCenter.Storage.Read(alertId, out var stored))
+                return Task.FromResult(stored != null && stored.Json.TryGet(nameof(AlertRaised.Message), out string message) && message.Contains("A pass of the server backup runner failed"));
+        }, true, timeout: 15_000, interval: 100), "The failed pass didn't raise its alert.");
+
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+
+        Assert.True(WaitForValue(() => Decisions(server, store.Database, taskId).Any(d => d.Category == BackupDecisionCategory.Completed), true, timeout: 90_000, interval: 500),
+            $"The runner didn't schedule backups after a failed pass.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task FailedBackupTaskTrackingMustBeRetriedOnTheNextPass()
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var failing = true;
+        var failures = 0;
+        runner.ForTestingPurposesOnly().BeforeUpdatingBackupTracking = databaseName =>
+        {
+            if (databaseName != store.Database || Volatile.Read(ref failing) == false)
+                return;
+
+            Interlocked.Increment(ref failures);
+            throw new InvalidOperationException("Simulated backup task tracking failure");
+        };
+
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        Assert.True(WaitForValue(() => Volatile.Read(ref failures) >= 1, true, timeout: 15_000, interval: 50), "precondition: tracking the new task fails");
+        Assert.True(WaitForValue(() => Volatile.Read(ref failures) >= 3, true, timeout: 15_000, interval: 50),
+            "The runner didn't retry tracking the task after the failure.");
+        Assert.Null(BackupTestBase.GetBackupState(runner, store.Database, taskId));
+
+        Volatile.Write(ref failing, false);
+
+        await WaitForStateAsync(runner, store.Database, taskId);
+
+        await Backup.RunBackupAsync(server, taskId, store);
+    }
+
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DeletingOrDisablingATaskWhileItsBackupRunsMustCancelItAndFreeItsPlace(bool disable)
+    {
+        using var server = GetNewServer();
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "0 0 1 1 *");
+        var taskId = await Backup.UpdateConfigAsync(server, config, store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+        var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+
+        var hold = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        runner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[store.Database] = new ServerBackupRunner.TestingStuffInternal { OnBackupTaskRunHoldBackupExecution = hold };
+
+        try
+        {
+            runner.StartBackupNowTask(database, taskId, isFullBackup: true, database.Operations.GetNextOperationId());
+            Assert.True(WaitForValue(() => state.RunningTask != null, true, timeout: 15_000, interval: 50), "precondition: the backup is running");
+
+            if (disable)
+            {
+                config.TaskId = taskId;
+                config.Disabled = true;
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+            }
+            else
+            {
+                await store.Maintenance.SendAsync(new DeleteOngoingTaskOperation(taskId, OngoingTaskType.Backup));
+            }
+
+            Assert.True(WaitForValue(() => state.Stale.IsRaised(), true, timeout: 15_000, interval: 50), "precondition: the runner applied the change");
+        }
+        finally
+        {
+            hold.TrySetResult(null);
+        }
+
+        var expectedReason = disable ? BackupDecisionTracker.CancelReasonDisabled : BackupDecisionTracker.CancelReasonTaskDeleted;
+
+        Assert.True(WaitForValue(() => state.Running.IsRaised() == false && server.ServerStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups == 0, true, timeout: 30_000, interval: 100),
+            $"The cancelled backup didn't give back its concurrent backup place.{Environment.NewLine}{Dump(state.GetDecisionLog())}");
+
+        Assert.True(state.GetDecisionLog().Any(d => d.Category == BackupDecisionCategory.Cancelled && d.Detail == expectedReason),
+            $"No Cancelled decision with '{expectedReason}'.{Environment.NewLine}{Dump(state.GetDecisionLog())}");
+        if (disable)
+        {
+            Assert.Null(state.NextBackup);
+            Assert.Same(state, BackupTestBase.GetBackupState(runner, store.Database, taskId));
+        }
+        else
+        {
+            Assert.Null(BackupTestBase.GetBackupState(runner, store.Database, taskId));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task DeletingATaskWhileItsDatabaseLoadsForTheBackupMustCancelItAndFreeItsPlace()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        await StoreDocument(store);
+
+        var config = Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *");
+        var taskId = await Backup.UpdateConfigAsync(server, config, store);
+        var runner = server.ServerStore.ServerBackupRunner;
+        var landlord = server.ServerStore.DatabasesLandlord;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        await WaitUntilNoBackupRunsBeforeTheNextMinute(state);
+        Assert.True(landlord.UnloadDirectly(store.Database), "precondition: unload database");
+
+        using (BlockDatabaseLoading(landlord, TimeSpan.FromMinutes(2)))
+        {
+            Assert.True(WaitForValue(() => state.Running.IsRaised(), true, timeout: 75_000, interval: 50),
+                "precondition: the scheduled backup waits for its database to load");
+            Assert.Null(state.RunningTask);
+
+            await server.ServerStore.DeleteOngoingTask(taskId, state.Configuration.Name, OngoingTaskType.Backup, store.Database, RaftIdGenerator.NewId());
+
+            Assert.True(WaitForValue(() => BackupTestBase.GetBackupState(runner, store.Database, taskId) == null, true, timeout: 15_000, interval: 50),
+                "precondition: the runner applied the delete");
+        }
+
+        Assert.True(WaitForValue(() => state.Running.IsRaised() == false && server.ServerStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups == 0, true,
+                timeout: 60_000, interval: 100),
+            $"The backup of the deleted task didn't give back its concurrent backup place.{Environment.NewLine}{Dump(state.GetDecisionLog())}");
+
+        Assert.True(state.GetDecisionLog().Any(d => d.Category == BackupDecisionCategory.Cancelled && d.Detail == BackupDecisionTracker.CancelReasonTaskDeleted),
+            $"No Cancelled decision with '{BackupDecisionTracker.CancelReasonTaskDeleted}'.{Environment.NewLine}{Dump(state.GetDecisionLog())}");
+        Assert.DoesNotContain(state.GetDecisionLog(), d => d.Category == BackupDecisionCategory.Started);
+        Assert.Null(state.RunningTask);
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ScheduledBackupMustWaitWhileTooManyDatabasesAreLoadingAndRunOnceLoadingIsFree()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        await StoreDocument(store);
+
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+        var runner = server.ServerStore.ServerBackupRunner;
+        var landlord = server.ServerStore.DatabasesLandlord;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        await WaitUntilNoBackupRunsBeforeTheNextMinute(state);
+        Assert.True(landlord.UnloadDirectly(store.Database), "precondition: unload database");
+
+        var blockedUtc = DateTime.UtcNow;
+
+        using (BlockDatabaseLoading(landlord, TimeSpan.FromMilliseconds(100)))
+        {
+            Assert.True(WaitForValue(() => Decisions(server, store.Database, taskId).Any(d => d.Category == BackupDecisionCategory.Waiting &&
+                                                                                            d.Detail == DatabaseLoadedPolicy.Instance.Name &&
+                                                                                            d.LastTime > blockedUtc), true, timeout: 90_000, interval: 250),
+                $"The backup didn't wait while too many databases were loading.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+            Assert.Null(state.BackupStatus?.Error);
+            Assert.DoesNotContain(Decisions(server, store.Database, taskId), d => d.Category == BackupDecisionCategory.Failed);
+        }
+
+        var releasedUtc = DateTime.UtcNow;
+        Assert.True(WaitForValue(() => Decisions(server, store.Database, taskId).Any(d => d.Category == BackupDecisionCategory.Completed && d.LastTime > releasedUtc), true,
+                timeout: 90_000, interval: 250),
+            $"The backup didn't run once loading was free.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ScheduledBackupOfADatabaseThatFailsToLoadMustFailWithAnAlertAndBeRescheduled()
+    {
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+        await StoreDocument(store);
+
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder"), fullBackupFrequency: "* * * * *"), store);
+        var runner = server.ServerStore.ServerBackupRunner;
+        var landlord = server.ServerStore.DatabasesLandlord;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        await WaitUntilNoBackupRunsBeforeTheNextMinute(state);
+
+        landlord.ForTestingPurposesOnly().OnBeforeDocumentDatabaseInitialization = database =>
+        {
+            if (database.Name == store.Database)
+                throw new InvalidOperationException("Simulated database load failure");
+        };
+
+        try
+        {
+            Assert.True(landlord.UnloadDirectly(store.Database), "precondition: unload database");
+            var unloadedUtc = DateTime.UtcNow;
+
+            BackupDecision failed = null;
+            Assert.True(WaitForValue(() => (failed = Decisions(server, store.Database, taskId).FirstOrDefault(d => d.Category == BackupDecisionCategory.Failed && d.LastTime > unloadedUtc)) != null,
+                    true, timeout: 90_000, interval: 250),
+                $"The backup of a database that fails to load didn't fail.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+            Assert.NotNull(state.BackupStatus?.Error);
+            Assert.True(state.NextBackup != null && state.NextBackup.DateTime > failed.LastTime, $"The failed backup wasn't rescheduled. Next backup: '{state.NextBackup?.DateTime}'.");
+
+            using (server.ServerStore.NotificationCenter.Storage.Read(AlertRaised.GetKey(AlertReason.PeriodicBackup, store.Database), out var stored))
+            {
+                Assert.True(stored != null, "No alert was raised for the backup that failed to start.");
+                Assert.True(stored.Json.TryGet(nameof(AlertRaised.Title), out string title));
+                Assert.Contains("Failed to start the backup task", title);
+            }
+        }
+        finally
+        {
+            landlord.ForTestingPurposesOnly().OnBeforeDocumentDatabaseInitialization = null;
+        }
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ScheduledBackupWithTheDisableOngoingTasksMarkerMustBeHeldBackUntilItsNextOccurrence()
+    {
+        var path = NewDataPath();
+        using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false });
+        using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = path });
+        await StoreDocument(store);
+
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *"), store);
+        var runner = server.ServerStore.ServerBackupRunner;
+        var landlord = server.ServerStore.DatabasesLandlord;
+        var state = await WaitForStateAsync(runner, store.Database, taskId);
+
+        await WaitUntilNoBackupRunsBeforeTheNextMinute(state);
+
+        await File.WriteAllTextAsync(Path.Combine(path, "disable.tasks.marker"), string.Empty);
+        Assert.True(landlord.UnloadDirectly(store.Database), "precondition: unload database");
+        var markedUtc = DateTime.UtcNow;
+
+        BackupDecision heldBack = null;
+        Assert.True(WaitForValue(() => (heldBack = Decisions(server, store.Database, taskId).FirstOrDefault(d => d.Detail == DisableOngoingTasksPolicy.Instance.Name && d.LastTime > markedUtc)) != null,
+                true, timeout: 90_000, interval: 250),
+            $"The scheduled backup wasn't held back by the marker.{Environment.NewLine}{Dump(Decisions(server, store.Database, taskId))}");
+
+        Assert.Equal(BackupDecisionCategory.HeldBack, heldBack.Category);
+        Assert.DoesNotContain(Decisions(server, store.Database, taskId), d => d.Category == BackupDecisionCategory.Started && d.LastTime > markedUtc);
+        Assert.True(state.NextBackup != null && state.NextBackup.DateTime > heldBack.LastTime,
+            $"The held backup should move to its next occurrence, not stay due. Next backup: '{state.NextBackup?.DateTime}'.");
+    }
+
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task MemoryHoldMustPauseTheRunnerAndRefuseBackupNow(bool lowMemory)
+    {
+        using var server = GetNewServer(new ServerCreationOptions { IgnoreHealthChecksBeforeBackup = false });
+        using var store = GetDocumentStore(new Options { Server = server });
+        await StoreDocument(store);
+        var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
+
+        var runner = server.ServerStore.ServerBackupRunner;
+        var decisions = runner.Decisions;
+        var holdDelay = server.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
+        var testingStuff = server.ServerStore.ForTestingPurposesOnly();
+        var policyName = lowMemory ? new ServerLowMemoryPolicy().Name : new ServerHighDirtyMemoryPolicy().Name;
+
+        if (lowMemory)
+            testingStuff.SimulateLowMemory = true;
+        else
+            testingStuff.SimulateHighDirtyMemory = true;
+
+        try
+        {
+            Assert.True(await WaitForValueAsync(() => GetHoldDecision() != null, true), $"The runner never recorded the '{policyName}' hold.");
+
+            await Task.Delay(server.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan * 5);
+
+            var decision = GetHoldDecision();
+            Assert.True(decision.Category == BackupDecisionCategory.HeldBack, $"The '{policyName}' decision is '{decision.Category}'.");
+            Assert.True(decision.Count == 1,
+                $"The runner kept checking the server policies during the '{policyName}' hold ({decision.Count} checks), instead of pausing until the hold ends.");
+
+            var serverBlock = decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Take = 1 }, afterEtag: null).Summary.ServerBlock;
+            Assert.NotNull(serverBlock?.Until);
+            Assert.True(serverBlock.Until.Value > DateTime.UtcNow + holdDelay - TimeSpan.FromMinutes(1),
+                $"The server block ends at '{serverBlock.Until}', expected about '{DateTime.UtcNow + holdDelay}'.");
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
+            Assert.Throws<BackupDelayException>(() => runner.StartBackupNowTask(database, taskId, isFullBackup: true, database.Operations.GetNextOperationId()));
+            Assert.Contains(BackupTestBase.GetDecisionLog(runner, store.Database, taskId), d => d.Category == BackupDecisionCategory.HeldBack && d.Detail == policyName);
+        }
+        finally
+        {
+            testingStuff.SimulateLowMemory = false;
+            testingStuff.SimulateHighDirtyMemory = false;
+        }
+
+        BackupDecisionLogEntry GetHoldDecision()
+        {
+            return decisions.GetDecisionLogDetails(new BackupDecisionLogFilter { Take = 100 }, afterEtag: null).Entries
+                .SingleOrDefault(x => x.Source == BackupDecisionSource.Server && x.Detail == policyName);
+        }
+    }
+
     private static async Task<JsonDocument> ReceiveJsonAsync(ClientWebSocket socket, CancellationToken token)
     {
         var buffer = new byte[64 * 1024];
@@ -736,6 +1101,35 @@ public class ServerBackupRunnerTests : ClusterTestBase
     {
         while (DateTime.Now.Second >= second)
             await Task.Delay(250);
+    }
+
+    private static async Task WaitForSecondOfMinuteBetween(int from, int to)
+    {
+        while (DateTime.Now.Second < from || DateTime.Now.Second >= to)
+            await Task.Delay(250);
+    }
+
+    private static IDisposable BlockDatabaseLoading(DatabasesLandlord landlord, TimeSpan loadTimeout)
+    {
+        var drained = 0;
+        while (landlord._databaseSemaphore.Wait(0))
+            drained++;
+
+        var originalLoadTimeout = landlord._concurrentDatabaseLoadTimeout;
+        landlord._concurrentDatabaseLoadTimeout = loadTimeout;
+
+        return new DisposableAction(() =>
+        {
+            landlord._concurrentDatabaseLoadTimeout = originalLoadTimeout;
+            if (drained > 0)
+                landlord._databaseSemaphore.Release(drained);
+        });
+    }
+
+    private async Task WaitUntilNoBackupRunsBeforeTheNextMinute(DatabaseBackupState state)
+    {
+        await WaitForSecondOfMinuteBetween(10, 30);
+        Assert.False(WaitForValue(() => state.Running.IsRaised(), false, timeout: 60_000, interval: 100), "precondition: no backup is running");
     }
 
 }
