@@ -649,7 +649,7 @@ namespace Raven.Server.Web.System
 
             using (var token = CreateHttpRequestBoundOperationToken())
             {
-                await ServerStore.ServerBackupRunner.DelayAsync(database.Name, id, delayUntil, GetCurrentCertificate(), token.Token);
+                await ServerStore.ServerBackupRunner.DelayAsync(database.Name, id, delayUntil, token.Token);
             }
 
             if (RavenLogManager.Instance.IsAuditEnabled)

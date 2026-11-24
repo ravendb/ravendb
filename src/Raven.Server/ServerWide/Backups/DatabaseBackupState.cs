@@ -74,10 +74,6 @@ namespace Raven.Server.ServerWide.Backups
             _serverStore = serverStore;
         }
 
-        public DatabaseBackupState()
-        {
-        }
-
         public NextBackup GetNextBackupDetails(PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
         {
             var taskStatus = _serverStore.ServerBackupRunner.GetTaskStatus(Configuration, DatabaseName, out responsibleNodeTag, disableLog: true);

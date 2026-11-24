@@ -433,26 +433,17 @@ public static class BackupUtils
 
         if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
         {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
-            {
-                DelayPeriod = serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan
-            };
+            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
         }
 
         if (LowMemoryNotification.Instance.LowMemoryState)
         {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in low memory state.")
-            {
-                DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-            };
+            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in low memory state.");
         }
 
         if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
         {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in high dirty memory state.")
-            {
-                DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-            };
+            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in high dirty memory state.");
         }
     }
 

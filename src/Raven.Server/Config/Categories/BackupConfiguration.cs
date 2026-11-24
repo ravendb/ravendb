@@ -59,7 +59,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MaxReadOpsPerSecond", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int? MaxReadOpsPerSecond { get; set; }
 
-        [Description("Number of seconds to delay the backup after hitting the maximum number of concurrent backups limit")]
+        [Description("Number of seconds between backup runner checks while the maximum number of concurrent backups is reached, if shorter than Backup.BackupRunnerFrequencyInSec. The runner also checks as soon as a concurrent backup place frees.")]
         [DefaultValue(30)]
         [MinValue(1)]
         [TimeUnit(TimeUnit.Seconds)]

@@ -9,9 +9,9 @@ using Raven.Server.Web.System.Processors.OngoingTasks;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks;
 
-internal sealed class ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupSchedule : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupSchedule<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTimers([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
+    public ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupSchedule([NotNull] ShardedDatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -19,7 +19,7 @@ internal sealed class ShardedOngoingTasksHandlerProcessorForGetPeriodicBackupTim
 
     protected override ValueTask HandleCurrentNodeAsync() => throw new NotSupportedException();
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> command, OperationCancelToken token)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetPeriodicBackupScheduleCommand.PeriodicBackupScheduleResponse> command, OperationCancelToken token)
     {
         var shardNumber = GetShardNumber();
 

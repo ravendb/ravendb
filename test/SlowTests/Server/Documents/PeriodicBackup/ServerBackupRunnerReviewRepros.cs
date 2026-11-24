@@ -216,7 +216,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
             var secondRegistered = loadedDatabase.Operations.GetOperation(secondOperationId) != null;
 
             Assert.True(error is BackupAlreadyRunningException,
-                $"The second StartBackupTask call returned operation id {secondOperationId} without throwing (error: {error?.GetType().Name ?? "none"}); " +
+                $"The second StartBackupNowTask call returned operation id {secondOperationId} without throwing (error: {error?.GetType().Name ?? "none"}); " +
                 $"that operation was registered: {secondRegistered}.");
         }
         finally

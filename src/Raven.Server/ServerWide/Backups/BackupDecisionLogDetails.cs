@@ -500,8 +500,6 @@ public sealed class BackupDecisionLogEntry : IDynamicJson
 
     public string NodeTag { get; set; }
 
-    internal long Etag { get; set; }
-
     public static BackupDecisionLogEntry Create(BackupDecision decision, string nodeTag, DatabaseBackupState backupState = null)
     {
         var entry = new BackupDecisionLogEntry
@@ -514,8 +512,7 @@ public sealed class BackupDecisionLogEntry : IDynamicJson
             Detail = decision.Detail,
             Reason = decision.Reason,
             Source = backupState == null ? BackupDecisionSource.Server : BackupDecisionSource.Task,
-            NodeTag = nodeTag,
-            Etag = decision.Etag
+            NodeTag = nodeTag
         };
 
         if (backupState == null)

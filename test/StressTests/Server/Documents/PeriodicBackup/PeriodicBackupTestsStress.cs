@@ -132,8 +132,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(pb);
 
                 var val = WaitForValue(() => pb.NextBackup != null, false, timeout: 66666, interval: 444);
-                Assert.False(val, "PeriodicBackup should cancel the ScheduledBackup if the task status is ActiveByOtherNode, " +
-                                  "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
+                Assert.False(val, "The runner should clear NextBackup while the task is active on another node, " +
+                                  "so it recalculates the next backup when the task is back to ActiveByCurrentNode");
 
                 responsibleDatabase.ServerStore.ServerBackupRunner._forTestingPurposes = null;
                 var serverWideConfiguration = (await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation())).Single();

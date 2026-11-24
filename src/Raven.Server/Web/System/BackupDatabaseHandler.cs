@@ -24,13 +24,13 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
-        public async Task GetAllPeriodicBackupsTimers()
+        public async Task GetAllPeriodicBackupsSchedule()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse();
+                var result = new GetPeriodicBackupScheduleCommand.PeriodicBackupScheduleResponse();
 
                 foreach (var databaseName in ServerStore.ServerBackupRunner.BackupsPerDatabasePerTaskId.Keys)
                     result.Timers.AddRange(ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(databaseName));

@@ -413,7 +413,7 @@ namespace Raven.Server.Documents
             return new ReplicationLoader(this, _serverStore);
         }
 
-        public void Initialize(InitializeOptions options = InitializeOptions.None, DateTime? wakeup = null)
+        public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
             try
             {

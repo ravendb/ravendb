@@ -56,9 +56,9 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/databases/*/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public async Task GetPeriodicBackupTimers()
+        public async Task GetPeriodicBackupSchedule()
         {
-            using (var processor = new OngoingTasksHandlerProcessorForGetPeriodicBackupTimers(this))
+            using (var processor = new OngoingTasksHandlerProcessorForGetPeriodicBackupSchedule(this))
                 await processor.ExecuteAsync();
         }
 

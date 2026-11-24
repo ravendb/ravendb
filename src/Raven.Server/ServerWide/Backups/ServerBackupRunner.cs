@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -518,7 +517,7 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    public async Task DelayAsync(string databaseName, long operationId, DateTime delayUntil, X509Certificate2 clientCert, CancellationToken token)
+    public async Task DelayAsync(string databaseName, long operationId, DateTime delayUntil, CancellationToken token)
     {
         if (TryGetBackupStates(databaseName, out var backupStates) == false)
             throw new InvalidOperationException($"Fail to delay backup task with operationId '{operationId}',  the operation with that number isn't registered");
@@ -777,7 +776,7 @@ public class ServerBackupRunner : IDisposable
                 }
 
                 if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_serverStore.NodeTag}'.");
+                    _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, recalculating the next backup, which will be executed by the current node '{_serverStore.NodeTag}'.");
 
 
                 var localBackupStatus = existingBackupState.GetMostUpdatedLocalBackupStatus(inMemoryBackupStatus: null);

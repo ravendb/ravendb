@@ -111,15 +111,15 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public void DatabaseBackupStateMustNotPreallocateItsWholeDecisionLog()
     {
-        GC.KeepAlive(new DatabaseBackupState()); // JIT warm-up
+        GC.KeepAlive(new BackupDecisionLog(BackupDecisionTracker.MaxDecisionLogSize)); // JIT warm-up
 
         var before = GC.GetAllocatedBytesForCurrentThread();
-        var state = new DatabaseBackupState();
+        var decisionLog = new BackupDecisionLog(BackupDecisionTracker.MaxDecisionLogSize);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-        GC.KeepAlive(state);
+        GC.KeepAlive(decisionLog);
 
         Assert.True(allocated < 2048,
-            $"Creating an empty DatabaseBackupState allocated {allocated:N0} bytes (MaxDecisionLogSize = {BackupDecisionTracker.MaxDecisionLogSize}).");
+            $"Creating an empty BackupDecisionLog allocated {allocated:N0} bytes (MaxDecisionLogSize = {BackupDecisionTracker.MaxDecisionLogSize}).");
     }
 
     // WaitHandle.WaitAny(WaitHandle[], TimeSpan) throws ArgumentOutOfRangeException for a timeout above Int32.MaxValue ms (~24.86 days).

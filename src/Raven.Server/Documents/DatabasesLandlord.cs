@@ -118,7 +118,6 @@ namespace Raven.Server.Documents
             internal bool PreventNodePromotion = false;
             internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
             internal Action DelayNotifyFeaturesAboutStateChange;
-            internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -734,7 +733,7 @@ namespace Raven.Server.Documents
             return databaseContext;
         }
 
-        public IEnumerable<Task<ShardedDocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
+        public IEnumerable<Task<ShardedDocumentDatabase>> TryGetOrCreateShardedResourcesStore(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             // create all database shards on this node
             List<string> relevantDatabases = new List<string>();
@@ -754,17 +753,17 @@ namespace Raven.Server.Documents
 
             foreach (var shardedDatabase in relevantDatabases)
             {
-                yield return TryGetOrCreateShardedResourceStore(shardedDatabase, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
+                yield return TryGetOrCreateShardedResourceStore(shardedDatabase, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             }
         }
 
-        public Task<ShardedDocumentDatabase> TryGetOrCreateShardedResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
+        public Task<ShardedDocumentDatabase> TryGetOrCreateShardedResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
-            var t = TryGetOrCreateResourceStore(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, addToInitLog, caller);
+            var t = TryGetOrCreateResourceStore(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, addToInitLog, caller);
             return t.ContinueWith(database => ShardedDocumentDatabase.CastToShardedDocumentDatabase(database.Result), TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
-        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, DateTime? wakeup = null, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
+        public Task<DocumentDatabase> TryGetOrCreateResourceStore(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false, Action<string> addToInitLog = null, [CallerMemberName] string caller = null)
         {
             if (_disposing.TryEnter(out var idx) == false)
                 ThrowServerIsBeingDisposed(databaseName);
@@ -773,7 +772,7 @@ namespace Raven.Server.Documents
                 if (TryGetResourceStore(databaseName, out var database))
                     return database;
 
-                return CreateDatabase(databaseName, wakeup, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller);
+                return CreateDatabase(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, caller);
             }
             finally
             {
@@ -846,32 +845,32 @@ namespace Raven.Server.Documents
             throw new ObjectDisposedException("The server is being disposed, cannot load database " + databaseName);
         }
 
-        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, DateTime? wakeup, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<string> addToInitLog = null)
+        private Task<DocumentDatabase> CreateDatabase(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, string caller, Action<string> addToInitLog = null)
         {
             var config = CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant);
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
             if (_databaseSemaphore.Wait(0) == false)
-                return UnlikelyCreateDatabaseUnderContention(databaseName, config, wakeup, caller);
+                return UnlikelyCreateDatabaseUnderContention(databaseName, config, caller);
 
-            return CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup, addToInitLog, caller);
+            return CreateDatabaseUnderResourceSemaphore(databaseName, config, addToInitLog, caller);
         }
 
-        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, string caller = null)
+        private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config, string caller = null)
         {
             var timeToWait = caller == Init ? Timeout.InfiniteTimeSpan : _concurrentDatabaseLoadTimeout;
             if (await _databaseSemaphore.WaitAsync(timeToWait) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
-            return await CreateDatabaseUnderResourceSemaphore(databaseName, config, wakeup);
+            return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
         }
 
-        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null, string caller = null)
+        private Task<DocumentDatabase> CreateDatabaseUnderResourceSemaphore(StringSegment databaseName, RavenConfiguration config, Action<string> addToInitLog = null, string caller = null)
         {
             try
             {
-                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, wakeup, addToInitLog), TaskCreationOptions.RunContinuationsAsynchronously);
+                var task = new Task<DocumentDatabase>(() => ActuallyCreateDatabase(databaseName, config, addToInitLog), TaskCreationOptions.RunContinuationsAsynchronously);
                 var database = DatabasesCache.GetOrAdd(databaseName, task);
                 if (database == task)
                 {
@@ -886,8 +885,6 @@ namespace Raven.Server.Documents
                         ForTestingPurposes?.AfterDatabaseCreation?.Invoke((t.GetAwaiter().GetResult(), caller));
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
-
-                        ForTestingPurposes?.AfterDatabaseRemovedFromIdle?.Set();
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
@@ -902,7 +899,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup = null, Action<string> addToInitLog = null)
+        private DocumentDatabase ActuallyCreateDatabase(StringSegment databaseName, RavenConfiguration config, Action<string> addToInitLog = null)
         {
             try
             {
@@ -913,7 +910,7 @@ namespace Raven.Server.Documents
                     ThrowServerIsBeingDisposed(databaseName);
                 try
                 {
-                    var db = CreateDocumentsStorage(databaseName, config, wakeup, addToInitLog);
+                    var db = CreateDocumentsStorage(databaseName, config, addToInitLog);
                     _serverStore.NotificationCenter.Add(
                         DatabaseChanged.Create(databaseName.Value, DatabaseChangeType.Load));
 
@@ -988,7 +985,7 @@ namespace Raven.Server.Documents
                 new DocumentDatabase(name, configuration, serverStore, addToInitLog);
         }
 
-        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, DateTime? wakeup, Action<string> addToInitLog)
+        private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config, Action<string> addToInitLog)
         {
             void AddToInitLog(LogLevel logMode, string txt)
             {
@@ -1042,7 +1039,7 @@ namespace Raven.Server.Documents
 
                 ForTestingPurposes?.OnBeforeDocumentDatabaseInitialization?.Invoke(documentDatabase);
 
-                documentDatabase.Initialize(InitializeOptions.None, wakeup);
+                documentDatabase.Initialize(InitializeOptions.None);
 
                 ForTestingPurposes?.AfterDatabaseInitialize?.Invoke();
 
