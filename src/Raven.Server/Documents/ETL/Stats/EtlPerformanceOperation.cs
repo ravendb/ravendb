@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 
 namespace Raven.Server.Documents.ETL.Stats
 {
@@ -7,6 +8,13 @@ namespace Raven.Server.Documents.ETL.Stats
         public EtlPerformanceOperation(TimeSpan duration)
         {
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
+            Operations = [];
+        }
+
+        [JsonConstructor]
+        private EtlPerformanceOperation(double durationInMs)
+        {
+            DurationInMs = durationInMs;
             Operations = [];
         }
 

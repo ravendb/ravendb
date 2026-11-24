@@ -1,4 +1,5 @@
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.SqlMigration.Model;
 using Sparrow.Json;
 using Sparrow.Json.Sync;
@@ -57,6 +58,66 @@ public class ServerConventionsConstructorBindingTests(ITestOutputHelper output) 
 
         LinkedCollection linked = Assert.Single(root.LinkedCollections);
         Assert.Equal(["customer_id"], linked.JoinColumns);
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void ReadsEtlTaskPerformanceStatsWithDurations()
+    {
+        const string json = """
+            {
+              "TaskId": 7, "TaskName": "task", "EtlType": "Raven",
+              "Stats": [
+                {
+                  "TransformationName": "script",
+                  "Performance": [
+                    {
+                      "Id": 3, "DurationInMs": 12.5, "NumberOfLoadedItems": 4,
+                      "Details": {
+                        "Name": "ETL", "DurationInMs": 12.5,
+                        "Operations": [ { "Name": "Extract", "DurationInMs": 2.25, "Operations": [] } ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+            """;
+
+        EtlTaskPerformanceStats stats = Read<EtlTaskPerformanceStats>(json);
+
+        EtlPerformanceStats performance = Assert.Single(Assert.Single(stats.Stats).Performance);
+        Assert.Equal(3, performance.Id);
+        Assert.Equal(4, performance.NumberOfLoadedItems);
+        Assert.Equal(12.5, performance.DurationInMs);
+        Assert.Equal(12.5, performance.Details.DurationInMs);
+
+        EtlPerformanceOperation extract = Assert.Single(performance.Details.Operations);
+        Assert.Equal("Extract", extract.Name);
+        Assert.Equal(2.25, extract.DurationInMs);
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void ReadsEtlTaskDebugStatsWithMetrics()
+    {
+        const string json = """
+            {
+              "TaskName": "task",
+              "Stats": [
+                {
+                  "TransformationName": "script",
+                  "Statistics": { "LastProcessedEtag": 5 },
+                  "Metrics": { "BatchSizeMeter": { "Current": 0.0, "Count": 0, "MeanRate": 0.0 } }
+                }
+              ]
+            }
+            """;
+
+        EtlTaskDebugStats stats = Read<EtlTaskDebugStats>(json);
+
+        EtlProcessTransformationDebugStats transformation = Assert.Single(stats.Stats);
+        Assert.Equal("script", transformation.TransformationName);
+        Assert.Equal(5, transformation.Statistics.LastProcessedEtag);
+        Assert.NotNull(transformation.Metrics.BatchSizeMeter);
     }
 
     private static T Read<T>(string json)

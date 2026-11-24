@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text.Json.Serialization;
 using System.Threading;
 using Sparrow.Utils;
 using Sparrow.Json.Parsing;
@@ -47,6 +48,11 @@ namespace Raven.Server.Utils.Metrics
         private readonly bool _usesDefaultClock;
 
         private static long DefaultNow() => Clock.Nanoseconds;
+
+        [JsonConstructor]
+        private MeterMetric() : this(nowProvider: null)
+        {
+        }
 
         public MeterMetric(Func<long> nowProvider = null)
         {
