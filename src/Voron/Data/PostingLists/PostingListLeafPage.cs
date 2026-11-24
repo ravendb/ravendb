@@ -253,7 +253,7 @@ public readonly unsafe struct PostingListLeafPage
 
     public static bool TryMerge(
         LowLevelTransaction llt,
-        ByteStringContext allocator, ref FastPForDecoder fastPForDecoder,
+        ByteStringContext allocator, ref FastPForDecoder fastPForDecoder, FastPForEncoder encoder,
         PostingListLeafPageHeader* dest, PostingListLeafPageHeader* first, PostingListLeafPageHeader* second)
     {
         Debug.Assert(llt.IsDirty(dest->PageNumber));
@@ -281,13 +281,13 @@ public readonly unsafe struct PostingListLeafPage
             mergedList.Count += fastPForDecoder.Read(mergedList.RawItems + first->NumberOfEntries, mergedList.Capacity - first->NumberOfEntries);
         }
 
-        using var encoder = new FastPForEncoder(allocator);
         int reqSize = 0;
         if (mergedList.Count > 0)
         {
             reqSize = encoder.Encode(mergedList.RawItems, mergedList.Count);
             if (reqSize >= Constants.Storage.PageSize - PageHeader.SizeOf)
             {
+                encoder.Discard();
                 mergedList.Dispose();
                 scope.Dispose();
                 return false;

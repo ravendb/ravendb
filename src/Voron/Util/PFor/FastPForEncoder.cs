@@ -166,6 +166,13 @@ public sealed unsafe class FastPForEncoder  : IDisposable
 
     public bool Done => _metadataPos == _metadata.Count;
 
+    /// <summary>Drops an encoded batch that will not be written, so the encoder is Done again</summary>
+    public void Discard()
+    {
+        _metadata.Clear();
+        _metadataPos = 0;
+    }
+
     public (int Count, int SizeUsed) Write(byte* output, int outputSize)
     {
         Debug.Assert(outputSize <= ushort.MaxValue, "Output buffer too large, we use ushort for offsets and don't want to overflow");
