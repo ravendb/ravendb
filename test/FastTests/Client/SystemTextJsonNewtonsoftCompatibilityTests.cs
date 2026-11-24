@@ -434,6 +434,42 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         public string Name { get; }
     }
 
+    private struct AttributedReadOnlyFields
+    {
+        [JsonProperty]
+        public readonly long Count;
+
+        [JsonProperty("Rate")]
+        public readonly double Rate;
+
+        public AttributedReadOnlyFields(long count, double rate)
+        {
+            Count = count;
+            Rate = rate;
+        }
+    }
+
+    private class HoldsAttributedReadOnlyFields
+    {
+        public AttributedReadOnlyFields Measure { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsStructReadOnlyFieldsWithNewtonsoftAttributesLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Measure\":{\"Count\":2,\"Rate\":1.5}}", "struct"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<HoldsAttributedReadOnlyFields>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsAttributedReadOnlyFields>(json);
+
+            Assert.Equal(2, actual.Measure.Count);
+            Assert.Equal(1.5, actual.Measure.Rate);
+            Assert.Equal(expected.Measure.Count, actual.Measure.Count);
+            Assert.Equal(expected.Measure.Rate, actual.Measure.Rate);
+        }
+    }
+
     private class BothConstructorAttributes
     {
         public BothConstructorAttributes()

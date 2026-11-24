@@ -1177,6 +1177,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (property == null || property.Set != null)
                     continue;
 
+                if (property.AttributeProvider is FieldInfo { IsInitOnly: true } field && HasNewtonsoftMemberAttribute(field))
+                    continue;
+
                 string member = ((MemberInfo)property.AttributeProvider).Name;
                 typeInfo.CreateObject = () => throw new NotSupportedException(
                     $"Struct '{type.FullName}' assigns its read-only member '{member}' in a constructor, and System.Text.Json creates structs through their parameterless constructor. " +
