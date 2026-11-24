@@ -292,7 +292,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                return new TimeSeriesRetentionCommandDto(_keys, _collection, _to);
+                return new TimeSeriesRetentionCommandDto { _keys = _keys, _collection = _collection, _to = _to };
             }
 
             public sealed class TimeSeriesRetentionCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, TimeSeriesRetentionCommand>
@@ -301,12 +301,6 @@ namespace Raven.Server.Documents.TimeSeries
                 public string _collection;
                 public DateTime _to;
 
-                public TimeSeriesRetentionCommandDto(List<Slice> keys, string collection, DateTime to)
-                {
-                    _keys = keys;
-                    _collection = collection;
-                    _to = to;
-                }
                 public TimeSeriesRetentionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
                     var keys = new List<Slice>();
@@ -367,7 +361,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                return new AddedNewRollupPoliciesCommandDto(_collection, _from, _to, _skip);
+                return new AddedNewRollupPoliciesCommandDto { _name = _collection, _from = _from, _to = _to, _skip = _skip };
             }
 
             public sealed class AddedNewRollupPoliciesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AddedNewRollupPoliciesCommand>
@@ -376,14 +370,6 @@ namespace Raven.Server.Documents.TimeSeries
                 public TimeSeriesPolicy _from;
                 public TimeSeriesPolicy _to;
                 public int _skip;
-
-                public AddedNewRollupPoliciesCommandDto(CollectionName name, TimeSeriesPolicy from, TimeSeriesPolicy to, int skip)
-                {
-                    _name = name;
-                    _from = @from;
-                    _to = to;
-                    _skip = skip;
-                }
 
                 public AddedNewRollupPoliciesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {
@@ -637,7 +623,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                return new RollupTimeSeriesCommandDto(_configuration, _now, _states, _isFirstInTopology);
+                return new RollupTimeSeriesCommandDto { _configuration = _configuration, _now = _now, _states = _states, _isFirstInTopology = _isFirstInTopology };
             }
 
             public sealed class RollupTimeSeriesCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RollupTimeSeriesCommand>
@@ -646,14 +632,6 @@ namespace Raven.Server.Documents.TimeSeries
                 public DateTime _now;
                 public List<RollupState> _states;
                 public bool _isFirstInTopology;
-
-                public RollupTimeSeriesCommandDto(TimeSeriesConfiguration configuration, DateTime now, List<RollupState> states, bool isFirstInTopology)
-                {
-                    _configuration = configuration;
-                    _now = now;
-                    _states = states;
-                    _isFirstInTopology = isFirstInTopology;
-                }
 
                 public RollupTimeSeriesCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
                 {

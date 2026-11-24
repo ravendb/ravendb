@@ -15,6 +15,7 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -22,6 +23,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 
 namespace SlowTests.Blittable
@@ -342,6 +344,32 @@ namespace SlowTests.Blittable
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<MergedInsertBulkCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.TimeSeries)]
+        public async Task SerializeAndDeserialize_TimeSeriesRetentionCommandTest()
+        {
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                //Arrange
+                Slice.From(context.Allocator, "users/1", out Slice key);
+                var to = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+                var expected = new TimeSeriesRollups.TimeSeriesRetentionCommand(new List<Slice> { key }, "Users", to);
+
+                //Action
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
+                var actualDto = ReplayTxCommandHelper.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(context, fromStream);
+
+                //Assert
+                Assert.Equal("users/1", Assert.Single(actualDto._keys).ToString());
+                Assert.Equal("Users", actualDto._collection);
+                Assert.Equal(to, actualDto._to);
+                Assert.NotNull(actualDto.ToCommand(context, database));
             }
         }
 
