@@ -2910,22 +2910,20 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void PopulatingAnExistingInstanceSetsMembersOfAPartlyBoundConstructorLikeNewtonsoft()
+        public void PopulatingAnExistingInstanceKeepsTheValueOfAPartlyBoundConstructorLikeLoading()
         {
-            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
             var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"  x  \"}", "partly"))
             {
-                var expected = new TrimmingConstructor("old", 0);
-                newtonsoft.Serialization.DefaultConverter.PopulateEntity(expected, json);
+                var loaded = systemTextJson.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
 
                 var populated = new TrimmingConstructor("old", 0);
                 systemTextJson.Serialization.DefaultConverter.PopulateEntity(populated, json);
 
-                Assert.Equal("  x  ", expected.Name);
-                Assert.Equal(expected.Name, populated.Name);
+                Assert.Equal("x", loaded.Name);
+                Assert.Equal(loaded.Name, populated.Name);
             }
         }
 

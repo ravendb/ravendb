@@ -74,25 +74,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static object _constructedFromArguments;
 
         [ThreadStatic]
-        private static Type _populateSourceType;
-
-        [ThreadStatic]
-        private static bool _settersOverrideConstructor;
-
-        internal static object DeserializePopulateSource(ReadOnlySpan<byte> utf8Json, Type type, JsonSerializerOptions options)
-        {
-            _populateSourceType = type;
-            try
-            {
-                return JsonSerializer.Deserialize(utf8Json, type, options);
-            }
-            finally
-            {
-                _populateSourceType = null;
-            }
-        }
-
-        [ThreadStatic]
         private static (JsonConverter Converter, JsonElement Json, PresentMembers Present) _capturedMember;
 
         [ThreadStatic]
@@ -231,13 +212,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 {
                     JsonElement json = document.RootElement;
                     object outer = _constructedFromArguments;
-                    bool populateSource = _populateSourceType == typeof(T);
-                    if (populateSource)
-                        _populateSourceType = null;
-
                     object[] arguments = json.ValueKind == JsonValueKind.Object ? constructor.CreateArguments(json, options) : null;
                     _pendingConstructorArguments = arguments;
-                    _settersOverrideConstructor = populateSource;
                     try
                     {
                         return (T)JsonSerializer.Deserialize(json, objectTypeInfo);
@@ -245,7 +221,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     finally
                     {
                         _pendingConstructorArguments = null;
-                        _settersOverrideConstructor = false;
                         _constructedFromArguments = outer;
                     }
                 }
@@ -1487,10 +1462,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     return constructor.Invoke(defaults);
 
                 object instance = constructor.Invoke(arguments);
-                if (_settersOverrideConstructor == false)
-                    _constructedFromArguments = instance;
-
-                _settersOverrideConstructor = false;
+                _constructedFromArguments = instance;
                 return instance;
             };
 
