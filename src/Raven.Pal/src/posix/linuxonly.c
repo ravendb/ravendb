@@ -303,7 +303,8 @@ rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int
 EXPORT int32_t
 rvn_sync_directories(void* handle, char** folders, int32_t count, int32_t *detailed_error_code)
 {
-    if(io_ring_setup_successful())
+    // the ring path waits on the pager's eventfd, an anonymous pager has none
+    if(io_ring_setup_successful() && ((struct handle *)handle)->global_state->fsync_dir_arena.eventfd != -1)
         return rvn_sync_directories_ioring(handle, folders, count, detailed_error_code);
     return rvn_sync_directories_sync(handle, folders, count, detailed_error_code);
 }

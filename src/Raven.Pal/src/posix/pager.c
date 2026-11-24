@@ -327,6 +327,12 @@ rvn_init_pager(const char *filename,
     assert(filename);
     assert(filename[0] != '\0');
 
+    if (open_flags & OPEN_FILE_ANONYMOUS) // rvn_init_anonymous_pager sets it up, a file pager with it would grow as an anonymous one
+    {
+        *detailed_error_code = EINVAL;
+        return FAIL_INVALID_CONFIGURATION;
+    }
+
     struct handle_global_state *global_state = calloc(1, sizeof(struct handle_global_state));
     if (global_state == NULL)
     {

@@ -573,6 +573,11 @@ rvn_init_pager(const char *filename,
     *memory_size = 0;
     *memory = NULL;
     *handle = NULL;
+    if (open_flags & OPEN_FILE_ANONYMOUS) // rvn_init_anonymous_pager sets it up, a file pager with it would grow as an anonymous one
+    {
+        *detailed_error_code = ERROR_INVALID_PARAMETER;
+        return FAIL_INVALID_CONFIGURATION;
+    }
     HANDLE h = INVALID_HANDLE_VALUE;
 
     int32_t rc = -1;
