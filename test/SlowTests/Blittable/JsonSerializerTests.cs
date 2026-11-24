@@ -1,7 +1,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Documents;
 using Sparrow;
@@ -23,16 +22,6 @@ namespace SlowTests.Blittable
             public BlittableJsonReaderArray BlittableArray { get; set; }
             public BlittableJsonReaderObject BlittableObject { get; set; }
             public LazyStringValue LazyString { get; set; }
-
-            [JsonProperty]
-            private readonly int _id;
-
-            public Command(int id = 0)
-            {
-                _id = id;
-            }
-
-            public int GetId() => _id;
         }
 
         [RavenFact(RavenTestCategory.Core)]
