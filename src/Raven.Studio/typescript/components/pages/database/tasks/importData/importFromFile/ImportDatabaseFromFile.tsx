@@ -29,7 +29,7 @@ import ImportPageLayout from "components/pages/database/tasks/importData/shared/
 import { useImportPageScroll } from "components/pages/database/tasks/importData/shared/useImportPageScroll";
 import SelectFileSection from "./sections/SelectFileSection";
 import DataToImportSection from "./sections/DataToImportSection";
-import ConfigurationToImportSection from "./sections/ConfigurationToImportSection";
+import ConfigurationToImportSection from "components/pages/database/tasks/importData/shared/ConfigurationToImportSection";
 import ImportProcessingSection from "./sections/ImportProcessingSection";
 import ImportResultModal from "./ImportResultModal";
 import ImportCommandModal from "./ImportCommandModal";
