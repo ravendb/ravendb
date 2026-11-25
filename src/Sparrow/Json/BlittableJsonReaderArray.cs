@@ -17,6 +17,11 @@ namespace Sparrow.Json
         private readonly byte* _metadataPtr;
         private readonly byte* _dataStart;
         private readonly long _currentOffsetSize;
+
+        // arrays up to this length cache their items in an array indexed by the item position,
+        // larger ones use a dictionary, so accessing a few items of a big array won't allocate a cache for all of them
+        private const int MaxLengthForCacheByIndex = 128;
+        private (object, BlittableJsonToken)[] _cacheByIndex;
         private Dictionary<int, (object, BlittableJsonToken)> _cache;
 
         public DynamicJsonArray Modifications;
@@ -196,7 +201,7 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             // try get value from cache, works only with Blittable types, other objects are not stored for now
-            if (NoCache == false && _cache != null && _cache.TryGetValue(index, out (object, BlittableJsonToken) result))
+            if (NoCache == false && TryGetFromCache(index, out (object, BlittableJsonToken) result))
                 return result;
 
             if (index >= _count || index < 0)
@@ -214,12 +219,46 @@ namespace Sparrow.Json
             {
                 ((BlittableJsonReaderBase)result.Item1).NoCache = NoCache;
                 if (NoCache == false)
-                {
-                    _cache ??= new Dictionary<int, (object, BlittableJsonToken)>();
-                    _cache[index] = result;
-                }
+                    AddToCache(index, result);
             }
             return result;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryGetFromCache(int index, out (object, BlittableJsonToken) result)
+        {
+            var cacheByIndex = _cacheByIndex;
+            if (cacheByIndex != null)
+            {
+                if ((uint)index < (uint)cacheByIndex.Length)
+                {
+                    result = cacheByIndex[index];
+                    return result.Item1 != null;
+                }
+
+                result = default;
+                return false;
+            }
+
+            if (_cache != null)
+                return _cache.TryGetValue(index, out result);
+
+            result = default;
+            return false;
+        }
+
+        private void AddToCache(int index, (object, BlittableJsonToken) result)
+        {
+            if (_count <= MaxLengthForCacheByIndex)
+            {
+                // small arrays get a cache indexed directly by the item position, so we don't pay for dictionary growth and hashing
+                _cacheByIndex ??= new (object, BlittableJsonToken)[_count];
+                _cacheByIndex[index] = result;
+                return;
+            }
+
+            _cache ??= new Dictionary<int, (object, BlittableJsonToken)>();
+            _cache[index] = result;
         }
 
         public BlittableJsonArrayEnumerator Items

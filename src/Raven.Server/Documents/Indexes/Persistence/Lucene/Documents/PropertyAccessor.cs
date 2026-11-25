@@ -65,10 +65,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerator<PropertyItem> GetProperties(object target)
+        public PropertiesEnumerator GetProperties(object target)
         {
             return new PropertiesEnumerator(_propertiesInOrder, target);
         }
+
+        IEnumerator<PropertyItem> IPropertyAccessor.GetProperties(object target) => GetProperties(target);
 
 
         public static IPropertyAccessor Create(Type type, object instance)

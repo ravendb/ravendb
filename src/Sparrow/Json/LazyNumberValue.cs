@@ -8,21 +8,40 @@ namespace Sparrow.Json
     public sealed class LazyNumberValue : IComparable, IConvertible
     {
         public readonly LazyStringValue Inner;
-        private double? _val;
-        private float? _floatVal;
-        private decimal? _decimalVal;
-        private long? _longVal;
-        private ulong? _ulongVal;
+
+        // results of the conversions, valid only when the matching flag is set in _cached
+        // (plain fields and a single flags byte instead of nullables, to keep the instance small)
+        private double _val;
+        private float _floatVal;
+        private decimal _decimalVal;
+        private long _longVal;
+        private ulong _ulongVal;
+        private CachedValues _cached;
+
+        [Flags]
+        private enum CachedValues : byte
+        {
+            None = 0,
+            Double = 1,
+            Float = 2,
+            Decimal = 4,
+            Long = 8,
+            ULong = 16
+        }
 
         public LazyNumberValue(LazyStringValue inner)
         {
             Inner = inner;
         }
 
+        private bool HasDouble => (_cached & CachedValues.Double) != 0;
+
+        private bool HasDecimal => (_cached & CachedValues.Decimal) != 0;
+
         public static implicit operator long(LazyNumberValue self)
         {
-            if (self._longVal.HasValue)
-                return self._longVal.Value;
+            if ((self._cached & CachedValues.Long) != 0)
+                return self._longVal;
 
             if (self.TryParseLong(out var val) == false)
             {
@@ -31,13 +50,14 @@ namespace Sparrow.Json
             }
 
             self._longVal = val;
+            self._cached |= CachedValues.Long;
             return val;
         }
 
         public static implicit operator ulong(LazyNumberValue self)
         {
-            if (self._ulongVal.HasValue)
-                return self._ulongVal.Value;
+            if ((self._cached & CachedValues.ULong) != 0)
+                return self._ulongVal;
 
             if (self.TryParseULong(out var val) == false)
             {
@@ -46,13 +66,14 @@ namespace Sparrow.Json
             }
 
             self._ulongVal = val;
+            self._cached |= CachedValues.ULong;
             return val;
         }
 
         public static implicit operator double(LazyNumberValue self)
         {
-            if (self._val.HasValue)
-                return self._val.Value;
+            if (self.HasDouble)
+                return self._val;
 
             if (self.TryParseDouble(out var val) == false)
             {
@@ -60,6 +81,7 @@ namespace Sparrow.Json
             }
 
             self._val = val;
+            self._cached |= CachedValues.Double;
             return val;
         }
 
@@ -70,8 +92,8 @@ namespace Sparrow.Json
 
         public static implicit operator float(LazyNumberValue self)
         {
-            if (self._floatVal.HasValue)
-                return self._floatVal.Value;
+            if ((self._cached & CachedValues.Float) != 0)
+                return self._floatVal;
 
             if (self.TryParseFloat(out var val) == false)
             {
@@ -80,13 +102,14 @@ namespace Sparrow.Json
             }
 
             self._floatVal = val;
+            self._cached |= CachedValues.Float;
             return val;
         }
 
         public static implicit operator decimal(LazyNumberValue self)
         {
-            if (self._decimalVal.HasValue)
-                return self._decimalVal.Value;
+            if (self.HasDecimal)
+                return self._decimalVal;
 
             if (self.TryParseDecimal(out var val) == false)
             {
@@ -94,6 +117,7 @@ namespace Sparrow.Json
             }
 
             self._decimalVal = val;
+            self._cached |= CachedValues.Decimal;
             return val;
         }
 
@@ -200,11 +224,11 @@ namespace Sparrow.Json
 
         private bool Equals(LazyNumberValue other)
         {
-            if (_val != null && other._val != null)
-                return _val.Value.AlmostEquals(other._val.Value);
+            if (HasDouble && other.HasDouble)
+                return _val.AlmostEquals(other._val);
 
-            if (_decimalVal != null && other._decimalVal != null)
-                return _decimalVal.Value.Equals(other._decimalVal.Value);
+            if (HasDecimal && other.HasDecimal)
+                return _decimalVal.Equals(other._decimalVal);
 
             return Inner.Equals(other.Inner);
         }
@@ -246,7 +270,13 @@ namespace Sparrow.Json
 
         public override int GetHashCode()
         {
-            return _val?.GetHashCode() ?? _decimalVal?.GetHashCode() ?? Inner.GetHashCode();
+            if (HasDouble)
+                return _val.GetHashCode();
+
+            if (HasDecimal)
+                return _decimalVal.GetHashCode();
+
+            return Inner.GetHashCode();
         }
 
         public int CompareTo(object that)
@@ -302,7 +332,7 @@ namespace Sparrow.Json
 
         public bool IsNaN()
         {
-            if (_val.HasValue && double.IsNaN(_val.Value))
+            if (HasDouble && double.IsNaN(_val))
                 return true;
 
             return Inner.Equals("NaN");
@@ -310,7 +340,7 @@ namespace Sparrow.Json
 
         public bool IsPositiveInfinity()
         {
-            if (_val.HasValue && double.IsPositiveInfinity(_val.Value))
+            if (HasDouble && double.IsPositiveInfinity(_val))
                 return true;
 
             return Inner.Equals("Infinity");
@@ -318,7 +348,7 @@ namespace Sparrow.Json
 
         public bool IsNegativeInfinity()
         {
-            if (_val.HasValue && double.IsNegativeInfinity(_val.Value))
+            if (HasDouble && double.IsNegativeInfinity(_val))
                 return true;
 
             return Inner.Equals("-Infinity");

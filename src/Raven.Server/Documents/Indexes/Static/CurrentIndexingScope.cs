@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -42,6 +45,12 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, bool, IndexField> _getVectorField;
 
         private Dictionary<string, IndexField> _loadVectorFields;
+
+        // UTF-8 bytes of the collection names requested by LoadDocument, see IsSameCollection
+        private const int MaxCachedCollectionNames = 64;
+        private Dictionary<string, CollectionNameUtf8> _collectionNamesUtf8;
+        private string _lastCollectionName;
+        private CollectionNameUtf8 _lastCollectionNameUtf8;
         
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, ReferenceContainer> ReferencesByCollection;
@@ -71,6 +80,51 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private int _createdFieldsCount;
         public int CreatedFieldsCount => _createdFieldsCount;
+
+        private int _createdFieldPosition;
+
+        /// <summary>
+        /// Position of a dynamic field created (by CreateField) for the source document (or reduce key) that is currently being indexed.
+        /// The Lucene converter caches field instances by this position, so every created field of a source document gets its own instances,
+        /// also across its outputs (a field created once, e.g. bound with `let`, can be part of every output),
+        /// and the next source documents reuse them after <see cref="ResetCreatedFieldPositions"/> is called once all their outputs are written.
+        /// Without a reset, positions keep growing, so field instances are never reused (and never overwritten before they are written).
+        /// </summary>
+        public int NextCreatedFieldPosition() => ++_createdFieldPosition;
+
+        /// <summary>
+        /// Must be called only after all outputs of the source document (or reduce key) were written, when no field created for them is used anymore.
+        /// </summary>
+        public void ResetCreatedFieldPositions() => _createdFieldPosition = 0;
+
+        private Dictionary<(string Name, FieldIndexing? Indexing, FieldStorage? Storage, FieldTermVector? TermVector, int Id), IndexField> _dynamicFields;
+
+        /// <summary>
+        /// Returns the index field of a dynamic field created (by CreateField). The same field (name and options) is usually created
+        /// for many values, so we create its index field (and, for Lucene, the names of its additional fields) once per batch, not for every value.
+        /// The returned field is shared, so it must not be modified.
+        /// </summary>
+        /// <param name="allFields">The options of all the fields of the index, the same for every call in this scope.</param>
+        /// <param name="id">The id of the field: 0 for Lucene, <see cref="Corax.Constants.IndexWriter.DynamicField"/> for Corax.</param>
+        public IndexField GetOrCreateDynamicField(string name, FieldIndexing? indexing, FieldStorage? storage, FieldTermVector? termVector, IndexFieldOptions allFields, int id = 0)
+        {
+            _dynamicFields ??= new();
+
+            var key = (name, indexing, storage, termVector, id);
+            if (_dynamicFields.TryGetValue(key, out var field) == false)
+            {
+                field = IndexField.Create(name, new IndexFieldOptions
+                {
+                    Indexing = indexing,
+                    Storage = storage,
+                    TermVector = termVector
+                }, allFields, id);
+
+                _dynamicFields[key] = field;
+            }
+
+            return field;
+        }
 
         static CurrentIndexingScope()
         {
@@ -140,40 +194,21 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public sealed class MetadataFieldCache
+        // writer of the map results of map-reduce indexes, reused by all the map results of the batch,
+        // see MapReduceIndex.AnonymousObjectToBlittableMapResultsEnumerableWrapper
+        private BlittableJsonWriter _mapResultWriter;
+
+        /// <summary>
+        /// Returns the writer of the batch, ready for a new map result (anything left from the previous one is discarded)
+        /// </summary>
+        internal BlittableJsonWriter GetMapResultWriter()
         {
-            public readonly LazyStringValue Id;
-            public readonly LazyStringValue Key;
-            public readonly LazyStringValue Collection;
+            if (_mapResultWriter == null)
+                return _mapResultWriter = new BlittableJsonWriter(IndexContext);
 
-            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection)
-            {
-                Id = id;
-                Key = key;
-                Collection = collection;
-            }
+            _mapResultWriter.Renew();
+            return _mapResultWriter;
         }
-
-        private MetadataFieldCache _metadataFields;
-
-        public MetadataFieldCache MetadataFields
-        {
-            get
-            {
-                if (_metadataFields == null)
-                {
-                    var context = this.IndexContext;
-                    _metadataFields = new MetadataFieldCache(
-                        id: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id),
-                        key: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key),
-                        collection: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection)
-                    );
-                }
-
-                return _metadataFields;
-            }
-        }
-
 
         public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
         {
@@ -267,15 +302,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     return DynamicNullObject.Null;
                 }
 
-                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection))
+                if (document.TryGetMetadata(out var metadata) && metadata.TryGet(Constants.Documents.Metadata.Collection, out LazyStringValue collection))
                 {
-                    if (string.Equals(collection, collectionName, StringComparison.OrdinalIgnoreCase) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
+                    if (IsSameCollection(collection, collectionName) == false && collectionName != Constants.Documents.Collections.AllDocumentsCollection)
                     {
                         MismatchedReferencesWarningHandler ??= new MismatchedReferencesWarningHandler();
 
                         if (MismatchedReferencesWarningHandler.IsFull == false)
                         {
-                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection);
+                            MismatchedReferencesWarningHandler.HandleMismatchedReference(document, collectionName, id, collection?.ToString());
                         }
 
                         return DynamicNullObject.Null;
@@ -290,6 +325,68 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        [SkipLocalsInit]
+        private unsafe bool IsSameCollection(LazyStringValue collection, string collectionName)
+        {
+            if (collection == null)
+                return false;
+
+            var actual = new ReadOnlySpan<byte>(collection.Buffer, collection.Size);
+
+            if (collectionName != null)
+            {
+                // the requested name comes from the index definition, so we compare the stored bytes with its cached UTF-8 bytes
+                var expected = GetCollectionNameUtf8(collectionName);
+
+                // the stored name almost always has the same casing as the requested one
+                if (actual.SequenceEqual(expected.Bytes))
+                    return true;
+
+                // for ASCII names, an ASCII case-insensitive comparison of the bytes is the same as OrdinalIgnoreCase
+                if (expected.IsAscii && Ascii.IsValid(actual))
+                    return Ascii.EqualsIgnoreCase(actual, expected.Bytes);
+            }
+
+            // non-ASCII names: decode and compare the chars
+            const int maxSizeToDecodeOnStack = 256;
+            if (collection.Size <= maxSizeToDecodeOnStack)
+            {
+                Span<char> chars = stackalloc char[maxSizeToDecodeOnStack];
+                var length = Encodings.Utf8.GetChars(actual, chars);
+                return chars.Slice(0, length).Equals(collectionName.AsSpan(), StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(collection.ToString(), collectionName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private CollectionNameUtf8 GetCollectionNameUtf8(string collectionName)
+        {
+            // the name is usually the same string instance as in the previous call (a literal from the index definition)
+            if (ReferenceEquals(collectionName, _lastCollectionName))
+                return _lastCollectionNameUtf8;
+
+            _collectionNamesUtf8 ??= new Dictionary<string, CollectionNameUtf8>(StringComparer.Ordinal);
+            if (_collectionNamesUtf8.TryGetValue(collectionName, out var utf8) == false)
+            {
+                var bytes = Encodings.Utf8.GetBytes(collectionName);
+                utf8 = new CollectionNameUtf8(bytes, Ascii.IsValid(bytes));
+
+                // an index loads from a few collections only, the limit is just a safety net
+                if (_collectionNamesUtf8.Count < MaxCachedCollectionNames)
+                    _collectionNamesUtf8.Add(collectionName, utf8);
+            }
+
+            _lastCollectionName = collectionName;
+            _lastCollectionNameUtf8 = utf8;
+            return utf8;
+        }
+
+        private sealed class CollectionNameUtf8(byte[] bytes, bool isAscii)
+        {
+            public readonly byte[] Bytes = bytes;
+            public readonly bool IsAscii = isAscii;
         }
 
         public string[] SchemaGetErrorsFor(BlittableJsonReaderObject doc)
@@ -473,6 +570,8 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             _javaScriptUtils?.Clear();
             _javaScriptUtils = null;
+            ((IDisposable)_mapResultWriter)?.Dispose();
+            _mapResultWriter = null;
             Current = null;
         }
 

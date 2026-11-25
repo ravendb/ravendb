@@ -257,18 +257,21 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         internal static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
         {
-            var dotIndex = ldv.Inner.LastIndexOf(".");
+            // the textual representation of a number is ASCII, so we can work on its bytes directly instead of materializing a string
+            var number = new ReadOnlySpan<byte>(ldv.Inner.Buffer, ldv.Inner.Size);
+
+            var dotIndex = number.LastIndexOf((byte)'.');
             if (dotIndex <= 0)
             {
                 dblAsString = null;
                 return false;
             }
 
-            var index = ldv.Inner.Length - 1;
+            var index = number.Length - 1;
             var anyTrailingZeros = false;
             while (true)
             {
-                var lastChar = ldv.Inner[index];
+                var lastChar = number[index];
                 if (lastChar != '0')
                 {
                     if (lastChar == '.')

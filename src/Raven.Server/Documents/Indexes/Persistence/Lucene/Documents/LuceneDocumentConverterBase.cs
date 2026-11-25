@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateField(path, dateAsString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
-                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTime.Ticks, Field.Store.NO));
+                instance.Add(GerOrCreateNumericLongField(field.LuceneNames.Time, dateTime.Ticks, Field.Store.NO));
                 newFields++;
 
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     dateAsString = dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(isUtc: true);
 
-                    instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO));
+                    instance.Add(GerOrCreateNumericLongField(field.LuceneNames.Time, dateTimeOffset.UtcDateTime.Ticks, Field.Store.NO));
                     newFields++;
 
                     _index.IndexFieldsPersistence.MarkHasTimeValue(path);
@@ -411,11 +411,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var timeSpan = (TimeSpan)value;
                 instance.Add(GetOrCreateField(path, timeSpan.ToString("c", CultureInfo.InvariantCulture), null, null, null, storage, indexing, termVector));
 
-                foreach (var numericField in GetOrCreateNumericField(field, timeSpan.Ticks, storage, termVector))
-                {
-                    instance.Add(numericField);
-                    newFields++;
-                }
+                newFields += AddNumericFields(instance, field, timeSpan.Ticks, timeSpan.Ticks, storage, termVector);
 
                 return newFields;
             }
@@ -435,7 +431,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
-                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, ticks, Field.Store.NO));
+                instance.Add(GerOrCreateNumericLongField(field.LuceneNames.Time, ticks, Field.Store.NO));
                 newFields++;
 
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
@@ -449,7 +445,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateField(path, asString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
-                instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, timeOnly.Ticks, Field.Store.NO));
+                instance.Add(GerOrCreateNumericLongField(field.LuceneNames.Time, timeOnly.Ticks, Field.Store.NO));
                 newFields++;
 
                 _index.IndexFieldsPersistence.MarkHasTimeValue(path);
@@ -481,7 +477,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (nestedArray == false)
                 {
-                    instance.Add(GetOrCreateField(path + IsArrayFieldSuffix, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                    instance.Add(GetOrCreateField(field.LuceneNames.IsArray, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                     newFields++;
                 }
 
@@ -511,11 +507,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     return HandleArray((IEnumerable)values);
                 }
 
-                foreach (var complexObjectField in GetComplexObjectFields(path, val, storage, indexing, termVector))
-                {
-                    instance.Add(complexObjectField);
-                    newFields++;
-                }
+                newFields += AddComplexObjectFields(instance, field, val, storage, indexing, termVector);
 
                 return newFields;
             }
@@ -556,11 +548,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     return GetRegularFields(instance, field, val, indexContext, sourceDocument, out _, nestedArray: nestedArray);
                 }
 
-                foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
-                {
-                    instance.Add(jsonField);
-                    newFields++;
-                }
+                newFields += AddComplexObjectFields(instance, field, Scope.CreateJson(json, indexContext), storage, indexing, termVector);
 
                 return newFields;
             }
@@ -604,10 +592,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
-            foreach (var numericField in GetOrCreateNumericField(field, value, storage))
+            switch (BlittableNumber.Parse(value, out double doubleValue, out long longValue))
             {
-                instance.Add(numericField);
-                newFields++;
+                case NumberParseResult.Double:
+                    newFields += AddNumericFields(instance, field, doubleValue, (long)doubleValue, storage);
+                    break;
+
+                case NumberParseResult.Long:
+                    newFields += AddNumericFields(instance, field, longValue, longValue, storage);
+                    break;
             }
 
             return newFields;
@@ -634,12 +627,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private IEnumerable<AbstractField> GetComplexObjectFields(string path, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
+        private int AddComplexObjectFields<T>(T instance, IndexField field, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
+            where T : ILuceneDocumentWrapper
         {
-            if (_multipleItemsSameFieldCount.Count == 0 || _multipleItemsSameFieldCount[0] == 1)
-                yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            var count = 0;
 
-            yield return GetOrCreateField(path, null, null, null, val, storage, indexing, termVector);
+            if (_multipleItemsSameFieldCount.Count == 0 || _multipleItemsSameFieldCount[0] == 1)
+            {
+                instance.Add(GetOrCreateField(field.LuceneNames.ConvertToJson, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                count++;
+            }
+
+            instance.Add(GetOrCreateField(field.Name, null, null, null, val, storage, indexing, termVector));
+            count++;
+
+            return count;
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
@@ -747,26 +749,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             
         }
 
-        private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
+        private int AddNumericFields<T>(T instance, IndexField field, double doubleValue, long longValue, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
+            where T : ILuceneDocumentWrapper
         {
-            var fieldNameDouble = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
-            var fieldNameLong = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+            var luceneNames = field.LuceneNames;
 
-            var numericFieldDouble = GetNumericFieldFromCache(fieldNameDouble, null, storage, termVector);
-            var numericFieldLong = GetNumericFieldFromCache(fieldNameLong, null, storage, termVector);
+            instance.Add(GetNumericFieldFromCache(luceneNames.RangeDouble, null, storage, termVector).SetDoubleValue(doubleValue));
+            instance.Add(GetNumericFieldFromCache(luceneNames.RangeLong, null, storage, termVector).SetLongValue(longValue));
 
-            switch (BlittableNumber.Parse(value, out double doubleValue, out long longValue))
-            {
-                case NumberParseResult.Double:
-                    yield return numericFieldDouble.SetDoubleValue(doubleValue);
-                    yield return numericFieldLong.SetLongValue((long)doubleValue);
-                    break;
-
-                case NumberParseResult.Long:
-                    yield return numericFieldDouble.SetDoubleValue(longValue);
-                    yield return numericFieldLong.SetLongValue(longValue);
-                    break;
-            }
+            return 2;
         }
 
         private NumericField GerOrCreateNumericLongField(string name, long value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)

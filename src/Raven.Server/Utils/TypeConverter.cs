@@ -721,7 +721,8 @@ namespace Raven.Server.Utils
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
                 return PropertyAccessor.Create(type, value);
 
-            return PropertyAccessorCache.GetOrAdd(type, x => PropertyAccessor.Create(type, value));
+            // static lambda with an explicit state, so we don't allocate a closure on every call (including cache hits)
+            return PropertyAccessorCache.GetOrAdd(type, static (t, v) => PropertyAccessor.Create(t, v), value);
         }
 
         public static IPropertyAccessor GetPropertyAccessorForMapReduceOutput(object value, Dictionary<string, CompiledIndexField> groupByFields)
@@ -734,7 +735,10 @@ namespace Raven.Server.Utils
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
+            // static lambda with an explicit state, so we don't allocate a closure on every call (including cache hits)
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type,
+                static (t, state) => PropertyAccessor.CreateMapReduceOutputAccessor(t, state.Value, state.GroupByFields),
+                (Value: value, GroupByFields: groupByFields));
         }
 
 
