@@ -1976,7 +1976,6 @@ namespace Voron.Impl.Journal
             private Pager.State ApplyPagesToDataFileFromScratch(ApplyLogsToDataFileState state, List<(long Start, long Count, long AllocatedInTransaction)> flushedPageRanges)
             {
                 long written = 0;
-                long unsynced;
                 var sp = Stopwatch.StartNew();
                 var options = _waj._env.Options;
                 var dataPager = _waj._env.DataPager;
@@ -2006,7 +2005,7 @@ namespace Voron.Impl.Journal
                             }
                         }
 
-                        unsynced = MarkUnsyncedPages(pages);
+                        Interlocked.Add(ref _totalWrittenButUnsyncedBytes, MarkUnsyncedPages(pages));
 
                         TrickleWriteback(dataPager, dataPagerState);
                     }
@@ -2023,8 +2022,6 @@ namespace Voron.Impl.Journal
                     _waj._logger.Debug($"Flushed {pagesFlushed:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)} in {sp.Elapsed}.");
                 else if (_waj._logger.IsWarnEnabled && sp.Elapsed > options.LongRunningFlushingWarning)
                     _waj._logger.Warn($"Very long data flushing. It took {sp.Elapsed} to flush {pagesFlushed:#,#} pages to {dataPager.FileName} with {new Size(written, SizeUnit.Bytes)}.");
-
-                Interlocked.Add(ref _totalWrittenButUnsyncedBytes, unsynced);
 
                 return dataPagerState;
             }
