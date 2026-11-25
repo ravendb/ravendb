@@ -4,7 +4,10 @@ import {
     OngoingTaskKey,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { ImportFromFileFormData } from "./importFromFileValidation";
-import { getDatabaseRecordTypes } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
+import {
+    getDatabaseRecordTypes,
+    getDefaultImportOptions,
+} from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import endpoints = require("endpoints");
 import appUrl = require("common/appUrl");
 
@@ -14,82 +17,16 @@ type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptio
 export type ImportCommandType = "PowerShell" | "Cmd" | "Bash";
 
 export function getDefaultFormData(isAdminAccessOrAbove: boolean): ImportFromFileFormData {
+    const importOptions = getDefaultImportOptions(isAdminAccessOrAbove);
     return {
         file: null,
-        documents: {
-            isIncludeDocuments: true,
-            isIncludeAttachments: true,
-            isIncludeCounters: true,
-            isIncludeRevisions: true,
-            isIncludeTimeSeries: true,
-            isIncludeTimeSeriesDeletedRanges: true,
-            isIncludeArtificialDocuments: false,
-            isIncludeArchivedDocuments: true,
-            isIncludeExpiredDocuments: true,
-            isIncludeConflicts: true,
-            isIncludeCompareExchange: true,
-            isIncludeLegacyAttachments: false,
-            isIncludeDocumentsTombstones: true,
-            isIncludeCompareExchangeTombstones: true,
-            isIncludeSubscriptions: true,
-        },
+        ...importOptions,
         collections: {
             isImportAllCollections: true,
             includedCollections: [],
         },
-        configuration: {
-            isIncludeIndexes: isAdminAccessOrAbove,
-            isIncludeIndexHistory: false,
-            isRemoveAnalyzers: false,
-            isIncludeIdentities: true,
-            isIncludeConnectionStringsAndOngoingTasks: true,
-            isCustomizeOngoingTasks: false,
-            ongoingTasks: {
-                periodicBackups: isAdminAccessOrAbove,
-                externalReplications: isAdminAccessOrAbove,
-                ravenEtls: isAdminAccessOrAbove,
-                sqlEtls: isAdminAccessOrAbove,
-                snowflakeEtls: isAdminAccessOrAbove,
-                olapEtls: isAdminAccessOrAbove,
-                elasticSearchEtls: isAdminAccessOrAbove,
-                queueEtls: isAdminAccessOrAbove,
-                hubReplications: true,
-                sinkReplications: isAdminAccessOrAbove,
-                embeddingsGeneration: isAdminAccessOrAbove,
-                genAi: isAdminAccessOrAbove,
-                cdcSinks: isAdminAccessOrAbove,
-                aiAgents: isAdminAccessOrAbove,
-                remoteAttachments: isAdminAccessOrAbove,
-            },
-            connectionStrings: {
-                ravenConnectionStrings: isAdminAccessOrAbove,
-                sqlConnectionStrings: isAdminAccessOrAbove,
-                snowflakeConnectionStrings: isAdminAccessOrAbove,
-                olapConnectionStrings: isAdminAccessOrAbove,
-                elasticSearchConnectionStrings: isAdminAccessOrAbove,
-                queueConnectionStrings: isAdminAccessOrAbove,
-                aiConnectionStrings: isAdminAccessOrAbove,
-            },
-            isImportAllSettings: true,
-            databaseSettings: {
-                settings: true,
-                conflictSolverConfig: true,
-                client: isAdminAccessOrAbove,
-                revisions: isAdminAccessOrAbove,
-                refresh: true,
-                expiration: isAdminAccessOrAbove,
-                documentsCompression: true,
-                schemaValidation: true,
-                dataArchival: true,
-                timeSeries: true,
-                sorters: true,
-                analyzers: true,
-                postgreSqlIntegration: true,
-            },
-        },
         processing: {
-            isUseTransformScript: false,
-            transformScript: "",
+            ...importOptions.processing,
             isSetMaxReadOpsPerSecond: false,
             maxReadOpsPerSecond: null,
             isEncrypted: false,
