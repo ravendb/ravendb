@@ -2849,9 +2849,9 @@ namespace FastTests.Client
             }
         }
 
-        private class PartlyBoundCollection
+        private class ConstructedCollection
         {
-            public PartlyBoundCollection(List<int> items, string name, int notAMember)
+            public ConstructedCollection(List<int> items, string name)
             {
                 Items = items ?? new List<int>();
                 Name = name;
@@ -2863,67 +2863,87 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void CollectionPassedThroughAPartlyBoundConstructorIsNotPopulatedAgain()
+        public void CollectionPassedThroughAConstructorIsNotPopulatedAgain()
         {
             var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Items\":[1,2],\"Name\":\"n\"}", "partly"))
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Items\":[1,2],\"Name\":\"n\"}", "constructed"))
             {
-                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<PartlyBoundCollection>(json);
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<ConstructedCollection>(json);
 
                 Assert.Equal([1, 2], loaded.Items);
                 Assert.Equal("n", loaded.Name);
             }
         }
 
-        private class TrimmingConstructor
+        private class UnboundConstructorParameter
         {
-            public TrimmingConstructor(string name, int unboundParameter)
+            public UnboundConstructorParameter(string name, int unboundParameter)
             {
-                Name = name?.Trim();
+                Name = name;
             }
 
             public string Name { get; set; }
-
-            public TrimmingConstructor Inner { get; set; }
         }
 
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void ValuePassedThroughAPartlyBoundConstructorIsNotSetAgainLikeNewtonsoft()
+        private class WiderConstructorParameters
         {
-            const string text = "{\"Name\":\"  x  \",\"Inner\":{\"Name\":\"  y  \"}}";
-            var newtonsoft = new DocumentConventions { Serialization = new NewtonsoftJsonSerializationConventions() };
-            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            public WiderConstructorParameters(IEnumerable<int> items, object tag)
+            {
+                Items = items.ToList();
+                Tag = tag.ToString();
+            }
+
+            public List<int> Items { get; }
+
+            public string Tag { get; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(typeof(UnboundConstructorParameter), "{\"Name\":\"x\"}")]
+        [InlineData(typeof(WiderConstructorParameters), "{\"Items\":[1,2],\"Tag\":\"t\"}")]
+        public void ConstructorWhoseParametersDoNotEachBindAMemberIsRejected(Type type, string text)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "partly"))
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "rejected"))
             {
-                var expected = newtonsoft.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
-                var loaded = systemTextJson.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
+                var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable(type, json));
 
-                Assert.Equal("x", expected.Name);
-                Assert.Equal("y", expected.Inner.Name);
-                Assert.Equal(expected.Name, loaded.Name);
-                Assert.Equal(expected.Inner.Name, loaded.Inner.Name);
+                Assert.Contains("deserialization constructor", e.ToString());
+                Assert.Contains(type.Name, e.ToString());
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData(typeof(Raven.Client.Documents.Smuggler.OfflineMigrationProgress), "{\"DataExporter\":{\"ReadCount\":1},\"Documents\":{\"ReadCount\":2}}")]
+        [InlineData(typeof(Raven.Client.Documents.Operations.Backups.BackupProgress), "{\"SnapshotBackup\":{\"ReadCount\":1},\"Documents\":{\"ReadCount\":2}}")]
+        public void OperationProgressBuiltFromItsResultCanBeRead(Type type, string text)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "progress"))
+            {
+                var progress = (Raven.Client.Documents.Smuggler.SmugglerResult.SmugglerProgress)conventions.Serialization.DefaultConverter.FromBlittable(type, json);
+
+                Assert.Equal(2, progress.Documents.ReadCount);
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void PopulatingAnExistingInstanceKeepsTheValueOfAPartlyBoundConstructorLikeLoading()
+        public void PopulatingAnExistingInstanceRejectsAConstructorWithAnUnboundParameterLikeLoading()
         {
-            var systemTextJson = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"  x  \"}", "partly"))
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"x\"}", "rejected"))
             {
-                var loaded = systemTextJson.Serialization.DefaultConverter.FromBlittable<TrimmingConstructor>(json);
+                var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.PopulateEntity(new UnboundConstructorParameter("old", 0), json));
 
-                var populated = new TrimmingConstructor("old", 0);
-                systemTextJson.Serialization.DefaultConverter.PopulateEntity(populated, json);
-
-                Assert.Equal("x", loaded.Name);
-                Assert.Equal(loaded.Name, populated.Name);
+                Assert.Contains("deserialization constructor", e.ToString());
             }
         }
 
@@ -2952,8 +2972,25 @@ namespace FastTests.Client
             public List<ImmutableMeasure> Many { get; set; }
         }
 
+        private struct AnnotatedImmutableMeasure
+        {
+            public readonly long Count;
+
+            public readonly double Rate;
+
+            public string Name { get; }
+
+            [System.Text.Json.Serialization.JsonConstructor]
+            public AnnotatedImmutableMeasure(string name, long count, double rate)
+            {
+                Name = name;
+                Count = count;
+                Rate = rate;
+            }
+        }
+
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void ImmutableStructIsCreatedThroughItsConstructor()
+        public void ImmutableStructWithoutAnAnnotatedConstructorIsRejectedOnRead()
         {
             var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
             const string measure = "{\"Count\":2,\"Rate\":1.5,\"Name\":\"n\"}";
@@ -2962,61 +2999,51 @@ namespace FastTests.Client
             {
                 using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(measure, "root"))
                 {
-                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<ImmutableMeasure>(json);
+                    var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<ImmutableMeasure>(json));
 
-                    Assert.Equal("n", loaded.Name);
-                    Assert.Equal(2, loaded.Count);
-                    Assert.Equal(1.5, loaded.Rate);
+                    Assert.Contains(nameof(ImmutableMeasure), e.ToString());
+                    Assert.Contains("JsonConstructorAttribute", e.ToString());
                 }
 
-                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Measure\":" + measure + ",\"Maybe\":" + measure + ",\"Many\":[" + measure + ",{\"Name\":\"partial\"}]}", "holder"))
+                using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Measure\":" + measure + "}", "holder"))
                 {
-                    var loaded = conventions.Serialization.DefaultConverter.FromBlittable<HoldsImmutableMeasure>(json);
+                    var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<HoldsImmutableMeasure>(json));
 
-                    Assert.Equal("n", loaded.Measure.Name);
-                    Assert.Equal(2, loaded.Measure.Count);
-                    Assert.Equal(1.5, loaded.Measure.Rate);
-                    Assert.Equal(2, loaded.Maybe.Value.Count);
-                    Assert.Equal(2, loaded.Many.Count);
-                    Assert.Equal(1.5, loaded.Many[0].Rate);
-                    Assert.Equal("partial", loaded.Many[1].Name);
-                    Assert.Equal(0, loaded.Many[1].Count);
+                    Assert.Contains("JsonConstructorAttribute", e.ToString());
+                }
 
-                    using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(loaded, context))
-                    {
-                        Assert.True(written.TryGet(nameof(HoldsImmutableMeasure.Measure), out BlittableJsonReaderObject writtenMeasure));
-                        Assert.Equal(measure, writtenMeasure.ToString());
-                    }
+                var holder = new HoldsImmutableMeasure { Measure = new ImmutableMeasure("n", 2, 1.5) };
+                using (BlittableJsonReaderObject written = conventions.Serialization.DefaultConverter.ToBlittable(holder, context))
+                {
+                    Assert.True(written.TryGet(nameof(HoldsImmutableMeasure.Measure), out BlittableJsonReaderObject writtenMeasure));
+                    Assert.Equal(measure, writtenMeasure.ToString());
                 }
             }
-        }
-
-        private class WiderConstructorParameters
-        {
-            public WiderConstructorParameters(IEnumerable<int> items, object tag)
-            {
-                Items = items.ToList();
-                Tag = tag.ToString();
-            }
-
-            public List<int> Items { get; }
-
-            public string Tag { get; }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void ConstructorParameterWithAWiderTypeThanItsMemberReceivesTheDocumentValue()
+        public void ImmutableStructIsCreatedThroughItsAnnotatedConstructor()
         {
             var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+            const string measure = "{\"Count\":2,\"Rate\":1.5,\"Name\":\"n\"}";
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Items\":[1,2],\"Tag\":\"t\"}", "wider"))
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Many\":[" + measure + ",{\"Name\":\"partial\"}]}", "holder"))
             {
-                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<WiderConstructorParameters>(json);
+                var loaded = conventions.Serialization.DefaultConverter.FromBlittable<HoldsAnnotatedImmutableMeasures>(json);
 
-                Assert.Equal([1, 2], loaded.Items);
-                Assert.Equal("t", loaded.Tag);
+                Assert.Equal(2, loaded.Many.Count);
+                Assert.Equal("n", loaded.Many[0].Name);
+                Assert.Equal(2, loaded.Many[0].Count);
+                Assert.Equal(1.5, loaded.Many[0].Rate);
+                Assert.Equal("partial", loaded.Many[1].Name);
+                Assert.Equal(0, loaded.Many[1].Count);
             }
+        }
+
+        private class HoldsAnnotatedImmutableMeasures
+        {
+            public List<AnnotatedImmutableMeasure> Many { get; set; }
         }
 
         private struct OpenStructShape : IOpenShape

@@ -224,17 +224,16 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void SourceGeneratedTypesBindConstructorParametersLikeReflection()
+        public void SourceGeneratedTypesRejectConstructorsWithUnboundParametersLikeReflection()
         {
             DocumentConventions conventions = CreateEdgeCaseConventions();
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"Oren\",\"Age\":40}", "constructor"))
             {
-                var read = conventions.Serialization.DefaultConverter.FromBlittable<ConstructedWithUnboundParameter>(json);
+                var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<ConstructedWithUnboundParameter>(json));
 
-                Assert.Equal("Oren", read.Name);
-                Assert.Equal(40, read.Age);
+                Assert.Contains("deserialization constructor", e.ToString());
             }
         }
 
