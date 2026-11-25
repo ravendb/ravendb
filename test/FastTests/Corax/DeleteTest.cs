@@ -204,6 +204,36 @@ namespace FastTests.Corax
             }
         }
 
+        [RavenFact(RavenTestCategory.Corax)]
+        public void CanDeleteEntriesWithUniqueTermsAcrossManyTreePages()
+        {
+            const int count = 20_000;
+            PrepareData(DataType.Linear, count);
+            IndexEntries(CreateKnownFields(_bsc));
+
+            using (var indexWriter = new IndexWriter(Env, _analyzers, SupportedFeatures.All))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    if (i % 3 != 0)
+                        indexWriter.TryDeleteEntry($"list/{i}");
+                }
+
+                indexWriter.Commit();
+            }
+
+            Span<long> ids = stackalloc long[16];
+            using var indexSearcher = new IndexSearcher(Env, _analyzers);
+            for (int i = 0; i < count; i++)
+            {
+                var expected = i % 3 == 0 ? 1 : 0;
+                Assert.Equal(expected, indexSearcher.TermQuery("Content", i.ToString()).Fill(ids));
+                Assert.Equal(expected, indexSearcher.TermQuery("Id", $"list/{i}").Fill(ids));
+            }
+
+            Assert.Equal(count / 3 + 1, indexSearcher.NumberOfEntries);
+        }
+
         private void PrepareData(DataType type = DataType.Default, int batchSize = 1000, uint modulo = 33)
         {
             for (int i = 0; i < batchSize; ++i)

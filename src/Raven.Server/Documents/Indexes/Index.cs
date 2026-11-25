@@ -253,6 +253,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         internal bool HadRealIndexingWork => _hadRealIndexingWorkToDo.IsRaised();
 
+        private bool _spaceReclaimPending;
+
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
         private Size _initialManagedAllocations;
 
@@ -2586,6 +2588,8 @@ namespace Raven.Server.Documents.Indexes
                                 UpdateThreadAllocations(indexContext, null, null, IndexingWorkType.None);
                             }
 
+                            ReclaimSpaceIfBatchIsLight(indexContext.Transaction.InnerTransaction, stats, mightBeMore, writeOperation.IsValueCreated);
+
                             IndexFieldsPersistence.Persist(indexContext);
                             HandleReferences(tx, stats);
 
@@ -2638,6 +2642,20 @@ namespace Raven.Server.Documents.Indexes
                     return mightBeMore;
                 }
             }
+        }
+
+        private void ReclaimSpaceIfBatchIsLight(Transaction tx, IndexingStatsScope stats, bool mightBeMore, bool hadWrites)
+        {
+            if (SearchEngineType != SearchEngineType.Corax)
+                return;
+
+            _spaceReclaimPending |= hadWrites;
+            if (_spaceReclaimPending == false || mightBeMore || hadWrites)
+                return;
+
+            _spaceReclaimPending = false;
+            using (stats.For(IndexingOperation.Corax.ReclaimSpace))
+                IndexPersistence.ReclaimSpace(tx, Configuration.CoraxMaxPagesToReclaimPerBatch);
         }
 
         private void HandleReferences(RavenTransaction tx, IndexingStatsScope stats)

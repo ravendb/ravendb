@@ -82,6 +82,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.MaxMemoizationSizeInMb",
                 "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
+                "Indexing.Corax.MaxPagesToReclaimPerBatch",
                 "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
                 "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
                 "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",

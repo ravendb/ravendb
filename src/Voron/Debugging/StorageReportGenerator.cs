@@ -151,7 +151,7 @@ namespace Voron.Debugging
                                         string nestedReportName = treeReport.Name + "/" + nestedReport.Name;
                                         nestedReport.Name = nestedReportName +" (CompactTree)";
                                         trees.Add(nestedReport);
-                                        trees.Add(GetContainerReport(nestedReportName +" (Entries)", textLookup.State.TermsContainerId, input.IncludeDetails));
+                                        AddContainerReports(trees, nestedReportName +" (Entries)", textLookup.State.TermsContainerId, input.IncludeDetails);
                                     }
                                     break;
                                 case RootObjectType.EmbeddedFixedSizeTree:
@@ -187,7 +187,7 @@ namespace Voron.Debugging
 
             foreach (var (name, page) in input.Containers)
             {
-                trees.Add(GetContainerReport(name.ToString(), page, input.IncludeDetails));
+                AddContainerReports(trees, name.ToString(), page, input.IncludeDetails);
             }
 
             foreach (PersistentDictionaryRootHeader dic in input.PersistentDictionaries)
@@ -491,6 +491,19 @@ namespace Voron.Debugging
             return treeReport;
         }
 
+        private void AddContainerReports(List<TreeReport> trees, string name, ContainerId page, bool includeDetails)
+        {
+            trees.Add(GetContainerReport(name, page, includeDetails));
+
+            var pendingFrees = _tx.Transaction.GetContainerState(page).GetPendingFrees(_tx, create: false);
+            if (pendingFrees == null)
+                return;
+
+            var pendingFreesReport = GetReport(pendingFrees, includeDetails);
+            pendingFreesReport.Name = name + " (Container Pending Frees)";
+            trees.Add(pendingFreesReport);
+        }
+
         public TreeReport GetContainerReport(string name, ContainerId page, bool includeDetails)
         {
             name += $" (Container)";
@@ -528,7 +541,7 @@ namespace Voron.Debugging
             {
                 Type = RootObjectType.Set,
                 Name = name.ToString(),
-                NumberOfEntries = root.GetNumberOfEntries(),
+                NumberOfEntries = root.GetNumberOfEntries() - Container.GetNumberOfPendingFrees(_tx, page),
                 LeafPages = allPages.State.NumberOfEntries + allPages.State.LeafPages + freePages.State.LeafPages,
                 OverflowPages = root.Header.NumberOfOverflowPages,
                 BranchPages = +freePages.State.BranchPages + allPages.State.BranchPages,

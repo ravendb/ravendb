@@ -19,6 +19,7 @@ using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.Containers;
 using Voron.Data.Graphs;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
@@ -210,6 +211,8 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     {
         // lucene method
     }
+
+    public override bool ReclaimSpace(Transaction writeTransaction, int maxPages) => Container.ReclaimPendingFrees(writeTransaction.LowLevelTransaction, maxPages);
 
     public override void Initialize(StorageEnvironment environment)
     {

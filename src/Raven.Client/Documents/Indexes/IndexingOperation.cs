@@ -39,6 +39,7 @@
             public const string AddDocument = "Corax/AddDocument";
             public const string Commit = "Corax/Commit";
             public const string DictionaryTraining = "Corax/DictionaryTraining";
+            public const string ReclaimSpace = "Corax/ReclaimSpace";
         }
 
         internal static class Cleanup

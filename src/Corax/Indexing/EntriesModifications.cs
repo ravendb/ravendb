@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Corax.Utils;
 using Sparrow.Server;
+using Voron.Data.Containers;
 using Voron.Util;
 
 namespace Corax.Indexing;
@@ -24,6 +25,8 @@ internal unsafe struct EntriesModifications
     private int _termSize;
     private long _longValue;
     private double _doubleValue;
+
+    public ContainerEntryId TermContainerId;
 
     public int TermSize
     {

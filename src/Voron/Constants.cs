@@ -79,6 +79,19 @@ namespace Voron.Global
             }
         }
 
+        public static class Container
+        {
+            public static readonly Slice PendingFrees;
+
+            static Container()
+            {
+                using (StorageEnvironment.GetStaticContext(out var ctx))
+                {
+                    Slice.From(ctx, "PendingFrees", ByteStringType.Immutable, out PendingFrees);
+                }
+            }
+        }
+
         public static class Graphs
         {
             public static class VectorId

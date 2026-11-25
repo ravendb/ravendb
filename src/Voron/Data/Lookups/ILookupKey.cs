@@ -14,6 +14,8 @@ public interface ILookupKey
     void Init<T>(Lookup<T> parent) where T : struct, ILookupKey;
 
     int CompareTo<T>(Lookup<T> parent, long l) where T : struct, ILookupKey;
+
+    bool TryGetKnownKeyData(out long keyData);
     
     [Pure]
     int CompareTo<T>(T l) where T : ILookupKey;
