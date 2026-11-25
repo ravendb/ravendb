@@ -1023,6 +1023,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     reader.TryGet(nameof(SubscriptionState.ArchivedDataProcessingBehavior), out ArchivedDataProcessingBehavior? archivedDataProcessingBehavior);
+                    reader.TryGet(nameof(SubscriptionState.PinToMentorNode), out bool pinToMentorNode);
 
                     yield return new SubscriptionState
                     {
@@ -1031,6 +1032,7 @@ namespace Raven.Server.Smuggler.Documents
                         SubscriptionName = subscriptionName,
                         SubscriptionId = subscriptionId,
                         MentorNode = mentorNode,
+                        PinToMentorNode = pinToMentorNode,
                         NodeTag = nodeTag,
                         ArchivedDataProcessingBehavior = archivedDataProcessingBehavior,
                         LastBatchAckTime = lastBatchAckTime,

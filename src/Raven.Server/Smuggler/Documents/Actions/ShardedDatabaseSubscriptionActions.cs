@@ -17,11 +17,10 @@ public sealed class ShardedDatabaseSubscriptionActions : DatabaseSubscriptionAct
     {
         var command = new PutShardedSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {
-            SubscriptionName = subscriptionState.SubscriptionName,
             //After restore/export , subscription will start from the start
-            InitialChangeVector = null,
-            ArchivedDataProcessingBehavior = subscriptionState.ArchivedDataProcessingBehavior
+            InitialChangeVector = null
         };
+        command.CopySettingsFrom(subscriptionState, keepMentorNode: false);
 
         return command;
     }

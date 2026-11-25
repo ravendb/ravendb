@@ -46,10 +46,9 @@ namespace Raven.Server.Smuggler.Documents
 
                 var command = new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
-                    SubscriptionName = subscriptionState.SubscriptionName,
-                    InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-                    Disabled = subscriptionState.Disabled
+                    InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint
                 };
+                command.CopySettingsFrom(subscriptionState, keepMentorNode: true);
                 return command;
             }
 
