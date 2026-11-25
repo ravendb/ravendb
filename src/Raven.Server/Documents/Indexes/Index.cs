@@ -1182,7 +1182,10 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.IndexStore.ForTestingPurposes?.BeforeRollingIndexFinished?.Invoke(this);
 
                 // We may send the command multiple times so we need a new Id every time.
-                var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId());
+                var command = new PutRollingIndexCommand(DocumentDatabase.Name, Definition.Name, nodeTag, DocumentDatabase.Time.GetUtcNow(), RaftIdGenerator.NewId())
+                {
+                    DeploymentRaftCommandIndex = Definition.ClusterState?.LastRollingDeploymentIndex
+                };
                 _rollingCompletionTask = DocumentDatabase.ServerStore.SendToLeaderAsync(command).ContinueWith(async t =>
                 {
                     try
