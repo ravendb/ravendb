@@ -1,9 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.15</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -63,6 +63,7 @@
     <ProjectReference Include="..\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\Sparrow.Server\Sparrow.Server.csproj" />
     <ProjectReference Include="..\Voron\Voron.csproj" />
+    <ProjectReference Include="..\Raven.Server.SourceGenerators\Raven.Server.SourceGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

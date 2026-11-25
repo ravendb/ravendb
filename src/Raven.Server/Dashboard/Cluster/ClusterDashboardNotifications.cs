@@ -38,7 +38,7 @@ namespace Raven.Server.Dashboard.Cluster
                 case ClusterDashboardNotificationType.DatabaseStorageUsage:
                     return new StorageUsageNotificationSender(topicId, ClusterDashboardPayloadType.Database, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.IoStats:
-                    return new IoStatsNotificationSender(topicId, _databasesInfoRetriever, watcher, _shutdown);
+                    return new IoStatsNotificationSender(topicId, _databasesInfoRetriever, _server.ServerStore.StorageDeviceMonitor, watcher, _shutdown);
                 case ClusterDashboardNotificationType.Traffic:
                     return new TrafficNotificationSender(topicId, ClusterDashboardPayloadType.Server, _databasesInfoRetriever, watcher, _shutdown);
                 case ClusterDashboardNotificationType.DatabaseTraffic:

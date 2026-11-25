@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -152,7 +152,7 @@ namespace Voron.Impl
             {
                 Ptr = ptr,
                 Size = size,
-                InPoolSince = DateTime.UtcNow
+                InPoolSinceMilliseconds = Clock.Milliseconds
             };
 
             var addToPerCorePool = ForTestingPurposes == null || ForTestingPurposes.CanAddToPerCorePool;
@@ -303,6 +303,7 @@ namespace Voron.Impl
             try
             {
                 var currentTime = DateTime.UtcNow;
+                var now = Clock.Milliseconds;
                 var idleTime = TimeSpan.FromMinutes(10);
 
                 for (int i = 0; i < _items.Length; i++)
@@ -318,7 +319,7 @@ namespace Voron.Impl
                         foreach (var current in currentStack)
                         {
                             var allocation = current.Item;
-                            var timeInPool = currentTime - allocation.InPoolSince;
+                            var timeInPool = TimeSpan.FromMilliseconds(now - allocation.InPoolSinceMilliseconds);
                             if (timeInPool <= idleTime)
                                 continue;
 
@@ -338,7 +339,7 @@ namespace Voron.Impl
                         {
                             var allocation = globalStackEnumerator.Current;
 
-                            var timeInPool = currentTime - allocation.InPoolSince;
+                            var timeInPool = TimeSpan.FromMilliseconds(now - allocation.InPoolSinceMilliseconds);
                             if (timeInPool <= idleTime)
                                 continue;
 

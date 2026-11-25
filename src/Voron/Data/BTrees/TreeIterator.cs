@@ -1,4 +1,5 @@
 using System;
+using Voron.Impl.Paging;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -145,7 +146,7 @@ namespace Voron.Data.BTrees
                     {
                         // In here we will also have the 'current' page (even if we are traversing a compressed node).
                         if (_prefetch)
-                            MaybePrefetchPagesReferencedBy(_currentPage);
+                            MaybePrefetchPagesReferencedBy(_currentPage, forward: false);
 
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
@@ -159,7 +160,7 @@ namespace Voron.Data.BTrees
 
                     // We should be prefetching data pages down here.
                     if (_prefetch)
-                        MaybePrefetchPagesReferencedBy(_currentPage);
+                        MaybePrefetchPagesReferencedBy(_currentPage, forward: false);
 
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 
@@ -180,9 +181,11 @@ namespace Voron.Data.BTrees
             return false;
         }
 
-        private void MaybePrefetchPagesReferencedBy(TreePage page)
+        // the entries the iterator reads next; each step adds one
+        private void MaybePrefetchPagesReferencedBy(TreePage page, bool forward)
         {
-            _tx.DataPager.MaybePrefetchMemory(_tx.DataPagerState,new TreePage.PagesReferencedEnumerator(page));
+            var first = forward ? page.LastSearchPosition + 1 : page.LastSearchPosition - Pager.IteratorReadAheadPages;
+            _tx.DataPager.MaybePrefetchMemory(_tx.DataPagerState, new TreePage.PagesReferencedEnumerator(page, first, Pager.IteratorReadAheadPages));
         }
 
         public bool MoveNext()
@@ -199,7 +202,7 @@ namespace Voron.Data.BTrees
                     {
                         // In here we will also have the 'current' page (even if we are traversing a compressed node).
                         if (_prefetch)
-                            MaybePrefetchPagesReferencedBy(_currentPage);
+                            MaybePrefetchPagesReferencedBy(_currentPage, forward: true);
 
                         _cursor.Push(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
@@ -213,7 +216,7 @@ namespace Voron.Data.BTrees
 
                     // We should be prefetching data pages down here.
                     if (_prefetch)
-                        MaybePrefetchPagesReferencedBy(_currentPage);
+                        MaybePrefetchPagesReferencedBy(_currentPage, forward: true);
 
                     var current = _currentPage.GetNode(_currentPage.LastSearchPosition);
 

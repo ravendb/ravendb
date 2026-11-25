@@ -60,6 +60,11 @@ type rangeSearchType = "Numeric Double" | "Numeric Long" | "Alphabetical" | "Dat
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<document>>;
 
+type queryPagingProgress = {
+    totalSkippedResults: number;
+    itemsSoFar: number;
+}
+
 type explanationItem = {
     explanations: string[];
     id: string;
@@ -232,7 +237,6 @@ class query extends shardViewModelBase {
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any, any>>();
     staleResult: KnockoutComputed<boolean>;
     fromCache = ko.observable<boolean>(false);
-    originalRequestTime = ko.observable<number>();
     dirtyResult = ko.observable<boolean>();
     currentTab = ko.observable<queryResultTab | highlightSection | perCollectionIncludes | timeSeriesPlotDetails | timeSeriesTableDetails | spatialQueryMap>("results");
     totalResultsForUi = ko.observable<number>(0);
@@ -1011,7 +1015,7 @@ class query extends shardViewModelBase {
         this.saveQueryOptions(criteria);
         
         const criteriaDto = criteria.toStorageDto();
-        const disableCache = !this.cacheEnabled();
+        const cacheEnabled = this.cacheEnabled();
         const disableAutoIndexCreation = this.disableAutoIndexCreation();
         const projectionBehavior = this.projectionBehavior();
 
@@ -1027,14 +1031,13 @@ class query extends shardViewModelBase {
                 skip: 0,
                 take: 25,
                 criteria,
-                disableCache,
+                cacheEnabled,
                 disableAutoIndexCreation,
                 projectionBehavior
             });
 
-            // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
-            let totalSkippedResults = 0;
-            let itemsSoFar = 0;
+            // if any result returns skippedResults <> 0 we enter infinite scroll mode 
+            let latestPagingProgress: queryPagingProgress = { totalSkippedResults: 0, itemsSoFar: 0 };
             
             try {
                 this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl("GET"));
@@ -1048,14 +1051,20 @@ class query extends shardViewModelBase {
             this.lastCriteriaExecuted = criteria.clone();
             
             const resultsFetcher = (skip: number, take: number) => {
+                const isFetchingFromStart = skip === 0;
+                if (isFetchingFromStart) {
+                    latestPagingProgress = { totalSkippedResults: 0, itemsSoFar: 0 };
+                }
+
+                const pagingProgress = latestPagingProgress;
                 const criteriaForFetcher = this.lastCriteriaExecuted;
                 
                 const command = new queryCommand({
                     db: database,
-                    skip: skip + totalSkippedResults,
+                    skip: skip + pagingProgress.totalSkippedResults,
                     take: take + 1,
                     criteria: criteriaForFetcher,
-                    disableCache,
+                    cacheEnabled,
                     disableAutoIndexCreation,
                     queryId: query.clientQueryId,
                     projectionBehavior
@@ -1065,13 +1074,7 @@ class query extends shardViewModelBase {
                 
                 const resultsTask = $.Deferred<pagedResultExtended<document>>();
                 const queryForAllFields = criteriaForFetcher.showFields();
-                
-                // Note: 
-                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution
-                // If we ask browser to report the 304 state then 'response content' is empty 
-                // This is why we need to measure the execution time here ourselves..
-                const startQueryTime = new Date().getTime();
-                
+
                 command.execute()
                     .always(() => {
                         this.spinners.isLoading(false);
@@ -1090,11 +1093,11 @@ class query extends shardViewModelBase {
                         const totalFromQuery = queryResults.totalResultCount || 0;
                         const filterByQuery = !!queryResults.additionalResultInfo.ScannedResults;
                         
-                        itemsSoFar += queryResults.items.length;
+                        pagingProgress.itemsSoFar += queryResults.items.length;
                         
                         if (totalFromQuery !== -1) {
-                            if (itemsSoFar > totalFromQuery) {
-                                itemsSoFar = totalFromQuery;
+                            if (pagingProgress.itemsSoFar > totalFromQuery) {
+                                pagingProgress.itemsSoFar = totalFromQuery;
                             }
                         }
                         
@@ -1105,19 +1108,19 @@ class query extends shardViewModelBase {
                             if (queryResults.items.length === take + 1) {
                                 // returned all or have more
                                 const returnedLimit = queryResults.additionalResultInfo.CappedMaxResults || Number.MAX_SAFE_INTEGER;
-                                this.hasMoreUnboundedResults(returnedLimit > itemsSoFar);
+                                this.hasMoreUnboundedResults(returnedLimit > pagingProgress.itemsSoFar);
                                 queryResults.totalResultCount = Math.min(skip + take + 30, returnedLimit - 1 /* subtract one since we fetch n+1 records */);
                             } else {
                                 queryResults.totalResultCount = skip + queryResults.items.length;
                             }
                             
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
-                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? pagingProgress.itemsSoFar - 1 : pagingProgress.itemsSoFar);
                         }
                         
                         if (queryResults.additionalResultInfo.SkippedResults || filterByQuery) {
                             // apply skipped results (if any)
-                            totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
+                            pagingProgress.totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
                             
                             // find if query contains positive offset or limit, if so warn about paging.
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1127,7 +1130,7 @@ class query extends shardViewModelBase {
                             }
                         }
                         
-                        if (totalSkippedResults || filterByQuery) {
+                        if (pagingProgress.totalSkippedResults || filterByQuery) {
                             queryResults.totalResultCount = skip + queryResults.items.length;
                             if (queryResults.items.length === take + 1) {
                                 queryResults.totalResultCount += 30;
@@ -1137,25 +1140,16 @@ class query extends shardViewModelBase {
                                 }
                                 
                                 if (totalFromQuery != -1) {
-                                    this.hasMoreUnboundedResults(itemsSoFar < totalFromQuery);
+                                    this.hasMoreUnboundedResults(pagingProgress.itemsSoFar < totalFromQuery);
                                 } else {
                                     this.hasMoreUnboundedResults(true); 
                                 }
                             }
                             
-                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? itemsSoFar - 1 : itemsSoFar);
+                            this.totalResultsForUi(this.hasMoreUnboundedResults() ? pagingProgress.itemsSoFar - 1 : pagingProgress.itemsSoFar);
                         }
                         
-                        const endQueryTime = new Date().getTime();
-                        const localQueryTime = endQueryTime - startQueryTime;
-                        if (!disableCache && localQueryTime < queryResults.additionalResultInfo.DurationInMs) {
-                            this.originalRequestTime(queryResults.additionalResultInfo.DurationInMs);
-                            queryResults.additionalResultInfo.DurationInMs = localQueryTime;
-                            this.fromCache(true);
-                        } else {
-                            this.originalRequestTime(null);
-                            this.fromCache(false);
-                        }
+                        this.fromCache(queryResults.fromCache);
                         
                         const emptyFieldsResult = queryForAllFields
                             && queryResults.totalResultCount > 0
@@ -1766,7 +1760,7 @@ class query extends shardViewModelBase {
             skip: this.allSpatialResultsItems().length,
             take: query.maxSpatialResultsToFetch + 1,
             criteria: this.criteria().clone(),
-            disableCache: !this.cacheEnabled(),
+            cacheEnabled: this.cacheEnabled(),
             disableAutoIndexCreation: this.disableAutoIndexCreation()
         });
         

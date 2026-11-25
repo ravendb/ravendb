@@ -161,7 +161,9 @@ Deviation from these rules is not allowed.");
         var run = await chat.RunAsync<Sample>();
         Assert.Equal(run.Status, AiConversationResult.Done);
         Assert.NotNull(run.Answer.Answer);
-        Assert.Contains("sugar", query);
+        // The term is what the tool was asked to look for; the whitespace around it is the model's
+        // own and says nothing about whether the argument arrived.
+        Assert.Contains(query, term => term?.Trim() == "sugar");
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

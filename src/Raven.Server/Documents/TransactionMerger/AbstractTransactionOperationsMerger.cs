@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.TransactionMerger
                     {
                         _recording.State?.Prepare(ref _recording.State);
 
-                        if (_operations.IsEmpty && _env.Journal.HasBranchCommits is false)
+                        if (_operations.IsEmpty)
                         {
                             if (_isEncrypted)
                             {
@@ -327,7 +327,10 @@ namespace Raven.Server.Documents.TransactionMerger
                             using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                             {
                                 generalMeter.IncrementCounter(1);
-                                _waitHandle.Wait(_shutdown);
+                                _waitHandle.Wait();
+
+                                if (_runTransactions == false)
+                                    return;
                             }
                             _waitHandle.Reset();
                         }
@@ -944,7 +947,7 @@ namespace Raven.Server.Documents.TransactionMerger
                 meter.IncrementCounter(1);
                 meter.IncrementCommands(op.Execute(context, _recording.State));
                 if (op.UpdateAccessTime)
-                    UpdateLastAccessTime(_time.GetUtcNow());
+                    UpdateLastAccessTime();
 
                 modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize + llt.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
@@ -969,6 +972,7 @@ namespace Raven.Server.Documents.TransactionMerger
             } while (true);
 
             shaper.Publish(executedOps.Count, modifiedSize);
+            context.Transaction.InnerTransaction.LowLevelTransaction.BatchOperations = executedOps.Count;
 
             var status = GetPendingOperationsStatus(context, executedOps.Count is 0);
             if (_log.IsDebugEnabled)
@@ -979,7 +983,7 @@ namespace Raven.Server.Documents.TransactionMerger
             return status;
         }
 
-        protected abstract void UpdateLastAccessTime(DateTime time);
+        protected abstract void UpdateLastAccessTime();
 
         private void UnlikelyRejectOperations(IAsyncResult previousOperation, Stopwatch sp, LowLevelTransaction llt, long modifiedSize)
         {
@@ -1173,6 +1177,7 @@ namespace Raven.Server.Documents.TransactionMerger
                                     op.RetryOnError = false;
 
                                     op.Execute(context, _recording.State);
+                                    UpdateGlobalReplicationInfoBeforeCommit(context);
 
                                     _recording.State?.TryRecord(context, TxInstruction.Commit);
                                     tx.Commit();

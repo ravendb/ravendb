@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
-using CsvHelper.Configuration;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Tcp;
@@ -164,23 +163,23 @@ namespace Raven.Server.Documents.Handlers
             HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/csv";
 
             await using (var writer = new StreamWriter(HttpContext.Response.Body, Encoding.UTF8))
-            await using (var csvWriter = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = "," }))
+            await using (var csvWriter = CsvWriter.Create(writer, CsvExportOptions.Writer))
             {
                 foreach (string column in columns)
                 {
                     csvWriter.WriteField(column);
                 }
 
-                await csvWriter.NextRecordAsync();
+                await csvWriter.EndRecordAsync();
                 foreach (var item in debugItems)
                 {
                     foreach (string column in columns)
                     {
                         var value = item[column];
-                        csvWriter.WriteField(field: value?.ToString());
+                        csvWriter.WriteField(value?.ToString());
                     }
 
-                    await csvWriter.NextRecordAsync();
+                    await csvWriter.EndRecordAsync();
                 }
             }
         }

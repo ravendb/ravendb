@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using CsvHelper;
-using CsvHelper.Configuration;
 using Raven.Server.Integrations.PostgreSQL.Types;
 
 namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
@@ -17,13 +16,11 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             using var stream = assembly.GetManifestResourceStream(resourceName)
                                ?? throw new FileNotFoundException($"Catalog CSV resource not found: {resourceName}");
 
-            using var reader = new StreamReader(stream);
-            using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture) { Delimiter = "," });
+            using var csv = CsvReader.Create(stream, new CsvReaderOptions { Separator = ',', DetectSeparatorHint = false });
 
-            if (csv.Read() == false || csv.ReadHeader() == false)
+            var header = csv.Headers.ToArray();
+            if (header.Length == 0)
                 throw new InvalidDataException($"Catalog CSV {fileName} has no header row.");
-
-            var header = csv.HeaderRecord;
             var columnIndex = new int[columns.Count];
             for (int i = 0; i < columns.Count; i++)
             {
@@ -37,7 +34,7 @@ namespace Raven.Server.Integrations.PostgreSQL.VirtualCatalog.Tables
             {
                 var row = new object[columns.Count];
                 for (int i = 0; i < columns.Count; i++)
-                    row[i] = ParseCell(csv.GetField(columnIndex[i]), columns[i].PgType);
+                    row[i] = ParseCell(csv.GetString(columnIndex[i]), columns[i].PgType);
                 rows.Add(row);
             }
 

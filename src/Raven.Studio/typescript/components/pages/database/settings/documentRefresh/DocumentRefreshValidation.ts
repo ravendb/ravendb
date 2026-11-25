@@ -4,26 +4,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 const schema = yup
     .object({
         isDocumentRefreshEnabled: yup.boolean(),
-        isRefreshFrequencyEnabled: yup.boolean(),
-        refreshFrequency: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("isRefreshFrequencyEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        isLimitMaxItemsToProcessEnabled: yup.boolean(),
-        maxItemsToProcess: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("isLimitMaxItemsToProcessEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
+        refreshFrequency: yup.number().nullable().positive().integer(),
+        maxItemsToProcess: yup.number().nullable().positive().integer(),
     })
     .required();
 

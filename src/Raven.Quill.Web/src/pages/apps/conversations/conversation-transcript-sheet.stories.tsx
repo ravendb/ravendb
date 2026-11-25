@@ -90,8 +90,10 @@ export const ExpandedRowsStayExpandedAcrossScrolling: Story = {
         scrollElement.scrollTop = scrollElement.scrollHeight;
         await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).not.toBeInTheDocument());
 
-        scrollElement.scrollTop = 0;
-        await waitFor(() => expect(rowAt(sheet, TOOL_CALL_ROW)).toBeInTheDocument());
+        await waitFor(() => {
+            scrollElement.scrollTop = 0;
+            expect(rowAt(sheet, TOOL_CALL_ROW)).toBeInTheDocument();
+        });
         expect(
             within(requireRowAt(sheet, TOOL_CALL_ROW)).getByRole("button", { name: /search-products/i }),
         ).toHaveAttribute("aria-expanded", "true");

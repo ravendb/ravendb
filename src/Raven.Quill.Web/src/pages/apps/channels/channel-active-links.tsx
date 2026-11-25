@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/incompatible-library */
+/* eslint-disable react-hooks-js/incompatible-library */
 "use no memo";
 
 import { useMemo } from "react";

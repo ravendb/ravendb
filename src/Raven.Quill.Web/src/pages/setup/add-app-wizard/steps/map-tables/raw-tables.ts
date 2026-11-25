@@ -1,9 +1,6 @@
 import type { CdcSinkTableConfig } from "@/api/generated/server-api";
 import { tablesSchema } from "@/pages/setup/add-app-wizard/app-wizard-validation";
-import {
-    mapFormTablesToDto,
-    wrapDtoTablesToFormShape,
-} from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
+import { mapFormTablesToDto, mapDtoTablesToForm } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-dto";
 import type { FormRootTable } from "@/pages/setup/add-app-wizard/steps/map-tables/map-tables-types";
 
 // Bridges the table editor's form state and its raw JSON representation, which is the canonical
@@ -47,9 +44,9 @@ function parseRawJson(rawContent: string): unknown {
     }
 }
 
-function toFormShape(tables: CdcSinkTableConfig[]): unknown[] {
+function toFormShape(tables: CdcSinkTableConfig[]): FormRootTable[] {
     try {
-        return wrapDtoTablesToFormShape(tables);
+        return mapDtoTablesToForm(tables);
     } catch {
         throw new Error("The raw configuration does not match the table shape.");
     }

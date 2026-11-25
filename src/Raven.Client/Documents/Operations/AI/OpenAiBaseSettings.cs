@@ -72,6 +72,8 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 
     public override void ValidateFields(List<string> errors)
     {
+        base.ValidateFields(errors);
+
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
 

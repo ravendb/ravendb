@@ -10,13 +10,14 @@ interface UseStudioSearchKeyboardEventsProps {
     studioSearchInputId: string;
     results: StudioSearchResult;
     activeItem: StudioSearchResultItem;
+    isDropdownOpen: boolean;
     setActiveItem: React.Dispatch<React.SetStateAction<StudioSearchResultItem>>;
     setIsDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
     handleAskAi: () => void;
 }
 
 export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEventsProps) {
-    const { refs, results, activeItem, setIsDropdownOpen, setActiveItem, handleAskAi } = props;
+    const { refs, results, activeItem, isDropdownOpen, setIsDropdownOpen, setActiveItem, handleAskAi } = props;
 
     const { inputRef, serverColumnRef, databaseColumnRef } = refs;
 
@@ -28,7 +29,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
                 setIsDropdownOpen(true);
                 inputRef.current?.focus();
             }
-            if (e.key === "Escape") {
+            if (e.key === "Escape" && isDropdownOpen) {
                 e.preventDefault();
                 setIsDropdownOpen(false);
                 inputRef.current?.blur();
@@ -39,7 +40,7 @@ export function useStudioSearchKeyboardEvents(props: UseStudioSearchKeyboardEven
         return () => {
             document.removeEventListener("keydown", handleToggleDropdown);
         };
-    }, [inputRef, setIsDropdownOpen]);
+    }, [inputRef, isDropdownOpen, setIsDropdownOpen]);
 
     // Handle closing dropdown on tab key
     useEffect(() => {

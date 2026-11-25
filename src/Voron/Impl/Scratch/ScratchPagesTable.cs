@@ -30,9 +30,12 @@ namespace Voron.Impl.Scratch
     /// - _heads holds the index of the page's newest version in the entries array, NoEntry for none.
     /// - _entries holds the version chain nodes, blittable and linked by index, newest first.
     /// - _refs holds the only object references a version needs (the scratch file and the pager state
-    ///   mapping it), deduplicated to one entry per scratch file growth rather than one per page.
+    ///   mapping it), deduplicated to one entry per scratch file growth rather than one per page. Every
+    ///   state of a scratch file maps the whole file, so the next write session moves all of a file's
+    ///   entries to its current state and the older states can be unmapped.
     /// 
     /// The four arrays form a generation: append-only between rebuilds, replaced together by Rebuild.
+    /// The one exception: that move copies _refs with the entries pointing at the current states.
     /// An index is therefore never repurposed while its generation is published, which is what makes
     /// index-following safe with no interlocking. The arrays are sized to be born on the LOH - gen2 from
     /// birth and never copied by a collection - and retired generations recycle through a pool
@@ -115,6 +118,8 @@ namespace Voron.Impl.Scratch
         private long _prunedUpToSeq;
 
         private readonly Queue<(long Seq, int Index)> _pendingFree = new();
+
+        private bool _refsToOlderStates;
 
         private readonly List<long> _undo = [];
 
@@ -221,6 +226,9 @@ namespace Voron.Impl.Scratch
             _seq = ++_seqCounter;
             _lastPublishedSeq = lastPublishedSeq;
             _activeSnapshotsFetched = false;
+
+            if (_refsToOlderStates)
+                MoveRefsToCurrentStates();
         }
 
         [Conditional("DEBUG")]
@@ -651,8 +659,13 @@ namespace Voron.Impl.Scratch
         {
             for (var i = 0; i < _usedRefs; i++)
             {
-                if (ReferenceEquals(_refs[i].File, file) && ReferenceEquals(_refs[i].State, state))
+                if (ReferenceEquals(_refs[i].File, file) == false)
+                    continue;
+
+                if (ReferenceEquals(_refs[i].State, state))
                     return i;
+
+                _refsToOlderStates = true;
             }
 
             if (_usedRefs == _refs.Length)
@@ -666,6 +679,27 @@ namespace Voron.Impl.Scratch
             r.File = file;
             r.State = state;
             return _usedRefs++;
+        }
+
+        // Runs before the session reads any page: callers compare page pointers, so a page must keep one address for the
+        // whole write transaction. Published snapshots share _refs, so it is copied rather than written in place. Whoever
+        // can still use a replaced state holds it through its own snapshot or transaction pages, so the table drops it.
+        private void MoveRefsToCurrentStates()
+        {
+            _refsToOlderStates = false;
+
+            ScratchRef[] refs = new ScratchRef[_refs.Length];
+            Array.Copy(_refs, refs, _usedRefs);
+            for (int i = 0; i < _usedRefs; i++)
+            {
+                ScratchBufferFile file = refs[i].File;
+                if (file.IsDisposed)
+                    continue;
+
+                refs[i].State = file.GetStateRef();
+            }
+
+            _refs = refs;
         }
 
         private bool TryFindSlot(long pageNumber, out int index)

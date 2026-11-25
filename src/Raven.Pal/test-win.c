@@ -28,7 +28,7 @@ int write_using_io_ring()
     }
     printf("rvn_startup_configure - OK\n");
 
-    rc = rvn_init_pager(L"test.db", 1024 * 64, OPEN_FILE_WRITABLE_MAP, &handle, &mem, &wmem, &size, &err);
+    rc = rvn_init_pager(L"test.db", 1024 * 64, OPEN_FILE_WRITABLE_MAP, NULL, &handle, &mem, &wmem, &size, &err);
     if (rc != SUCCESS) {
         fprintf(stderr, "rvn_init_pager failed with status code: %d, error: %d\n", rc, err);
         return rc;

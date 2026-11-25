@@ -1,5 +1,10 @@
-﻿using Sparrow.Server;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using Sparrow.Server;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -225,6 +230,79 @@ namespace FastTests.Sparrow
                 }
 
                 Assert.Equal(allocatedBefore, context._totalAllocated);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void ContextThatNeedsLittleMemoryShouldNotKeepLargeSegmentReleasedByAnotherThread()
+        {
+            var worker = new Thread(() =>
+            {
+                using (var large = new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                    while (large.AllocationBlockSize != ByteStringContext.MaxSegmentSizeInBytes)
+                        large.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
+
+                    large.Allocate(ByteStringContext.MinBlockSizeInBytes / 2, out _);
+                }
+            });
+            worker.Start();
+            worker.Join();
+
+            // more contexts than the pool can hold, so whatever was pooled before gets handed out
+            var contexts = new List<ByteStringContext>();
+            try
+            {
+                for (var i = 0; i < 1024; i++)
+                {
+                    var context = new ByteStringContext(SharedMultipleUseFlag.None);
+                    contexts.Add(context);
+
+                    context.Allocate(16, out var byteString);
+                    context.Release(ref byteString);
+                    context.Reset();
+                }
+
+                var largest = contexts.Max(x => x._totalAllocated);
+                Assert.True(largest <= 16 * ByteStringContext.DefaultAllocationBlockSizeInBytes,
+                    $"A context that allocated 16 bytes keeps {largest:N0} bytes of native memory after Reset");
+            }
+            finally
+            {
+                foreach (var context in contexts)
+                    context.Dispose();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Memory)]
+        public void SegmentTakenFromPoolIsChargedToTheThreadUsingIt()
+        {
+            // its segments go to the pool, still charged to this thread
+            RunOnNewThread(() =>
+            {
+                using (new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                }
+            });
+
+            // a new thread starts with no charge, so it must be charged exactly what its context holds
+            long chargedToThread = 0, heldByContext = 0;
+            RunOnNewThread(() =>
+            {
+                using (var context = new ByteStringContext(SharedMultipleUseFlag.None))
+                {
+                    chargedToThread = NativeMemory.CurrentThreadStats.Allocations;
+                    heldByContext = context._totalAllocated;
+                }
+            });
+
+            Assert.Equal(heldByContext, chargedToThread);
+
+            static void RunOnNewThread(Action action)
+            {
+                var thread = new Thread(() => action());
+                thread.Start();
+                thread.Join();
             }
         }
 

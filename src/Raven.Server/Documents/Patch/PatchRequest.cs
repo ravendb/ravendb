@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Patch
 
         private readonly Dictionary<string, DeclaredFunction> _functions;
 
+        internal bool HasFunctions => _functions is { Count: > 0 };
+
         public PatchRequest(string script, PatchRequestType type, Dictionary<string, DeclaredFunction> functions = null)
         {
             Script = script;

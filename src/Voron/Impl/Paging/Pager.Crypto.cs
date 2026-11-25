@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -68,6 +68,7 @@ public unsafe partial class Pager
             var pageHeader = (PageHeader*)pagePointer;
 
             int numberOfPages = Paging.GetNumberOfPages(pageHeader);
+            HintOverflowPages(state, pageNumber, numberOfPages); // the copy below would fault them in one at a time
 
             buffer = GetBufferAndAddToTxState(pager, pageNumber, cryptoState, numberOfPages);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -24,7 +24,7 @@ internal abstract class AbstractDocumentHandlerProcessorForPatch<TRequestHandler
 
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
-            var request = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ScriptedPatchRequest");
+            var request = await context.ReadForDiskAsync(RequestHandler.RequestBodyStream(), "ScriptedPatchRequest"); 
             if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                 throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 

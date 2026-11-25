@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.Patching
                 {
                     await store.Operations.SendAsync(new PatchOperation<User>("doc", null, new PatchRequest
                     {
-                        Script = "this.Name = 'Jeroboam 1'"
+                        Script = "this.Name = 'Jeroboam 1'; void 0;" // 'void 0;' does nothing, but the script is then not a simple patch: the script engine runs it
                     }));
                 }
 

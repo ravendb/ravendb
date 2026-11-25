@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -140,7 +140,10 @@ namespace Raven.Server.ServerWide
 
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
-        public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
+        public readonly ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
+
+        // PERF: looks up an idle database by the name in the request path, without allocating a string for it
+        internal readonly ConcurrentDictionary<string, Dictionary<string, long>>.AlternateLookup<ReadOnlySpan<char>> IdleDatabasesByName;
 
         private RequestExecutor _leaderRequestExecutor;
         internal long _lastClusterTopologyIndex = -1;
@@ -155,6 +158,7 @@ namespace Raven.Server.ServerWide
         public readonly StorageSpaceMonitor StorageSpaceMonitor;
         public readonly ServerLimitsMonitor ServerLimitsMonitor;
         public readonly GcThreadContentionDetector GcThreadContentionDetector;
+        public readonly StorageDeviceMonitor StorageDeviceMonitor;
         public readonly SecretProtection Secrets;
         public readonly AsyncManualResetEvent InitializationCompleted;
         public readonly GlobalIndexingScratchSpaceMonitor GlobalIndexingScratchSpaceMonitor;
@@ -202,6 +206,7 @@ namespace Raven.Server.ServerWide
             _clusterRequestExecutor = CreateClusterRequestExecutor();
 
             IdleDatabases = new ConcurrentDictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
+            IdleDatabasesByName = IdleDatabases.GetAlternateLookup<ReadOnlySpan<char>>();
 
             DatabasesLandlord = new DatabasesLandlord(this);
 
@@ -224,6 +229,8 @@ namespace Raven.Server.ServerWide
             ServerLimitsMonitor = new ServerLimitsMonitor(this, NotificationCenter, _notificationsStorage);
 
             GcThreadContentionDetector = new GcThreadContentionDetector(this, NotificationCenter);
+
+            StorageDeviceMonitor = new StorageDeviceMonitor(this);
 
             DatabaseInfoCache = new DatabaseInfoCache(this);
 
@@ -2872,6 +2879,7 @@ namespace Raven.Server.ServerWide
                         (nameof(StorageSpaceMonitor), StorageSpaceMonitor),
                         (nameof(ServerLimitsMonitor), ServerLimitsMonitor),
                         (nameof(GcThreadContentionDetector), GcThreadContentionDetector),
+                        (nameof(StorageDeviceMonitor), StorageDeviceMonitor),
                         (nameof(NotificationCenter), NotificationCenter),
                         (nameof(LicenseManager), LicenseManager),
                         (nameof(DatabasesLandlord), DatabasesLandlord),
@@ -3247,7 +3255,7 @@ namespace Raven.Server.ServerWide
             {
                 if (isRestore == false)
                 {
-                    var dbRecordExist = Cluster.DatabaseExists(context, databaseName);
+                    var dbRecordExist = ClusterStateMachine.DatabaseExists(context, databaseName);
                     if (index.HasValue && dbRecordExist == false)
                         throw new BadRequestException($"Attempted to modify non-existing database: '{databaseName}'");
 

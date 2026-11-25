@@ -187,18 +187,32 @@ export class LicenseStubs {
     }
 
     static changeLog(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
+        const latestMajorMinorBuilds = [
+            LicenseStubs.buildCompatibilityInfo("6.0.100"),
+            LicenseStubs.buildCompatibilityInfo("6.0.8"),
+            LicenseStubs.buildCompatibilityInfo("6.0.7", false),
+            LicenseStubs.buildCompatibilityInfo("6.0.6"),
+            LicenseStubs.buildCompatibilityInfo("6.0.5"),
+        ];
+        const userMajorMinorBuilds = [
+            LicenseStubs.buildCompatibilityInfo("6.0.5"),
+            LicenseStubs.buildCompatibilityInfo("6.0.0", false),
+        ];
+
         return {
-            BuildCompatibilitiesForLatestMajorMinor: [
-                LicenseStubs.buildCompatibilityInfo("6.0.100"),
-                LicenseStubs.buildCompatibilityInfo("6.0.8"),
-                LicenseStubs.buildCompatibilityInfo("6.0.7", false),
-            ],
-            BuildCompatibilitiesForUserMajorMinor: [
-                LicenseStubs.buildCompatibilityInfo("6.0.5"),
-                LicenseStubs.buildCompatibilityInfo("6.0.0", false),
-            ],
-            TotalBuildsForLatestMajorMinor: 3,
-            TotalBuildsForUserMajorMinor: 2,
+            BuildCompatibilitiesForLatestMajorMinor: latestMajorMinorBuilds,
+            BuildCompatibilitiesForUserMajorMinor: userMajorMinorBuilds,
+            TotalBuildsForLatestMajorMinor: latestMajorMinorBuilds.length,
+            TotalBuildsForUserMajorMinor: userMajorMinorBuilds.length,
+        };
+    }
+
+    static changeLogWithoutStableRelease(): Raven.Server.Web.Studio.UpgradeInfoHandler.UpgradeInfoResponse {
+        return {
+            BuildCompatibilitiesForLatestMajorMinor: [LicenseStubs.buildCompatibilityInfo("6.0.100")],
+            BuildCompatibilitiesForUserMajorMinor: [],
+            TotalBuildsForLatestMajorMinor: 1,
+            TotalBuildsForUserMajorMinor: 0,
         };
     }
 
@@ -253,6 +267,16 @@ export class LicenseStubs {
             BuildType: "Stable",
             PublishedAt: "2024-01-19T12:58:07.0000000Z",
             UpdateSeverity: "TODO",
+        };
+    }
+
+    static latestVersionNotChecked(): Raven.Server.ServerWide.BackgroundTasks.LatestVersionCheck.VersionInfo {
+        return {
+            Version: null,
+            BuildNumber: null,
+            BuildType: null,
+            PublishedAt: null,
+            UpdateSeverity: null,
         };
     }
 

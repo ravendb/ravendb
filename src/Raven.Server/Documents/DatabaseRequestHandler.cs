@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -99,17 +99,17 @@ namespace Raven.Server.Documents
 
         public override OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken(TimeSpan cancelAfter)
         {
-            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(cancelAfter, Database.DatabaseShutdownForRequest, HttpContext.RequestAborted);
         }
 
         public override OperationCancelToken CreateHttpRequestBoundOperationToken()
         {
-            return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted);
+            return new OperationCancelToken(Database.DatabaseShutdownForRequest, HttpContext.RequestAborted);
         }
 
         public override OperationCancelToken CreateHttpRequestBoundOperationToken(CancellationToken token)
         {
-            return new OperationCancelToken(Database.DatabaseShutdown, HttpContext.RequestAborted, token);
+            return new OperationCancelToken(Database.DatabaseShutdownForRequest, HttpContext.RequestAborted, token);
         }
 
         public override OperationCancelToken CreateTimeLimitedBackgroundOperationTokenForQueryOperation()

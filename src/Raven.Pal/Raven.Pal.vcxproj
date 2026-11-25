@@ -137,10 +137,12 @@
     <ClInclude Include="inc\internal_win.h" />
     <ClInclude Include="inc\rvn.h" />
     <ClInclude Include="inc\rvn_internal.h" />
+    <ClInclude Include="inc\slots.h" />
     <ClInclude Include="inc\status_codes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\shared_all.c" />
+    <ClCompile Include="src\slots.c" />
     <ClCompile Include="src\win\ioring.c" />
     <ClCompile Include="test-win.c" />
     <ClCompile Include="src\rvngetpalver.c" />

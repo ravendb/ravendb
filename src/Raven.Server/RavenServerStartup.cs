@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -40,6 +41,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Logging;
+using Sparrow.Utils;
 using Voron.Exceptions;
 
 namespace Raven.Server
@@ -53,10 +55,11 @@ namespace Raven.Server
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
-            app.UseWebSockets(new WebSocketOptions
+            // PERF: the web sockets middleware allocates a handshake feature for every request it sees, so we only route upgrade requests through it
+            app.UseWhen(IsWebSocketUpgradeCandidate, appBuilder => appBuilder.UseWebSockets(new WebSocketOptions
             {
                 KeepAliveInterval = TimeSpan.FromHours(24)
-            });
+            }));
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
@@ -78,6 +81,13 @@ namespace Raven.Server
             }
 
             app.Use(_ => RequestHandler);
+        }
+
+        private static bool IsWebSocketUpgradeCandidate(HttpContext context)
+        {
+            // HTTP/1.1 upgrade, or HTTP/2 extended CONNECT (RFC 8441)
+            return context.Features.Get<IHttpUpgradeFeature>()?.IsUpgradableRequest == true ||
+                   context.Features.Get<IHttpExtendedConnectFeature>()?.IsExtendedConnect == true;
         }
 
         private bool IsServerRunningInASafeManner()
@@ -171,7 +181,10 @@ namespace Raven.Server
                 HttpContext = context
             };
             Exception exception = null;
-            Stopwatch sp = null;
+
+            // PERF: only TrafficWatch and debug logging need the duration here (the router measures requests for the metrics),
+            // so we read the clock only when one of them is on
+            long startNanoseconds = 0, endNanoseconds = 0;
 
             try
             {
@@ -181,15 +194,20 @@ namespace Raven.Server
                 if (_server.ServerStore.Initialized == false)
                     await _server.ServerStore.InitializationCompleted.WaitAsync();
 
-                sp = Stopwatch.StartNew();
+                if (TrafficWatchManager.HasRegisteredClients || (_logger.IsDebugEnabled && SkipHttpLogging == false))
+                    startNanoseconds = Clock.Nanoseconds;
+
                 await _router.HandlePath(requestHandlerContext);
-                sp.Stop();
+
+                if (startNanoseconds != 0)
+                    endNanoseconds = Clock.Nanoseconds;
             }
             catch (Exception e)
             {
                 try
                 {
-                    sp?.Stop();
+                    if (startNanoseconds != 0 && endNanoseconds == 0)
+                        endNanoseconds = Clock.Nanoseconds;
                     exception = e;
 
                     CheckDatabaseShutdownAndThrowIfNeeded(requestHandlerContext, ref e);
@@ -242,16 +260,18 @@ namespace Raven.Server
             }
             finally
             {
+                var elapsedMilliseconds = endNanoseconds == 0 ? 0 : (endNanoseconds - startNanoseconds) / Clock.NanosecondsInMillisecond;
+
                 // check if TW has clients
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
                     var database = requestHandlerContext.DatabaseName;
-                    LogTrafficWatch(context, sp?.ElapsedMilliseconds ?? 0, database);
+                    LogTrafficWatch(context, elapsedMilliseconds, database);
                 }
 
                 if (_logger.IsDebugEnabled && SkipHttpLogging == false)
                 {
-                    _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
+                    _logger.Debug($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {elapsedMilliseconds:#,#;;0} ms", exception);
                 }
             }
         }
@@ -392,7 +412,7 @@ namespace Raven.Server
         {
             var response = httpContext.Response;
 
-            if (response.HasStarted)
+            if (response.HasStarted || HttpResponseBodyStream.HasContent(httpContext))
                 return;
 
             if (exception is InsufficientTransportLayerProtectionException)

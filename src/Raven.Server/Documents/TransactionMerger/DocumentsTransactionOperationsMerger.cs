@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using JetBrains.Annotations;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
@@ -44,8 +44,8 @@ public sealed class DocumentsTransactionOperationsMerger : AbstractTransactionOp
         }
     }
 
-    protected override void UpdateLastAccessTime(DateTime time)
+    protected override void UpdateLastAccessTime()
     {
-        _database.LastAccessTime = time;
+        _database.UpdateLastAccessTime();
     }
 }

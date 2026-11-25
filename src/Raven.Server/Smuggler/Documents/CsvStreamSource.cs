@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CsvHelper;
-using CsvHelper.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Replication;
@@ -22,13 +21,25 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Smuggler.Documents
 {
+    /// <summary>
+    /// How whitespace is trimmed from imported CSV fields. The names and values are those of CsvHelper's former
+    /// TrimOptions, which this replaces, so the JSON that clients send keeps working.
+    /// </summary>
+    [Flags]
+    public enum CsvTrimOptions
+    {
+        None = 0,
+        Trim = 1,
+        InsideQuotes = 2
+    }
+
     public sealed class CsvImportOptions
     {
         public string Delimiter { get; set; }
         public char Quote { get; set; }
         public char? Comment { get; set; }
         public bool AllowComments { get; set; }
-        public TrimOptions TrimOptions { get; set; }
+        public CsvTrimOptions TrimOptions { get; set; }
 
         public CsvImportOptions()
         {
@@ -36,7 +47,7 @@ namespace Raven.Server.Smuggler.Documents
             Quote = '"';
         }
 
-        public CsvImportOptions(string delimiter, char quote, TrimOptions trim, bool allowComments, char comment)
+        public CsvImportOptions(string delimiter, char quote, CsvTrimOptions trim, bool allowComments, char comment)
         {
             Delimiter = delimiter;
             Quote = quote;
@@ -54,9 +65,9 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerResult _result;
         private DatabaseItemType _currentType;
         private readonly string _collection;
-        private StreamReader _reader;
         private CsvReader _csvReader;
-        private readonly CsvConfiguration _csvHelperConfig;
+        private readonly CsvReaderOptions _csvReaderOptions;
+        private readonly string _multiCharacterDelimiter;
         private bool _hasId;
         private int _idIndex;
         private bool _hasCollection;
@@ -81,49 +92,56 @@ namespace Raven.Server.Smuggler.Documents
             _currentType = DatabaseItemType.Documents;
             _collection = collection;
 
-            _csvHelperConfig = new CsvConfiguration(CultureInfo.InvariantCulture);
+            var delimiter = string.IsNullOrEmpty(csvConfig.Delimiter) ? "," : csvConfig.Delimiter;
 
-            _csvHelperConfig.Delimiter = csvConfig.Delimiter;
-            _csvHelperConfig.Quote = csvConfig.Quote;
-            _csvHelperConfig.TrimOptions = csvConfig.TrimOptions;
-            _csvHelperConfig.AllowComments = csvConfig.AllowComments;
-            if (csvConfig.AllowComments && csvConfig.Comment != null)
+            // CsvHelper 34 detects the separator when it is not set, and takes a single character only:
+            // a longer delimiter is replaced in the input by a CsvSeparatorStream (see InitializeAsync)
+            if (delimiter.Length > 1)
+                _multiCharacterDelimiter = delimiter;
+
+            _csvReaderOptions = new CsvReaderOptions
             {
-                _csvHelperConfig.Comment = (char)csvConfig.Comment;
-            }
-
-            _csvHelperConfig.BadDataFound = null;
+                Separator = _multiCharacterDelimiter == null ? delimiter[0] : null,
+                DetectSeparatorHint = false,
+                Quote = csvConfig.Quote,
+                TrimWhitespace = csvConfig.TrimOptions.HasFlag(CsvTrimOptions.Trim),
+                TrimInsideQuotes = csvConfig.TrimOptions.HasFlag(CsvTrimOptions.InsideQuotes),
+                // '#' was the default comment character of CsvHelper 33
+                CommentPrefix = csvConfig.AllowComments ? csvConfig.Comment ?? '#' : null,
+                // malformed quoting is recovered from by default, as BadDataFound = null did in CsvHelper 33
+            };
         }
 
         public Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
         {
-            _reader = new StreamReader(_stream);
-            _csvReader = new CsvReader(_reader, _csvHelperConfig);
+            var input = _multiCharacterDelimiter == null ? _stream : new CsvSeparatorStream(_stream, _multiCharacterDelimiter);
+            _csvReader = CsvReader.Create(input, _csvReaderOptions);
 
             _result = result;
 
             var disposable = new DisposableAction(() =>
             {
-                _reader.Dispose();
                 _csvReader.Dispose();
             });
 
             return Task.FromResult(new SmugglerInitializeResult(disposable, ServerVersion.DevBuildNumber));
         }
 
-        private bool ProcessFieldsIfNeeded()
+        private void ProcessFieldsIfNeeded()
         {
             if (_headersProcessed)
-                return false;
+                return;
 
-            if (_csvReader.ReadHeader() == false)
+            // the reader has read the header row with the first record
+            var header = _csvReader.Headers.ToArray();
+            if (header.Length == 0)
                 throw new InvalidOperationException("CSV file must contain a header row.");
 
-            for (var i = 0; i < _csvReader.Context.Reader.HeaderRecord.Length; i++)
+            for (var i = 0; i < header.Length; i++)
             {
-                var property = _csvReader.Context.Reader.HeaderRecord[i];
+                var property = header[i];
 
-                if (_csvReader.Context.Reader.HeaderRecord[i].StartsWith('@'))
+                if (property.StartsWith('@'))
                 {
                     if (property == Constants.Documents.Metadata.Id)
                     {
@@ -148,25 +166,23 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                var indexOfDot = _csvReader.Context.Reader.HeaderRecord[i].IndexOf('.');
+                var indexOfDot = property.IndexOf('.');
                 //We probably have a nested property
                 if (indexOfDot >= 0)
                 {
                     if (_nestedPropertyDictionary == null)
                         _nestedPropertyDictionary = new Dictionary<int, string[]>();
 
-                    var (arr, hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.Reader.HeaderRecord[i]);
+                    var (arr, hasSegments) = SplitByDotWhileIgnoringEscapedDot(property);
                     //May be false if all dots are escaped
                     if (hasSegments)
                         _nestedPropertyDictionary[i] = arr;
                 }
             }
 
-            _csvReaderFieldHeaders = new string[_csvReader.Context.Reader.HeaderRecord.Length];
-            _csvReader.Context.Reader.HeaderRecord.CopyTo(_csvReaderFieldHeaders, 0);
+            _csvReaderFieldHeaders = header;
 
             _headersProcessed = true;
-            return true;
         }
 
         private static (string[] Segments, bool HasSegments) SplitByDotWhileIgnoringEscapedDot(string csvReaderFieldHeader)
@@ -213,19 +229,18 @@ namespace Raven.Server.Smuggler.Documents
 
         public async IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            var line = 0;
+            var line = 1; // the header row
             while (await _csvReader.ReadAsync())
             {
                 line++;
 
-                if (ProcessFieldsIfNeeded())
-                    continue;
+                ProcessFieldsIfNeeded();
 
                 var context = actions.GetContextForNewDocument();
                 DocumentItem item;
                 try
                 {
-                    item = ConvertRecordToDocumentItem(context, _csvReader.Context.Parser.Record, _csvReaderFieldHeaders, _collection);
+                    item = ConvertRecordToDocumentItem(context, GetCurrentRecord(), _csvReaderFieldHeaders, _collection);
                 }
                 catch (Exception e)
                 {
@@ -235,6 +250,15 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 yield return item;
             }
+        }
+
+        private string[] GetCurrentRecord()
+        {
+            var record = new string[_csvReader.FieldCount];
+            for (var i = 0; i < record.Length; i++)
+                record[i] = _csvReader.GetString(i);
+
+            return record;
         }
 
         private DocumentItem ConvertRecordToDocumentItem(JsonOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)

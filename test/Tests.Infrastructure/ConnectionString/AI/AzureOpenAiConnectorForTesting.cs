@@ -31,7 +31,8 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
 
 public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiAzureOpenAiConnectorForTesting>
 {
-    private const string Model = "gpt-4.1-mini";
+    // Azure picks the model by the chat deployment env var, this only goes into the request body
+    private const string Model = "gpt-5.6-luna";
 
     public GenAiAzureOpenAiConnectorForTesting()
     {
@@ -63,7 +64,7 @@ internal static class AzureOpenAiConnectorHelper
         return new AiConnectionString
         {
             ModelType = modelType,
-            AzureOpenAiSettings = new AzureOpenAiSettings(apiKey, endpoint, model, deploymentName) { Temperature = 0 }
+            AzureOpenAiSettings = new AzureOpenAiSettings(apiKey, endpoint, model, deploymentName)
         };
     }
 }

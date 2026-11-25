@@ -61,7 +61,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
                 {
                     if (string.IsNullOrEmpty(Skip) && aiConnectionStringForTesting.AiConnectorType == AiConnectorType.Ollama)
                     {
-                        Skip = "Local Ollama integration tests are currently disabled.";
+                        Skip = "Ollama integration tests are disabled because they are flaky on CI, especially when tests run in parallel. To run them locally, remove this skip in RavenAiIntegrationAttribute.";
                     }
                     else if (HasSkipReason(aiConnectionStringForTesting) == false)
                     {

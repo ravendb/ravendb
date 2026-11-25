@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    buildConnectionSeed,
     buildConnectionString,
     parseConnectionString,
     resolveConnectionString,
@@ -225,5 +226,27 @@ describe("resolveConnectionString", () => {
                 connectionString: "  Server=host\\SQLEXPRESS;Integrated Security=true  ",
             }),
         ).toBe("Server=host\\SQLEXPRESS;Integrated Security=true");
+    });
+});
+
+describe("buildConnectionSeed", () => {
+    it("fills the details when they build the stored string again", () => {
+        const connectionString = "Host=localhost;Port=5432;Database=demo_shop;Username=admin;Password=pass";
+
+        expect(buildConnectionSeed("Npgsql", connectionString)).toEqual({
+            mode: "fields",
+            fields: values({ database: "demo_shop", password: "pass", ssl: "default" }),
+            connectionString,
+        });
+    });
+
+    it("keeps a string the details would build differently raw", () => {
+        const connectionString = "Database=demo_shop;Host=localhost";
+
+        expect(buildConnectionSeed("Npgsql", connectionString)).toMatchObject({ mode: "raw", connectionString });
+    });
+
+    it("starts empty details at the provider's default port", () => {
+        expect(buildConnectionSeed("SqlClient", "")).toMatchObject({ mode: "fields", fields: { port: 1433 } });
     });
 });

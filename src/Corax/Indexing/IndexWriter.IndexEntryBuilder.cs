@@ -158,12 +158,9 @@ public partial class IndexWriter
 
         private void AnalyzeTerm(IndexedField field, ReadOnlySpan<byte> value, Analyzer analyzer, out Span<byte> wordsBuffer, out Span<Token> tokens)
         {
-            if (value.Length > _parent._analyzersContext.EncodingBufferHandler.Length)
-            {
-                analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
-                if (outputSize > _parent._analyzersContext.EncodingBufferHandler.Length || tokenSize > _parent._analyzersContext.TokensBufferHandler.Length)
-                    _parent._analyzersContext.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
-            }
+            analyzer.GetOutputBuffersSize(value.Length, out var outputSize, out var tokenSize);
+            if (outputSize > _parent._analyzersContext.EncodingBufferHandler.Length || tokenSize > _parent._analyzersContext.TokensBufferHandler.Length)
+                _parent._analyzersContext.UnlikelyGrowAnalyzerBuffer(outputSize, tokenSize);
 
             wordsBuffer = _parent._analyzersContext.EncodingBufferHandler;
             tokens = _parent._analyzersContext.TokensBufferHandler;

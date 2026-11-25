@@ -10,7 +10,7 @@ using Xunit.v3;
 
 namespace Tests.Infrastructure.TestMetrics
 {
-    public class TestResourceSnapshotWriter : IDisposable
+    public partial class TestResourceSnapshotWriter : IDisposable
     {
         private readonly TestResourcesAnalyzerMetricCacher _metricCacher;
         private readonly CsvWriter _csvWriter;
@@ -30,8 +30,8 @@ namespace Tests.Infrastructure.TestMetrics
                 file.Position = 0;
                 file.SetLength(0);
 
-                _csvWriter = new CsvWriter(new StreamWriter(file), CultureInfo.InvariantCulture);
-                _csvWriter.WriteHeader(typeof(TestResourceSnapshot));
+                _csvWriter = CsvWriter.Create(new StreamWriter(file));
+                _csvWriter.WriteHeader<TestResourceSnapshot>();
             }
         }
 
@@ -66,7 +66,6 @@ namespace Tests.Infrastructure.TestMetrics
         {
             lock (_syncObject)
             {
-                _csvWriter.NextRecord();
                 _csvWriter.WriteRecord(snapshot);
             }
         }
@@ -104,7 +103,8 @@ namespace Tests.Infrastructure.TestMetrics
             return snapshot;
         }
 
-        public class TestResourceSnapshot
+        [CsvRecord]
+        public partial class TestResourceSnapshot
         {
             public TestStage TestStage { get; set; }
 

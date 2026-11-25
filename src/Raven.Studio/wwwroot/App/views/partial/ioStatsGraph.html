@@ -10,6 +10,7 @@
             <div class="openedTrackArrow"></div>
             <div class="closedTrackArrow"></div>
             <div class="text"></div>
+            <div class="drainSync"></div>
         </div>
     </div>
     <div class="event-colors" style="display: none">
@@ -86,6 +87,50 @@
                     <i class="icon-cancel"></i><span>Clear graph</span>
                 </button>
             </div>
+        </div>
+        <div class="io-stats-storage flex-horizontal flex-wrap flex-shrink-0">
+            <div class="io-stats-storage-item" data-bind="attr: { title: help.journalCompression }">
+                <span class="text-muted">Journal compression:</span>
+                <strong data-bind="text: journalCompression"></strong>
+                <i class="icon-info text-info"></i>
+            </div>
+            <!-- ko if: canSeeStorageDevices -->
+            <div class="io-stats-storage-item text-muted" data-bind="visible: isImport">
+                Disk state: not shown for imported files
+            </div>
+            <!-- ko ifnot: isImport -->
+            <!-- ko foreach: storageDevices -->
+            <div class="io-stats-storage-item">
+                <span class="text-muted">Disk <span data-bind="text: name"></span><span data-bind="visible: usedBy, text: usedBy ? ' (' + usedBy + ')' : ''"></span>:</span>
+                <span class="label" data-bind="text: statusText, css: statusCss, attr: { title: statusHelp }"></span>
+                <span class="io-stats-storage-value" data-bind="attr: { title: modeHelp }">
+                    <span class="text-muted">Mode:</span>
+                    <span data-bind="text: modeText, css: { 'text-warning': draining }"></span>
+                    <i class="icon-info text-info"></i>
+                </span>
+                <span class="io-stats-storage-value" data-bind="attr: { title: $parent.termHelp.drainShare }">
+                    <span class="text-muted">Paced in the last hour:</span>
+                    <span data-bind="text: drainShareText"></span>
+                </span>
+                <span class="io-stats-storage-value" data-bind="attr: { title: classHelp }">
+                    <span class="text-muted">Disk class:</span>
+                    <span data-bind="text: classText"></span>
+                    <i class="icon-info text-info"></i>
+                </span>
+            </div>
+            <!-- /ko -->
+            <div class="io-stats-storage-item text-muted" data-bind="visible: storageDevicesNote, text: storageDevicesNote"></div>
+            <div class="flex-separator"></div>
+            <div class="io-stats-storage-item">
+                <small class="text-muted" data-bind="visible: storageDevicesAsOf, text: 'Disk state as of ' + storageDevicesAsOf()"></small>
+                <a class="margin-left margin-left-sm margin-right margin-right-sm" data-bind="attr: { href: storageIoUrl }" title="Thresholds, last hour history and slow writes of each disk">Storage I/O details</a>
+                <button class="btn btn-default btn-sm" title="Reload the disk state of this node (Operator)"
+                        data-bind="click: refreshStorageDevices, disable: storageDevicesLoading, css: { 'btn-spinner': storageDevicesLoading }">
+                    <i class="icon-refresh"></i><span>Refresh disk state</span>
+                </button>
+            </div>
+            <!-- /ko -->
+            <!-- /ko -->
         </div>
         <div class="flex-grow dynamic-container">
             <div class="row" data-bind="visible: !hasAnyData()">

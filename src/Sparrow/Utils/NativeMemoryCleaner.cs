@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -76,7 +76,7 @@ namespace Sparrow.Utils
                 if (maxIterations <= MinimumRetainedItemsInQueue)
                     return; 
 
-                DateTime now = DateTime.UtcNow;
+                long now = Clock.Milliseconds;
                 for (int i = 0; i < maxIterations; i++)
                 {
                     if (_ringBuffer.TryDequeue(out var item) == false)
@@ -88,7 +88,7 @@ namespace Sparrow.Utils
                     Debug.Assert(item.InUse.IsRaised() == false, "Item should not be in use when in the pool.");
                     
                     // Check if the item has been idle for too long or if we are under memory pressure.
-                    var timeInPool = now - item.InPoolSince;
+                    var timeInPool = TimeSpan.FromMilliseconds(now - item.InPoolSinceMilliseconds);
                     bool shouldDispose = _lowMemoryFlag.IsRaised() || timeInPool >= _idleTime;
                     if (shouldDispose == false)
                     {

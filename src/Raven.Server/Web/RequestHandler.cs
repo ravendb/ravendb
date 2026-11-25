@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -78,6 +78,8 @@ namespace Raven.Server.Web
 
         public void RegisterForDisposal(IDisposable disposable) => _context.RegisterForDisposal(disposable);
 
+        internal long RequestStartNanoseconds => _context.RequestStartNanoseconds;
+
         public X509Certificate2 GetCurrentCertificate()
         {
             return GetCurrentCertificate(HttpContext);
@@ -98,7 +100,9 @@ namespace Raven.Server.Web
         public virtual void Init(RequestHandlerContext context)
         {
             _context = context;
-            context.HttpContext.Response.OnStarting(() => CheckForChanges(context));
+
+            if (context.CheckForChanges)
+                context.HttpContext.Response.OnStarting(static state => ((RequestHandler)state).CheckForChanges(((RequestHandler)state)._context), this);
         }
 
         public abstract Task CheckForChanges(RequestHandlerContext context);
@@ -119,12 +123,15 @@ namespace Raven.Server.Web
 
         private Stream _requestBodyStream;
 
+        // a timeout of the request or response stream aborts the connection, which fails the operation that waits on it
+        internal static readonly Action<object> AbortConnection = static state => ((HttpContext)state).Abort();
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Stream RequestBodyStream()
         {
             if (_requestBodyStream != null)
                 return _requestBodyStream;
-            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
+            _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers), AbortConnection, HttpContext);
 
             if (TrafficWatchManager.HasRegisteredClients)
             {
@@ -261,7 +268,7 @@ namespace Raven.Server.Web
             if (_responseStream != null)
                 return _responseStream;
 
-            _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
+            _responseStream = new HttpResponseBodyStream(HttpContext, Server.MinResponseSizeToCompressInBytes);
 
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
 

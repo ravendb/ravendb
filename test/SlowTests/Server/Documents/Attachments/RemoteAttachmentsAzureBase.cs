@@ -124,11 +124,6 @@ public abstract class RemoteAttachmentsAzureBase : RemoteAttachmentsHolder<Remot
         return settings;
     }
 
-    protected override async Task WaitForTaskDelayIfNeeded()
-    {
-        await Task.Delay(1000); // in Azure we have seconds resolution
-    }
-
     protected override void AssertUploadRemoteAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)
     {
         Assert.Contains("The specified blob does not exist.", e.Message);

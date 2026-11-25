@@ -406,7 +406,8 @@ internal static partial class QueryPlanBuilder
         return new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
             spatialField.Units is SpatialUnits.Kilometers
                 ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                : global::Corax.Utils.Spatial.SpatialUnits.Miles, GetNullsSortMode(field));
+                : global::Corax.Utils.Spatial.SpatialUnits.Miles, GetNullsSortMode(field),
+            useNearestPoint: IndexDefinitionBaseServerSide.IndexVersion.IsSpatialSortByNearestPointSupported(builderParameters.Index.Definition.Version));
     }
 
     private static IQueryMatch OrderBy(QueryBuilderParameters builderParameters, IQueryMatch match, in OrderMetadata[] orderMetadata)

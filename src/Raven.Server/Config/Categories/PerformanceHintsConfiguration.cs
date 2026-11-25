@@ -68,5 +68,22 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(32)]
         [ConfigurationEntry("PerformanceHints.Indexing.MaxDepthOfRecursionInLinqSelect", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxDepthOfRecursionInLinqSelect { get; set; }
+
+        [Description("A disk is reported as saturated when its writes were paced because of congestion for more than this share (percent) of the last hour.")]
+        [DefaultValue(50)]
+        [ConfigurationEntry("PerformanceHints.Storage.CongestionDrainSharePercent", ConfigurationEntryScope.ServerWideOnly)]
+        public int StorageCongestionDrainSharePercent { get; set; }
+
+        [Description("A disk is reported as saturated when its average journal write latency stays above this value for PerformanceHints.Storage.CongestionSustainedInMin.")]
+        [DefaultValue(50)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("PerformanceHints.Storage.CongestionJournalWriteLatencyInMs", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting StorageCongestionJournalWriteLatency { get; set; }
+
+        [Description("How long the journal write latency has to stay above PerformanceHints.Storage.CongestionJournalWriteLatencyInMs before the disk is reported as saturated.")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("PerformanceHints.Storage.CongestionSustainedInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting StorageCongestionSustained { get; set; }
     }
 }

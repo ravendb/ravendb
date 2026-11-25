@@ -99,6 +99,23 @@ public class ChatCompletionClient : IDisposable
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string streamPropertyPath, AiChatRequest request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
+        AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        if (ShouldSendToolsWithoutSchema(request))
+        {
+            var r = await SendToolsWithoutSchemaAsync(streamingContext, request, usage, traces, token);
+            if (r.Type is AiResponseType.Tool)
+                return r;
+
+            request = FinalRequest(streamingContext, request, r);
+        }
+
+        return await SendStreamingAsync(streamingContext, contextPool, streamPropertyPath, request, streamedPropertyCallback, usage, traces?.CreateTrace(), token);
+    }
+
+    private async Task<AiResponse> SendStreamingAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
+        string streamPropertyPath, AiChatRequest request,
+        Func<Memory<byte>, Task> streamedPropertyCallback,
         AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         request = WithoutInternalMessages(request);
@@ -234,7 +251,7 @@ public class ChatCompletionClient : IDisposable
             [Constants.RequestFields.Content] = userPrompt
         }, "system/msg");
 
-        var r = await CompleteAsync(context, new AiChatRequest { Messages = [prompt, user], Schema = schema }, new AiUsage(), trace: null, token);
+        var r = await CompleteAsync(context, new AiChatRequest { Messages = [prompt, user], Schema = schema }, new AiUsage(), traces: null, token);
         return (r.Result.ToString(), r.Message.ToString());
     }
 
@@ -317,7 +334,53 @@ public class ChatCompletionClient : IDisposable
         HandleUnsuccessfulResponse(response, responseContent);
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        if (ShouldSendToolsWithoutSchema(request))
+        {
+            var r = await SendToolsWithoutSchemaAsync(context, request, usage, traces, token);
+            if (r.Type is AiResponseType.Tool)
+                return r;
+
+            request = FinalRequest(context, request, r);
+        }
+
+        return await SendAsync(context, request, usage, traces?.CreateTrace(), token);
+    }
+
+    private bool ShouldSendToolsWithoutSchema(AiChatRequest request) =>
+        _provider.SupportsToolsWithStructuredOutput == false && request.Schema != null && request.UseTools && request.Tools?.Count > 0;
+
+    // the usage is added only when this request ends the turn: AiUsage.GetUsageDifference expects the usage of one request
+    private async Task<AiResponse> SendToolsWithoutSchemaAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTraceCollector traces, CancellationToken token)
+    {
+        var textUsage = new AiUsage();
+        var r = await SendAsync(context, request with { Schema = null }, textUsage, traces?.CreateTrace(), token);
+        if (r.Type is AiResponseType.Tool)
+            usage.Add(textUsage);
+        return r;
+    }
+
+    // Ollama continues a trailing assistant message instead of answering
+    private static AiChatRequest FinalRequest(JsonOperationContext context, AiChatRequest request, AiResponse textAnswer)
+    {
+        // not textAnswer.Message: an answer taken from 'reasoning' is only in its Modifications, which aren't sent
+        var draft = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleAssistantValue,
+            [Constants.RequestFields.Content] = textAnswer.Result.ToString()
+        }, "assistant/draft");
+
+        var finalAnswerPrompt = context.ReadObject(new DynamicJsonValue
+        {
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = "Reply now with your final answer as JSON matching the schema."
+        }, "user/final-answer");
+
+        return request with { UseTools = false, Messages = request.Messages.Append(draft).Append(finalAnswerPrompt) };
+    }
+
+    private async Task<AiResponse> SendAsync(JsonOperationContext context, AiChatRequest request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         request = WithoutInternalMessages(request);
         await SimulateRequestFailureIfNeededAsync(request);
@@ -509,6 +572,40 @@ public class ChatCompletionClient : IDisposable
         }
     }
 
+    internal static bool TryGetRetryAfter(HttpResponseMessage response, out TimeSpan retryAfter)
+    {
+        retryAfter = TimeSpan.Zero;
+
+        if (response.Headers.TryGetValues(Constants.Headers.RetryAfterMs, out var milliseconds) &&
+            double.TryParse(milliseconds.FirstOrDefault(), NumberStyles.Float, CultureInfo.InvariantCulture, out var ms) &&
+            double.IsFinite(ms) && ms > 0)
+        {
+            retryAfter = ClampRetryAfter(TimeSpan.FromMilliseconds(Math.Min(ms, MaxRetryAfter.TotalMilliseconds)));
+            return true;
+        }
+
+        if (response.Headers.RetryAfter is not { } header)
+            return false;
+
+        if (header.Delta is { } delta && delta > TimeSpan.Zero)
+        {
+            retryAfter = ClampRetryAfter(delta);
+            return true;
+        }
+
+        if (header.Date is { } date && date - DateTimeOffset.UtcNow is { Ticks: > 0 } until)
+        {
+            retryAfter = ClampRetryAfter(until);
+            return true;
+        }
+
+        return false;
+    }
+
+    internal static readonly TimeSpan MaxRetryAfter = TimeSpan.FromDays(1);
+
+    private static TimeSpan ClampRetryAfter(TimeSpan value) => value > MaxRetryAfter ? MaxRetryAfter : value;
+
     private static readonly Regex GoDurationRegex = new(
         @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant
@@ -522,16 +619,16 @@ public class ChatCompletionClient : IDisposable
             return false;
 
         // As int: 1684293600
-        if (int.TryParse(input, out var seconds1))
+        if (int.TryParse(input, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds1))
         {
-            time = TimeSpan.FromSeconds(seconds1);
+            time = ClampSeconds(seconds1);
             return true;
         }
 
         // As double: 33011.382867097855
-        if (double.TryParse(input, provider: CultureInfo.InvariantCulture, out var seconds2))
+        if (double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds2) && double.IsFinite(seconds2))
         {
-            time = TimeSpan.FromSeconds(seconds2);
+            time = ClampSeconds(seconds2);
             return true;
         }
 
@@ -540,36 +637,35 @@ public class ChatCompletionClient : IDisposable
         if (matches.Count == 0)
             return false;
 
+        var seconds = 0d;
         foreach (Match m in matches)
         {
             var v = double.Parse(m.Groups["value"].Value, CultureInfo.InvariantCulture);
-            switch (m.Groups["unit"].Value)
+            seconds += m.Groups["unit"].Value switch
             {
-                case "h":
-                    time += TimeSpan.FromHours(v);
-                    break;
-                case "m":
-                    time += TimeSpan.FromMinutes(v);
-                    break;
-                case "s":
-                    time += TimeSpan.FromSeconds(v);
-                    break;
-                case "ms":
-                    time += TimeSpan.FromMilliseconds(v);
-                    break;
-                case "us":
-                case "µs":
-                    time += TimeSpan.FromTicks((long)(v * 10));
-                    break; // 1 µs = 10 ticks
-                case "ns":
-                    time += TimeSpan.FromTicks((long)(v / 100));
-                    break; // 1 ns = 1/100 tick
-                default:
-                    return false;
-            }
+                "h" => v * 3600,
+                "m" => v * 60,
+                "s" => v,
+                "ms" => v / 1e3,
+                "us" or "µs" => v / 1e6,
+                "ns" => v / 1e9,
+                _ => double.NaN
+            };
         }
 
+        if (double.IsNaN(seconds))
+            return false;
+
+        time = ClampSeconds(seconds);
         return true;
+    }
+
+    private static TimeSpan ClampSeconds(double seconds)
+    {
+        if (seconds <= 0)
+            return TimeSpan.Zero;
+
+        return TimeSpan.FromSeconds(Math.Min(seconds, MaxRetryAfter.TotalSeconds));
     }
 
     public static string GetSchemaForRequest(string schema, string sampleObject)

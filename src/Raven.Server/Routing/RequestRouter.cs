@@ -1,12 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -41,14 +43,17 @@ namespace Raven.Server.Routing
         public static readonly TimeSpan LastRequestTimeUpdateFrequency = TimeSpan.FromSeconds(15);
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
-        private readonly Trie<RouteInformation> _trie;
-        private DateTime _lastAuthorizedNonClusterAdminRequestTime;
-        private DateTime _lastRequestTimeUpdated;
+        private readonly RouteMatcher<RouteInformation> _routes;
+        private static readonly long LastRequestTimeUpdateFrequencyInNanoseconds = (long)LastRequestTimeUpdateFrequency.TotalMilliseconds * Clock.NanosecondsInMillisecond;
+
+        // Clock.Nanoseconds of the last update, far enough in the past for the first request to update
+        private long _lastAuthorizedNonClusterAdminRequestTimeNanoseconds = long.MinValue / 2;
+        private long _lastRequestTimeUpdatedNanoseconds = long.MinValue / 2;
         private static readonly RavenLogger RequestLogger = RavenLogManager.Instance.GetLoggerForServer<RequestRouter>();
 
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
-            _trie = Trie<RouteInformation>.Build(routes);
+            _routes = new RouteMatcher<RouteInformation>(routes.Values.Select(x => (x.Method, x.Path, x)));
             _ravenServer = ravenServer;
             _serverMetrics = ravenServer.Metrics;
             AllRoutes = new List<RouteInformation>(routes.Values);
@@ -92,9 +97,8 @@ namespace Raven.Server.Routing
 
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
         {
-            var tryMatch = _trie.TryMatch(method, path);
-            match = tryMatch.Match;
-            return tryMatch.Value;
+            _routes.TryMatch(method, path, out match, out RouteInformation route);
+            return route;
         }
 
         internal async ValueTask<(bool Authorized, AuthenticationStatus Status, string CertificateThumbprint)> TryAuthorizeAsync(RouteInformation route, HttpContext context, string databaseName)
@@ -158,12 +162,12 @@ namespace Raven.Server.Routing
                     context.Features.Set<IHttpAuthenticationFeature>(feature);
 
                     if (CanAccessRoute(route, context, databaseName, feature))
-                        return (true, feature.Status, feature.Certificate?.Thumbprint);
+                        return (true, feature.Status, feature.CertificateThumbprint);
                 }
 
 
                 await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
-                return (false, feature.Status, feature.Certificate?.Thumbprint);
+                return (false, feature.Status, feature.CertificateThumbprint);
             }
 
             if (feature.RequiresTwoFactor && _ravenServer.TwoFactor.ValidateTwoFactorRequestLimits(route, context, feature.TwoFactorAuthRegistration, out var twoFactorMsg) == false)
@@ -177,10 +181,10 @@ namespace Raven.Server.Routing
 
                 await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
 
-                return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.Certificate?.Thumbprint);
+                return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.CertificateThumbprint);
             }
 
-            return (true, feature.Status, feature.Certificate?.Thumbprint);
+            return (true, feature.Status, feature.CertificateThumbprint);
         }
 
 
@@ -260,15 +264,12 @@ namespace Raven.Server.Routing
         public async ValueTask HandlePath(RequestHandlerContext reqCtx)
         {
             var context = reqCtx.HttpContext;
-            var tryMatch = _trie.TryMatch(context.Request.Method, context.Request.Path.Value);
-            if (tryMatch.Value == null)
+            if (_routes.TryMatch(context.Request.Method, context.Request.Path.Value, out RouteMatch match, out RouteInformation route) == false)
             {
                 // CONNECT (https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/CONNECT)
                 // starting from .NET 7 can be used by WS connections to establish a communication
-                if (string.Equals(context.Request.Method, HttpMethods.Connect.Method, StringComparison.OrdinalIgnoreCase))
-                    tryMatch = _trie.TryMatch(HttpMethods.Get.Method, context.Request.Path.Value);
-
-                if (tryMatch.Value == null)
+                if (string.Equals(context.Request.Method, HttpMethods.Connect.Method, StringComparison.OrdinalIgnoreCase) == false ||
+                    _routes.TryMatch(HttpMethods.Get.Method, context.Request.Path.Value, out match, out route) == false)
                 {
                     var exception = new RouteNotFoundException($"There is no handler for path: {context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString}");
                     AssertClientVersion(context, exception);
@@ -277,17 +278,18 @@ namespace Raven.Server.Routing
             }
 
             reqCtx.RavenServer = _ravenServer;
-            reqCtx.RouteMatch = tryMatch.Match;
-            reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
+            reqCtx.RouteMatch = match;
+            reqCtx.CheckForChanges = route.CheckForChanges;
 
-            var tuple = tryMatch.Value.TryGetHandler(reqCtx);
-            var handler = tuple.Item1 ?? await tuple.Item2;
+            var (handler, pendingHandler) = route.TryGetHandler(reqCtx);
+            handler ??= await pendingHandler;
 
             // We defer all throughput accounting until the request actually completes so the
             // reported rates track true throughput rather than arrival pressure.
             var requestStartNs = Clock.Nanoseconds;
+            reqCtx.RequestStartNanoseconds = requestStartNs;
 
-            Interlocked.Increment(ref _serverMetrics.Requests.ConcurrentRequestsCount);
+            var concurrentRequest = _serverMetrics.Requests.ConcurrentRequests.Apply(1);
 
             try
             {
@@ -318,9 +320,9 @@ namespace Raven.Server.Routing
 
                 var skipAuthorization = false;
 
-                if (tryMatch.Value.CorsMode != CorsMode.None)
+                if (route.CorsMode != CorsMode.None)
                 {
-                    RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, tryMatch.Value.CorsMode);
+                    RequestHandler.SetupCORSHeaders(context, reqCtx.RavenServer.ServerStore, route.CorsMode);
 
                     // don't authorize preflight requests: https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html
                     skipAuthorization = context.Request.Method == "OPTIONS";
@@ -339,7 +341,7 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName);
+                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(route, context, reqCtx.DatabaseName);
                         status = authorizationStatus;
                         certificateThumbprint = thumbprint;
 
@@ -349,20 +351,27 @@ namespace Raven.Server.Routing
                 }
                 finally
                 {
-                    if (tryMatch.Value.SkipLastRequestTimeUpdate == false)
+                    if (route.SkipLastRequestTimeUpdate == false)
                     {
-                        var now = SystemTime.UtcNow;
+                        // PERF: these statistics move only every LastRequestTimeUpdateFrequency, so instead of reading the wall clock
+                        // on every request, we read it when an update is due (or when there is a certificate to track)
+                        var lastRequestTimeDue = requestStartNs - _lastRequestTimeUpdatedNanoseconds >= LastRequestTimeUpdateFrequencyInNanoseconds;
+                        var lastAuthorizedNonClusterAdminRequestTimeDue = skipAuthorization == false &&
+                                                                          requestStartNs - _lastAuthorizedNonClusterAdminRequestTimeNanoseconds >= LastRequestTimeUpdateFrequencyInNanoseconds;
 
-                        if (now - _lastRequestTimeUpdated >= LastRequestTimeUpdateFrequency)
+                        DateTime now = default;
+                        if (lastRequestTimeDue || lastAuthorizedNonClusterAdminRequestTimeDue || certificateThumbprint != null)
+                            now = SystemTime.UtcNow;
+
+                        if (lastRequestTimeDue)
                         {
                             _ravenServer.Statistics.LastRequestTime = now;
-                            _lastRequestTimeUpdated = now;
+                            _lastRequestTimeUpdatedNanoseconds = requestStartNs;
                         }
 
                         _ravenServer.Statistics.UpdateLastCertificateRequestTime(certificateThumbprint, now);
 
-                        if (now - _lastAuthorizedNonClusterAdminRequestTime >= LastRequestTimeUpdateFrequency &&
-                            skipAuthorization == false)
+                        if (lastAuthorizedNonClusterAdminRequestTimeDue)
                         {
                             switch (status)
                             {
@@ -370,7 +379,7 @@ namespace Raven.Server.Routing
                                 case AuthenticationStatus.Operator:
                                     {
                                         _ravenServer.Statistics.LastAuthorizedNonClusterAdminRequestTime = now;
-                                        _lastAuthorizedNonClusterAdminRequestTime = now;
+                                        _lastAuthorizedNonClusterAdminRequestTimeNanoseconds = requestStartNs;
                                         break;
                                     }
                                 case AuthenticationStatus.None:
@@ -397,14 +406,14 @@ namespace Raven.Server.Routing
 
                 if (reqCtx.Database != null)
                 {
-                    if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
+                    if (route.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
                         await RejectRequestBecauseOfCpuThresholdAsync(context);
                         return;
                     }
 
-                    using (reqCtx.Database.DatabaseInUse(tryMatch.Value.SkipUsagesCount))
+                    using (reqCtx.Database.DatabaseInUse(route.SkipUsagesCount))
                     {
                         if (context.Request.Headers.TryGetValue(Constants.Headers.LastKnownClusterTransactionIndex, out var value)
                             && long.TryParse(value, out var index)
@@ -434,17 +443,19 @@ namespace Raven.Server.Routing
             }
             finally
             {
-                Interlocked.Decrement(ref _serverMetrics.Requests.ConcurrentRequestsCount);
+                concurrentRequest.Apply(-1);
 
-                var elapsedNs = Clock.Nanoseconds - requestStartNs;
+                // PERF: a single clock read for the duration and for both meters
+                var requestEndNs = Clock.Nanoseconds;
+                var elapsedNs = requestEndNs - requestStartNs;
                 if (elapsedNs < 0)
                     elapsedNs = 0;
 
                 var elapsedMilliseconds = elapsedNs / (double)Clock.NanosecondsInMillisecond;
 
                 var duration = reqCtx.HttpContext.WebSockets.IsWebSocketRequest ? 0L : (long)elapsedMilliseconds;
-                _serverMetrics.Requests.RecordRequest(duration);
-                reqCtx.DatabaseMetrics?.Requests.RecordRequest(duration);
+                _serverMetrics.Requests.RecordRequest(duration, requestEndNs);
+                reqCtx.DatabaseMetrics?.Requests.RecordRequest(duration, requestEndNs);
             }
         }
 

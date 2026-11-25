@@ -107,7 +107,7 @@ export function AppChannelDetail() {
         >
             <DetailHeader
                 title={channel?.displayName ?? "Channel"}
-                status={channel && <EnabledStatus isEnabled={channel.enabled} />}
+                status={channel && <EnabledStatus isEnabled={channel.enabled} setupError={channel.setupError} />}
                 backTo={{ to: appRoutes.app(slug, "channels"), label: "Channels" }}
                 meta={channel && <ChannelMeta channel={channel} agent={agent} />}
                 actions={channel && <ChannelActions slug={slug} channel={channel} />}

@@ -42,6 +42,21 @@ namespace FastTests.Sparrow
         }
 
         [RavenFact(RavenTestCategory.Core)]
+        public void CountIsNumberOfItemsUpToFull()
+        {
+            var ringBuffer = new LockFreeRingBuffer<int>(8);
+            Assert.Equal(0, ringBuffer.Count);
+
+            for (int i = 1; i <= 8; i++)
+            {
+                ringBuffer.TryEnqueue(i);
+                Assert.Equal(i, ringBuffer.Count);
+            }
+
+            Assert.True(ringBuffer.IsFull);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
         public void Enqueue_Dequeue_MultipleItems()
         {
             var ringBuffer = new LockFreeRingBuffer<int>(8);

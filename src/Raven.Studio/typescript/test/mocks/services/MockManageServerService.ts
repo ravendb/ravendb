@@ -88,6 +88,10 @@ export default class MockManageServerService extends AutoMockService<ManageServe
         );
     }
 
+    withGetStorageIo(dto?: MockedValue<Raven.Server.Storage.StorageIoReport>) {
+        return this.mockResolvedValue(this.mocks.getStorageIo, dto, ManageServerStubs.storageIo());
+    }
+
     withGetClusterLogEntry() {
         return this.mockResolvedValue(this.mocks.getClusterLogEntry, null, ManageServerStubs.getClusterLogEntry());
     }
@@ -173,6 +177,12 @@ export default class MockManageServerService extends AutoMockService<ManageServe
                     ? ManageServerStubs.getClusterLogLeader()
                     : ManageServerStubs.getClusterLogFollower();
             }
+        );
+    }
+
+    withDebugPackageStorageIo(empty = false) {
+        return this.mocks.getDebugPackageStorageIo.mockImplementation(async (_packageId: string, nodeTag: string) =>
+            empty ? null : DebugPackageStubs.storageIo(nodeTag)
         );
     }
 

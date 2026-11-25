@@ -1,4 +1,5 @@
-import type { RequestHandler } from "msw";
+import type { AnyHandler } from "msw";
+import type { AiHelperStatus, DiscoverResponse } from "@/api/generated/server-api";
 import { agentsMocks } from "./agents-mocks";
 import { aiConnectionStringsMocks } from "./ai-connection-strings-mocks";
 import { aiModelsMocks } from "./ai-models-mocks";
@@ -11,6 +12,7 @@ import { discordMocks } from "./discord-mocks";
 import { dnsMocks } from "./dns-mocks";
 import { embedLinksMocks } from "./embed-links-mocks";
 import { iframeHandlers } from "./iframe-mocks";
+import { migrationMocks } from "./migration-mocks";
 import { settingsMocks } from "./settings-mocks";
 import { setupMocks } from "./setup-mocks";
 import { slackMocks } from "./slack-mocks";
@@ -21,11 +23,9 @@ import { statsMocks } from "./stats-mocks";
 // every mock accepts a custom response value:
 //
 //     parameters: {
-//         msw: {
-//             handlers: {
-//                 bootstrap: [bootstrapMocks.status({ state: "NeedsActivation" })],
-//             },
-//         },
+//         msw: mockHandlers({
+//             bootstrap: [bootstrapMocks.status({ state: "NeedsActivation" })],
+//         }),
 //     },
 export const defaultApiMocks = {
     agents: [agentsMocks.list(), agentsMocks.get(), agentsMocks.edit(), agentsMocks.delete()],
@@ -54,7 +54,7 @@ export const defaultApiMocks = {
     auth: [authMocks.status(), authMocks.login(), authMocks.logout()],
     bootstrap: [bootstrapMocks.status()],
     channels: [channelsMocks.list(), channelsMocks.create(), channelsMocks.update(), channelsMocks.delete()],
-    slack: [slackMocks.webhookInfo(), slackMocks.health()],
+    slack: [slackMocks.health()],
     discord: [discordMocks.health()],
     dns: [dnsMocks.ipBinding()],
     embedLinks: [embedLinksMocks.list(), embedLinksMocks.mint(), embedLinksMocks.revoke()],
@@ -82,24 +82,41 @@ export const defaultApiMocks = {
     setup: [
         setupMocks.connect(),
         setupMocks.discover(),
+        setupMocks.draftMissing(),
+        setupMocks.draftSave(),
         setupMocks.verifyCdc(),
         setupMocks.map(),
-        setupMocks.suggestCdc(),
         setupMocks.testMapping(),
         setupMocks.provision(),
+        migrationMocks.proposalStart(),
+        migrationMocks.proposalAsk(),
+        migrationMocks.areaStart(),
+        migrationMocks.areaAsk(),
+        migrationMocks.stop(),
+        migrationMocks.planGetMissing(),
+        migrationMocks.planDiscard(),
+        migrationMocks.planSave(),
+        migrationMocks.apply(),
     ],
-} satisfies Record<string, RequestHandler[]>;
+} satisfies Record<string, AnyHandler[]>;
 
 // Handler overrides are keyed by the service names above. A story (or the preview
 // default) can replace any subset and keep the rest.
-type MockHandlers = Partial<Record<keyof typeof defaultApiMocks, RequestHandler[]>>;
+type MockHandlers = Partial<Record<keyof typeof defaultApiMocks, AnyHandler[]>>;
 
-// Type the `msw` story parameter against those keys so overrides autocomplete and a
-// mistyped service name is a compile error instead of a silently ignored handler.
-declare module "storybook/internal/csf" {
-    interface Parameters {
-        msw?: {
-            handlers: MockHandlers;
-        };
-    }
+// Builds the `msw` story parameter so overrides autocomplete and a mistyped service name is a
+// compile error instead of a silently ignored handler. msw-storybook-addon already types
+// `parameters.msw` loosely, so a stricter module augmentation would conflict with it.
+export function mockHandlers(handlers: MockHandlers) {
+    return { handlers };
+}
+
+// Each override goes first because MSW answers with the first matching handler; the rest of the
+// service keeps its defaults.
+export function discoverHandlers(discovery: DiscoverResponse): MockHandlers {
+    return { setup: [setupMocks.discover(discovery), ...defaultApiMocks.setup] };
+}
+
+export function consentHandlers(status: AiHelperStatus): MockHandlers {
+    return { assistant: [assistantMocks.consent({ status }), ...defaultApiMocks.assistant] };
 }

@@ -535,10 +535,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
 
-                var trace = debugTraces.CreateTrace();
-
                 var request = talker.CreateRequest(attachments);
-                r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
+                r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, debugTraces, token);
 
                 var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
                 //we want that message only on when we upload an attachment and not when the internal tool is called.
@@ -861,7 +859,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             UseTools = false,
             Schema = SummarizationOutputSchema
         };
-        var result = await client.CompleteAsync(context, request, usage, trace: null, token);
+        var result = await client.CompleteAsync(context, request, usage, traces: null, token);
 
         if (result.Result is not BlittableJsonReaderObject resultObj || resultObj.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
             throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };

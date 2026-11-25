@@ -780,7 +780,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
                 Assert.Contains($"{Settings.RemoteFolderName}/EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", cloudObjects[0].FullPath);
 
                 await GetAndCompareRemoteAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier1);
-                await WaitForTaskDelayIfNeeded();
+                await WaitForTheNextSecond();
 
                 if (overwriteWithDummy)
                 {
@@ -791,7 +791,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
                     {
                         // we should have dummy stream in cloud now but the size is same since its saved in attachment metadata
                         await GetAndCompareRemoteAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", stream, 3, identifier1);
-                        await WaitForTaskDelayIfNeeded();
+                        await WaitForTheNextSecond();
                     }
                 }
 
@@ -820,11 +820,8 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
         }
     }
 
-    protected virtual Task WaitForTaskDelayIfNeeded()
-    {
-        return Task.CompletedTask;
-        // noop
-    }
+    // S3 and Azure keep an object's modification time in whole seconds: the next upload must come in a later second
+    private static Task WaitForTheNextSecond() => Task.Delay(1100);
 
     protected async Task UploadRemoteAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal()
     {

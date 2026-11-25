@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <versionhelpers.h>
 #include <stdio.h>
 
@@ -6,20 +6,6 @@
 #include "rvn_internal.h"
 #include "status_codes.h"
 #include "internal_win.h"
-
-#ifdef _MSC_VER
-static __forceinline int clzl(uint64_t x)
-{
-    unsigned long r = 0;
-    BitScanReverse64(&r, x);
-    return (int)(r ^ 63);
-}
-#else
-__forceinline int clzl(uint64_t x)
-{
-    return __builtin_clzl(x);
-}
-#endif
 
 extern struct rvn_configuration g_cfg;
 
@@ -95,27 +81,6 @@ rvn_pager_get_device_id(void *handle, uint64_t *device_id, int32_t *detailed_err
     }
     *device_id = info.dwVolumeSerialNumber;
     return SUCCESS;
-}
-
-uint64_t _GetNearestFileSize(uint64_t needed_size)
-{
-    const uint64_t POWER_OF_TWO_THRESHOLD = (uint64_t)512 * 1024ul * 1024ul; // 512MB
-    if (needed_size == 0)
-    {
-        return (uint64_t)1024 * 1024;
-    }
-    if (needed_size < POWER_OF_TWO_THRESHOLD)
-    {
-        int32_t idx = clzl(needed_size);
-        if (idx)
-        {
-            return (uint64_t)1 << (64 - idx);
-        }
-        return 1024 * 1024;
-    }
-    const uint64_t ONE_GB = (uint64_t)1024 * 1024 * 1024;
-    // if it is over 0.5 GB, then we grow at 1 GB intervals
-    return (needed_size + ONE_GB - 1) & ~ONE_GB;
 }
 
 int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t *detailed_error_code)
@@ -437,6 +402,7 @@ void delete_global_state(struct handle_global_state *global_state)
     {
         return;
     }
+    rvn_io_ring_unregister_file(global_state); // before notify is closed, the unregister waits on it
     if (global_state->notify != NULL)
     {
         CloseHandle(global_state->notify);
@@ -587,12 +553,14 @@ EXPORT int32_t
 rvn_init_pager(const char *filename,
                int64_t initial_file_size,
                int32_t open_flags,
+               void *prefetch_ring,
                void **handle,
                void **memory,
                void **writable_memory,
                int64_t *memory_size,
                int32_t *detailed_error_code)
 {
+    (void)prefetch_ring; // no prefetch ring on Windows
     *memory_size = 0;
     *memory = NULL;
     *handle = NULL;
@@ -616,6 +584,7 @@ rvn_init_pager(const char *filename,
     }
     global_state->open_flags = open_flags;
     global_state->ref_count = 1;
+    global_state->io_ring_file = -1;
     InitializeCriticalSection(&global_state->lock);
     LPCWSTR file_path_unicode = (LPCWSTR)filename;
     global_state->file_path = ConvertLPCWSTRToUTF8(file_path_unicode);
@@ -657,6 +626,20 @@ rvn_init_pager(const char *filename,
     rc = _open_pager_file(h, global_state, initial_file_size, handle, memory, writable_memory, memory_size, detailed_error_code);
     if (rc == SUCCESS)
     {
+        if (_uses_write_ring(open_flags))
+        {
+            rc = rvn_io_ring_register_file(global_state, ((struct handle *)*handle)->file_handle, detailed_error_code);
+            if (rc != SUCCESS)
+            {
+                int32_t ignored;
+                rvn_close_pager(*handle, &ignored); // the last reference: also deletes the global state
+                *handle = NULL;
+                *memory = NULL;
+                *writable_memory = NULL;
+                *memory_size = 0;
+                return rc;
+            }
+        }
         return SUCCESS;
     }
 
@@ -858,4 +841,93 @@ rvn_writer rvn_get_writer(void *handle)
     default:
         return io_ring_setup_successful() ? rvn_write_io_ring : rvn_write_file_io;
     }
+}
+
+EXPORT int32_t
+rvn_pager_prefetch(void *handle, int64_t offset, int64_t length)
+{
+    // no prefetch ring on Windows: the data file is opened with FILE_FLAG_RANDOM_ACCESS and the memory manager pages it in
+    (void)handle;
+    (void)offset;
+    (void)length;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_pager_will_need(void *handle, int64_t offset, int64_t length)
+{
+    (void)handle;
+    (void)offset;
+    (void)length;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_pager_start_reads(void *handle, int64_t *offsets, int32_t count)
+{
+    (void)handle;
+    (void)offsets;
+    (void)count;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_read_pages(void *ring, int64_t ticket, const int64_t *offsets, int32_t count, uint32_t group)
+{
+    (void)ring;
+    (void)ticket;
+    (void)offsets;
+    (void)count;
+    (void)group;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, int32_t max_groups,
+    rvn_reads_done on_reads_done, void *on_reads_done_context, void **ring, int32_t *detailed_error_code)
+{
+    (void)max_groups;
+    (void)on_reads_done;
+    (void)on_reads_done_context;
+    (void)ring_entries;
+    (void)max_files;
+    (void)queue_size;
+    *ring = NULL;
+    *detailed_error_code = 0;
+    return FAIL_CREATE_IO_RING; // no prefetch ring on Windows
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
+{
+    (void)ring;
+    *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_fail_submits(void *ring, int32_t count, int32_t error, int32_t give_up_ms)
+{
+    (void)ring;
+    (void)count;
+    (void)error;
+    (void)give_up_ms;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, struct rvn_prefetch_ring_stats *stats)
+{
+    (void)ring;
+    memset(stats, 0, sizeof(*stats));
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_pager_get_prefetch_info(void *handle, struct rvn_pager_prefetch_info *info)
+{
+    (void)handle;
+    info->request_size = 0; // PrefetchVirtualMemory takes a whole range
+    info->ticket = -1;
+    return SUCCESS;
 }

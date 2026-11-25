@@ -300,7 +300,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis.Lucene
                 }
 
                 // go through all the fields and find the largest document frequency
-                var topField = _fieldNames[0];
+                string topField = null;
                 var docFreq = 0;
                 for (var i = 0; i < _fieldNames.Length; i++)
                 {

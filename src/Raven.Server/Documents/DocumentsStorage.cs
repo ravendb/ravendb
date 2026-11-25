@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
@@ -14,6 +16,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide.Sharding;
 using Raven.Server.Config;
 using Raven.Server.Documents.DataArchival;
 using Raven.Server.Documents.Expiration;
@@ -39,8 +42,10 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
+using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Impl.Paging;
 using Voron.Impl;
 using static Raven.Server.Documents.Schemas.Collections;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -190,7 +195,8 @@ namespace Raven.Server.Documents
 
             }
 
-            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(_name));
+            var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges,
+                DocumentDatabase.CatastrophicFailureNotification, LoggingResource.Database(_name), DocumentDatabase as ShardedDocumentDatabase);
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnDatabaseRecoveryError;
@@ -214,25 +220,46 @@ namespace Raven.Server.Documents
             }
         }
 
-        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource)
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource)
         {
-            if (config.Core.RunInMemory)
-                return StorageEnvironmentOptions.CreateMemoryOnly(
-                    config.Core.DataDirectory.FullPath,
-                    config.Storage.TempPath?.FullPath,
-                    ioChanges,
-                    catastrophicFailureNotification,
-                    loggingResource,
-                    loggingComponent: null);
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
 
-            return StorageEnvironmentOptions.ForPath(
-                config.Core.DataDirectory.FullPath,
-                config.Storage.TempPath?.FullPath,
-                null,
-                ioChanges,
-                catastrophicFailureNotification,
-                loggingResource,
-                loggingComponent: null);
+            if (config.Core.RunInMemory)
+                return StorageEnvironmentOptions.CreateMemoryOnly(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, loggingComponent: null);
+
+            return StorageEnvironmentOptions.ForPath(dataDirectory, tempPath, null, ioChanges, catastrophicFailureNotification, loggingResource, loggingComponent: null);
+        }
+
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, ShardedDocumentDatabase database)
+        {
+            if (database == null)
+                return GetStorageEnvironmentOptionsFromConfiguration(config, ioChanges, catastrophicFailureNotification, loggingResource);
+
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
+
+            if (config.Core.RunInMemory)
+                return new ShardedPureMemoryStorageEnvironmentOptions(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, database);
+
+            return new ShardedDirectoryStorageEnvironmentOptions(dataDirectory, tempPath, journalPath: null, ioChanges, catastrophicFailureNotification, loggingResource, database);
+        }
+
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges,
+            CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, ShardingConfiguration sharding)
+        {
+            if (sharding == null)
+                return GetStorageEnvironmentOptionsFromConfiguration(config, ioChanges, catastrophicFailureNotification, loggingResource);
+
+            var dataDirectory = config.Core.DataDirectory.FullPath;
+            var tempPath = config.Storage.TempPath?.FullPath;
+
+            if (config.Core.RunInMemory)
+                return new ShardedPureMemoryStorageEnvironmentOptions(dataDirectory, tempPath, ioChanges, catastrophicFailureNotification, loggingResource, sharding);
+
+            return new ShardedDirectoryStorageEnvironmentOptions(dataDirectory, tempPath, journalPath: null, ioChanges, catastrophicFailureNotification, loggingResource, sharding);
         }
 
         private void Initialize(StorageEnvironmentOptions options)
@@ -372,9 +399,8 @@ namespace Raven.Server.Documents
             };
 
             llt.TryGetClientState(out DocumentTransactionCache previousCache);
-            var collectionsForReads = previousCache.Collections;
-            var collectionsForWrites = TryAddCollectionsCreatedInTransaction(tx, collectionsForReads);
-            var collections = collectionsForWrites ?? collectionsForReads;
+            var (collectionsForWrites, collectionsByOwnerHashForWrites) = TryAddCollectionsCreatedInTransaction(tx, previousCache);
+            var collections = collectionsForWrites ?? previousCache.Collections;
 
             currentCache.EtagsByCollectionIndex = 
                   RecomputeChangedCollectionEtags(tx, collections, collectionsForWrites, previousCache.EtagsByCollectionIndex);
@@ -382,43 +408,50 @@ namespace Raven.Server.Documents
             AssertIncrementalCacheMatchesFullScan(tx, collections, currentCache.EtagsByCollectionIndex);
 
             currentCache.Collections = collections;
+            currentCache.CollectionsByDocumentsTableOwnerHash = collectionsByOwnerHashForWrites ?? previousCache.CollectionsByDocumentsTableOwnerHash;
             currentCache.RevisionsCount = tx.ReadTree(Schemas.Revisions.RevisionsCountSlice)?.ReadHeader().NumberOfEntries ?? 0;
             currentCache.Published = true; // this instance is immutable from here on
 
             tx.LowLevelTransaction.UpdateClientState(currentCache);
         }
 
-        private Dictionary<string, CollectionName> TryAddCollectionsCreatedInTransaction(Transaction tx,
-            IReadOnlyDictionary<string, CollectionName> collectionsForReads)
+        private (Dictionary<string, CollectionName> ByName, Dictionary<ulong, CollectionName> ByOwnerHash) TryAddCollectionsCreatedInTransaction(Transaction tx,
+            DocumentTransactionCache previous)
         {
+            var collectionsForReads = previous?.Collections ?? EmptyCollections;
             var collectionsTable = tx.OpenTable(CollectionsSchema, CollectionsSlice);
             if (collectionsTable.NumberOfEntries == collectionsForReads.Count) // we only ever _add_ new collections
-                return null;
+                return default;
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 var collectionsForWrites = new Dictionary<string, CollectionName>(collectionsForReads, StringComparer.OrdinalIgnoreCase);
-               foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+                var collectionsByOwnerHashForWrites = new Dictionary<ulong, CollectionName>(previous?.CollectionsByDocumentsTableOwnerHash ?? []);
+                foreach (var entry in collectionsTable.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
                 {
                     var collection = TableValueToId(ctx, (int)CollectionsTable.Name, entry).ToString();
                     if (collectionsForWrites.ContainsKey(collection))
                         continue;
 
-                    collectionsForWrites[collection] = new CollectionName(collection) { Index = collectionsForWrites.Count };
+                    var name = new CollectionName(collection) { Index = collectionsForWrites.Count };
+                    collectionsForWrites[collection] = name;
+                    using (Slice.From(tx.Allocator, name.GetTableName(CollectionTableType.Documents), ByteStringType.Immutable, out Slice tableName))
+                        collectionsByOwnerHashForWrites[RawDataSection.GetOwnerHash(tableName)] = name;
                 }
 
-                return collectionsForWrites;
+                return (collectionsForWrites, collectionsByOwnerHashForWrites);
             }
         }
 
         private void SeedTransactionCache(Transaction tx)
         {
-            var collections = TryAddCollectionsCreatedInTransaction(tx, EmptyCollections) ??
-                              new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
+            var (existing, collectionsByOwnerHash) = TryAddCollectionsCreatedInTransaction(tx, previous: null);
+            var collections = existing ?? new Dictionary<string, CollectionName>(StringComparer.OrdinalIgnoreCase);
 
             tx.LowLevelTransaction.UpdateClientState(new DocumentTransactionCache
             {
                 Collections = collections,
+                CollectionsByDocumentsTableOwnerHash = collectionsByOwnerHash ?? [],
                 EtagsByCollectionIndex = ComputeAllCollectionEtags(tx, collections),
                 Published = true // this transaction's own commit hook will carry it forward, it must not be mutated in place
             });
@@ -1286,6 +1319,77 @@ namespace Raven.Server.Documents
             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(doc);
 
             return doc;
+        }
+
+        /// <summary>
+        /// Reads the pages that updating <paramref name="document"/> modifies (its page, its section header and its entries in
+        /// the etag indexes); the task completes once they are in memory, so the merger does not stall on them.
+        /// </summary>
+        [SkipLocalsInit]
+        public ValueTask PrefetchDocumentAsync(DocumentsOperationContext context, Document document)
+        {
+            Span<long> pages = stackalloc long[PagesToUpdatePerDocument];
+            var count = GetPagesToUpdate(context, document.StorageId, ExtractCollectionName(context, document.Data), pages);
+            return Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
+        }
+
+        public ValueTask PrefetchDocumentAsync(DocumentsOperationContext context, string id)
+        {
+            Span<long> pages = stackalloc long[PagesToUpdatePerDocument];
+            var count = GetPagesToUpdate(context, id, pages);
+            return count == 0
+                ? ValueTask.CompletedTask
+                : Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
+        }
+
+        /// <summary>
+        /// <see cref="PrefetchDocumentAsync"/> for the existing documents among <paramref name="ids"/>, as one read group: an id
+        /// without a document costs only the lookup (which reads the id tree's leaf, for an insert there).
+        /// </summary>
+        [SkipLocalsInit]
+        public ValueTask PrefetchDocumentsAsync(DocumentsOperationContext context, List<string> ids)
+        {
+            var size = ids.Count * PagesToUpdatePerDocument;
+            long[] rented = null;
+            Span<long> pages = size <= 64 ? stackalloc long[size] : (rented = ArrayPool<long>.Shared.Rent(size));
+            try
+            {
+                var count = 0;
+                foreach (var id in ids)
+                    count += GetPagesToUpdate(context, id, pages.Slice(count, PagesToUpdatePerDocument));
+                return count == 0
+                    ? ValueTask.CompletedTask
+                    : Pager.ReadPagesAhead(context.Transaction.InnerTransaction.LowLevelTransaction.DataPagerState, pages[..count]);
+            }
+            finally
+            {
+                if (rented != null)
+                    ArrayPool<long>.Shared.Return(rented);
+            }
+        }
+
+        private const int PagesToUpdatePerDocument = 4; // its page, its section header, its two etag index leaves
+
+        private int GetPagesToUpdate(DocumentsOperationContext context, string id, Span<long> pages)
+        {
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            {
+                if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict: false, out TableValueReader tvr) == false)
+                    return 0;
+
+                var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+                if (llt.TryGetClientState(out DocumentTransactionCache cache) == false ||
+                    cache.CollectionsByDocumentsTableOwnerHash?.TryGetValue(RawDataSection.GetOwnerHash(llt, tvr.Id), out var collection) != true)
+                    return 0;
+                return GetPagesToUpdate(context, tvr.Id, collection, pages);
+            }
+        }
+
+        private int GetPagesToUpdate(DocumentsOperationContext context, long storageId, CollectionName collectionName, Span<long> pages)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName),
+                collectionName.GetTableName(CollectionTableType.Documents));
+            return table?.GetPagesToUpdate(storageId, pages, Schemas.Documents.AllDocsEtagsIndex, Schemas.Documents.CollectionEtagsIndex) ?? 0;
         }
 
         public Document GetByEtag(DocumentsOperationContext context, long etag)
@@ -2387,6 +2491,14 @@ namespace Raven.Server.Documents
             public DateTime LastModified;
             public string ChangeVector;
             public DocumentFlags Flags;
+
+            public readonly void CopyTo(PatchResultBase result)
+            {
+                result.ChangeVector = ChangeVector;
+                result.Collection = Collection.Name;
+                result.LastModified = LastModified;
+                result.Etag = Etag;
+            }
         }
 
         public void DeleteWithoutCreatingTombstone(DocumentsOperationContext context, string collection, long storageId, bool isTombstone)

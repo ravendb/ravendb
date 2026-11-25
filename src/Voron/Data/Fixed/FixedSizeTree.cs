@@ -14,6 +14,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using static Sparrow.PortableExceptions;
 using static Voron.VoronExceptions;
+using Voron.Impl.Paging;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Fixed
@@ -120,6 +121,7 @@ namespace Voron.Data.Fixed
 
             tree._rightmostLeafPageNumber = -1; // reset the old values
             tree._treeMaxKey = TVal.MinValue;
+            tree._cachedLargeHeader = null;
 
             // Setting the name of the tree has to happen before returning even if the return is null
             // because we are repurposing the tree and we dont want the tree to be returned with the wrong
@@ -551,6 +553,39 @@ namespace Voron.Data.Fixed
         internal FixedSizeTreePageHeader GetPageHeader(long pageNumber)
         {
             return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
+        }
+
+        /// <summary>
+        /// The leaf page that holds <paramref name="key"/>, found without reading the leaf: the branch pages on the way are
+        /// read (they are usually in memory). False when there is no leaf to read: the tree is embedded or one page, or the
+        /// walk already read the leaf. This does not use or fill the per transaction search state.
+        /// </summary>
+        public bool TryGetLeafPageNumber(TVal key, out long pageNumber)
+        {
+            pageNumber = -1;
+            if (Type != RootObjectType.FixedSizeTree)
+                return false; // an embedded tree is part of its parent's value
+            var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
+            if (header->Depth < 2)
+                return false; // the root is the leaf
+            var page = GetReadOnlyPage(header->RootPageNumber);
+            for (var level = 1; ; level++)
+            {
+                // Deletions can leave a leaf above the deepest level, so the page in hand is checked: a leaf was already
+                // read. No path is deeper than Depth, so below the last branch level there is a leaf, which we do not read.
+                if (page.IsLeaf)
+                    return false;
+                BinarySearch(ref page, key);
+                if (page.LastMatch < 0 && page.LastSearchPosition > 0)
+                    page.LastSearchPosition--;
+                var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
+                if (level == header->Depth - 1)
+                {
+                    pageNumber = childPageNumber;
+                    return true;
+                }
+                page = GetReadOnlyPage(childPageNumber);
+            }
         }
 
         private FixedSizeTreePage<TVal> FindPageFor(TVal key)
@@ -1774,6 +1809,14 @@ namespace Voron.Data.Fixed
 
         private (long Count, int ReachedDepth) EstimateRemainingEntriesFor(FixedSizeTreePage<TVal> page, int currentDepth, int maxDepth, ref RemainingNumberOfEntriesState state)
         {
+            if (page.IsLeaf)
+            {
+                // siblings can be leaves after a branch collapses
+                var activeEntriesInPage = page.NumberOfActiveEntries;
+                state.NonEstimatedAmount += activeEntriesInPage;
+                return (activeEntriesInPage, currentDepth - 1);
+            }
+
             var lastEntry = page.GetEntry(page.NumberOfEntries - 1);
             var lastPage = GetReadOnlyPage(lastEntry->PageNumber);
 
@@ -1804,19 +1847,9 @@ namespace Voron.Data.Fixed
                     {
                         var entry = page.GetEntry(page.LastSearchPosition);
                         var childPage = GetReadOnlyPage(entry->PageNumber);
-
-                        if (childPage.IsLeaf)
-                        {
-                            var activeEntriesInChildPage = childPage.NumberOfActiveEntries;
-                            totalEstimate += activeEntriesInChildPage;
-                            state.NonEstimatedAmount += activeEntriesInChildPage;
-                        }
-                        else
-                        {
-                            var branchEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
-                            totalEstimate += branchEstimate.Count;
-                            reachedDepth = Math.Max(reachedDepth, branchEstimate.ReachedDepth);
-                        }
+                        var childEstimate = EstimateRemainingEntriesFor(childPage, currentDepth + 1, maxDepth, ref state);
+                        totalEstimate += childEstimate.Count;
+                        reachedDepth = Math.Max(reachedDepth, childEstimate.ReachedDepth);
 
                         page.LastSearchPosition++;
                     }

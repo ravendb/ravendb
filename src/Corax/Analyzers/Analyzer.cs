@@ -131,7 +131,11 @@ namespace Corax.Analyzers
             Span<byte> outputBufferSpace = output;
             if (transformer.RequiresBufferSpace)
             {
-                sourceTempBufferHolder = BufferPool.Rent(source.Length);
+                var requiredSize = transformer.BufferSpaceMultiplier > 1
+                    ? (int)Math.Ceiling(source.Length * (double)transformer.BufferSpaceMultiplier)
+                    : source.Length;
+
+                sourceTempBufferHolder = BufferPool.Rent(requiredSize);
                 outputBufferSpace = sourceTempBufferHolder.AsSpan();
             }
 

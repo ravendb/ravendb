@@ -215,6 +215,12 @@ namespace Voron
 
         public bool ManualFlushing { get; set; }
 
+        /// <summary>The ring for data file prefetches; null uses <see cref="PrefetchRing.Default"/>.</summary>
+        public PrefetchRing PrefetchRing { get; set; }
+
+        /// <summary>For tests: the segment warm-up policy of the data file; null uses <see cref="Impl.Paging.PrefetchPolicy.Global"/>.</summary>
+        internal PrefetchPolicy PrefetchPolicy { get; set; }
+
         public bool IncrementalBackupEnabled { get; set; }
 
         public long MaxNumberOfPagesInJournalBeforeFlush { get; set; }
@@ -309,7 +315,6 @@ namespace Voron
             });
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
-            PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();
@@ -368,8 +373,7 @@ namespace Voron
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource, LoggingComponent loggingComponent)
         {
-            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
-            return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
+            return new PureMemoryStorageEnvironmentOptions(name, tempPath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnlyForTests([CallerMemberName] string caller = null, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
@@ -382,11 +386,7 @@ namespace Voron
         public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
             LoggingComponent loggingComponent)
         {
-            var pathSetting = new VoronPathSetting(path);
-            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
-            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
-
-            return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
+            return new DirectoryStorageEnvironmentOptions(path, tempPath, journalPath, ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent);
         }
 
         public static StorageEnvironmentOptions ForPathForTests(string path, LoggingResource loggingResource = null, LoggingComponent loggingComponent = null)
@@ -440,7 +440,7 @@ namespace Voron
             return tempPath;
         }
 
-        public sealed class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             public const string TempFileExtension = ".tmp";
             public const string BuffersFileExtension = ".buffers";
@@ -457,6 +457,15 @@ namespace Voron
             private long _reuseCounter;
             private long _lastJournalCreatedTicks;
             private long _journalFillIntervalTicks;
+
+            public DirectoryStorageEnvironmentOptions(string path, string tempPath, string journalPath,
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
+                LoggingResource loggingResource, LoggingComponent loggingComponent)
+                : this(new VoronPathSetting(path), new VoronPathSetting(tempPath ?? GetTempPath(path)),
+                    journalPath != null ? new VoronPathSetting(journalPath) : new VoronPathSetting(path).Combine("Journals"),
+                    ioChangesNotifications, catastrophicFailureNotification, loggingResource, loggingComponent)
+            {
+            }
 
             public DirectoryStorageEnvironmentOptions(VoronPathSetting basePath, VoronPathSetting tempPath, VoronPathSetting journalPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
@@ -505,7 +514,7 @@ namespace Voron
 
             public override (Pager Pager, Pager.State State) InitializeDataPager()
             {
-                var flags = Pal.OpenFileFlags.None;
+                var flags = EnablePrefetching ? Pal.OpenFileFlags.Prefetch : Pal.OpenFileFlags.None;
                 if(Encryption.IsEnabled)
                     flags |= Pal.OpenFileFlags.Encrypted;
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
@@ -513,7 +522,7 @@ namespace Voron
                 var result = Pager.Create(this, FilePath.FullPath,
                     InitialFileSize ?? 0,
                     flags);
-                InitializeWritebackGate(result.State, FilePath.FullPath);
+                DeviceWriteBudget = result.Pager.DeviceBudget;
                 return result;
             }
 
@@ -1426,15 +1435,12 @@ namespace Voron
                 }
 
                 string filename = fileInfo.FullName;
-                var (pager, state) = OpenJournalPager(filename);
-                if (UseSequentialReadAheadHintForJournalRecovery)
-                    pager.TrySetSequentialReadAheadHint(state);
-                return (pager, state);
+                return OpenJournalPager(filename);
             }
 
             public override (Pager Pager, Pager.State State) OpenJournalPager(string filename)
             {
-                var flags = Pal.OpenFileFlags.ReadOnly;
+                var flags = Pal.OpenFileFlags.ReadOnly | Pal.OpenFileFlags.SequentialScan; // read from start to end
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
                 return Pager.Create(this, filename, 0, flags, pageSize: Constants.Storage.JournalPageSize);
@@ -1468,7 +1474,7 @@ namespace Voron
             }
         }
 
-        public sealed class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
+        public class PureMemoryStorageEnvironmentOptions : StorageEnvironmentOptions
         {
             private readonly string _name;
             private static int _counter;
@@ -1481,6 +1487,14 @@ namespace Voron
 
 
             private readonly string _filename;
+
+            public PureMemoryStorageEnvironmentOptions(string name, string tempPath,
+                IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification,
+                LoggingResource loggingResource, LoggingComponent loggingComponent)
+                : this(name, new VoronPathSetting(tempPath ?? GetTempPath()), ioChangesNotifications, catastrophicFailureNotification,
+                    loggingResource, loggingComponent)
+            {
+            }
 
             public PureMemoryStorageEnvironmentOptions(string name, VoronPathSetting tempPath,
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification, LoggingResource loggingResource,
@@ -1864,7 +1878,6 @@ namespace Voron
         }
 
         public long PrefetchSegmentSize { get; set; }
-        public long PrefetchResetThreshold { get; set; }
         public long SyncJournalsCountThreshold { get; set; }
 
         public long MaxUnsyncedBytesBeforeSync { get; set; } = 256 * Constants.Size.Megabyte;
@@ -1895,15 +1908,6 @@ namespace Voron
 
         internal DeviceWriteBudget DeviceWriteBudget { get; private set; } 
 
-        private protected unsafe void InitializeWritebackGate(Pager.State state, string dataFilePath)
-        {
-            if (Pal.rvn_pager_get_device_id(state.Handle, out var deviceId, out _) != PalFlags.FailCodes.Success)
-                return;
-                
-            DeviceWriteBudget = DeviceWriteBudget.GetForDevice(deviceId, dataFilePath,
-                SyncWritebackBarrierCostThresholdTicks, SyncWritebackDrainQueueDepthThreshold, PipelineJournalWritesAboveLatencyInTicks);
-        }
-
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;
         public bool? IgnoreInvalidJournalErrors { get; set; }
@@ -1922,7 +1926,6 @@ namespace Voron
         public JournalCompressionAlgorithm JournalCompressionAlgorithm { get; set; } = JournalCompressionAlgorithm.Auto;
         public long ConsolidationTargetWriteSizeInBytes { get; set; }
         public int MinimumSharedJournalsMergeCount { get; set; } = 8;
-        public bool UseSequentialReadAheadHintForJournalRecovery { get; set; } = true;
 
         private readonly RavenLogger _log;
 

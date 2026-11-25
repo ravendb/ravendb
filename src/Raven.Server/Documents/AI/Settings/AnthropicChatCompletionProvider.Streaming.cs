@@ -119,9 +119,7 @@ internal sealed partial class AnthropicChatCompletionProvider
             throw UnexpectedResponseException.Create("The stream ended before the provider signaled completion (message_stop); the response is incomplete",
                 response, string.Empty, GetRequestId(response.Headers));
 
-        // Partial plain text is still an answer; a cut structured object or a cut tool call is not.
-        var lengthTruncated = state.StopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded;
-        if (lengthTruncated && state.StructuredOutput)
+        if (state.StopReason is Wire.StopReasonMaxTokens or Wire.StopReasonModelContextWindowExceeded)
             throw OutOfRoom(state.StopReason, response);
 
         var blocks = AsStreamState<AnthropicStreamState>(state).Blocks;
@@ -132,16 +130,14 @@ internal sealed partial class AnthropicChatCompletionProvider
         if (state.StopReason == Wire.StopReasonRefusal)
             RefusedToAnswerException.Throw(RefusalText(text), "[streaming]", state.StopReason, GetRequestId(response.Headers));
 
-        if (lengthTruncated && hasToolUse)
-            throw OutOfRoom(state.StopReason, response);
-
         if (hasToolUse == false)
         {
+            // Anthropic cannot have parsed a result without streaming text, so one check covers both branches
+            if (text.Length == 0)
+                throw UnexpectedResponseException.Create($"No content in streamed response (stop_reason='{state.StopReason}')", response, string.Empty, GetRequestId(response.Headers));
+
             if (state.StructuredOutput == false)
             {
-                if (lengthTruncated && text.Length == 0)
-                    throw OutOfRoom(state.StopReason, response);
-
                 return new AiResponse(AiResponseType.Result)
                 {
                     Result = text,
@@ -149,14 +145,7 @@ internal sealed partial class AnthropicChatCompletionProvider
                 };
             }
 
-            var resultMessage = state.FinalResult;
-            if (resultMessage == null)
-            {
-                if (string.IsNullOrEmpty(text))
-                    throw UnexpectedResponseException.Create("No content in streamed response", response, string.Empty, GetRequestId(response.Headers));
-
-                resultMessage = ReadStructuredOutput(streamingCtx, text, $"stop_reason='{state.StopReason}'", response, body: null);
-            }
+            var resultMessage = state.FinalResult ?? ReadStructuredOutput(streamingCtx, text, $"stop_reason='{state.StopReason}'", response, body: null);
 
             return new AiResponse(AiResponseType.Result)
             {

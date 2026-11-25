@@ -37,8 +37,8 @@ namespace Raven.Server.Documents.AI.Settings
             Unlike OpenAI streaming:
                - The full tool call is returned in a single chunk (no deltas).
                - There is no "index" field.
-               - All required fields must be present.
-               - There is additional field - `extra_content`.
+               - There is an additional field - `extra_content` - carried once per response,
+                 on its first tool call, and absent from every other call.
             */
 
             if (toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id) == false)
@@ -54,9 +54,6 @@ namespace Raven.Server.Documents.AI.Settings
                     return;
             }
 
-            if (toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Type, out string type) == false)
-                throw new InvalidOperationException($"Google tool call '{id}' is missing required field '{ChatCompletionClient.Constants.ResponseFields.Type}'.");
-            
             if (toolCallChunk.TryGet(ChatCompletionClient.Constants.ResponseFields.Function, out BlittableJsonReaderObject functionChunk) == false)
                 throw new InvalidOperationException($"Google tool call '{id}' is missing required field '{ChatCompletionClient.Constants.ResponseFields.Function}'.");
 
@@ -68,18 +65,22 @@ namespace Raven.Server.Documents.AI.Settings
                 throw new InvalidOperationException($"Google tool call '{id}' - '{ChatCompletionClient.Constants.ResponseFields.Function}' is missing required field" +
                                                     $" '{ChatCompletionClient.Constants.ResponseFields.Arguments}'.");
 
-            if (toolCallChunk.TryGet("extra_content", out BlittableJsonReaderObject extraContent) == false)
-                throw new InvalidOperationException($"Google tool call '{id}' - is missing required field 'extra_content'.");
-            
+            _currentCall = new GoogleAiToolCall(id, name, arguments, ReadThoughtSignature(toolCallChunk));
+        }
 
-            if (extraContent.TryGet("google", out BlittableJsonReaderObject googleContent) == false)
-                throw new InvalidOperationException($"Google tool call '{id}' - 'extra_content' is missing required field 'google'.");
-            
+        // Google carries the thought signature once per response, on its first tool call, and omits
+        // extra_content entirely on models that do not produce one - requiring it failed every
+        // response that held more than one call.
+        private static string ReadThoughtSignature(BlittableJsonReaderObject toolCallChunk)
+        {
+            if (toolCallChunk.TryGetWithoutThrowingOnError("extra_content", out BlittableJsonReaderObject extraContent) == false || extraContent == null)
+                return null;
 
-            if (googleContent.TryGet("thought_signature", out string thoughtSignature) == false)
-                throw new InvalidOperationException($"Google tool call '{id}' - 'extra_content.google' is missing required field 'thought_signature'.");
+            if (extraContent.TryGetWithoutThrowingOnError("google", out BlittableJsonReaderObject googleContent) == false || googleContent == null)
+                return null;
 
-            _currentCall = new GoogleAiToolCall(id, name, arguments, thoughtSignature);
+            googleContent.TryGetWithoutThrowingOnError("thought_signature", out string thoughtSignature);
+            return thoughtSignature;
         }
 
         public void AddAndReset()
@@ -101,7 +102,7 @@ namespace Raven.Server.Documents.AI.Settings
             toolCalls = new();
             foreach (var (_, call) in _allToolCalls)
             {
-                toolCalls.Add(new DynamicJsonValue
+                var json = new DynamicJsonValue
                 {
                     [ChatCompletionClient.Constants.ResponseFields.Id] = call.Id,
                     [ChatCompletionClient.Constants.ResponseFields.Type] = ChatCompletionClient.Constants.ResponseFields.Function,
@@ -109,15 +110,21 @@ namespace Raven.Server.Documents.AI.Settings
                     {
                         [ChatCompletionClient.Constants.ResponseFields.Name] = call.Name,
                         [ChatCompletionClient.Constants.ResponseFields.Arguments] = call.Arguments
-                    },
-                    ["extra_content"] = new DynamicJsonValue
+                    }
+                };
+
+                if (string.IsNullOrEmpty(call.ThoughtSignature) == false)
+                {
+                    json["extra_content"] = new DynamicJsonValue
                     {
                         ["google"] = new DynamicJsonValue
                         {
                             ["thought_signature"] = call.ThoughtSignature
                         }
-                    }
-                });
+                    };
+                }
+
+                toolCalls.Add(json);
             }
 
             return true;

@@ -116,6 +116,8 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         HighReadAheadKb = 73, // 72 is used in 7.2
 
-        CdcSink_Warning = 74
+        CdcSink_Warning = 74,
+
+        Indexing_SharedJournalsFallback = 75
     }
 }

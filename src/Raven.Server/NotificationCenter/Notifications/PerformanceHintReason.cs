@@ -11,6 +11,7 @@
         SlowIO = 6,
         SqlEtl_SlowSql = 7,
         HugeDocuments = 8,
-        Indexing_References = 9
+        Indexing_References = 9,
+        StorageCongestion = 10
     }
 }

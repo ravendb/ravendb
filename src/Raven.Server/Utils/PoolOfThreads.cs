@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -117,7 +117,7 @@ namespace Raven.Server.Utils
             }
 
             pooled.StartedAt = DateTime.UtcNow;
-            pooled.InPoolSince = DateTime.MinValue;
+            pooled.InPoolSinceMilliseconds = 0;
             return pooled.SetWorkForThread(action, state, threadInfo, nameToUse);
         }
 
@@ -137,7 +137,7 @@ namespace Raven.Server.Utils
 
         private static void ReleaseThread(PooledThread pooled)
         {
-            pooled.InPoolSince = DateTime.MinValue;
+            pooled.InPoolSinceMilliseconds = 0;
             pooled.SetWorkForThread(null, null, null, null);
         }
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Utils
 
             try
             {
-                var currentTime = DateTime.UtcNow;
+                var now = Clock.Milliseconds;
                 var idleTime = TimeSpan.FromMinutes(5);
 
                 var numberOfThreadsToRelease = 0;
@@ -169,7 +169,7 @@ namespace Raven.Server.Utils
                     {
                         var pooled = enumerator.Current;
 
-                        var timeInPool = currentTime - pooled.InPoolSince;
+                        var timeInPool = TimeSpan.FromMilliseconds(now - pooled.InPoolSinceMilliseconds);
                         if (timeInPool <= idleTime)
                             continue;
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Utils
                     var localPool = new CountingConcurrentStack<PooledThread>();
                     while (_pool.TryPop(out var pooled))
                     {
-                        var timeInPool = currentTime - pooled.InPoolSince;
+                        var timeInPool = TimeSpan.FromMilliseconds(now - pooled.InPoolSinceMilliseconds);
                         if (timeInPool <= idleTime)
                         {
                             localPool.Push(pooled);
@@ -344,7 +344,7 @@ namespace Raven.Server.Utils
                     if (_parent._lowMemoryFlag.IsRaised())
                         return false;
 
-                    InPoolSince = DateTime.UtcNow;
+                    InPoolSinceMilliseconds = Clock.Milliseconds;
                     _parent._pool.Push(this);
                 }
 

@@ -18,6 +18,13 @@ namespace Sparrow.Server.Platform
             public bool CanPrefetch => PrefetchOption == 1;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PagerPrefetchInfo
+        {
+            public Int64 RequestSize;
+            public Int64 Ticket;
+        }
+
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PrefetchRanges
         {
@@ -33,8 +40,16 @@ namespace Sparrow.Server.Platform
                 this.NumberOfBytes = new IntPtr(bytes);
             }
 
+            public PrefetchRanges(void* address, long bytes, long requestSize)
+            {
+                this.VirtualAddress = address;
+                this.NumberOfBytes = new IntPtr(bytes);
+                this.RequestSize = new IntPtr(requestSize);
+            }
+
             public void* VirtualAddress;
             public IntPtr NumberOfBytes;
+            public IntPtr RequestSize; // the largest WILLNEED request the device reads whole, 0: one request
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
     public sealed class AlphaNumericFieldComparator : FieldComparator
     {
-        private readonly UnmanagedStringArray.UnmanagedString[] _values;
+        private UnmanagedStringArray.UnmanagedString[] _values;
         private readonly string _field;
         private UnmanagedStringArray.UnmanagedString _bottom;
         private IArray<int> _order;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public AlphaNumericFieldComparator(string field, int numHits)
         {
-            _values = new UnmanagedStringArray.UnmanagedString[numHits];
+            _values = ArrayPool<UnmanagedStringArray.UnmanagedString>.Shared.Rent(numHits);
             _field = field;
         }
 
@@ -89,6 +90,15 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
             var currentReaderValues = FieldCache_Fields.DEFAULT.GetStringIndex(reader, _field, state);
             _order = currentReaderValues.order;
             _lookup = currentReaderValues.lookup;
+        }
+
+        public override void Dispose()
+        {
+            if (_values == null)
+                return;
+
+            ArrayPool<UnmanagedStringArray.UnmanagedString>.Shared.Return(_values);
+            _values = null;
         }
 
         public override IComparable this[int slot] => _values[slot];

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Zstd.Benchmark.Infrastructure;
+using Sparrow.Threading;
 
 namespace Zstd.Benchmark.Baseline
 {
@@ -37,7 +38,7 @@ namespace Zstd.Benchmark.Baseline
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
         private long _compressedBytesCount;
         private long _uncompressedBytesCount;
-        private readonly DisposeLock _disposerLock = new(nameof(BaselineZstdStream));
+        private readonly InFlightGuard<SingleSlot> _inFlight = new();
         private bool _disposed;
 
         private BaselineZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
@@ -156,7 +157,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override int Read(Span<byte> buffer)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 while (true)
                 {
@@ -180,7 +181,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(false).ConfigureAwait(false))
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 while (true)
                 {
@@ -202,7 +203,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 while (buffer.Length > 0)
                 {
@@ -224,7 +225,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(false).ConfigureAwait(false))
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 while (buffer.Length > 0)
                 {
@@ -241,7 +242,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override void Flush()
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 FlushInternal();
             }
@@ -262,7 +263,7 @@ namespace Zstd.Benchmark.Baseline
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(false).ConfigureAwait(false))
+            using (_inFlight.Enter(nameof(BaselineZstdStream)))
             {
                 await FlushInternalAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -287,7 +288,7 @@ namespace Zstd.Benchmark.Baseline
             if (_disposed)
                 return;
 
-            using (_disposerLock.StartDisposing())
+            if (_inFlight.TryClose() && _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan))
             {
                 if (_disposed)
                     return;
@@ -322,7 +323,7 @@ namespace Zstd.Benchmark.Baseline
             if (_disposed)
                 return;
 
-            using (_disposerLock.StartDisposing())
+            if (_inFlight.TryClose() && _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan))
             {
                 if (_disposed)
                     return;
