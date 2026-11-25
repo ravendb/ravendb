@@ -34,7 +34,8 @@ namespace Voron.Data.BTrees
         private RecentlyFoundTreePages* _recentlyFoundPages;
         private ByteString _recentlyFoundPagesMemory;
 
-        // Iterate hands it out again once it is disposed: a tree has one open iterator at a time
+        // Iterate hands it out again once it is disposed, nested iterators are rare but they are valid (see OngoingTasksBase.GetData).
+        // When there is nesting, we'll create a new instance
         private TreeIterator _reusableIterator;
 
         // Page pool to reduce allocations
@@ -1152,19 +1153,10 @@ namespace Voron.Data.BTrees
                 return _reusableIterator = new TreeIterator(this, _llt, prefetch);
 
             if (iterator.IsDisposed == false)
-                return IterateWhileAnotherIsOpen(prefetch);
+                return new TreeIterator(this, _llt, prefetch);
 
             iterator.Reuse(prefetch);
             return iterator;
-        }
-
-        private TreeIterator IterateWhileAnotherIsOpen(bool prefetch)
-        {
-#if DEBUG
-            throw new InvalidOperationException($"Tree {Name} already has an open iterator. This may be a bug, or change in requirements that does need it. Investigate this.");
-#else
-            return new TreeIterator(this, _llt, prefetch);
-#endif
         }
 
         public bool TryRead(Slice key, out ValueReader value)
