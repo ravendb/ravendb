@@ -91,4 +91,23 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
         var state = await store.Subscriptions.GetSubscriptionStateAsync("NewSubscription");
         Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
     }
+
+    [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task UpdateCanChangeArchivedDataProcessingBehavior(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users" });
+
+        await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+        {
+            Name = name,
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+        });
+
+        var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
+        Assert.Equal("from Users", state.Query);
+        Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+    }
 }
