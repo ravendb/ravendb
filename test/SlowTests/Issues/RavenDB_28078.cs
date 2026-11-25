@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Expiration;
@@ -235,6 +237,70 @@ namespace SlowTests.Issues
             await WaitForAllNodesToApplyAsync(nodes);
             Assert.All(nodes, node => Assert.Empty(GetCompareExchangeExpirationTicks(node)));
             Assert.Null(await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1")));
+        }
+
+        [RavenFact(RavenTestCategory.CompareExchange)]
+        public void SendingNodeConvertsCompareExchangeExpirationWithoutATimeZoneToUtc()
+        {
+            var timeZone = TimeZoneInfo.CreateCustomTimeZone("RavenDB_28078", TimeSpan.FromHours(5), "RavenDB_28078", "RavenDB_28078");
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var converted = CompareExchangeExpirationStorage.ConvertExpiresToUtc(context, ValueWithExpires(context, "2030-01-01T05:00:00.0000000"), timeZone);
+                Assert.Equal("2030-01-01T00:00:00.0000000Z", GetExpires(converted));
+
+                foreach (var expires in new[] { "2030-01-01T05:00:00.0000000Z", "2030-01-01T05:00:00.0000000+01:00" })
+                {
+                    var value = ValueWithExpires(context, expires);
+                    Assert.Same(value, CompareExchangeExpirationStorage.ConvertExpiresToUtc(context, value, timeZone));
+                }
+            }
+
+            static BlittableJsonReaderObject ValueWithExpires(JsonOperationContext context, string expires) => context.ReadObject(new DynamicJsonValue
+            {
+                ["Name"] = "Oren",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Expires] = expires }
+            }, "value");
+
+            static string GetExpires(BlittableJsonReaderObject value)
+            {
+                Assert.True(value.TryGet("Name", out string name) && name == "Oren");
+                Assert.True(value.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
+                Assert.True(metadata.TryGet(Constants.Documents.Metadata.Expires, out string expires));
+                return expires;
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
+        public async Task CompareExchangeExpirationWithoutATimeZoneIsStoredAsUtc()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+            const string expires = "2030-01-01T00:00:00.0000000";
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/direct", new User(), 0,
+                new MetadataAsDictionary { [Constants.Documents.Metadata.Expires] = expires }));
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var value = session.Advanced.ClusterTransaction.CreateCompareExchangeValue("users/cluster-transaction", new User());
+                value.Metadata[Constants.Documents.Metadata.Expires] = expires;
+                await session.SaveChangesAsync();
+            }
+
+            await WaitForAllNodesToApplyAsync(nodes);
+
+            // the servers of the test run in this process, so the receiving node has this time zone
+            var local = new DateTime(2030, 1, 1);
+            var expected = new DateTime(local.Ticks - TimeZoneInfo.Local.GetUtcOffset(local).Ticks, DateTimeKind.Utc);
+            foreach (var key in new[] { "users/direct", "users/cluster-transaction" })
+            {
+                var value = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
+                var stored = value.Metadata.GetString(Constants.Documents.Metadata.Expires);
+                Assert.EndsWith("Z", stored);
+                Assert.Equal(expected, DateTime.Parse(stored, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind));
+            }
+
+            Assert.All(nodes, node => Assert.Equal(new[] { expected.Ticks, expected.Ticks }, GetCompareExchangeExpirationTicks(node)));
         }
 
         private static async Task PutCompareExchangeAsIsAsync(RavenServer server, string database, string key, string expires)

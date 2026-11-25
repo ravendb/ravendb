@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -34,6 +35,7 @@ public sealed class CompareExchangeHandlerProcessorForPutCompareExchangeValue<TO
         using (_requestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var updateJson = await context.ReadForMemoryAsync(_requestHandler.RequestBodyStream(), "read-unique-value");
+            updateJson = CompareExchangeExpirationStorage.ConvertExpiresToUtc(context, updateJson, TimeZoneInfo.Local);
             
             if(_requestHandler.GetSupportedFeature().SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
                 DocumentIdWorker.CheckAndThrowContainsControlCharacters(key, "Compare Exchange Key");

@@ -5,7 +5,9 @@ using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 
@@ -96,6 +98,29 @@ namespace Raven.Server.ServerWide
 
             ticks = date.Ticks;
             return true;
+        }
+
+        /// <summary>
+        /// Runs on the node that received the request, before the command is in the log: apply reads @expires without a time zone
+        /// as UTC, so a local time is converted here, with the time zone of this node, and written back to the value as UTC.
+        /// </summary>
+        public static BlittableJsonReaderObject ConvertExpiresToUtc(JsonOperationContext context, BlittableJsonReaderObject value, TimeZoneInfo localTimeZone)
+        {
+            if (value == null ||
+                value.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || metadata == null ||
+                metadata.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expires) == false || expires == null)
+                return value;
+
+            // an invalid date is left as is, apply rejects it
+            if (DateTime.TryParseExact(expires, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false ||
+                date.Kind != DateTimeKind.Unspecified)
+                return value;
+
+            // GetUtcOffset, not ConvertTimeToUtc: that throws for a time inside a daylight saving gap
+            var utc = new DateTime(Math.Clamp(date.Ticks - localTimeZone.GetUtcOffset(date).Ticks, DateTime.MinValue.Ticks, DateTime.MaxValue.Ticks), DateTimeKind.Utc);
+            metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.Expires] = utc.GetDefaultRavenFormat(isUtc: true) };
+            value.Modifications = new DynamicJsonValue(value) { [Constants.Documents.Metadata.Key] = metadata };
+            return context.ReadObject(value, "compare-exchange-value");
         }
 
         public static unsafe bool DeleteExpiredCompareExchange(ClusterOperationContext context, Table items, long ticks, long take = long.MaxValue)
