@@ -3568,7 +3568,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                         void AssertNumberOfConcurrentBackups(int expectedNumber)
                         {
-                            int concurrentBackups = WaitForValue(() => server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups,
+                            int concurrentBackups = WaitForValue(() => server.ServerStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups,
                                 expectedVal: expectedNumber,
                                 timeout: Convert.ToInt32(TimeSpan.FromMinutes(1).TotalMilliseconds),
                                 interval: Convert.ToInt32(TimeSpan.FromSeconds(1).TotalMilliseconds));

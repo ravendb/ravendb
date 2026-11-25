@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.PeriodicBackup;
 using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.ServerWide.Backups
 {
     public sealed class ConcurrentBackupsCounter
     {

@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     Assert.Equal(ServerVersion.Version, metrics.ServerVersion);
                     Assert.Equal(ServerVersion.FullVersion, metrics.ServerFullVersion);
                     
-                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups, metrics.Backup.CurrentNumberOfRunningBackups);
+                    Assert.Equal(Server.ServerStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups, metrics.Backup.CurrentNumberOfRunningBackups);
 
                     using (var currentProcess = Process.GetCurrentProcess())
                     {
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
 #pragma warning restore CA1416 // Validate platform compatibility
                     }
                     
-                    Assert.Equal(Server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups, metrics.Backup.MaxNumberOfConcurrentBackups);
+                    Assert.Equal(Server.ServerStore.ServerBackupRunner.ConcurrentBackups.MaxNumberOfConcurrentBackups, metrics.Backup.MaxNumberOfConcurrentBackups);
                     Assert.Equal(Environment.ProcessorCount, metrics.Cpu.ProcessorCount);
 
                     Assert.True(metrics.Cpu.ThreadPoolAvailableWorkerThreads > 0);

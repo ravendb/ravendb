@@ -619,7 +619,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         using var store = GetDocumentStore(new Options { Server = server });
         await StoreDocument(store);
 
-        var counter = server.ServerStore.ConcurrentBackupsCounter;
+        var counter = server.ServerStore.ServerBackupRunner.ConcurrentBackups;
         var logger = RavenLogManager.Instance.CreateNullLogger();
         counter.TakePlace("OtherDatabase", "OtherBackup", logger);
         var placeFreed = false;

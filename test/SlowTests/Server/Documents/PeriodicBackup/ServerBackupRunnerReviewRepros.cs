@@ -281,7 +281,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
 
             Assert.True(started == shardNames.Count,
                 $"Only {started} of {shardNames.Count} shards of '{store.Database}' started; the server log has {capRejections} 'ConcurrentBackup' rejections. " +
-                $"Running backups per counter: {server.ServerStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups} (limit {server.ServerStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}).");
+                $"Running backups per counter: {server.ServerStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups} (limit {server.ServerStore.ServerBackupRunner.ConcurrentBackups.MaxNumberOfConcurrentBackups}).");
 
             int StartedShards() => shardNames.Count(name => Decisions(server, name, result.TaskId).Any(d => d.Category == BackupDecisionCategory.Started && d.LastTime >= startUtc));
         }
@@ -406,7 +406,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder1")), store1);
 
         var runner = server.ServerStore.ServerBackupRunner;
-        var counter = server.ServerStore.ConcurrentBackupsCounter;
+        var counter = server.ServerStore.ServerBackupRunner.ConcurrentBackups;
         var hold = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         runner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[store1.Database] = new ServerBackupRunner.TestingStuffInternal { OnBackupTaskRunHoldBackupExecution = hold };
 

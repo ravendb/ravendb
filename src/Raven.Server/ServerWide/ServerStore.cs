@@ -163,8 +163,6 @@ namespace Raven.Server.ServerWide
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
-        public ConcurrentBackupsCounter ConcurrentBackupsCounter { get; private set; }
-
         public ServerOperations Operations { get; }
 
         public CatastrophicFailureNotification CatastrophicFailureNotification { get; }
@@ -951,8 +949,6 @@ namespace Raven.Server.ServerWide
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
-            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
-
             RavenLogManager.Instance.ConfigureAuditLog(Server, Logger);
 
             ServerBackupRunner.Initialize();
@@ -1364,7 +1360,7 @@ namespace Raven.Server.ServerWide
 
                     // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
-                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
+                    ServerBackupRunner.ConcurrentBackups.ModifyMaxConcurrentBackups();
 
                     // we are not waiting here on purpose
                     _ = LicenseManager.PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
@@ -1373,7 +1369,7 @@ namespace Raven.Server.ServerWide
                 case nameof(PutLicenseLimitsCommand):
                 case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
-                    ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
+                    ServerBackupRunner.ConcurrentBackups.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
                     break;
                 case nameof(PutCertificateCommand):

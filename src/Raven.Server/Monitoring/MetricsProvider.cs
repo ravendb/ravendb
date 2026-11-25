@@ -88,8 +88,8 @@ public sealed class MetricsProvider
     private BackupMetrics GetBackupMetrics()
     {
         var result = new BackupMetrics();
-        result.MaxNumberOfConcurrentBackups = _serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups;
-        result.CurrentNumberOfRunningBackups = _serverStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
+        result.MaxNumberOfConcurrentBackups = _serverStore.ServerBackupRunner.ConcurrentBackups.MaxNumberOfConcurrentBackups;
+        result.CurrentNumberOfRunningBackups = _serverStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups;
 
         return result;
     }

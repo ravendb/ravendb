@@ -67,7 +67,7 @@ public sealed class BackupDecisionTracker
     internal void Start()
     {
         _runnerStartTime = DateTime.UtcNow;
-        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged += _ => OnRunningBackupsChanged();
+        _runner.ConcurrentBackups.RunningBackupsChanged += _ => OnRunningBackupsChanged();
     }
 
     internal static string GetCancelReasonText(string cancelReason)
@@ -274,7 +274,7 @@ public sealed class BackupDecisionTracker
     {
         var cachedScheduleSummary = _scheduleSummary;
         var scheduleSummary = Volatile.Read(ref _watchers) > 0 && cachedScheduleSummary != null ? cachedScheduleSummary : GetScheduleSummary(now);
-        var counter = _serverStore.ConcurrentBackupsCounter;
+        var counter = _runner.ConcurrentBackups;
 
         var summary = new BackupDecisionLogSummary
         {

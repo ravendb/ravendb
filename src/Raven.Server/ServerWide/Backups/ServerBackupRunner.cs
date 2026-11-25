@@ -63,6 +63,8 @@ public class ServerBackupRunner : IDisposable
 
     internal readonly BackupDecisionTracker Decisions;
 
+    public ConcurrentBackupsCounter ConcurrentBackups { get; private set; }
+
     private readonly ConcurrentDictionary<string, IdleDatabaseSnapshot> _idleDatabases = new(StringComparer.OrdinalIgnoreCase);
 
     public ServerBackupRunner(ServerStore serverStore)
@@ -74,8 +76,10 @@ public class ServerBackupRunner : IDisposable
 
     public void Initialize()
     {
+        ConcurrentBackups = new ConcurrentBackupsCounter(_serverStore.Configuration.Backup, _serverStore.LicenseManager);
+
         Decisions.Start();
-        _serverStore.ConcurrentBackupsCounter.RunningBackupsChanged += OnRunningBackupsChanged;
+        ConcurrentBackups.RunningBackupsChanged += OnRunningBackupsChanged;
 
         _serverBackupPolicies =
         [
@@ -197,7 +201,7 @@ public class ServerBackupRunner : IDisposable
         var nextBackup = backupState.NextBackup;
         if (nextBackup == null || backupState.Running.Raise() == false)
         {
-            _serverStore.ConcurrentBackupsCounter.GiveBackPlace(backupState.OriginalDatabaseName);
+            ConcurrentBackups.GiveBackPlace(backupState.OriginalDatabaseName);
             return;
         }
 
@@ -376,7 +380,7 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            _serverStore.ConcurrentBackupsCounter.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, elapsed, _logger);
+            ConcurrentBackups.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, elapsed, _logger);
         }
         catch (Exception e)
         {
@@ -406,7 +410,7 @@ public class ServerBackupRunner : IDisposable
         try
         {
             BackupUtils.CheckServerHealthBeforeBackup(_serverStore, backupState.Configuration.Name);
-            _serverStore.ConcurrentBackupsCounter.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
+            ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
         }
         catch
         {
@@ -956,10 +960,10 @@ public class ServerBackupRunner : IDisposable
     private bool TryTakeConcurrentBackupsPlace(DatabaseBackupState backupState, DateTime now, bool afterRefusal)
     {
         // canTakeNewPlace is false after a refusal in this pass, so a free place is kept for the refused task (fairness).
-        if (_serverStore.ConcurrentBackupsCounter.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, canTakeNewPlace: afterRefusal == false))
+        if (ConcurrentBackups.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, canTakeNewPlace: afterRefusal == false))
             return true;
 
-        var reason = $"The maximum number of concurrent backups ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
+        var reason = $"The maximum number of concurrent backups ({ConcurrentBackups.MaxNumberOfConcurrentBackups}) is reached.";
 
         if (afterRefusal == false)
         {

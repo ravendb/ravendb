@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
             {
                 try
                 {
-                    ServerStore.ConcurrentBackupsCounter.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
+                    ServerStore.ServerBackupRunner.ConcurrentBackups.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
                 }
                 finally
                 {
