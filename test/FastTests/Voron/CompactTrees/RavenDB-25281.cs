@@ -17,10 +17,10 @@ public class RavenDB_25281 : StorageTest
     {
         // CompactKey's backing arrays used to be pooled in [ThreadStatic] ArrayPool fields. Since
         // CompactKey instances are rented/returned via a process-wide ObjectPool (LowLevelTransaction's
-        // _sharedCompactKeyPool), a key can legitimately be initialized (renting arrays) on one thread
-        // and reset (returning arrays) on a different one. With thread-static pools, the releasing
-        // thread's pool field could be null, throwing a NullReferenceException from Reset(). The pools
-        // are now process-wide static readonly fields, so this cross-thread sequence must not throw.
+        // _sharedCompactKeyPool), a key can legitimately be initialized on one thread and reset on a
+        // different one. With thread-static pools, the releasing thread's pool field could be null,
+        // throwing a NullReferenceException from Reset(). Reset() now keeps the arrays (Dispose() returns
+        // them to the pool they were rented from), so this cross-thread sequence must not throw.
         using var wtx = Env.WriteTransaction();
 
         var key = new CompactKey();
