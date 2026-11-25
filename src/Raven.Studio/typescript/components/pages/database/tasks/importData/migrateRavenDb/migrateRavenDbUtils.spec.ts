@@ -138,6 +138,36 @@ describe("toMigrateDto", () => {
     });
 });
 
+describe("toMigrateDto defaults", () => {
+    it("includes legacy attachments for a default form and a legacy source", () => {
+        const dto = toMigrateDto(createFormData(), version("V35", 35000), noRestrictions);
+
+        expect(dto.MigrationSettings.OperateOnTypes.split(",")).toContain("LegacyAttachments");
+    });
+
+    it("skips counters and time series for a 4.1 source", () => {
+        const dto = toMigrateDto(createFormData(), version("V4", 41000), noRestrictions);
+        const types = dto.MigrationSettings.OperateOnTypes.split(",");
+
+        expect(types).not.toContain("CounterGroups");
+        expect(types).not.toContain("TimeSeries");
+        expect(types).toContain("Documents");
+    });
+
+    it("sends windows credentials only", () => {
+        const data = createFormData();
+        data.server.authenticationMethod = "windows";
+        data.server.userName = "user";
+        data.server.password = "pass";
+        data.server.domain = "corp";
+        data.server.apiKey = "key";
+
+        const dto = toMigrateDto(data, version("V7", 71000), noRestrictions);
+
+        expect([dto.UserName, dto.Password, dto.Domain, dto.ApiKey]).toEqual(["user", "pass", "corp", null]);
+    });
+});
+
 describe("hasAnyMigrateInclude", () => {
     it("is false when everything is off", () => {
         expect(hasAnyMigrateInclude(createAllOffFormData(), version("V7", 71000))).toBe(false);
@@ -146,6 +176,17 @@ describe("hasAnyMigrateInclude", () => {
     it("is true when a supported toggle is on", () => {
         const data = createAllOffFormData();
         data.documents.isIncludeDocuments = true;
+
+        expect(hasAnyMigrateInclude(data, version("V7", 71000))).toBe(true);
+    });
+
+    it("is true when only the default database record is on", () => {
+        const data = getDefaultMigrateFormData(true);
+        documentToggleKeys.forEach((key) => {
+            data.documents[key] = false;
+        });
+        data.configuration.isIncludeIndexes = false;
+        data.configuration.isIncludeIdentities = false;
 
         expect(hasAnyMigrateInclude(data, version("V7", 71000))).toBe(true);
     });

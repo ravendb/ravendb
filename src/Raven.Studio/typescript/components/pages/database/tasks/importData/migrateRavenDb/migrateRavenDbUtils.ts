@@ -34,9 +34,24 @@ const DOCUMENT_TOGGLE_ITEM_TYPES: Partial<Record<DocumentToggleKey, DatabaseItem
     isIncludeSubscriptions: "Subscriptions",
 };
 
+const NO_RESTRICTIONS: RestrictedKeys = { settings: [], tasks: [], connectionStrings: [] };
+
+function getMigrateRecordTypes(
+    data: MigrateRavenDbFormData,
+    version: SourceServerVersion,
+    restricted: RestrictedKeys
+): DatabaseRecordItemType[] {
+    if (isLegacyVersion(version)) {
+        return [];
+    }
+    return getDatabaseRecordTypes(data, restricted.settings, restricted.tasks, restricted.connectionStrings);
+}
+
 export function getDefaultMigrateFormData(isAdminAccessOrAbove: boolean): MigrateRavenDbFormData {
+    const importOptions = getDefaultImportOptions(isAdminAccessOrAbove);
     return {
-        ...getDefaultImportOptions(isAdminAccessOrAbove),
+        ...importOptions,
+        documents: { ...importOptions.documents, isIncludeLegacyAttachments: true },
         server: {
             serverUrl: "",
             isSkipServerCertificateValidation: false,
@@ -52,20 +67,23 @@ export function getDefaultMigrateFormData(isAdminAccessOrAbove: boolean): Migrat
     };
 }
 
-export function hasAnyMigrateInclude(data: MigrateRavenDbFormData, version: SourceServerVersion): boolean {
+export function hasAnyMigrateInclude(
+    data: MigrateRavenDbFormData,
+    version: SourceServerVersion,
+    restricted: RestrictedKeys = NO_RESTRICTIONS
+): boolean {
     const isLegacy = isLegacyVersion(version);
     if (isLegacy && data.server.isImportRavenFs) {
         return true;
     }
 
     const { configuration, documents } = data;
-    const hasRecordTypes = !isLegacy && getDatabaseRecordTypes(data).some((recordType) => recordType !== "None");
 
     return (
         getMigratableDocumentToggles(version).some((key) => documents[key]) ||
         configuration.isIncludeIndexes ||
         (!isLegacy && configuration.isIncludeIdentities) ||
-        hasRecordTypes
+        getMigrateRecordTypes(data, version, restricted).length > 0
     );
 }
 
@@ -77,9 +95,7 @@ export function toMigrateDto(
     const { server, documents, configuration, processing } = data;
     const isLegacy = isLegacyVersion(version);
 
-    const databaseRecordTypes = isLegacy
-        ? []
-        : getDatabaseRecordTypes(data, restricted.settings, restricted.tasks, restricted.connectionStrings);
+    const databaseRecordTypes = getMigrateRecordTypes(data, version, restricted);
 
     const operateOnTypes: string[] = [];
     if (!server.isImportRavenFs) {
