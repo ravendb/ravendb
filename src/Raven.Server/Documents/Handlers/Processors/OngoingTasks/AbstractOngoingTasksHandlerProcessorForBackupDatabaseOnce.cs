@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
                 var startTime = RequestHandler.GetDateTimeQueryString("startTime", required: false) ?? DateTime.UtcNow;
 
-                BackupUtils.CheckServerHealthBeforeBackup(ServerStore, backupName);
+                ServerStore.ServerBackupRunner.CheckServerHealthBeforeBackup(backupName);
 
                 AssertBackup(backupConfiguration);
 

@@ -3,36 +3,21 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-public class ServerHighDirtyMemoryPolicy : IServerBackupPolicy
+public class ServerHighDirtyMemoryPolicy : ServerHealthBackupPolicy
 {
-    private const string Reason = "The server has high dirty memory.";
+    public override string Name => "HighDirtyMemory";
 
-    private DateTime _heldUntil;
+    protected override string HoldReason => "The server has high dirty memory.";
 
-    public string Name => "HighDirtyMemory";
+    internal override string StartFailureReason => "the server is in high dirty memory state";
 
-    internal DateTime HeldUntil => _heldUntil;
-
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
+    protected override bool IsTriggered(ServerStore serverStore)
     {
-        category = BackupDecisionCategory.HeldBack;
+        return LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty;
+    }
 
-        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
-        {
-            reason = null;
-            return true;
-        }
-
-        if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty && now >= _heldUntil)
-            _heldUntil = now + serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
-
-        if (now < _heldUntil)
-        {
-            reason = $"{Reason} Backups are held until '{_heldUntil}' UTC and then checked again.";
-            return false;
-        }
-
-        reason = null;
-        return true;
+    protected override TimeSpan GetHoldDuration(ServerStore serverStore)
+    {
+        return serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
     }
 }

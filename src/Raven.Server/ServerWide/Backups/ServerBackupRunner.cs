@@ -55,6 +55,8 @@ public class ServerBackupRunner : IDisposable
 
     private List<IServerBackupPolicy> _serverBackupPolicies;
 
+    private List<ServerHealthBackupPolicy> _serverHealthPolicies;
+
     private List<IDatabaseBackupPolicy> _databaseBackupPolicies;
 
     private List<IDatabaseBackupPolicy> _afterDatabaseLoadPolicies;
@@ -83,12 +85,17 @@ public class ServerBackupRunner : IDisposable
         Decisions.Start();
         ConcurrentBackups.RunningBackupsChanged += OnRunningBackupsChanged;
 
-        _serverBackupPolicies =
+        _serverHealthPolicies =
         [
-            ServerStartupPolicy.Instance,
             new ServerCpuCreditsPolicy(),
             new ServerLowMemoryPolicy(),
             new ServerHighDirtyMemoryPolicy()
+        ];
+
+        _serverBackupPolicies =
+        [
+            ServerStartupPolicy.Instance,
+            .. _serverHealthPolicies
         ];
 
         _databaseBackupPolicies =
@@ -435,7 +442,7 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            BackupUtils.CheckServerHealthBeforeBackup(_serverStore, backupState.Configuration.Name);
+            CheckServerHealthBeforeBackup(backupState.Configuration.Name);
             ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
         }
         catch
@@ -450,6 +457,17 @@ public class ServerBackupRunner : IDisposable
             throw new InvalidOperationException($"Backup task id: {taskId} was disabled or removed while its backup was starting");
 
         return operationId;
+    }
+
+    internal void CheckServerHealthBeforeBackup(string backupName)
+    {
+        foreach (var policy in _serverHealthPolicies)
+        {
+            if (policy.IsServerUnhealthy(_serverStore) == false)
+                continue;
+
+            throw new BackupDelayException($"Failed to start Backup Task: '{backupName}'. The task cannot run because {policy.StartFailureReason}.");
+        }
     }
 
     private Task<IOperationResult> StartBackupThread(DocumentDatabase database, DatabaseBackupState backupState, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)

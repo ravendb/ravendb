@@ -3,36 +3,21 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-public class ServerLowMemoryPolicy : IServerBackupPolicy
+public class ServerLowMemoryPolicy : ServerHealthBackupPolicy
 {
-    private const string Reason = "The server is low on memory.";
+    public override string Name => "LowMemory";
 
-    private DateTime _heldUntil;
+    protected override string HoldReason => "The server is low on memory.";
 
-    public string Name => "LowMemory";
+    internal override string StartFailureReason => "the server is in low memory state";
 
-    internal DateTime HeldUntil => _heldUntil;
-
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
+    protected override bool IsTriggered(ServerStore serverStore)
     {
-        category = BackupDecisionCategory.HeldBack;
+        return LowMemoryNotification.Instance.LowMemoryState;
+    }
 
-        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
-        {
-            reason = null;
-            return true;
-        }
-
-        if (LowMemoryNotification.Instance.LowMemoryState && now >= _heldUntil)
-            _heldUntil = now + serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
-
-        if (now < _heldUntil)
-        {
-            reason = $"{Reason} Backups are held until '{_heldUntil}' UTC and then checked again.";
-            return false;
-        }
-
-        reason = null;
-        return true;
+    protected override TimeSpan GetHoldDuration(ServerStore serverStore)
+    {
+        return serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan;
     }
 }

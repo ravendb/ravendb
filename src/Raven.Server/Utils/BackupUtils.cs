@@ -25,7 +25,6 @@ using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -424,27 +423,6 @@ public static class BackupUtils
         return lastEtag != backupStatus.LastEtag ||
                lastChangeVector != backupStatus.LastDatabaseChangeVector ||
                etagForBackup != backupStatus.LastRaftIndex?.LastEtag;
-    }
-
-    internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
-    {
-        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
-            return;
-
-        if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
-        {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.");
-        }
-
-        if (LowMemoryNotification.Instance.LowMemoryState)
-        {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in low memory state.");
-        }
-
-        if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
-        {
-            throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in high dirty memory state.");
-        }
     }
 
     public static PathSetting GetBackupTempPath(RavenConfiguration configuration, string dir, out PathSetting basePath)

@@ -2,36 +2,21 @@
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
-public class ServerCpuCreditsPolicy : IServerBackupPolicy
+public class ServerCpuCreditsPolicy : ServerHealthBackupPolicy
 {
-    private const string Reason = "The server CPU credits are near exhaustion.";
+    public override string Name => "CpuCredits";
 
-    private DateTime _heldUntil;
+    protected override string HoldReason => "The server CPU credits are near exhaustion.";
 
-    public string Name => "CpuCredits";
+    internal override string StartFailureReason => "the CPU credits allocated to this machine are nearing exhaustion";
 
-    internal DateTime HeldUntil => _heldUntil;
-
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
+    protected override bool IsTriggered(ServerStore serverStore)
     {
-        category = BackupDecisionCategory.HeldBack;
+        return serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised();
+    }
 
-        if (serverStore.ForTestingPurposes?.IgnoreHealthChecksBeforeBackup == true)
-        {
-            reason = null;
-            return true;
-        }
-
-        if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() && now >= _heldUntil)
-            _heldUntil = now + serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan;
-
-        if (now < _heldUntil)
-        {
-            reason = $"{Reason} Backups are held until '{_heldUntil}' UTC and then checked again.";
-            return false;
-        }
-
-        reason = null;
-        return true;
+    protected override TimeSpan GetHoldDuration(ServerStore serverStore)
+    {
+        return serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan;
     }
 }

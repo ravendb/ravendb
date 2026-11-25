@@ -444,7 +444,7 @@ public class ServerBackupRunnerReviewRepros : ClusterTestBase
         await StoreDocument(store);
         var taskId = await Backup.UpdateConfigAsync(server, Backup.CreateBackupConfiguration(NewDataPath(suffix: "BackupFolder")), store);
 
-        // same server-health gate as low memory / high dirty memory in BackupUtils.CheckServerHealthBeforeBackup
+        // same server-health gate as low memory / high dirty memory in ServerBackupRunner.CheckServerHealthBeforeBackup
         server.CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
         try
         {
