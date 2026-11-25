@@ -72,7 +72,7 @@ namespace Raven.Server.Web.System
                         }
                         else
                         {
-                            JsonObject resultObject = JsonNode.Parse(responseString)?.AsObject();
+                            JsonObject resultObject = string.IsNullOrWhiteSpace(responseString) ? null : JsonNode.Parse(responseString)?.AsObject();
                             result = resultObject;
                             if (resultObject != null)
                             {
