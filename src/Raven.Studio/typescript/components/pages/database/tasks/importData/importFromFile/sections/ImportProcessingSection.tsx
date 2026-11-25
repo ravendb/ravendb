@@ -4,7 +4,7 @@ import Collapse from "react-bootstrap/Collapse";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormAceEditor, FormGroup, FormInput, FormSwitch } from "components/common/Form";
-import ImportSection from "./ImportSection";
+import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 import Code from "components/common/Code";
 import Card from "react-bootstrap/Card";

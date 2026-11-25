@@ -6,9 +6,10 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import {
     connectionStringKeys,
     databaseSettingKeys,
+    DocumentToggleKey,
     documentToggleKeys,
     ongoingTaskKeys,
-} from "./importFromFileValidation";
+} from "./importOptionsValidation";
 import {
     connectionStringRules,
     databaseSettingRules,
@@ -22,7 +23,9 @@ export interface RestrictedImportItem extends ImportRestriction {
     key: string;
 }
 
-function useComputeImportRestrictions() {
+type DocumentToggleOverrides = Partial<Record<DocumentToggleKey, ImportRestriction>>;
+
+function useComputeImportRestrictions(documentToggleOverrides?: DocumentToggleOverrides) {
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const isSharded = !!useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
     const canHandleOperation = useAppSelector(accessManagerSelectors.getCanHandleOperation);
@@ -43,7 +46,10 @@ function useComputeImportRestrictions() {
             return map;
         };
 
-        const documentToggles = resolveAll(documentToggleKeys, documentToggleRules, recordContext);
+        const documentToggles = {
+            ...resolveAll(documentToggleKeys, documentToggleRules, recordContext),
+            ...documentToggleOverrides,
+        };
         const databaseSettings = resolveAll(databaseSettingKeys, databaseSettingRules, recordContext);
         const ongoingTasks = resolveAll(ongoingTaskKeys, ongoingTaskRules, context);
         const connectionStrings = resolveAll(connectionStringKeys, connectionStringRules, recordContext);
@@ -84,15 +90,20 @@ function useComputeImportRestrictions() {
             restrictedDocumentToggleKeys,
             hasAnyRestriction: allRestrictedItems.length > 0 || restrictedDocumentToggleKeys.length > 0,
         };
-    }, [licenseStatus, isSharded, canHandleOperation]);
+    }, [licenseStatus, isSharded, canHandleOperation, documentToggleOverrides]);
 }
 
 export type ImportRestrictions = ReturnType<typeof useComputeImportRestrictions>;
 
 const ImportRestrictionsContext = createContext<ImportRestrictions | null>(null);
 
-export function ImportRestrictionsProvider({ children }: { children: ReactNode }) {
-    const restrictions = useComputeImportRestrictions();
+interface ImportRestrictionsProviderProps {
+    children: ReactNode;
+    documentToggleOverrides?: DocumentToggleOverrides;
+}
+
+export function ImportRestrictionsProvider({ children, documentToggleOverrides }: ImportRestrictionsProviderProps) {
+    const restrictions = useComputeImportRestrictions(documentToggleOverrides);
     return <ImportRestrictionsContext.Provider value={restrictions}>{children}</ImportRestrictionsContext.Provider>;
 }
 

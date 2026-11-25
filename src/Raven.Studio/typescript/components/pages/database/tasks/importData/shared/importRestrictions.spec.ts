@@ -4,7 +4,7 @@ import {
     ongoingTaskRules,
     resolveRestriction,
 } from "./importRestrictions";
-import { ongoingTaskKeys } from "./importFromFileValidation";
+import { ongoingTaskKeys } from "./importOptionsValidation";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 const fullLicense = LicenseStubs.getStatus();

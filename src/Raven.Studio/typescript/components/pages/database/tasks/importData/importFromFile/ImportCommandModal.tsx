@@ -6,7 +6,7 @@ import { Icon } from "components/common/Icon";
 import Code from "components/common/Code";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 import { buildImportCurlCommand, ImportCommandType } from "./importFromFileUtils";
-import { useImportRestrictions } from "./useImportRestrictions";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 

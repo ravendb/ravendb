@@ -8,7 +8,7 @@ import notificationCenter from "common/notifications/notificationCenter";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
-import { useImportRestrictions } from "./useImportRestrictions";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 

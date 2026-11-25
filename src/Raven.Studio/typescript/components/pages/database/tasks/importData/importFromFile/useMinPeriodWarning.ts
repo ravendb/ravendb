@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { DatabaseSettingKey } from "./importFromFileValidation";
-import { databaseSettingLabels } from "./importFromFileLabels";
+import { DatabaseSettingKey } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { databaseSettingLabels } from "components/pages/database/tasks/importData/shared/importLabels";
 
 type MinPeriodLicenseKey = "MinPeriodForRefreshInHours" | "MinPeriodForExpirationInHours";
 

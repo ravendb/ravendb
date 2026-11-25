@@ -1,119 +1,18 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FieldPath } from "react-hook-form";
-
-function getJavaScriptSyntaxError(script: string): string | null {
-    try {
-        new Function(script);
-        return null;
-    } catch (e) {
-        return e instanceof SyntaxError ? `Invalid JavaScript: ${e.message}` : null;
-    }
-}
-
-export const databaseSettingKeys = [
-    "settings",
-    "conflictSolverConfig",
-    "client",
-    "revisions",
-    "refresh",
-    "expiration",
-    "documentsCompression",
-    "schemaValidation",
-    "dataArchival",
-    "timeSeries",
-    "sorters",
-    "analyzers",
-    "postgreSqlIntegration",
-] as const;
-
-export type DatabaseSettingKey = (typeof databaseSettingKeys)[number];
-
-export const ongoingTaskKeys = [
-    "periodicBackups",
-    "externalReplications",
-    "ravenEtls",
-    "sqlEtls",
-    "snowflakeEtls",
-    "olapEtls",
-    "elasticSearchEtls",
-    "queueEtls",
-    "hubReplications",
-    "sinkReplications",
-    "embeddingsGeneration",
-    "genAi",
-    "cdcSinks",
-    "aiAgents",
-    "remoteAttachments",
-] as const;
-
-export type OngoingTaskKey = (typeof ongoingTaskKeys)[number];
-
-export const connectionStringKeys = [
-    "ravenConnectionStrings",
-    "sqlConnectionStrings",
-    "snowflakeConnectionStrings",
-    "olapConnectionStrings",
-    "elasticSearchConnectionStrings",
-    "queueConnectionStrings",
-    "aiConnectionStrings",
-] as const;
-
-export type ConnectionStringKey = (typeof connectionStringKeys)[number];
-
-export const documentToggleKeys = [
-    "isIncludeDocuments",
-    "isIncludeAttachments",
-    "isIncludeCounters",
-    "isIncludeRevisions",
-    "isIncludeTimeSeries",
-    "isIncludeTimeSeriesDeletedRanges",
-    "isIncludeArtificialDocuments",
-    "isIncludeArchivedDocuments",
-    "isIncludeExpiredDocuments",
-    "isIncludeConflicts",
-    "isIncludeCompareExchange",
-    "isIncludeLegacyAttachments",
-    "isIncludeDocumentsTombstones",
-    "isIncludeCompareExchangeTombstones",
-    "isIncludeSubscriptions",
-] as const;
-
-export type DocumentToggleKey = (typeof documentToggleKeys)[number];
-
-const documentsSchema = yup.object(Object.fromEntries(documentToggleKeys.map((key) => [key, yup.boolean()])));
+import {
+    documentsSchema,
+    configurationSchema,
+    transformScriptSchema,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
 const collectionsSchema = yup.object({
     isImportAllCollections: yup.boolean(),
     includedCollections: yup.array().of(yup.string()),
 });
 
-const configurationSchema = yup.object({
-    isIncludeIndexes: yup.boolean(),
-    isIncludeIndexHistory: yup.boolean(),
-    isRemoveAnalyzers: yup.boolean(),
-    isIncludeIdentities: yup.boolean(),
-    isIncludeConnectionStringsAndOngoingTasks: yup.boolean(),
-    isCustomizeOngoingTasks: yup.boolean(),
-    ongoingTasks: yup.object(Object.fromEntries(ongoingTaskKeys.map((key) => [key, yup.boolean()]))),
-    connectionStrings: yup.object(Object.fromEntries(connectionStringKeys.map((key) => [key, yup.boolean()]))),
-    isImportAllSettings: yup.boolean(),
-    databaseSettings: yup.object(Object.fromEntries(databaseSettingKeys.map((key) => [key, yup.boolean()]))),
-});
-
-const processingSchema = yup.object({
-    isUseTransformScript: yup.boolean(),
-    transformScript: yup.string().when("isUseTransformScript", {
-        is: true,
-        then: (schema) =>
-            schema.required("Transform script is required when enabled").test("valid-javascript", (value, ctx) => {
-                if (!value?.trim()) {
-                    return true; // "required" above already covers the empty case
-                }
-                const error = getJavaScriptSyntaxError(value);
-                return error ? ctx.createError({ message: error }) : true;
-            }),
-    }),
+const processingSchema = transformScriptSchema.shape({
     isSetMaxReadOpsPerSecond: yup.boolean(),
     maxReadOpsPerSecond: yup
         .number()

@@ -1,11 +1,8 @@
-import IconName from "typings/server/icons";
-
-export interface SectionNavItem {
-    id: string;
-    label: string;
-    icon: IconName;
-    children?: { id: string; label: string }[];
-}
+import {
+    ErrorFieldTarget,
+    SectionNavItem,
+    getSectionIds,
+} from "components/pages/database/tasks/importData/shared/importNav";
 
 export const sectionNav: SectionNavItem[] = [
     { id: "select-file", label: "Select file to import", icon: "folder" },
@@ -30,36 +27,12 @@ export const sectionNav: SectionNavItem[] = [
     { id: "import-processing", label: "Import processing & security", icon: "settings" },
 ];
 
-export const sectionIds = sectionNav.flatMap((item) => [item.id, ...(item.children?.map((child) => child.id) ?? [])]);
+export const sectionIds = getSectionIds(sectionNav);
 
-export function getFirstErrorPath(errors: unknown, prefix = ""): string | null {
-    if (!errors || typeof errors !== "object") {
-        return null;
-    }
-    if ("message" in errors && typeof (errors as { message?: unknown }).message === "string") {
-        return prefix;
-    }
-    for (const [key, value] of Object.entries(errors)) {
-        const path = prefix ? `${prefix}.${key}` : key;
-        const found = getFirstErrorPath(value, path);
-        if (found) {
-            return found;
-        }
-    }
-    return null;
-}
-
-const errorFieldTargets: {
-    path: string;
-    sectionId: string;
-}[] = [
+export const errorFieldTargets: ErrorFieldTarget[] = [
     { path: "processing", sectionId: "import-processing" },
     { path: "file", sectionId: "select-file" },
     { path: "documents", sectionId: "data-to-import" },
     { path: "collections", sectionId: "data-to-import" },
     { path: "configuration", sectionId: "configuration-to-import" },
 ];
-
-export function getSectionIdForErrorPath(errorPath: string): string | null {
-    return errorFieldTargets.find((x) => errorPath.startsWith(x.path))?.sectionId ?? null;
-}

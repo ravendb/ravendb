@@ -6,7 +6,7 @@ import {
     DocumentToggleKey,
     OngoingTaskKey,
     ongoingTaskKeys,
-} from "./importFromFileValidation";
+} from "./importOptionsValidation";
 import {
     connectionStringIcons,
     connectionStringLabels,
@@ -14,13 +14,13 @@ import {
     databaseSettingLabels,
     ongoingTaskIcons,
     ongoingTaskLabels,
-} from "./importFromFileLabels";
+} from "./importLabels";
 import IconName from "../../../../../../../typings/server/icons";
 import { mergeCapabilities, OngoingTaskTarget } from "components/pages/database/tasks/shared/ongoingTaskCapabilities";
 
 type LicenseStatusKey = keyof LicenseStatus;
 
-export type ImportRestrictionReason = "license" | "sharding" | "access";
+export type ImportRestrictionReason = "license" | "sharding" | "access" | "sourceVersion";
 
 export interface ImportRestriction {
     reason: ImportRestrictionReason;

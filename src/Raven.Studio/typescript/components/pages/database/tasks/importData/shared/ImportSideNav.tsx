@@ -1,17 +1,18 @@
 import React from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import { SectionNavItem, sectionNav } from "./importFromFileNav";
+import { SectionNavItem } from "./importNav";
 
 interface ImportSideNavProps {
+    items: SectionNavItem[];
     activeSectionId: string | null;
     onSelectSection: (id: string) => void;
 }
 
-export default function ImportSideNav({ activeSectionId, onSelectSection }: ImportSideNavProps) {
+export default function ImportSideNav({ items, activeSectionId, onSelectSection }: ImportSideNavProps) {
     return (
         <nav className="import-side-nav align-self-start">
-            {sectionNav.map((item, index) => (
+            {items.map((item, index) => (
                 <React.Fragment key={item.id}>
                     {index > 0 && <hr />}
                     <ImportSideNavItem

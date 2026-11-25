@@ -17,11 +17,18 @@ import { useScrollSpy } from "components/hooks/useScrollSpy";
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import { useImportFromFileForm } from "./useImportFromFileForm";
 import { useImportOperation } from "./useImportOperation";
-import { ImportRestrictionsProvider, useImportRestrictions } from "./useImportRestrictions";
+import {
+    ImportRestrictionsProvider,
+    useImportRestrictions,
+} from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { hasAnyInclude } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
-import { getFirstErrorPath, getSectionIdForErrorPath, sectionIds } from "./importFromFileNav";
-import ImportSideNav from "./ImportSideNav";
+import { errorFieldTargets, sectionIds, sectionNav } from "./importFromFileNav";
+import {
+    getFirstErrorPath,
+    getSectionIdForErrorPath,
+} from "components/pages/database/tasks/importData/shared/importNav";
+import ImportSideNav from "components/pages/database/tasks/importData/shared/ImportSideNav";
 import SelectFileSection from "./sections/SelectFileSection";
 import DataToImportSection from "./sections/DataToImportSection";
 import ConfigurationToImportSection from "./sections/ConfigurationToImportSection";
@@ -79,7 +86,7 @@ function ImportDatabaseFromFileContent() {
             return;
         }
 
-        const sectionId = getSectionIdForErrorPath(firstErrorPath);
+        const sectionId = getSectionIdForErrorPath(firstErrorPath, errorFieldTargets);
         if (!sectionId) {
             return;
         }
@@ -148,7 +155,11 @@ function ImportDatabaseFromFileContent() {
                     </Alert>
                 )}
                 <div className="d-flex gap-4 import-page-body">
-                    <ImportSideNav activeSectionId={activeSectionId} onSelectSection={selectSection} />
+                    <ImportSideNav
+                        items={sectionNav}
+                        activeSectionId={activeSectionId}
+                        onSelectSection={selectSection}
+                    />
                     <div className="flex-grow-1 import-page-content" ref={contentRef}>
                         <SelectFileSection />
                         <fieldset disabled={!file} className={classNames({ "item-disabled": !file })}>

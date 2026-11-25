@@ -6,20 +6,24 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { FormSwitch } from "components/common/Form";
-import ImportSection from "./ImportSection";
-import RestrictedSwitch from "./RestrictedSwitch";
+import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
+import RestrictedSwitch from "components/pages/database/tasks/importData/shared/RestrictedSwitch";
 import {
     connectionStringKeys,
     DatabaseSettingKey,
     databaseSettingKeys,
-    ImportFromFileFormData,
     ongoingTaskKeys,
-} from "../importFromFileValidation";
-import { useImportRestrictions } from "../useImportRestrictions";
-import { getTasksMissingConnectionStrings } from "../importFromFileUtils";
-import { getLicenseLimitWarning } from "../importLicenseLimits";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportFromFileFormData } from "../importFromFileValidation";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
+import { getTasksMissingConnectionStrings } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
+import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
 import Card from "react-bootstrap/Card";
-import { connectionStringLabels, databaseSettingLabels, ongoingTaskLabels } from "../importFromFileLabels";
+import {
+    connectionStringLabels,
+    databaseSettingLabels,
+    ongoingTaskLabels,
+} from "components/pages/database/tasks/importData/shared/importLabels";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";

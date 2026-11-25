@@ -1,17 +1,17 @@
 import React, { ReactNode } from "react";
-import { Control, FieldPath } from "react-hook-form";
+import { Control } from "react-hook-form";
 import classNames from "classnames";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import { FormSwitch } from "components/common/Form";
-import { ImportFromFileFormData } from "../importFromFileValidation";
-import { ImportRestriction } from "../importRestrictions";
+import { ImportOptionsFormData, ImportOptionsFormPath } from "./importOptionsValidation";
+import { ImportRestriction } from "./importRestrictions";
 
 interface RestrictedSwitchProps {
-    control: Control<ImportFromFileFormData>;
-    name: FieldPath<ImportFromFileFormData>;
+    control: Control<ImportOptionsFormData>;
+    name: ImportOptionsFormPath;
     restriction?: ImportRestriction;
     warning?: ReactNode;
     children: ReactNode;

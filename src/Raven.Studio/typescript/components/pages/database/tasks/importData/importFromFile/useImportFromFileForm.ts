@@ -1,24 +1,22 @@
 import { useEffect, useRef } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import {
     ConnectionStringKey,
     DatabaseSettingKey,
     DocumentToggleKey,
-    ImportFromFileFormData,
-    importFromFileYupResolver,
     OngoingTaskKey,
-} from "./importFromFileValidation";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportFromFileFormData, importFromFileYupResolver } from "./importFromFileValidation";
 import { getDefaultFormData } from "./importFromFileUtils";
-import { useImportRestrictions } from "./useImportRestrictions";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
+import {
+    defaultTransformScript,
+    useImportOptionsFormSync,
+} from "components/pages/database/tasks/importData/shared/useImportOptionsFormSync";
 
-export { getDefaultFormData };
-
-export const defaultTransformScript =
-    "this.collection = this['@metadata']['@collection'];\r\n" +
-    "// current object is available under 'this' variable\r\n" +
-    "// @change-vector, @id, @last-modified metadata fields are not available";
+export { getDefaultFormData, defaultTransformScript };
 
 export function useImportFromFileForm() {
     const isAdminAccessOrAbove = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -55,7 +53,7 @@ export function useImportFromFileForm() {
         defaultValues: defaults,
     });
 
-    const { control, setValue } = form;
+    const { setValue } = form;
 
     const prevRestricted = useRef<{
         settings: Set<DatabaseSettingKey>;
@@ -140,30 +138,7 @@ export function useImportFromFileForm() {
         setValue,
     ]);
 
-    const documents = useWatch({ control, name: "documents" });
-    const configuration = useWatch({ control, name: "configuration" });
-    const isUseTransformScript = useWatch({ control, name: "processing.isUseTransformScript" });
-
-    useEffect(() => {
-        if (!documents.isIncludeDocuments) {
-            setValue("documents.isIncludeAttachments", false);
-        }
-    }, [documents.isIncludeDocuments, setValue]);
-
-    useEffect(() => {
-        if (!configuration.isIncludeIndexes) {
-            setValue("configuration.isRemoveAnalyzers", false);
-            setValue("configuration.isIncludeIndexHistory", false);
-        }
-    }, [configuration.isIncludeIndexes, setValue]);
-
-    useEffect(() => {
-        if (isUseTransformScript) {
-            setValue("processing.transformScript", defaultTransformScript);
-        } else {
-            setValue("processing.transformScript", "");
-        }
-    }, [isUseTransformScript, setValue]);
+    useImportOptionsFormSync(form);
 
     return form;
 }

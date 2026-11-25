@@ -4,9 +4,12 @@ import Badge from "react-bootstrap/Badge";
 import { Icon } from "components/common/Icon";
 import RichAlert from "components/common/RichAlert";
 import FileDropzone from "components/common/FileDropzone";
-import ImportSection from "./ImportSection";
+import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
 import { ImportFromFileFormData } from "../importFromFileValidation";
-import { RestrictedImportItem, useImportRestrictions } from "../useImportRestrictions";
+import {
+    RestrictedImportItem,
+    useImportRestrictions,
+} from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { useRavenLink } from "components/hooks/useRavenLink";
 import genUtils from "common/generalUtils";
 import MinPeriodWarningAlert from "components/pages/database/tasks/importData/importFromFile/sections/MinPeriodWarningAlert";

@@ -2,9 +2,13 @@ import React from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
-import { DatabaseSettingKey, ImportFromFileFormData, databaseSettingKeys } from "../importFromFileValidation";
+import {
+    DatabaseSettingKey,
+    databaseSettingKeys,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportFromFileFormData } from "../importFromFileValidation";
 import { useMinPeriodWarning } from "../useMinPeriodWarning";
-import { useImportRestrictions } from "../useImportRestrictions";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 
 export default function MinPeriodWarningAlert() {
     const { control, setValue } = useFormContext<ImportFromFileFormData>();
