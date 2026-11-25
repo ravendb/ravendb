@@ -590,7 +590,39 @@ namespace Raven.Server.Documents.Revisions
             public bool HasMore;
             public long PreviousCount;
             public long Remaining;
-            public int Skip;
+        }
+
+        // Where the next pass over the revisions of a document starts: just after the revision handed to the caller last. The
+        // caller deletes only the revision it held before that one, so the keys from there on stay where they were, and a pass
+        // doesn't walk again over the revisions that are kept.
+        private struct RevisionsScanPosition
+        {
+            private Slice _lastKey;
+
+            public readonly Slice SeekStart(Slice first) => _lastKey.HasValue ? _lastKey : first;
+
+            // the revision handed to the caller last is still there: the caller holds it
+            public readonly bool IsLast(Slice key) => _lastKey.HasValue && SliceComparer.Equals(key, _lastKey);
+
+            public void Remember(ByteStringContext allocator, Slice key)
+            {
+                // the keys of one document's revisions have the same size, so the copy is made once and then overwritten
+                if (_lastKey.HasValue && _lastKey.Size == key.Size)
+                {
+                    key.AsReadOnlySpan().CopyTo(_lastKey.AsSpan());
+                    return;
+                }
+
+                Release(allocator);
+                _lastKey = key.Clone(allocator);
+            }
+
+            public void Release(ByteStringContext allocator)
+            {
+                if (_lastKey.HasValue)
+                    _lastKey.Release(allocator);
+                _lastKey = default;
+            }
         }
 
         private DeleteOldRevisionsResult DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
@@ -782,38 +814,49 @@ namespace Raven.Server.Documents.Revisions
                 numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
             }
 
-            while (numberOfRevisionsToDelete > deleted) // checked before seeking again
+            var position = new RevisionsScanPosition();
+            try
             {
-                var ended = true;
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
+                while (numberOfRevisionsToDelete > deleted) // checked before seeking again
                 {
-                    var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
-
-                    if (configuration.MinimumRevisionAgeToKeep.HasValue &&
-                        _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
+                    var ended = true;
+                    foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], position.SeekStart(prefixSlice), prefixSlice, skip: 0))
                     {
-                        revision.Dispose();
+                        if (position.IsLast(read.Key))
+                            continue;
 
-                        if (stopWhenReachingAge == false)
+                        var tvr = read.Result.Reader;
+                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                        if (configuration.MinimumRevisionAgeToKeep.HasValue &&
+                            _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
                         {
-                            result.Skip++;
-                            ended = false;
+                            revision.Dispose();
+
+                            if (stopWhenReachingAge)
+                                break;
+
+                            // we haven't deleted anything, so we can keep using the same iterator instead of starting over
+                            continue;
                         }
 
+                        // the caller deletes revisions between passes, so the next pass seeks again, from here
+                        position.Remember(context.Allocator, read.Key);
+                        yield return revision;
+
+                        deleted++;
+
+                        ended = false;
                         break;
                     }
 
-                    yield return revision;
-
-                    deleted++;
-
-                    ended = false;
-                    break;
+                    if (ended)
+                        break;
                 }
-
-                if (ended)
-                    break;
+            }
+            finally
+            {
+                position.Release(context.Allocator);
             }
 
             Debug.Assert(numberOfRevisionsToDelete >= deleted);
@@ -840,7 +883,6 @@ namespace Raven.Server.Documents.Revisions
                 {
                     lastRevisionToDelete = revision;
                     first = false;
-                    result.Skip++;
                     continue;
                 }
 
@@ -1150,41 +1192,52 @@ namespace Raven.Server.Documents.Revisions
         private IEnumerable<Document> GetRevisionsToDeleteByIdAndEtag(DocumentsOperationContext context, Table table, Slice prefixSlice,
             ConflictedRevisionsDeletionState state, DeleteOldRevisionsResult result)
         {
-            while (true)
+            var position = new RevisionsScanPosition();
+            try
             {
-                var ended = true;
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
+                while (true)
                 {
-                    if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
+                    var ended = true;
+                    foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], position.SeekStart(prefixSlice), prefixSlice, skip: 0))
                     {
-                        result.HasMore = true;
+                        if (position.IsLast(read.Key))
+                            continue;
+
+                        if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
+                        {
+                            result.HasMore = true;
+                            yield break;
+                        }
+
+                        if (state.FinishedRegular && state.FinishedConflicted)
+                        {
+                            yield break;
+                        }
+
+                        var tvr = read.Result.Reader;
+                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                        if (state.ShouldDelete(revision) == false)
+                        {
+                            revision.Dispose();
+                            continue;
+                        }
+
+                        position.Remember(context.Allocator, read.Key);
+                        yield return revision;
+                        ended = false;
+                        break;
+                    }
+
+                    if (ended)
+                    {
                         yield break;
                     }
-
-                    if (state.FinishedRegular && state.FinishedConflicted)
-                    {
-                        yield break;
-                    }
-
-                    var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
-
-                    if (state.ShouldDelete(revision) == false)
-                    {
-                        revision.Dispose();
-                        result.Skip++;
-                        continue;
-                    }
-
-                    yield return revision;
-                    ended = false;
-                    break;
                 }
-
-                if (ended)
-                {
-                    yield break;
-                }
+            }
+            finally
+            {
+                position.Release(context.Allocator);
             }
         }
 
@@ -1198,58 +1251,63 @@ namespace Raven.Server.Documents.Revisions
             var etagsIndex = RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice];
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
 
-            while (true)
+            var position = new RevisionsScanPosition();
+            try
             {
-                var ended = true;
-
-                using (var it = tree.MultiRead(prefixSlice))
+                while (true)
                 {
-                    if (it.Seek(Slices.BeforeAllKeys) == false)
-                        yield break;
+                    var ended = true;
 
-                    if (it.Skip(result.Skip) == false)
-                        yield break;
-
-                    do
+                    using (var it = tree.MultiRead(prefixSlice))
                     {
-                        if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
-                        {
-                            result.HasMore = true;
-                            yield break;
-                        }
-
-                        if (state.FinishedConflicted)
+                        if (it.Seek(position.SeekStart(Slices.BeforeAllKeys)) == false)
                             yield break;
 
-                        var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-                        if (etag == ListedMarkerEtag) // the marker sorts last, so no revision follows it
-                            yield break;
-
-                        if (allRevisionsTable.FindByIndex(etagsIndex, etag, out var tvr) == false)
+                        do
                         {
-                            result.Skip++;
-                            continue;
-                        }
+                            if (position.IsLast(it.CurrentKey))
+                                continue;
 
-                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+                            if (state.ReachedMaximumRevisionsToDeleteUponDocumentUpdate())
+                            {
+                                result.HasMore = true;
+                                yield break;
+                            }
 
-                        if (state.ShouldDelete(revision) == false)
-                        {
-                            revision.Dispose();
-                            result.Skip++;
-                            continue;
-                        }
+                            if (state.FinishedConflicted)
+                                yield break;
 
-                        yield return revision;
-                        ended = false;
-                        break;
-                    } while (it.MoveNext());
+                            var etag = it.CurrentKey.CreateReader().ReadBigEndianInt64();
+                            if (etag == ListedMarkerEtag) // the marker sorts last, so no revision follows it
+                                yield break;
+
+                            if (allRevisionsTable.FindByIndex(etagsIndex, etag, out var tvr) == false)
+                                continue;
+
+                            var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                            if (state.ShouldDelete(revision) == false)
+                            {
+                                revision.Dispose();
+                                continue;
+                            }
+
+                            position.Remember(context.Allocator, it.CurrentKey);
+                            yield return revision;
+                            ended = false;
+                            break;
+                        } while (it.MoveNext());
+                    }
+
+                    if (ended)
+                    {
+                        yield break;
+                    }
                 }
-
-                if (ended)
-                {
-                    yield break;
-                }
+            }
+            finally
+            {
+                position.Release(context.Allocator);
             }
         }
 
@@ -1407,38 +1465,49 @@ namespace Raven.Server.Documents.Revisions
         {
             var deleted = 0L;
 
-            while (true)
+            var position = new RevisionsScanPosition();
+            try
             {
-                var ended = true;
-
-                foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
+                while (true)
                 {
-                    if (maxDeletesUponUpdate.HasValue && deleted >= maxDeletesUponUpdate.Value)
+                    var ended = true;
+
+                    foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], position.SeekStart(prefixSlice), prefixSlice, skip: 0))
                     {
-                        result.HasMore = true;
-                        yield break;
+                        if (position.IsLast(read.Key))
+                            continue;
+
+                        if (maxDeletesUponUpdate.HasValue && deleted >= maxDeletesUponUpdate.Value)
+                        {
+                            result.HasMore = true;
+                            yield break;
+                        }
+
+                        var tvr = read.Result.Reader;
+                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                        if (shouldSkip != null && shouldSkip.Invoke(revision))
+                        {
+                            revision.Dispose();
+                            continue;
+                        }
+
+                        position.Remember(context.Allocator, read.Key);
+                        yield return revision;
+
+                        deleted++;
+
+                        ended = false;
+                        break;
                     }
 
-                    var tvr = read.Result.Reader;
-                    var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
-
-                    if (shouldSkip != null && shouldSkip.Invoke(revision))
-                    {
-                        revision.Dispose();
-                        result.Skip++;
-                        continue;
-                    }
-
-                    yield return revision;
-
-                    deleted++;
-
-                    ended = false;
-                    break;
+                    if (ended)
+                        break;
                 }
-
-                if (ended)
-                    break;
+            }
+            finally
+            {
+                position.Release(context.Allocator);
             }
         }
 
