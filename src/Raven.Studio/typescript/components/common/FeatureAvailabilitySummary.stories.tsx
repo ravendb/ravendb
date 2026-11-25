@@ -129,7 +129,7 @@ export const CloudProductionFeatureTurnedOn: Story = {
     },
 };
 
-export const CloudProductionFeatureNotTurnedOnUnnamed: Story = {
+export const CloudProductionFeatureWithoutCloudSwitch: Story = {
     args: {
         licenseType: "Enterprise",
         isCloud: true,

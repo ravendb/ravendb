@@ -9,6 +9,7 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import IconName from "typings/server/icons";
+import type { CloudOptionalFeature } from "components/common/FeatureAvailabilitySummary";
 import { OngoingTaskFilterType } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksFilter";
 
 export type TaskCardDisplayMode = "expanded" | "compact";
@@ -26,6 +27,7 @@ export interface TaskCardInfo {
     link: string;
     target: string;
     licenseBadge?: LicenseBadgeText;
+    cloudOptionalFeature?: CloudOptionalFeature;
     showLicenseBadge?: boolean;
     counterBadge?: ReactNode;
     disabledConditions?: TaskCardDisabledCondition[];
@@ -85,6 +87,7 @@ export function TaskCard({
     target,
     variant,
     licenseBadge,
+    cloudOptionalFeature,
     showLicenseBadge,
     counterBadge,
     disabledConditions,
@@ -119,6 +122,7 @@ export function TaskCard({
                     <LicenseRestrictedBadge
                         className="position-absolute top-0 end-0 m-2"
                         licenseRequired={licenseBadge}
+                        cloudOptionalFeature={cloudOptionalFeature}
                     />
                 )}
             </a>

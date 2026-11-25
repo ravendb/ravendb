@@ -16,11 +16,11 @@ export function useCloudLicenseMessage(cloudOptionalFeature?: CloudOptionalFeatu
         return t("cloudProductionPlanOnly");
     }
 
-    if (cloudOptionalFeature) {
-        return t("cloudFeatureNotTurnedOnForFeature", {
-            feature: t("cloudFeatureName", { context: cloudOptionalFeature }),
-        });
+    if (!cloudOptionalFeature) {
+        return t("cloudNotIncludedInPlan");
     }
 
-    return t("cloudFeatureNotTurnedOn");
+    return t("cloudFeatureNotTurnedOnForFeature", {
+        feature: t("cloudFeatureName", { context: cloudOptionalFeature }),
+    });
 }

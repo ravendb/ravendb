@@ -10,7 +10,7 @@ const {
     CloudFree,
     CloudProductionFeatureNotTurnedOn,
     CloudProductionFeatureTurnedOn,
-    CloudProductionFeatureNotTurnedOnUnnamed,
+    CloudProductionFeatureWithoutCloudSwitch,
 } = composeStories(stories);
 
 const selectors = {
@@ -46,14 +46,11 @@ describe("FeatureAvailabilitySummary", () => {
             expect(screen.getByRole("link", { name: /Cloud pricing/ })).toBeInTheDocument();
         });
 
-        it("can show a general hint when the feature has no Cloud feature name", () => {
-            const { screen } = rtlRender(<CloudProductionFeatureNotTurnedOnUnnamed />);
+        it("can hide the hint when the feature cannot be turned on in Cloud", () => {
+            const { screen } = rtlRender(<CloudProductionFeatureWithoutCloudSwitch />);
 
-            expect(
-                screen.getByText(
-                    "Turn the feature on in Cloud Portal (Product → Features). On a yearly plan, contact support."
-                )
-            ).toBeInTheDocument();
+            expect(screen.queryByText("Not turned on")).not.toBeInTheDocument();
+            expect(screen.queryByText(/yearly plan, contact support/)).not.toBeInTheDocument();
         });
 
         it("can hide the hint when the feature is turned on", () => {

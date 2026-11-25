@@ -180,7 +180,10 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         >
                                             {valueData.footnote ? (
                                                 <div className="position-relative d-inline-block">
-                                                    {formatAvailabilityValue(valueData, column.canBeTurnedOnInCloud)}
+                                                    {formatAvailabilityValue(
+                                                        valueData,
+                                                        isTurnedOffInCloud(column, data)
+                                                    )}
                                                     <FootnoteMark
                                                         footnote={valueData.footnote}
                                                         number={footnoteNumber}
@@ -188,7 +191,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                     />
                                                 </div>
                                             ) : (
-                                                formatAvailabilityValue(valueData, column.canBeTurnedOnInCloud)
+                                                formatAvailabilityValue(valueData, isTurnedOffInCloud(column, data))
                                             )}
                                         </td>
                                     );
@@ -509,18 +512,20 @@ function getDisplayedValue(data: FeatureAvailabilityValueData): AvailabilityValu
 }
 
 function isTurnedOffInCloud(column: AvailabilityColumn, row: FeatureAvailabilityData): boolean {
-    return column.canBeTurnedOnInCloud && getDisplayedValue(column.getValue(row)) === false;
+    return (
+        column.canBeTurnedOnInCloud &&
+        row.cloudOptionalFeature != null &&
+        getDisplayedValue(column.getValue(row)) === false
+    );
 }
 
 function useCloudFeatureFootnote() {
     const t = useStudioTranslation("featureAvailabilitySummary");
 
     return (row: FeatureAvailabilityData): FeatureAvailabilityFootnote => ({
-        title: row.cloudOptionalFeature
-            ? t("cloudFeatureFootnoteForFeature", {
-                  feature: t("cloudFeatureName", { context: row.cloudOptionalFeature }),
-              })
-            : t("cloudFeatureFootnote"),
+        title: t("cloudFeatureFootnoteForFeature", {
+            feature: t("cloudFeatureName", { context: row.cloudOptionalFeature }),
+        }),
         items: [],
     });
 }
@@ -552,7 +557,7 @@ function CloudFeatureOffBadge() {
     return <Badge bg="faded-warning">{t("cloudFeatureOff")}</Badge>;
 }
 
-function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeTurnedOnInCloud?: boolean): ReactNode {
+function formatAvailabilityValue(data: FeatureAvailabilityValueData, isOffInCloud: boolean): ReactNode {
     const value = getDisplayedValue(data);
 
     let formattedValue: ReactNode = value;
@@ -561,7 +566,7 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeTurned
         formattedValue = <Icon icon="check" margin="m-0" color="success" />;
     }
     if (value === false) {
-        if (canBeTurnedOnInCloud) {
+        if (isOffInCloud) {
             return <CloudFeatureOffBadge />;
         }
         formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
