@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.IO;
 using System.Threading;
@@ -20,6 +20,7 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
     protected readonly BatchRequestParser BatchRequestParser;
     private readonly JsonParserState _state;
     private readonly CancellationToken _token;
+    private readonly BatchRequestParser.DocumentBuilderCache _builders = new();
 
     protected AbstractBulkInsertBatchCommandsReader(JsonOperationContext ctx, Stream stream, JsonOperationContext.MemoryBuffer buffer, BatchRequestParser batchRequestParser, CancellationToken token)
     {
@@ -47,11 +48,14 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
 
     protected Task<BatchRequestParser.CommandData> MoveNextAsync(JsonOperationContext ctx, BlittableMetadataModifier modifier)
     {
+        // the caller moves to a new context for each batch, and keeps the previous one until the batch after it
+        _builders.EnsureContext(ctx);
+
         if (_parser.Read())
         {
             if (_state.CurrentTokenType == JsonParserToken.EndArray)
                 return null;
-            return BatchRequestParser.ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _token);
+            return BatchRequestParser.ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _builders, _token);
         }
 
         return MoveNextUnlikely(ctx, modifier);
@@ -67,7 +71,7 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
         if (_state.CurrentTokenType == JsonParserToken.EndArray)
             return new BatchRequestParser.CommandData { Type = CommandType.None };
 
-        return await BatchRequestParser.ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _token);
+        return await BatchRequestParser.ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, modifier, _builders, _token);
     }
 
     public Stream GetBlob(long blobSize)
@@ -90,6 +94,7 @@ public abstract class AbstractBulkInsertBatchCommandsReader<TCommandData> : IDis
 
     public virtual void Dispose()
     {
+        _builders.Dispose();
         _parser.Dispose();
     }
 }

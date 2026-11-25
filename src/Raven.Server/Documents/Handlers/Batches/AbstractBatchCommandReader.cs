@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -97,9 +97,10 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         UnmanagedJsonParser parser,
         JsonOperationContext.MemoryBuffer buffer,
         BlittableMetadataModifier modifier,
+        BatchRequestParser.DocumentBuilderCache builders,
         CancellationToken token)
     {
-        return BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+        return BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, builders, token);
     }
 
     public async Task BuildCommandsAsync(JsonOperationContext context, Stream stream, char separator, CancellationToken token)
@@ -110,6 +111,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         /* In case we have a conflict between attachment with the same name we need attachment information from metadata */
         /* we can't know from advanced if we will need this information so we save this for all batch commands */
         using (var modifier = new BlittableMetadataModifier(context, legacyImport: false, readLegacyEtag: false, DatabaseItemType.Attachments))
+        using (var builders = new BatchRequestParser.DocumentBuilderCache())
         {
             while (parser.Read() == false)
                 await BatchRequestParser.RefillParserBuffer(stream, buffer, parser, token);
@@ -149,7 +151,7 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                     _commands = BatchRequestParser.IncreaseSizeOfCommandsBuffer(_index, _commands);
                 }
 
-                var commandData = await ReadCommandAsync(context, stream, state, parser, buffer, modifier, token);
+                var commandData = await ReadCommandAsync(context, stream, state, parser, buffer, modifier, builders, token);
 
                 if (commandData.Type == CommandType.PATCH)
                 {

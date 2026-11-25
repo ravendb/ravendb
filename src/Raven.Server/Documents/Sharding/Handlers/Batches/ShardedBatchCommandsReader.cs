@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -44,6 +44,7 @@ public sealed class ShardedBatchCommandsReader : AbstractBatchCommandsReader<Sha
         UnmanagedJsonParser parser,
         JsonOperationContext.MemoryBuffer buffer,
         BlittableMetadataModifier modifier,
+        BatchRequestParser.DocumentBuilderCache builders,
         CancellationToken token)
     {
         var ms = new MemoryStream();
@@ -55,7 +56,7 @@ public sealed class ShardedBatchCommandsReader : AbstractBatchCommandsReader<Sha
 
             using (_bufferedCommandCopier.UseCommand(bufferedCommand))
             {
-                result = await BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, token);
+                result = await BatchRequestParser.ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, builders, token);
                 ValidateSupportedCommand(result);
             }
 
