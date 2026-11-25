@@ -30,9 +30,9 @@ namespace Voron.Data.BTrees
 
         private readonly TreeMutableState _state;
 
-        private static readonly ObjectPool<RecentlyFoundTreePages> FoundPagesPool = new(() => new RecentlyFoundTreePages(), 128);
-
-        private RecentlyFoundTreePages _recentlyFoundPages;
+        // in memory of the transaction's allocator, taken when the first leaf is cached, see AddToRecentlyFoundPages
+        private RecentlyFoundTreePages* _recentlyFoundPages;
+        private ByteString _recentlyFoundPagesMemory;
 
         // Iterate hands it out again once it is disposed: a tree has one open iterator at a time
         private TreeIterator _reusableIterator;
@@ -83,8 +83,6 @@ namespace Voron.Data.BTrees
                 SetNewPageAllocator(newPageAllocator);
             }
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
-
             _state = new TreeMutableState(llt, in header);
 
             llt.RegisterDisposable(new TreeDisposable(this));
@@ -103,7 +101,6 @@ namespace Voron.Data.BTrees
                 SetNewPageAllocator(newPageAllocator);
             }
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
             _state = new TreeMutableState(llt);
 
             llt.RegisterDisposable(new TreeDisposable(this));
@@ -115,7 +112,6 @@ namespace Voron.Data.BTrees
             _tx = tx;
             Name = name;
 
-            _recentlyFoundPages = FoundPagesPool.Allocate();
             _state = state;
 
             llt.RegisterDisposable(new TreeDisposable(this));
@@ -125,9 +121,12 @@ namespace Voron.Data.BTrees
         {
             void IDisposable.Dispose()
             {
-                tree._recentlyFoundPages.Clear();
-                FoundPagesPool.Free(tree._recentlyFoundPages);
+                // the allocator may outlive the transaction (a context's allocator), so the memory goes back to it now
+                if (tree._recentlyFoundPages == null)
+                    return;
+
                 tree._recentlyFoundPages = null;
+                tree._llt.Allocator.Release(ref tree._recentlyFoundPagesMemory);
             }
         }
 
@@ -652,12 +651,14 @@ namespace Voron.Data.BTrees
             else if (IsLeafCompressionSupported)
             {
                 // compressing the page moves keys out of the range its cache entry was created for
-                _recentlyFoundPages?.Reset(pageNumber);
+                if (_recentlyFoundPages != null)
+                    _recentlyFoundPages->Reset(pageNumber);
             }
             else
             {
                 // a write to a leaf keeps its keys within its cached range
-                _recentlyFoundPages?.Refresh(pageNumber, page.Base);
+                if (_recentlyFoundPages != null)
+                    _recentlyFoundPages->Refresh(pageNumber, page.Base);
             }
 
             if (IsLeafCompressionSupported && page.IsCompressed)
@@ -946,7 +947,7 @@ namespace Voron.Data.BTrees
         private void AddToRecentlyFoundPages(TreePage p, bool leftmostPage, bool rightmostPage)
         {
             if (_recentlyFoundPages == null)
-                return;
+                AllocateRecentlyFoundPages();
 
             SliceOptions firstKeyOption, lastKeyOption;
             ReadOnlySpan<byte> firstKey, lastKey;
@@ -973,12 +974,20 @@ namespace Voron.Data.BTrees
                 lastKeyOption = SliceOptions.Key;
             }
 
-            _recentlyFoundPages.Add(p, firstKeyOption, firstKey, lastKeyOption, lastKey);
+            _recentlyFoundPages->Add(p, firstKeyOption, firstKey, lastKeyOption, lastKey);
+        }
+
+        private void AllocateRecentlyFoundPages()
+        {
+            // 63 bytes more, so the cache starts on a 64 bytes boundary and its Vector512 loads are aligned
+            _llt.Allocator.Allocate(sizeof(RecentlyFoundTreePages) + 63, out _recentlyFoundPagesMemory);
+            _recentlyFoundPages = (RecentlyFoundTreePages*)(((nuint)_recentlyFoundPagesMemory.Ptr + 63) & ~(nuint)63);
+            _recentlyFoundPages->Initialize();
         }
 
         private bool TryUseRecentTransactionPage(Slice key, out TreePage page, out TreeNodeHeader* node, bool backward, TreePage leafInstance)
         {
-            if (_recentlyFoundPages == null || _recentlyFoundPages.TryFind(key, out byte* pagePointer) == false)
+            if (_recentlyFoundPages == null || _recentlyFoundPages->TryFind(key, out byte* pagePointer) == false)
             {
                 page = null;
                 node = null;
@@ -1482,7 +1491,8 @@ namespace Voron.Data.BTrees
 
         public void ClearPagesCache()
         {
-            _recentlyFoundPages?.Clear();
+            if (_recentlyFoundPages != null)
+                _recentlyFoundPages->Clear();
         }
 
         public CompactTree CompactTreeFor(string key)
