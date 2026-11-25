@@ -1,18 +1,17 @@
 import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
-import migrateRavenDbDatabaseModel = require("models/database/tasks/migrateRavenDbDatabaseModel");
 import endpoints = require("endpoints");
 
 class migrateRavenDbDatabaseCommand extends commandBase {
 
-    constructor(private db: database | string, private model: migrateRavenDbDatabaseModel) {
+    constructor(private db: database | string, private dto: Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration) {
         super();
     }
 
     execute(): JQueryPromise<operationIdDto> {
         const url = endpoints.databases.smuggler.adminSmugglerMigrateRavendb;
         
-        return this.post(url, JSON.stringify(this.model.toDto()), this.db)
+        return this.post(url, JSON.stringify(this.dto), this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to migrate database", response.responseText, response.statusText));
     }
 }

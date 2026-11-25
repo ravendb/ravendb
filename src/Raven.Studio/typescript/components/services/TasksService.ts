@@ -61,6 +61,9 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import importDatabaseFromFileCommand = require("commands/database/studio/importDatabaseFromFileCommand");
 import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import getNextOperationIdCommand = require("commands/database/studio/getNextOperationIdCommand");
+import getMigratedServerUrlsCommand = require("commands/database/studio/getMigratedServerUrlsCommand");
+import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
+import migrateRavenDbDatabaseCommand = require("commands/database/studio/migrateRavenDbDatabaseCommand");
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -374,5 +377,17 @@ export default class TasksService {
 
     async importDatabaseFromFile(...args: ConstructorParameters<typeof importDatabaseFromFileCommand>) {
         return new importDatabaseFromFileCommand(...args).execute();
+    }
+
+    async getMigratedServerUrls(...args: ConstructorParameters<typeof getMigratedServerUrlsCommand>) {
+        return new getMigratedServerUrlsCommand(...args).execute();
+    }
+
+    async getRemoteServerBuildInfo(...args: ConstructorParameters<typeof getRemoteServerVersionWithDatabasesCommand>) {
+        return new getRemoteServerVersionWithDatabasesCommand(...args).execute();
+    }
+
+    async migrateRavenDbDatabase(...args: ConstructorParameters<typeof migrateRavenDbDatabaseCommand>) {
+        return new migrateRavenDbDatabaseCommand(...args).execute();
     }
 }

@@ -80,8 +80,15 @@ class migrateRavenDbDatabase extends viewModelBase {
         const skipServerCertificateValidation = this.model.skipServerCertificateValidation() ? this.model.skipServerCertificateValidation() : false;
 
         const url = this.model.serverUrl();
-        new getRemoteServerVersionWithDatabasesCommand(url, userName, password, domain,
-                apiKey, enableBasicAuthenticationOverUnsecuredHttp, skipServerCertificateValidation)
+        new getRemoteServerVersionWithDatabasesCommand({
+            serverUrl: url,
+            userName,
+            password,
+            domain,
+            apiKey,
+            enableBasicAuthenticationOverUnsecuredHttp,
+            skipServerCertificateValidation
+        })
             .execute()
             .done(info => {
                 if (info.MajorVersion !== "Unknown") {
@@ -135,7 +142,7 @@ class migrateRavenDbDatabase extends viewModelBase {
 
         const db = this.activeDatabase();
 
-        new migrateRavenDbDatabaseCommand(db, this.model)
+        new migrateRavenDbDatabaseCommand(db, this.model.toDto())
             .execute()
             .done((operationIdDto: operationIdDto) => {
                 const operationId = operationIdDto.OperationId;
