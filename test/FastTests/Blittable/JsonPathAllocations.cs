@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -49,6 +50,30 @@ namespace FastTests.Blittable
                         }
                     }));
                 }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void Reading_the_items_of_an_array_by_index()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var document = context.Sync.ReadForMemory(OrderJson, "order"))
+            {
+                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                AssertAtMost(1_330, "Read the order lines by index", MeasurePerOperation(() =>
+                {
+                    // a new reader each time, like a document read for indexing
+                    using (var order = new BlittableJsonReaderObject(document.BasePointer, document.Size, context))
+                    {
+                        Assert.True(order.TryGet("Lines", out BlittableJsonReaderArray lines));
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            var line = (BlittableJsonReaderObject)lines[i];
+                            line.GetPropertyByIndex(0, ref prop);
+                            Assert.Same(line, lines[i]);
+                        }
+                    }
+                }));
             }
         }
 
