@@ -73,4 +73,22 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal("from Users where Age > 1", state.Query);
         Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
     }
+
+    [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task UpdateWithCreateNewKeepsArchivedDataProcessingBehavior(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+        {
+            Name = "NewSubscription",
+            Query = "from Users",
+            CreateNew = true,
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+        });
+
+        var state = await store.Subscriptions.GetSubscriptionStateAsync("NewSubscription");
+        Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+    }
 }
