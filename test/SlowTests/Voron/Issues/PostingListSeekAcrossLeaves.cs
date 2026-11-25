@@ -68,7 +68,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void SeekIntoAnEmptiedCollapsedLeafMustFindTheValuesOfTheNextLeaf()
+    public void SeekIntoTheRangeOfAnEmptiedCollapsedLeafMustFindTheValuesOfTheNextLeaf()
     {
         const long step = 1L << 20;
         var model = new SortedSet<long>();
@@ -134,7 +134,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
 
         Assert.NotEqual(-1, markedLeaf);
 
-        // its siblings under the root are branches, so once it is emptied nothing merges it away
+        // its siblings under the root are branches, emptying it unlinks it from the root
         using (var wtx = Env.WriteTransaction())
         {
             var list = wtx.OpenPostingList(Name);
@@ -150,11 +150,9 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
         using (var rtx = Env.ReadTransaction())
         {
             var list = rtx.OpenPostingList(Name);
-            var header = (PostingListLeafPageHeader*)list.Llt.GetPage(markedLeaf).Pointer;
-            Assert.Equal(ExtendedPageType.PostingListLeaf, header->PageType);
-            Assert.Equal(0, header->NumberOfEntries);
+            Assert.DoesNotContain(RootChildren(list), child => child.Page == markedLeaf);
 
-            long from = (lo == long.MinValue ? 0 : lo) + 2; // inside the empty leaf's range, not a stored value
+            long from = (lo == long.MinValue ? 0 : lo) + 2; // inside the emptied leaf's range, not a stored value
             Assert.DoesNotContain(from, model);
             var above = model.GetViewBetween(from, long.MaxValue);
             Assert.True(above.Count > 0, "values above the emptied leaf are needed for the seek to have something to find");
@@ -169,7 +167,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void SeekIntoConsecutiveEmptiedLeavesMustFindTheValuesOfTheNextLeaf()
+    public void SeekIntoConsecutiveEmptiedRangesMustFindTheValuesOfTheNextLeaf()
     {
         var model = new SortedSet<long>();
         var (k1, k2, _) = EmptyTwoConsecutiveRootChildren(model);
@@ -179,7 +177,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
             var list = rtx.OpenPostingList(Name);
             Span<long> buffer = stackalloc long[16];
 
-            // both seeks land in an emptied leaf, and the next leaf with values is behind another emptied leaf
+            // both seeks land in the range of an emptied child, and the next values are past the other emptied child
             foreach (long from in new[] { k1 + 2, k2 + 2 })
             {
                 Assert.DoesNotContain(from, model);
@@ -198,7 +196,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void FillAcrossConsecutiveEmptiedLeavesMustNotStop()
+    public void FillAcrossConsecutiveEmptiedRangesMustNotStop()
     {
         var model = new SortedSet<long>();
         var (k1, _, _) = EmptyTwoConsecutiveRootChildren(model);
@@ -212,7 +210,7 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
             var it = list.Iterate();
             Assert.True(it.Seek(lastBeforeTheGap));
 
-            // a small buffer, so that filling has to walk past the emptied leaves on its own. Seek only finds the
+            // a small buffer, so that filling has to walk past the emptied range on its own. Seek only finds the
             // leaf, so the first values may be older than the one it was given
             var actual = new List<long>();
             Span<long> buffer = stackalloc long[64];
@@ -231,8 +229,8 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
 
     /// <summary>
     /// Builds a tree whose root has at least four children, then drains the second and the third of them: each
-    /// collapses into a leaf as it drains and is emptied, and the leaf stays because its left sibling is a branch
-    /// and nothing merges a leaf into a branch. Returns the first value of the range of the children 1, 2 and 3.
+    /// collapses into a leaf as it drains and is unlinked from the root once it is empty, while its left sibling is
+    /// still a branch. Returns the first value of the range of the children 1, 2 and 3.
     /// </summary>
     private (long K1, long K2, long K3) EmptyTwoConsecutiveRootChildren(SortedSet<long> model)
     {
@@ -274,16 +272,12 @@ public unsafe class PostingListSeekAcrossLeaves(ITestOutputHelper output) : Stor
         {
             var list = rtx.OpenPostingList(Name);
             var now = RootChildren(list);
-            Assert.Equal(children.Length, now.Length);
+            Assert.Equal(children.Length - 2, now.Length);
+            Assert.DoesNotContain(now, child => child.Key == children[1].Key || child.Key == children[2].Key);
 
             Assert.Equal(ExtendedPageType.PostingListBranch, ((PostingListLeafPageHeader*)list.Llt.GetPage(now[0].Page).Pointer)->PageType);
-            Assert.Equal(ExtendedPageType.PostingListBranch, ((PostingListLeafPageHeader*)list.Llt.GetPage(now[3].Page).Pointer)->PageType);
-            foreach (int emptied in new[] { 1, 2 })
-            {
-                var header = (PostingListLeafPageHeader*)list.Llt.GetPage(now[emptied].Page).Pointer;
-                Assert.Equal(ExtendedPageType.PostingListLeaf, header->PageType);
-                Assert.Equal(0, header->NumberOfEntries);
-            }
+            Assert.Equal(ExtendedPageType.PostingListBranch, ((PostingListLeafPageHeader*)list.Llt.GetPage(now[1].Page).Pointer)->PageType);
+            Assert.Equal(children[3].Key, now[1].Key);
         }
 
         return (children[1].Key, children[2].Key, children[3].Key);

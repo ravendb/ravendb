@@ -1472,6 +1472,8 @@ public unsafe partial class Hnsw
 
             if (numberOfEntries is 0)
             {
+                _searchState.Llt.FreePage(postingListState.RootPage);
+
                 _largePostingListSet ??= _searchState.Llt.Transaction.OpenPostingList(Constants.PostingList.PostingListRegister);
                 _largePostingListSet.Remove((long)postingListId);
                 Container.Delete(_searchState.Llt, _searchState.Options.Container, postingListId);
