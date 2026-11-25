@@ -797,8 +797,21 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract TStatsScope CreateScope(EtlRunStats stats);
 
+        protected virtual void WaitBeforeFirstRun()
+        {
+        }
+
         public void Run()
         {
+            try
+            {
+                WaitBeforeFirstRun();
+            }
+            catch (Exception e) when (e is OperationCanceledException or ObjectDisposedException)
+            {
+                return;
+            }
+
             var runStart = Database.Time.GetUtcNow();
 
             var cancellationAndForceRetryHandles = new[] { CancellationToken.WaitHandle, ForceBatchRetryEvent.WaitHandle };
@@ -823,6 +836,8 @@ namespace Raven.Server.Documents.ETL
                     var startTime = Database.Time.GetUtcNow();
 
                     var didWork = false;
+
+                    var batchLoaded = false;
 
                     var state = LastProcessState = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
@@ -859,6 +874,8 @@ namespace Raven.Server.Documents.ETL
                                     var transformations = Transform(merged, context, stats, state);
 
                                     var noFailures = Load(transformations, context, stats);
+
+                                    batchLoaded = noFailures;
 
                                     var lastLoadedOrFilteredInBatch = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
                                     var lastProcessedInBatch = Math.Max(lastLoadedOrFilteredInBatch, stats.LastTransformationErrorEtag);
@@ -948,7 +965,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     try
                     {
-                        AfterAllBatchesCompleted(runStart);
+                        AfterAllBatchesCompleted(runStart, batchLoaded);
 
                         PauseIfCpuCreditsBalanceIsTooLow();
 
@@ -1049,6 +1066,7 @@ namespace Raven.Server.Documents.ETL
 
         protected void UpdateEtlProcessState(EtlProcessState state, DateTime? lastBatchTime = null)
         {
+            lastBatchTime ??= GetProcessState(Database, Configuration.Name, Transformation.Name).LastBatchTime;
             var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
                 ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag,
                 _serverStore.LicenseManager.HasHighlyAvailableTasks(), Database.DbBase64Id, RaftIdGenerator.NewId(), state.SkippedTimeSeriesDocs, lastBatchTime);
@@ -1090,7 +1108,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutHiLoDocument();
 
-        protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime)
+        protected virtual void AfterAllBatchesCompleted(DateTime lastBatchTime, bool lastBatchLoaded)
         {
         }
 

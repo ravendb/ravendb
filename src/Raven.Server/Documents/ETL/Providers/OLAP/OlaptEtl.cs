@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
@@ -14,6 +16,8 @@ using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.TasksErrors;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -30,7 +34,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public readonly OlapEtlMetricsCountersManager OlapMetrics = new OlapEtlMetricsCountersManager();
 
         private PeriodicBackup.PeriodicBackup.BackupTimer _timer;
-        private readonly OperationCancelToken _operationCancelToken;
         private static readonly IEnumerator<ToOlapItem> EmptyEnumerator = Enumerable.Empty<ToOlapItem>().GetEnumerator();
 
         private OlapEtlStatsScope _uploadScope;
@@ -40,7 +43,6 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             : base(transformation, configuration, database, serverStore, OlaptEtlTag)
         {
             Metrics = OlapMetrics;
-            _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
             _uploaderSettings = UploaderSettings.GenerateUploaderSettingsForOlap(database, Name, Configuration.Connection.S3Settings, Configuration.Connection.AzureSettings, Configuration.Connection.GlacierSettings, Configuration.Connection.GoogleCloudSettings, Configuration.Connection.FtpSettings);
 
@@ -52,6 +54,14 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
         public override bool ShouldTrackCounters() => false;
 
         public override bool ShouldTrackTimeSeries() => false;
+
+        protected override void WaitBeforeFirstRun()
+        {
+            if (Database is ShardedDocumentDatabase)
+                return;
+
+            _waitForChanges.Wait(CancellationToken);
+        }
 
         public override void NotifyAboutWork(DatabaseChange change)
         {
@@ -129,6 +139,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         protected override int LoadInternal(IEnumerable<OlapTransformedItems> records, DocumentsOperationContext context, OlapEtlStatsScope scope)
         {
+            if (_forTestingPurposes?.SimulateLoadFailure == true)
+                throw new InvalidOperationException(nameof(_forTestingPurposes.SimulateLoadFailure));
+
             var count = 0;
             var uploadedFiles = new List<UploadInfo>();
             var localFiles = new List<string>();
@@ -193,12 +206,72 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return count;
         }
 
-        protected override void AfterAllBatchesCompleted(DateTime lastBatchTime)
+        protected override void AfterAllBatchesCompleted(DateTime lastBatchTime, bool lastBatchLoaded)
         {
-            if (Statistics.LastProcessedEtag > 0)
-                UpdateEtlProcessState(LastProcessState, lastBatchTime);
+            _forTestingPurposes?.OnAfterAllBatchesCompleted?.Invoke();
 
-            UpdateTimer(lastBatchTime);
+            try
+            {
+                if (Statistics.LastProcessedEtag > 0 && lastBatchLoaded)
+                    SaveLastBatchTime(lastBatchTime);
+            }
+            finally
+            {
+                UpdateTimer(lastBatchTime);
+            }
+        }
+
+        private void SaveLastBatchTime(DateTime lastBatchTime)
+        {
+            DateTime? lastErrorTime = null;
+
+            while (true)
+            {
+                try
+                {
+                    using (var operationCancelToken = new OperationCancelToken(CancellationToken))
+                    {
+                        AsyncHelpers.RunSync(() => BackupHelper.RunWithRetriesAsync(maxRetries: 3, () =>
+                            {
+                                try
+                                {
+                                    _forTestingPurposes?.BeforeSavingLastBatchTime?.Invoke();
+
+                                    UpdateEtlProcessState(LastProcessState, lastBatchTime);
+                                }
+                                catch (AggregateException e) when (e.InnerException is TimeoutException timeout)
+                                {
+                                    ExceptionDispatchInfo.Throw(timeout);
+                                }
+
+                                return Task.FromResult(0L);
+                            },
+                            infoMessage: "Saving the last batch time in the cluster",
+                            errorMessage: "Failed to save the last batch time in the cluster",
+                            smugglerResult: null, operationCancelToken: operationCancelToken));
+                    }
+
+                    return;
+                }
+                catch (Exception e) when (CancellationToken.IsCancellationRequested == false)
+                {
+                    // retry only the save, with fallback - leaving to the outer loop of Run() would export the pending changes right away, off schedule
+                    if (Logger.IsWarnEnabled)
+                        Logger.Warn($"{Tag} Failed to save the last batch time of ETL process '{Name}'", e);
+
+                    EnterFallbackMode(e, lastErrorTime);
+                    lastErrorTime = Database.Time.GetUtcNow();
+
+                    RecordLoadError(e.ToString(), TaskErrorStep.Persistence, count: 0);
+
+                    WaitHandle.WaitAny(new[] { CancellationToken.WaitHandle, ForceBatchRetryEvent.WaitHandle }, FallbackTime ?? TimeSpan.Zero);
+
+                    CancellationToken.ThrowIfCancellationRequested();
+
+                    ForceBatchRetryEvent.Reset();
+                    FallbackTime = null;
+                }
+            }
         }
 
         private void UpdateTimer(DateTime? lastBatchTime)
@@ -231,7 +304,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
 
         private void UpdateTimerInternal(NextBackup nextRun)
         {
-            if (Configuration.Disabled)
+            if (Configuration.Disabled || CancellationToken.IsCancellationRequested)
                 return;
 
             _timer?.Dispose();
@@ -247,6 +320,28 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 CreatedAt = DateTime.UtcNow,
                 NextBackup = nextRun
             };
+
+            if (CancellationToken.IsCancellationRequested)
+                DisposeTimer();
+        }
+
+        protected override void OnProcessStopped()
+        {
+            DisposeTimer();
+        }
+
+        public override void Dispose()
+        {
+            // a process that was never started (e.g. its transformation is disabled) isn't stopped, but its constructor created the timer
+            DisposeTimer();
+
+            base.Dispose();
+        }
+
+        private void DisposeTimer()
+        {
+            _timer?.Dispose();
+            _timer = null;
         }
 
         private DateTime GetNextRunOccurrence(string runFrequency, DateTime? lastBatchTime = null)
@@ -281,8 +376,9 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FilePath = localPath;
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
-            
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+
+            using var operationCancelToken = new OperationCancelToken(CancellationToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, operationCancelToken);
 
             try
             {
@@ -315,7 +411,8 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
 
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            using var operationCancelToken = new OperationCancelToken(CancellationToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, operationCancelToken);
 
             try
             {
@@ -358,5 +455,37 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             BackupConfiguration.CanBackupUsing(_uploaderSettings.AzureSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.GoogleCloudSettings) || 
             BackupConfiguration.CanBackupUsing(_uploaderSettings.FtpSettings);
+
+        private TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff(this);
+        }
+
+        internal sealed class TestingStuff
+        {
+            private readonly OlapEtl _parent;
+
+            internal TestingStuff(OlapEtl parent)
+            {
+                _parent = parent;
+            }
+
+            internal Action OnAfterAllBatchesCompleted;
+
+            internal Action BeforeSavingLastBatchTime;
+
+            internal bool SimulateLoadFailure;
+
+            internal void TriggerScheduledRun() => _parent._waitForChanges.Set();
+
+            internal bool IsStopped => _parent.CancellationToken.IsCancellationRequested;
+
+            internal Timer ScheduledRunTimer => _parent._timer?.Timer;
+        }
     }
 }
