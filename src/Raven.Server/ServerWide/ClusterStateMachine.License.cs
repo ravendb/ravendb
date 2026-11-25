@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.AI;
@@ -799,7 +799,7 @@ public sealed partial class ClusterStateMachine
         var subscriptionPrefix = Client.Documents.Subscriptions.SubscriptionState.SubscriptionPrefix(databaseName).ToLowerInvariant();
         using (Slice.From(allocator, subscriptionPrefix, out Slice loweredPrefix))
         {
-            var subscriptionsCount = items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0).Count();
+            var subscriptionsCount = (int)items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0).Count();
 
             if (subscriptionNamesToExclude == null)
                 return subscriptionsCount;

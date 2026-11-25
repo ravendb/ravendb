@@ -309,17 +309,44 @@ namespace Voron.Data.BTrees
             return false;
         }
 
+        internal long CountToEndOfRequiredPrefix()
+        {
+            Debug.Assert(_requiredPrefix.HasValue && _maxKey.HasValue == false);
+
+            long count = 0;
+            byte* lastLeaf = null; // the leaf where the prefix ends
+            while (true)
+            {
+                var page = _currentPage;
+                var lastPosition = page.NumberOfEntries - 1;
+                if (page.Base != lastLeaf && page.LastSearchPosition < lastPosition)
+                {
+                    using (TreeNodeHeader.ToSlicePtr(_tx.Allocator, page.GetNode(lastPosition), out Slice lastKey))
+                    {
+                        if (SliceComparer.StartWith(lastKey, _requiredPrefix))
+                        {
+                            count += lastPosition - page.LastSearchPosition;
+                            page.LastSearchPosition = lastPosition;
+                        }
+                        else
+                        {
+                            lastLeaf = page.Base;
+                        }
+                    }
+                }
+
+                count++;
+                if (MoveNext() == false)
+                    return count;
+            }
+        }
+
         public bool Skip(long count)
         {
-            if (count != 0)
+            for (long i = 0; i < Math.Abs(count); i++)
             {
-                var moveMethod = (count > 0) ? (Func<bool>)MoveNext : MovePrev;
-
-                for (long i = 0; i < Math.Abs(count); i++)
-                {
-                    if (moveMethod() == false)
-                        break;
-                }
+                if ((count > 0 ? MoveNext() : MovePrev()) == false)
+                    break;
             }
 
             if (DoRequireValidation)

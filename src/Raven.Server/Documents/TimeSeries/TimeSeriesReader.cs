@@ -572,9 +572,9 @@ namespace Raven.Server.Documents.TimeSeries
             using (Slice.From(_context.Allocator, key, keySize - sizeof(long), out var prefix))
             using (Slice.From(_context.Allocator, key, keySize, out var current))
             {
-                foreach (var (nextKey, tvh) in _table.SeekByPrimaryKeyPrefix(prefix, current, 0))
+                if (_table.SeekOnePrimaryKeyPrefix(prefix, current, out var next))
                 {
-                    _tvr = tvh.Reader;
+                    _tvr = next;
 
                     InitializeSegment(out baselineMilliseconds, out _currentSegment);
 

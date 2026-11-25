@@ -504,10 +504,8 @@ namespace Raven.Server.Documents.TimeSeries
             var offset = key.Size - sizeof(long);
             *(long*)(key.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
 
-            foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(prefix, key, 0))
-            {
-                return GetBaseline(tvh.Reader);
-            }
+            if (table.SeekOnePrimaryKeyPrefix(prefix, key, out var reader))
+                return GetBaseline(reader);
 
             return null;
         }

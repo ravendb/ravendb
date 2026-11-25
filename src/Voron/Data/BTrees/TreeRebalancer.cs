@@ -117,7 +117,8 @@ namespace Voron.Data.BTrees
 
                 Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-                var sibling = SetupMoveOrMerge(page, parentPage);
+                using var siblingRental = _tree.RentPage(out var siblingInstance);
+                var sibling = SetupMoveOrMerge(page, parentPage, siblingInstance);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
                 if (page.PageType != sibling.PageType || (page.IsBranch && page.CollapsedLevels != sibling.CollapsedLevels))
@@ -246,12 +247,12 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage)
+        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage, TreePage siblingInstance)
         {
             TreePage sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
-                sibling = _tree.ModifyPage(parentPage.GetNode(1)->PageNumber);
+                sibling = _tree.ModifyPage(parentPage.GetNode(1)->PageNumber, siblingInstance);
 
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
@@ -263,7 +264,7 @@ namespace Voron.Data.BTrees
                 if (beyondLast)
                     parentPage.LastSearchPosition--;
                 parentPage.LastSearchPosition--;
-                sibling = _tree.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber);
+                sibling = _tree.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, siblingInstance);
                 parentPage.LastSearchPosition++;
                 if (beyondLast)
                     parentPage.LastSearchPosition++;

@@ -714,11 +714,10 @@ namespace Raven.Server.Documents.Revisions
         private unsafe CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
-            var tvr = table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
-            if (tvr == null)
+            if (table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, out var reader) == false)
                 return null;
 
-            var ptr = tvr.Reader.Read((int)RevisionsTable.Document, out int size);
+            var ptr = reader.Read((int)RevisionsTable.Document, out int size);
             var data = new BlittableJsonReaderObject(ptr, size, context);
 
             return _documentsStorage.ExtractCollectionName(context, data);
@@ -783,14 +782,11 @@ namespace Raven.Server.Documents.Revisions
                 numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
             }
 
-            while (true)
+            while (numberOfRevisionsToDelete > deleted) // checked before seeking again
             {
                 var ended = true;
                 foreach (var read in table.SeekForwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, result.Skip, startsWith: true))
                 {
-                    if (numberOfRevisionsToDelete <= deleted)
-                        break;
-
                     var tvr = read.Result.Reader;
                     var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
 
@@ -917,14 +913,13 @@ namespace Raven.Server.Documents.Revisions
             using (GetKeyWithEtag(context, lowerId, etag: long.MaxValue, out var compoundPrefix))
             {
                 table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
-                var holder = table.SeekOneBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], lowerIdPrefix, compoundPrefix);
-                if (holder == null)
+                if (table.SeekOneBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], lowerIdPrefix, compoundPrefix, out var reader) == false)
                 {
                     table = null;
                     return null;
                 }
 
-                return TableValueToRevision(context, ref holder.Reader, DocumentFields.ChangeVector);
+                return TableValueToRevision(context, ref reader, DocumentFields.ChangeVector);
             }
         }
 
@@ -1975,14 +1970,13 @@ namespace Raven.Server.Documents.Revisions
                         };
                     }
 
-                    var first = table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice);
-                    if (first == null)
+                    if (table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, out var first) == false)
                         return null;
 
                     // document reached max number of revisions. So we take the oldest.
                     progressResult.Warn(id,
                         $"Reverted to oldest revision, since no revision prior to '{parameters.Before}' was found and you reached the maximum number of revisions ({count}).");
-                    return TableValueToRevision(context, ref first.Reader);
+                    return TableValueToRevision(context, ref first);
                 }
 
                 return result;
@@ -2163,9 +2157,9 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private bool GetRevisionsByCollection(DocumentsOperationContext context, string collection, long lastScannedEtag, out IEnumerable<TableValueHolder> revisions)
+        private bool GetRevisionsByCollection(DocumentsOperationContext context, string collection, long lastScannedEtag, out Table.FixedSizeIndexSeek revisions)
         {
-            revisions = null;
+            revisions = default;
             lastScannedEtag = long.Max(0, lastScannedEtag - 1);
 
             if (collection == null)
@@ -2500,7 +2494,7 @@ namespace Raven.Server.Documents.Revisions
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
             {
-                IEnumerable<Table.TableValueHolder> tvrs = null;
+                Table.FixedSizeIndexSeek tvrs;
                 if (collection != null)
                 {
                     var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -2896,17 +2890,16 @@ namespace Raven.Server.Documents.Revisions
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
             {
-                var tvr = table.SeekOneBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey);
-                if (tvr == null)
+                if (table.SeekOneBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, out var tvr) == false)
                 {
                     Debug.Assert(false, "Cannot happen.");
                     return true;
                 }
 
-                var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
-                var flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr.Reader);
+                var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
+                var flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr);
 
-                context.Transaction.InnerTransaction.ForgetAbout(tvr.Reader.Id);
+                context.Transaction.InnerTransaction.ForgetAbout(tvr.Id);
 
                 Debug.Assert(revisionsBinEntryEtag <= etag, $"Revisions bin entry for '{lowerId}' etag candidate ({etag}) cannot meet a bigger etag ({revisionsBinEntryEtag}).");
                 return (flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision && revisionsBinEntryEtag >= etag;
@@ -3023,21 +3016,18 @@ namespace Raven.Server.Documents.Revisions
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
 
-            var iterator = table?.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0);
+            var iterator = table == null ? default : table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0);
 
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
 
         private IEnumerable<(Document Previous, Document Current)> GetCurrentAndPreviousRevisionsFrom(
             DocumentsOperationContext context,
-            IEnumerable<Table.TableValueHolder> iterator,
+            Table.FixedSizeIndexSeek iterator,
             Table table,
             long take)
         {
             if (table == null)
-                yield break;
-
-            if (iterator == null)
                 yield break;
 
             var docsSchemaIndex = _documentsStorage.RevisionsStorage.RevisionsSchema.Indexes[IdAndEtagSlice];

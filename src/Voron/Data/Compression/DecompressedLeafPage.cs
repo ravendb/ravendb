@@ -131,7 +131,7 @@ namespace Voron.Data.Compression
                     Search(tx, key);
 
                     // the uncompressed page goes on the cursor, it might have some modifications (e.g. deleted node)
-                    var cursor = tree.BuildCursor(key, this);
+                    using var cursorRental = tree.BuildCursor(key, this, out var cursor);
 
                     var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, cursor,
                         splittingOnDecompressed: true);

@@ -307,7 +307,7 @@ namespace Voron.Data.BTrees
 
                 RemoveLeafNode(decompressed);
 
-                var cursor = BuildCursor(keyToDelete, page);
+                using var cursorRental = BuildCursor(keyToDelete, page, out var cursor);
                 var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                 var changedPage = (TreePage)decompressed;
                 while (changedPage != null)

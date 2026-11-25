@@ -21,6 +21,10 @@ namespace Voron.Data.BTrees
         private TreePage[] _deepPath;
         private int _count;
 
+        // page instances kept for the branch pages of the next path started with StartPath, one per level, so a descent allocates none
+        private InlinePath _branchPagesCache;
+        private bool _reuseBranchPages;
+
         private Span<TreePage> Path
         {
             get
@@ -38,14 +42,34 @@ namespace Voron.Data.BTrees
 
         public TreePage ParentPage => Path[_count - 2];
 
+        internal void StartPath()
+        {
+            Clear();
+            _reuseBranchPages = true;
+        }
+
         unsafe void ITreeDescentPath.PushBranch(TreePage branch)
         {
-            // we copy, beause the branch we are passed is reused by the caller
-            Push(new TreePage(branch.Base, branch.PageSize)
+            // the caller points its instance at the next level, so the cursor keeps its own
+            TreePage page;
+            if (_reuseBranchPages && _count < InlineDepth)
             {
-                LastSearchPosition = branch.LastSearchPosition,
-                LastMatch = branch.LastMatch
-            });
+                ref var own = ref _branchPagesCache[_count];
+                page = own ??= new TreePage(null, branch.PageSize);
+                page.Base = branch.Base;
+                page.Dirty = false;
+#if VALIDATE
+                page.Freed = false;
+#endif
+            }
+            else
+            {
+                page = new TreePage(branch.Base, branch.PageSize);
+            }
+
+            page.LastSearchPosition = branch.LastSearchPosition;
+            page.LastMatch = branch.LastMatch;
+            Push(page);
         }
 
         public void Push(TreePage p)
@@ -76,6 +100,7 @@ namespace Voron.Data.BTrees
         {
             Path[.._count].Clear();
             _count = 0;
+            _reuseBranchPages = false;
         }
 
         /// <summary>

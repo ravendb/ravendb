@@ -51,6 +51,9 @@ namespace Voron.Data.BTrees
         private PagePool _pagePool;
         private int _rentedPages;
 
+        private TreeCursor _cursor;
+        private bool _cursorInUse;
+
         private Dictionary<Slice, FixedSizeTree> _fixedSizeTrees;
         private Dictionary<Slice, FixedSizeTree<double>> _fixedSizeTreesForDouble;
 
@@ -388,7 +391,7 @@ namespace Voron.Data.BTrees
         }
 
         // nothing may keep the page after the rental ends, the next operations on this tree point it at other pages
-        private PageRental RentPage(out TreePage page)
+        internal PageRental RentPage(out TreePage page)
         {
             page = _rentedPages < PagePoolSize
                 ? _pagePool[_rentedPages] ??= new TreePage(null, Constants.Storage.PageSize)
@@ -397,7 +400,7 @@ namespace Voron.Data.BTrees
             return new PageRental(this);
         }
 
-        private readonly struct PageRental(Tree tree) : IDisposable
+        internal readonly struct PageRental(Tree tree) : IDisposable
         {
             public void Dispose() => tree._rentedPages--;
         }
@@ -506,7 +509,7 @@ namespace Voron.Data.BTrees
 
                 if (IsLeafCompressionSupported == false || TryCompressPageNodes(key, len, page, out decompressedPageToSplit) == false)
                 {
-                    var cursor = BuildCursor(key, page);
+                    using var cursorRental = BuildCursor(key, page, out var cursor);
 
                     var pageSplitter = new TreePageSplitter(_llt, this, key, len, pageNumber, nodeType, cursor, pageDecompressed: decompressedPageToSplit);
                     dataPos = pageSplitter.Execute();
@@ -621,23 +624,21 @@ namespace Voron.Data.BTrees
                 return newPage;
             }
 
-            page.Base = _llt.ModifyPage(page.PageNumber).Pointer; // reuse the instance
-            page.Dirty = true;
-            OnPageModified(page);
-
-            return page;
+            return ModifyPage(page.PageNumber, page); // reuse the instance
         }
 
-        public TreePage ModifyPage(long pageNumber)
+        internal TreePage ModifyPage(long pageNumber, TreePage instance)
         {
             AssertNotDisposed();
 
-            var newPage = GetWriteableTreePage(pageNumber);
-            newPage.Dirty = true;
-            OnPageModified(newPage);
+            instance.Base = _llt.ModifyPage(pageNumber).Pointer;
+            instance.Dirty = true;
+            OnPageModified(instance);
 
-            return newPage;
+            return instance;
         }
+
+        public TreePage ModifyPage(long pageNumber) => ModifyPage(pageNumber, new TreePage(null, Constants.Storage.PageSize));
 
         private void OnPageModified(TreePage page)
         {
@@ -783,23 +784,12 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal TreePage GetReadOnlyTreePage(long pageNumber)
-        {
-            var page = _llt.GetPage(pageNumber);
-            return new TreePage(page.Pointer, Constants.Storage.PageSize);
-        }
+        internal TreePage GetReadOnlyTreePage(long pageNumber) => UseInstance(null, _llt.GetPage(pageNumber).Pointer);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal Page GetReadOnlyPage(long pageNumber)
         {
             return _llt.GetPage(pageNumber);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal TreePage GetWriteableTreePage(long pageNumber)
-        {
-            var page = _llt.ModifyPage(pageNumber);
-            return new TreePage(page.Pointer, Constants.Storage.PageSize);
         }
 
         internal TreePage FindPageFor(Slice key, out TreeNodeHeader* node, bool allowCompressed = false, bool backward = false, TreePage leafInstance = null)
@@ -825,10 +815,12 @@ namespace Voron.Data.BTrees
             return SearchForPage(key, allowCompressed, out node, branches, backward: backward, leafInstance: leafInstance);
         }
 
-        // the branch pages on the path to the key, with the caller's leaf instance on top
-        internal TreeCursor BuildCursor(Slice key, TreePage leaf)
+        internal CursorRental BuildCursor(Slice key, TreePage leaf, out TreeCursor cursor)
         {
-            var cursor = new TreeCursor();
+            var rented = _cursorInUse == false;
+            cursor = rented ? _cursor ??= new TreeCursor() : new TreeCursor();
+            _cursorInUse = true;
+            cursor.StartPath();
 
             var leafPageNumber = ((TreePageHeader*)DescendToLeaf(key, cursor, out _, out _))->PageNumber;
             if (leafPageNumber != leaf.PageNumber)
@@ -836,7 +828,12 @@ namespace Voron.Data.BTrees
                     $"Could not build the cursor for leaf page {leaf.PageNumber}: descending by key '{key}' reaches page {leafPageNumber}, tree: {Name}");
 
             cursor.Push(leaf);
-            return cursor;
+            return new CursorRental(rented ? this : null);
+        }
+
+        internal readonly struct CursorRental(Tree tree) : IDisposable
+        {
+            public void Dispose() => tree?._cursorInUse = false;
         }
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node) => SearchForPage(key, allowCompressed: false, out node);
@@ -845,7 +842,7 @@ namespace Voron.Data.BTrees
             bool backward = false, TreePage leafInstance = null)
         {
             var leaf = DescendToLeaf(key, branches, out bool leftmostPage, out bool rightmostPage);
-            var p = UseLeafInstance(leafInstance, leaf);
+            var p = UseInstance(leafInstance, leaf);
 
             if (p.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page " + p.PageNumber);
@@ -862,14 +859,14 @@ namespace Voron.Data.BTrees
         }
 
         // Points the instance at the page, or creates one when there is no instance to reuse.
-        private static TreePage UseLeafInstance(TreePage leafInstance, byte* pagePointer)
+        private static TreePage UseInstance(TreePage instance, byte* pagePointer)
         {
-            if (leafInstance == null)
+            if (instance == null)
                 return new TreePage(pagePointer, Constants.Storage.PageSize);
 
-            leafInstance.Base = pagePointer;
-            leafInstance.Dirty = false;
-            return leafInstance;
+            instance.Base = pagePointer;
+            instance.Dirty = false;
+            return instance;
         }
 
         // Returns the leaf page that the key belongs to. The branch pages on the way are pushed to branches, when given.
@@ -996,7 +993,7 @@ namespace Voron.Data.BTrees
 
             AssertCachedLeafIsCurrent(key, pagePointer);
 
-            page = UseLeafInstance(leafInstance, pagePointer);
+            page = UseInstance(leafInstance, pagePointer);
 
             if (page.IsLeaf == false)
                 VoronUnrecoverableErrorException.Raise(_llt, "Index points to a non leaf page");
@@ -1135,7 +1132,7 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            var cursor = BuildCursor(key, page);
+            using var cursorRental = BuildCursor(key, page, out var cursor);
             var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
             var changedPage = page;
             while (changedPage != null)
@@ -1260,7 +1257,7 @@ namespace Voron.Data.BTrees
 
                 Debug.Assert(p.IsLeaf && p.IsCompressed && p.PageNumber == emptyPage.PageNumber);
 
-                var cursor = BuildCursor(key, p);
+                using var cursorRental = BuildCursor(key, p, out var cursor);
                 var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
                 var changedPage = (TreePage)emptyPage;
                 while (changedPage != null)
@@ -1308,7 +1305,7 @@ namespace Voron.Data.BTrees
                     }
                 }
 
-                var cursor = BuildCursor(key, p);
+                using var cursorRental = BuildCursor(key, p, out var cursor);
                 while (cursor.PageCount > 0)
                 {
                     if (cursor.CurrentPage.PageNumber == page.PageNumber)
