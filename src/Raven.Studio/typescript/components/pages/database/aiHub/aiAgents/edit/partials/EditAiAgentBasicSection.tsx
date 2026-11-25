@@ -42,6 +42,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                         "name",
                         "identifier",
                         "connectionStringName",
+                        "maxModelIterationsPerCall",
                         "systemPrompt",
                         "sampleObject",
                         "outputSchema",
@@ -116,6 +117,35 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                             type="Ai"
                             modelType="Chat"
                         />
+                        <FormGroup>
+                            <FormLabel>
+                                Max model iterations per call
+                                <PopoverWithHoverWrapper
+                                    message={
+                                        <>
+                                            The maximum number of times the LLM can request tools (query tools, action
+                                            tools and sub-agents) for a single user prompt.
+                                            <br />
+                                            <br />
+                                            When the limit is reached, the LLM must reply without using tools. Set{" "}
+                                            <code>0</code> to turn off tools entirely.
+                                            <br />
+                                            <br />A limit set in the conversation creation options takes priority over
+                                            this value. When this agent runs as a sub-agent, it gets the iterations that
+                                            its parent agent has left.
+                                        </>
+                                    }
+                                >
+                                    <Icon icon="info-new" />
+                                </PopoverWithHoverWrapper>
+                            </FormLabel>
+                            <FormInput
+                                type="number"
+                                control={control}
+                                name="maxModelIterationsPerCall"
+                                placeholder={`Default (${DEFAULT_MAX_MODEL_ITERATIONS_PER_CALL})`}
+                            />
+                        </FormGroup>
                         <FormGroup>
                             <FormLabel>
                                 System prompt
@@ -203,6 +233,8 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
         </>
     );
 }
+
+const DEFAULT_MAX_MODEL_ITERATIONS_PER_CALL = 16;
 
 const agentDescriptionPlaceholder = `Describe the agent's purpose and capabilities. 
 E.g.: You are a customer support assistant for an e-commerce platform, capable of answering questions about products and orders.

@@ -26,8 +26,12 @@ function mapFromDto(
                 // messagesLengthAfterTruncate: null,
                 maxTokensBeforeSummarization: null,
                 maxTokensAfterSummarization: null,
+                summarizationTaskBeginningPrompt: null,
+                summarizationTaskEndPrompt: null,
+                summarizationResultPrefix: null,
             },
             subAgents: [],
+            maxModelIterationsPerCall: null,
         };
     }
 
@@ -81,6 +85,9 @@ function mapFromDto(
             // messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
+            summarizationTaskBeginningPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskBeginningPrompt ?? null,
+            summarizationTaskEndPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskEndPrompt ?? null,
+            summarizationResultPrefix: dto.ChatTrimming?.Tokens?.ResultPrefix ?? null,
         },
         subAgents:
             dto.SubAgents?.map((x) => ({
@@ -88,6 +95,7 @@ function mapFromDto(
                 description: x.Description,
                 isEditing: false,
             })) ?? [],
+        maxModelIterationsPerCall: dto.MaxModelIterationsPerCall ?? null,
     };
 }
 
@@ -141,7 +149,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 ParametersSchema: x.parametersSchema || null,
                 Strict: !!x.parametersSchema && (x.strict ?? true),
             })) ?? [],
-        MaxModelIterationsPerCall: null,
+        MaxModelIterationsPerCall: formData.maxModelIterationsPerCall ?? null,
         ChatTrimming:
             formData.trimming?.method != null
                 ? {
@@ -157,9 +165,10 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                               ? {
                                     MaxTokensBeforeSummarization: formData.trimming.maxTokensBeforeSummarization,
                                     MaxTokensAfterSummarization: formData.trimming.maxTokensAfterSummarization,
-                                    ResultPrefix: null,
-                                    SummarizationTaskBeginningPrompt: null,
-                                    SummarizationTaskEndPrompt: null,
+                                    ResultPrefix: formData.trimming.summarizationResultPrefix || null,
+                                    SummarizationTaskBeginningPrompt:
+                                        formData.trimming.summarizationTaskBeginningPrompt || null,
+                                    SummarizationTaskEndPrompt: formData.trimming.summarizationTaskEndPrompt || null,
                                 }
                               : null,
                       //   Truncate:
