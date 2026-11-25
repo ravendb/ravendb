@@ -59,6 +59,7 @@ export default function AiAgentsInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "AI Agents",
+        cloudOptionalFeature: "ai",
         featureIcon: "ai-agents",
         community: { value: false },
         professional: { value: false },

@@ -82,6 +82,7 @@ export function EditOlapEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "OLAP ETL",
+        cloudOptionalFeature: "olapEtl",
         featureIcon: "olap-etl",
         community: { value: false },
         professional: { value: false },

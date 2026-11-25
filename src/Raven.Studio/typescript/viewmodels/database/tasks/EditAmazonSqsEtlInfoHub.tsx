@@ -77,6 +77,7 @@ export function EditAmazonSqsEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Amazon SQS ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "amazon-sqs-etl",
         community: { value: false },
         professional: { value: false },

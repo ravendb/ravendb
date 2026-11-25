@@ -6,6 +6,7 @@ import { isEqual, uniqueId, uniqWith } from "lodash";
 import { ReactNode } from "react";
 import Table from "react-bootstrap/Table";
 import Button from "react-bootstrap/Button";
+import Badge from "react-bootstrap/Badge";
 import IconName from "typings/server/icons";
 import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "./Icon";
@@ -36,10 +37,20 @@ export interface FeatureAvailabilityValueData {
     footnote?: FeatureAvailabilityFootnote;
 }
 
+export type CloudOptionalFeature =
+    | "dataGovernance"
+    | "olapEtl"
+    | "queueEtl"
+    | "queueSink"
+    | "snowflakeEtl"
+    | "powerBi"
+    | "ai";
+
 export interface FeatureAvailabilityData {
     featureName?: string;
     featureIcon?: IconName;
     helperInfo?: ReactNode;
+    cloudOptionalFeature?: CloudOptionalFeature;
     community: FeatureAvailabilityValueData;
     professional: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
@@ -60,7 +71,10 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
 
     const { allLicenseTextTypes, getIsCurrent, getLicenseTypeClass } = useLicenseTextTypes();
 
-    const columns = getAvailabilityColumns(currentLicense, isCloud);
+    const getCloudFeatureFootnote = useCloudFeatureFootnote();
+    const columns = getAvailabilityColumns(currentLicense, isCloud).map((column) =>
+        column.canBeTurnedOnInCloud ? withCloudFeatureFootnote(column, getCloudFeatureFootnote) : column
+    );
     const footnotes: FeatureAvailabilityFootnote[] = uniqWith(
         data.flatMap((row) => columns.map((column) => column.getValue(row).footnote)).filter(Boolean),
         isEqual
@@ -166,7 +180,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                         >
                                             {valueData.footnote ? (
                                                 <div className="position-relative d-inline-block">
-                                                    {formatAvailabilityValue(valueData, column.canBeEnabledInCloud)}
+                                                    {formatAvailabilityValue(valueData, column.canBeTurnedOnInCloud)}
                                                     <FootnoteMark
                                                         footnote={valueData.footnote}
                                                         number={footnoteNumber}
@@ -174,7 +188,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                                     />
                                                 </div>
                                             ) : (
-                                                formatAvailabilityValue(valueData, column.canBeEnabledInCloud)
+                                                formatAvailabilityValue(valueData, column.canBeTurnedOnInCloud)
                                             )}
                                         </td>
                                     );
@@ -209,7 +223,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                         <div key={idx} className="hstack gap-1 align-items-baseline">
                             <span className="small-label text-info">{idx + 1}</span>
                             <span id={getFootnoteId(idx + 1)} className="text-muted">
-                                {footnote.title}: {footnote.items.map((x) => x.label).join(", ")}
+                                {formatFootnote(footnote)}
                             </span>
                         </div>
                     ))}
@@ -236,7 +250,7 @@ interface AvailabilityColumn {
     className: string;
     isCurrent: boolean;
     getValue: (data: FeatureAvailabilityData) => FeatureAvailabilityValueData;
-    canBeEnabledInCloud?: boolean;
+    canBeTurnedOnInCloud?: boolean;
 }
 
 function getAvailabilityColumns(
@@ -265,11 +279,13 @@ function getAvailabilityColumns(
         });
     }
 
+    const isEnterpriseCurrent = currentLicense === "Enterprise";
+
     columns.push({
         className: "enterprise",
-        isCurrent: currentLicense === "Enterprise",
+        isCurrent: isEnterpriseCurrent,
         getValue: (x) => x.enterprise,
-        canBeEnabledInCloud: isCloud,
+        canBeTurnedOnInCloud: isCloud && isEnterpriseCurrent,
     });
 
     if (!isCloud) {
@@ -285,7 +301,7 @@ function getAvailabilityColumns(
             className: "developer",
             isCurrent: true,
             getValue: getEnterpriseAiValue,
-            canBeEnabledInCloud: isCloud,
+            canBeTurnedOnInCloud: isCloud,
         });
     }
 
@@ -308,15 +324,20 @@ function FootnoteMark({ footnote, number, descriptionId }: FootnoteMarkProps) {
             wrapperClassName="footnote-mark"
             message={
                 <div className="footnote-popover vstack gap-2 p-2 text-start">
-                    <div>{footnote.title}:</div>
-                    <div className="vstack gap-1">
-                        {footnote.items.map((item) => (
-                            <div key={item.label} className="hstack gap-1">
-                                {item.icon && <Icon icon={item.icon} margin="m-0" />}
-                                {item.label}
-                            </div>
-                        ))}
+                    <div>
+                        {footnote.title}
+                        {footnote.items.length > 0 && ":"}
                     </div>
+                    {footnote.items.length > 0 && (
+                        <div className="vstack gap-1">
+                            {footnote.items.map((item) => (
+                                <div key={item.label} className="hstack gap-1">
+                                    {item.icon && <Icon icon={item.icon} margin="m-0" />}
+                                    {item.label}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             }
         >
@@ -483,8 +504,56 @@ function UpgradeLinkButton() {
     );
 }
 
-function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnabledInCloud?: boolean): ReactNode {
-    const value = data.overwrittenValue ?? data.value;
+function getDisplayedValue(data: FeatureAvailabilityValueData): AvailabilityValue {
+    return data.overwrittenValue ?? data.value;
+}
+
+function isTurnedOffInCloud(column: AvailabilityColumn, row: FeatureAvailabilityData): boolean {
+    return column.canBeTurnedOnInCloud && getDisplayedValue(column.getValue(row)) === false;
+}
+
+function useCloudFeatureFootnote() {
+    const t = useStudioTranslation("featureAvailabilitySummary");
+
+    return (row: FeatureAvailabilityData): FeatureAvailabilityFootnote => ({
+        title: row.cloudOptionalFeature
+            ? t("cloudFeatureFootnoteForFeature", {
+                  feature: t("cloudFeatureName", { context: row.cloudOptionalFeature }),
+              })
+            : t("cloudFeatureFootnote"),
+        items: [],
+    });
+}
+
+function withCloudFeatureFootnote(
+    column: AvailabilityColumn,
+    getCloudFeatureFootnote: (row: FeatureAvailabilityData) => FeatureAvailabilityFootnote
+): AvailabilityColumn {
+    return {
+        ...column,
+        getValue: (row) =>
+            isTurnedOffInCloud(column, row)
+                ? { ...column.getValue(row), footnote: getCloudFeatureFootnote(row) }
+                : column.getValue(row),
+    };
+}
+
+function formatFootnote(footnote: FeatureAvailabilityFootnote): string {
+    if (footnote.items.length === 0) {
+        return footnote.title;
+    }
+
+    return `${footnote.title}: ${footnote.items.map((x) => x.label).join(", ")}`;
+}
+
+function CloudFeatureOffBadge() {
+    const t = useStudioTranslation("featureAvailabilitySummary");
+
+    return <Badge bg="faded-warning">{t("cloudFeatureOff")}</Badge>;
+}
+
+function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeTurnedOnInCloud?: boolean): ReactNode {
+    const value = getDisplayedValue(data);
 
     let formattedValue: ReactNode = value;
 
@@ -492,25 +561,10 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, canBeEnable
         formattedValue = <Icon icon="check" margin="m-0" color="success" />;
     }
     if (value === false) {
-        if (canBeEnabledInCloud) {
-            const cloudOnDemandId = "cloud-on-demand-" + uniqueId();
-            return (
-                <OverlayTrigger
-                    placement="top"
-                    overlay={
-                        <Tooltip id={cloudOnDemandId}>
-                            You can enable this feature in RavenDB Cloud Portal or by contacting support.
-                        </Tooltip>
-                    }
-                >
-                    <div className="d-inline-block">
-                        <Icon id={cloudOnDemandId} icon="upgrade-arrow" margin="m-0" color="success" />
-                    </div>
-                </OverlayTrigger>
-            );
-        } else {
-            formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
+        if (canBeTurnedOnInCloud) {
+            return <CloudFeatureOffBadge />;
         }
+        formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
     }
     if (value === Infinity) {
         formattedValue = <Icon icon="infinity" margin="m-0" />;

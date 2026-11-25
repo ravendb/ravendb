@@ -3,7 +3,7 @@ import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./ConnectionStrings.stories";
 import { rtlRender_WithWaitForLoad, within } from "test/rtlTestUtils";
 
-const { DefaultConnectionStrings } = composeStories(stories);
+const { DefaultConnectionStrings, CloudProductionQueueEtlNotTurnedOn } = composeStories(stories);
 
 const selectors = {
     edit: /edit connection string/i,
@@ -77,4 +77,17 @@ describe("ConnectionStrings", () => {
             );
         }
     );
+
+    it("can name the Cloud feature to turn on for queue connection strings", async () => {
+        const { screen, fireClick } = await rtlRender_WithWaitForLoad(<CloudProductionQueueEtlNotTurnedOn />);
+
+        await fireClick(screen.getByText(selectors.licensing));
+
+        expect(screen.getAllByText("Not turned on")).toHaveLength(5);
+        expect(
+            screen.getByText(
+                "Turn on Queue ETL in Cloud Portal (Product → Features). On a yearly plan, contact support."
+            )
+        ).toBeInTheDocument();
+    });
 });

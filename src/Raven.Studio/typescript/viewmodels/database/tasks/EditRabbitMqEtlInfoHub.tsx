@@ -82,6 +82,7 @@ export function EditRabbitMqEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "RabbitMQ ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "rabbitmq-etl",
         community: { value: false },
         professional: { value: false },

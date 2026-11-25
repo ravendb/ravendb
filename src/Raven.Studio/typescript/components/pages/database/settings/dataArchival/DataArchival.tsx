@@ -115,11 +115,14 @@ export default function DataArchival() {
                                 title="Data Archival"
                                 icon="data-archival"
                                 licenseBadgeText={hasDataArchival ? null : "Enterprise"}
+                                cloudOptionalFeature="dataGovernance"
                             />
                             <ConditionalPopover
                                 conditions={{
                                     isActive: !hasDataArchival,
-                                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                    message: (
+                                        <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                    ),
                                 }}
                             >
                                 <ButtonWithSpinner
@@ -236,6 +239,7 @@ function mapToFormData(dto: DataArchivalConfiguration): DataArchivalFormData {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Data Archival",
+        cloudOptionalFeature: "dataGovernance",
         featureIcon: "data-archival",
         community: { value: false },
         professional: { value: false },

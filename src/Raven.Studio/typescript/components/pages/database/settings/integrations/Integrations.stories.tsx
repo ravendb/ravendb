@@ -5,6 +5,7 @@ import {
     withBootstrap5,
     databaseAccessArgType,
     withForceRerender,
+    licenseArgType,
 } from "test/storybookTestUtils";
 import Integrations from "./Integrations";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -21,19 +22,6 @@ export default {
             url: "https://www.figma.com/design/VCQM6MOuGpbzDRjqi46Dw0/Pages---Integrations?node-id=0-1&t=6ANVvRyQ0duJ25uq-1",
         },
     },
-} satisfies Meta;
-
-interface IntegrationsStoryArgs {
-    databaseAccess: databaseAccessLevel;
-    isSharded: boolean;
-    hasPowerBi: boolean;
-    hasPostgreSqlIntegration: boolean;
-    credentialsDto: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames;
-    isPostgreSqlSupport: boolean;
-}
-
-export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
-    name: "Integrations",
     render: (args) => {
         const { databases, accessManager, license } = mockStore;
         const { databasesService } = mockServices;
@@ -52,6 +40,8 @@ export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
         });
 
         license.with_License({
+            Type: args.licenseType,
+            IsCloud: args.isCloud,
             HasPowerBI: args.hasPowerBi,
             HasPostgreSqlIntegration: args.hasPostgreSqlIntegration,
         });
@@ -64,13 +54,39 @@ export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
     },
     argTypes: {
         databaseAccess: databaseAccessArgType,
+        licenseType: licenseArgType,
     },
     args: {
         databaseAccess: "DatabaseAdmin",
+        licenseType: "Enterprise",
+        isCloud: false,
         isSharded: false,
         hasPowerBi: true,
         hasPostgreSqlIntegration: true,
         isPostgreSqlSupport: true,
         credentialsDto: DatabasesStubs.integrationsPostgreSqlCredentials(),
+    },
+} satisfies Meta<IntegrationsStoryArgs>;
+
+interface IntegrationsStoryArgs {
+    databaseAccess: databaseAccessLevel;
+    licenseType: Raven.Server.Commercial.LicenseType;
+    isCloud: boolean;
+    isSharded: boolean;
+    hasPowerBi: boolean;
+    hasPostgreSqlIntegration: boolean;
+    credentialsDto: Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames;
+    isPostgreSqlSupport: boolean;
+}
+
+export const IntegrationsStory: StoryObj<IntegrationsStoryArgs> = {
+    name: "Integrations",
+};
+
+export const CloudProductionPowerBiNotTurnedOn: StoryObj<IntegrationsStoryArgs> = {
+    args: {
+        isCloud: true,
+        hasPowerBi: false,
+        hasPostgreSqlIntegration: false,
     },
 };

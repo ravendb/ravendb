@@ -8,6 +8,7 @@ import IconName from "typings/server/icons";
 import { ThemeColor } from "components/models/common";
 import { uniqueId } from "lodash";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
+import type { CloudOptionalFeature } from "components/common/FeatureAvailabilitySummary";
 import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Popover from "react-bootstrap/Popover";
 import Accordion from "react-bootstrap/Accordion";
@@ -22,6 +23,7 @@ interface AboutViewProps {
 interface AboutViewHeadingBaseProps {
     title: ReactNode;
     licenseBadgeText?: LicenseBadgeText;
+    cloudOptionalFeature?: CloudOptionalFeature;
     iconAddon?: IconName;
     marginBottom?: number;
     className?: string;
@@ -41,7 +43,7 @@ export type AboutViewHeadingProps = AboutViewHeadingBaseProps &
     (AboutViewHeadingWithIcon | AboutViewHeadingWithBackUrl);
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className, backUrl } = props;
+    const { title, icon, iconAddon, licenseBadgeText, cloudOptionalFeature, marginBottom, className, backUrl } = props;
 
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`, className)}>
@@ -55,7 +57,13 @@ const AboutViewHeading = (props: AboutViewHeadingProps) => {
             ) : (
                 icon && <Icon icon={icon} addon={iconAddon} />
             )}
-            {title} {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
+            {title}{" "}
+            {licenseBadgeText != null && (
+                <LicenseRestrictedBadge
+                    licenseRequired={licenseBadgeText}
+                    cloudOptionalFeature={cloudOptionalFeature}
+                />
+            )}
         </h2>
     );
 };

@@ -2,7 +2,7 @@ import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/settings/remoteAttachments/RemoteAttachments.stories";
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 
-const { DefaultRemoteAttachments } = composeStories(stories);
+const { DefaultRemoteAttachments, CloudProductionNotTurnedOn } = composeStories(stories);
 
 const selectors = {
     titles: {
@@ -72,5 +72,18 @@ describe("RemoteAttachments", () => {
         expect(enableSwitch).toBeChecked();
 
         expect(addButton).toBeEnabled();
+    });
+
+    it("tells where to turn the feature on when it is off on Cloud Production", async () => {
+        const { screen, user } = await rtlRender_WithWaitForLoad(<CloudProductionNotTurnedOn />);
+
+        await user.hover(screen.getByRole("button", { name: selectors.titles.save }).parentElement);
+
+        expect(
+            await screen.findByText(
+                "Data Governance is not turned on for your Cloud instance. Turn it on in Cloud Portal (Product → Features). On a yearly plan, contact support."
+            )
+        ).toBeInTheDocument();
+        expect(screen.queryByText(/does not support this feature/)).not.toBeInTheDocument();
     });
 });

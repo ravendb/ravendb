@@ -1,7 +1,20 @@
 import { useRavenLink } from "hooks/useRavenLink";
+import { useCloudLicenseMessage } from "hooks/useCloudLicenseMessage";
+import type { CloudOptionalFeature } from "components/common/FeatureAvailabilitySummary";
 
-export default function FeatureNotAvailableInYourLicensePopoverBody() {
+interface FeatureNotAvailableInYourLicensePopoverBodyProps {
+    cloudOptionalFeature?: CloudOptionalFeature;
+}
+
+export default function FeatureNotAvailableInYourLicensePopoverBody({
+    cloudOptionalFeature,
+}: FeatureNotAvailableInYourLicensePopoverBodyProps) {
     const upgradeLicenseLink = useRavenLink({ hash: "FLDLO4", isDocs: false });
+    const cloudLicenseMessage = useCloudLicenseMessage(cloudOptionalFeature);
+
+    if (cloudLicenseMessage) {
+        return <div className="text-center">{cloudLicenseMessage}</div>;
+    }
 
     return (
         <div className="text-center">

@@ -75,6 +75,7 @@ export function IntegrationsInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "PostgreSQL",
+        cloudOptionalFeature: "powerBi",
         featureIcon: "postgresql",
         community: { value: true },
         professional: { value: true },
@@ -83,6 +84,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Power BI",
+        cloudOptionalFeature: "powerBi",
         featureIcon: "powerbi",
         community: { value: false },
         professional: { value: false },

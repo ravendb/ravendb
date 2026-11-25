@@ -60,7 +60,7 @@ export default function AiAgents() {
                 <ConditionalPopover
                     conditions={{
                         isActive: !hasAiAgent,
-                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                        message: <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="ai" />,
                     }}
                 >
                     <a

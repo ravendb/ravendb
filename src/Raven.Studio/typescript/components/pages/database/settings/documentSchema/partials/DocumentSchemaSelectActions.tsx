@@ -242,7 +242,9 @@ export default function DocumentSchemaSelectActions() {
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasSchemaValidation,
-                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            message: (
+                                <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                            ),
                         }}
                     >
                         <a
@@ -260,7 +262,9 @@ export default function DocumentSchemaSelectActions() {
                         <ConditionalPopover
                             conditions={{
                                 isActive: !hasSchemaValidation,
-                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                message: (
+                                    <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                ),
                             }}
                         >
                             <ButtonWithSpinner
