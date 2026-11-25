@@ -768,20 +768,7 @@ namespace Sparrow.Json
 
         public void GetPropertyByIndex(int index, ref PropertyDetails prop, bool addObjectToCache = false)
         {
-            AssertContextNotDisposed();
-
-            if (_mem == null)
-                ThrowObjectDisposed();
-
-            if (index < 0 || index >= _propCount)
-                ThrowOutOfRangeException(index);
-
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-
-            GetPropertyTypeAndPosition(index, metadataSize,
-                out var token,
-                out var position,
-                out var propertyId);
+            GetCheckedPropertyByIndex(index, out var token, out var position, out var propertyId);
 
             var stringValue = GetPropertyName(propertyId);
 
@@ -805,6 +792,25 @@ namespace Sparrow.Json
 
         internal LazyStringValue GetPropertyNameByIndex(int index)
         {
+            GetCheckedPropertyByIndex(index, out _, out _, out var propertyId);
+            return GetPropertyName(propertyId);
+        }
+
+        internal ReadOnlySpan<byte> GetRawPropertyNameByIndex(int index)
+        {
+            GetCheckedPropertyByIndex(index, out _, out _, out var propertyId);
+            return GetPropertyNameBytes(propertyId);
+        }
+
+        internal object GetValueByIndex(int index)
+        {
+            GetCheckedPropertyByIndex(index, out var token, out var position, out _);
+            return GetObject(token, (int)(_objStart - _mem - position), out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void GetCheckedPropertyByIndex(int index, out BlittableJsonToken token, out int position, out int propertyId)
+        {
             AssertContextNotDisposed();
 
             if (_mem == null)
@@ -814,13 +820,16 @@ namespace Sparrow.Json
                 ThrowOutOfRangeException(index);
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            GetPropertyTypeAndPosition(index, metadataSize, out token, out position, out propertyId);
+        }
 
-            GetPropertyTypeAndPosition(index, metadataSize,
-                out var token,
-                out var position,
-                out var propertyId);
-
-            return GetPropertyName(propertyId);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ReadOnlySpan<byte> GetPropertyNameBytes(int propertyId)
+        {
+            var propertyNameOffset = ReadNumber(_propNames + 1 + propertyId * _propNamesDataOffsetSize, _propNamesDataOffsetSize);
+            var propertyName = _propNames - propertyNameOffset;
+            var size = VariableSizeEncoding.Read<int>(propertyName, out var lengthSize);
+            return new ReadOnlySpan<byte>(propertyName + lengthSize, size);
         }
 
         private static void ThrowOutOfRangeException(int indexValue)
@@ -838,70 +847,35 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetPropertyIndex(LazyStringValue comparer)
+        public int GetPropertyIndex(LazyStringValue comparer) => GetPropertyIndex(comparer.AsReadOnlySpan());
+
+        // A binary search by the name bytes, in the order the properties are stored: the bytes, then the length.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int GetPropertyIndex(ReadOnlySpan<byte> name)
         {
-            if (_propCount == 0)
-                return -1;
-
             int min = 0, max = _propCount - 1;
+            long metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
 
-            long currentOffsetSize = _currentOffsetSize;
-            long currentPropertyIdSize = _currentPropertyIdSize;
-            long metadataSize = currentOffsetSize + currentPropertyIdSize + sizeof(byte);
-            byte* metadataPtr = _metadataPtr;
-
-            int mid = (min + max) / 2;
-            if (mid > max)
-                mid = max;
-
-            do
+            while (min <= max)
             {
-                var propertyIntPtr = metadataPtr + (mid) * metadataSize;
+                int mid = (min + max) / 2;
+                var propertyId = ReadNumber(_metadataPtr + mid * metadataSize + _currentOffsetSize, _currentPropertyIdSize);
+                var propertyName = GetPropertyNameBytes(propertyId);
 
-                var propertyId = ReadNumber(propertyIntPtr + currentOffsetSize, currentPropertyIdSize);
-
-                var cmpResult = ComparePropertyName(propertyId, comparer);
+                var cmpResult = Memory.CompareInline(name, propertyName, Math.Min(name.Length, propertyName.Length));
                 if (cmpResult == 0)
-                {
-                    return mid;
-                }
-                if (cmpResult > 0)
-                {
-                    min = mid + 1;
-                }
-                else
-                {
-                    max = mid - 1;
-                }
+                    cmpResult = name.Length - propertyName.Length;
 
-                mid = (min + max) / 2;
-            } while (min <= max);
+                if (cmpResult == 0)
+                    return mid;
+
+                if (cmpResult > 0)
+                    min = mid + 1;
+                else
+                    max = mid - 1;
+            }
 
             return -1;
-        }
-
-        /// <summary>
-        /// Compares property names between received StringToByteComparer and the string stored in the document's property names storage
-        /// </summary>
-        /// <param name="propertyId">Position of the string in the property ids storage</param>
-        /// <param name="comparer">Comparer of a specific string value</param>
-        /// <param name="ignoreCase">Indicates if the comparison should be case insensitive</param>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int ComparePropertyName(int propertyId, LazyStringValue comparer)
-        {
-            // Get the offset of the property name from the _propNames position
-            var propertyNameOffsetPtr = _propNames + 1 + propertyId * _propNamesDataOffsetSize;
-            var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
-
-            // Get the relative "In Document" position of the property Name
-            var propertyNameRelativePosition = _propNames - propertyNameOffset;
-
-            // Get the property name size
-            var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
-
-            // Return result of comparison between property name and received comparer
-            return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
         }
 
         public struct InsertionOrderProperties : IDisposable
