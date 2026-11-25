@@ -1,0 +1,83 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+$content-max-width: 926px;
+
+.edit-backup-task {
+    --wizard-sidebar-width: clamp(260px, 25%, 380px);
+
+    .edit-backup-task-link {
+        color: colors.$link-color-var;
+    }
+
+    .edit-backup-task-description,
+    .edit-backup-task-alert,
+    .edit-backup-task-type-list {
+        max-width: $content-max-width;
+    }
+
+    .edit-backup-task-settings-list {
+        .edit-backup-task-settings-row + .edit-backup-task-settings-row {
+            margin-top: 2 * sizes.$gutter-xxs;
+            padding-top: 2 * sizes.$gutter-xxs;
+            border-top: 1px solid colors.$border-color-light-var;
+        }
+
+        .edit-backup-task-settings-row .mb-3:last-child {
+            margin-bottom: 0 !important;
+        }
+    }
+
+    .edit-backup-task-summary-destinations .location-distribution {
+        display: flex;
+        flex-wrap: wrap;
+        gap: sizes.$gutter-xxs;
+
+        .distribution-legend,
+        .distribution-item {
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .distribution-legend {
+            min-width: 168px;
+        }
+
+        .distribution-item {
+            min-width: 154px;
+
+            .top {
+                font-size: sizes.$font-size-sm;
+            }
+        }
+    }
+
+    .edit-backup-task-add-destination {
+        border: 1px dashed colors.$link-color-var;
+        border-radius: sizes.$border-radius-md;
+
+        .btn {
+            color: colors.$link-color-var;
+            border-color: colors.$link-color-var;
+
+            &:hover {
+                color: colors.$white-var;
+                background-color: colors.$link-color-var;
+            }
+        }
+    }
+}
+
+.edit-backup-task-qr-code {
+    position: relative;
+    padding: sizes.$gutter-xs;
+    background-color: colors.$white-var;
+    border-radius: sizes.$gutter-sm;
+
+    .edit-backup-task-qr-code-logo {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+}

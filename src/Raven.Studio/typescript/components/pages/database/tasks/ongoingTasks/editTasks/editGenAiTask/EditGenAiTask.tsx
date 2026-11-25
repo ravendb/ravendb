@@ -16,6 +16,7 @@ import { editGenAiTaskUtils } from "./utils/editGenAiTaskUtils";
 import EditGenAiTaskTestResults from "./partials/EditGenAiTaskTestResults";
 import EditGenAiTaskSteps from "./partials/EditGenAiTaskSteps";
 import EditGenAiTaskPlayground from "./partials/EditGenAiTaskPlayground";
+import WizardLayout from "components/common/wizard/WizardLayout";
 import useEditGenAiCancel from "./hooks/useEditGenAiCancel";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import { DEFAULT_ITEMS_TO_PROCESS } from "common/constants/maxItemsToProcess";
@@ -121,18 +122,18 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
 
     return (
         <FormProvider {...form}>
-            <form onSubmit={handleSubmit(handleSave)} className="edit-gen-ai-task">
-                <div className="main-container wizard-content">
-                    {currentStep.component}
-                    {isPlaygroundVisible && <EditGenAiTaskPlayground />}
-                </div>
-                <div className="footer">
-                    <div className="footer-content">{currentStep.footer}</div>
-                </div>
-                <div className="sidebar wizard-sidebar">
-                    {isTestOpen ? <EditGenAiTaskTestResults /> : <EditGenAiTaskSteps steps={steps} />}
-                </div>
-            </form>
+            <WizardLayout
+                className="edit-gen-ai-task"
+                onSubmit={handleSubmit(handleSave)}
+                content={
+                    <>
+                        {currentStep.component}
+                        {isPlaygroundVisible && <EditGenAiTaskPlayground />}
+                    </>
+                }
+                footer={currentStep.footer}
+                sidebar={isTestOpen ? <EditGenAiTaskTestResults /> : <EditGenAiTaskSteps steps={steps} />}
+            />
         </FormProvider>
     );
 }

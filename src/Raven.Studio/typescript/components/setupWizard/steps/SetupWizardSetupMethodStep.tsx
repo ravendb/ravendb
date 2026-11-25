@@ -1,6 +1,6 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { SetupWizardFormData } from "../setupWizardValidation";
-import SetupWizardClickableCard from "../partials/SetupWizardClickableCard";
+import SelectableCard from "components/common/SelectableCard";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -33,74 +33,76 @@ export function SetupWizardSetupMethodStep() {
                 You can set up a new cluster, create a configuration package for external setup, or continue with an
                 existing setup package.
             </p>
-            <div className="mt-4">
-                <h5 className="mb-1">I&apos;m starting a new cluster setup:</h5>
-                <SetupWizardClickableCard
-                    icon="server"
-                    title="Set up new cluster"
-                    description="Create a new cluster with a new configuration"
-                    isSelected={selectedMethod === "newCluster"}
-                    onClick={() => {
-                        setValue("setupMethodStep.method", "newCluster");
-                        reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "newCluster");
-                    }}
-                    popoverMessage={
-                        <ul className="mb-0 ps-3">
-                            <li>Deploying RavenDB for the first time.</li>
-                            <li>Setting up a new single-node or multi-node cluster.</li>
-                            <li>Creating a cluster from scratch with custom configuration.</li>
-                        </ul>
-                    }
-                />
-                <SetupWizardClickableCard
-                    className="mt-2"
-                    icon="default"
-                    title="Create package for external setup"
-                    description="Generate a setup package for deploying RavenDB in external environments"
-                    isSelected={selectedMethod === "createPackage"}
-                    onClick={() => {
-                        setValue("setupMethodStep.method", "createPackage");
-                        reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "createPackage");
-                    }}
-                    popoverMessage={
-                        <ul className="mb-0 ps-3">
-                            <li>
-                                Deploying RavenDB in an external environment
-                                <br /> (e.g. cloud instance, container, or remote server).
-                            </li>
-                            <li>Generating a pre-configured setup package without running the server locally.</li>
-                            <li>Useful for offline, automated, or remote installations.</li>
-                        </ul>
-                    }
-                />
-            </div>
-            <div className="my-4">
-                <h5 className="mb-1">I already have a setup package:</h5>
-                <SetupWizardClickableCard
-                    icon="default"
-                    addon="arrow-up"
-                    title="Use setup package"
-                    description="Set up the server using a previously created setup package"
-                    isSelected={selectedMethod === "usePackage"}
-                    onClick={() => {
-                        setValue("setupMethodStep.method", "usePackage");
-                        reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "usePackage");
-                    }}
-                    popoverMessage={
-                        <>
-                            <ul className="ps-3">
-                                <li>Setting up an additional node in an existing cluster.</li>
-                                <li>Setting up a new cluster from a pre-configured package.</li>
+            <div role="radiogroup" aria-label="Setup method">
+                <div className="mt-4">
+                    <h5 className="mb-1">I&apos;m starting a new cluster setup:</h5>
+                    <SelectableCard
+                        icon="server"
+                        title="Set up new cluster"
+                        description="Create a new cluster with a new configuration"
+                        isSelected={selectedMethod === "newCluster"}
+                        onClick={() => {
+                            setValue("setupMethodStep.method", "newCluster");
+                            reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "newCluster");
+                        }}
+                        popoverMessage={
+                            <ul className="mb-0 ps-3">
+                                <li>Deploying RavenDB for the first time.</li>
+                                <li>Setting up a new single-node or multi-node cluster.</li>
+                                <li>Creating a cluster from scratch with custom configuration.</li>
                             </ul>
-                            <p className="mb-0">
-                                Note:
-                                <br /> Setup packages are generated when creating a multi-node cluster in{" "}
-                                <strong>Set up new cluster</strong> or using{" "}
-                                <strong>Create package for external setup</strong>.
-                            </p>
-                        </>
-                    }
-                />
+                        }
+                    />
+                    <SelectableCard
+                        className="mt-2"
+                        icon="default"
+                        title="Create package for external setup"
+                        description="Generate a setup package for deploying RavenDB in external environments"
+                        isSelected={selectedMethod === "createPackage"}
+                        onClick={() => {
+                            setValue("setupMethodStep.method", "createPackage");
+                            reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "createPackage");
+                        }}
+                        popoverMessage={
+                            <ul className="mb-0 ps-3">
+                                <li>
+                                    Deploying RavenDB in an external environment
+                                    <br /> (e.g. cloud instance, container, or remote server).
+                                </li>
+                                <li>Generating a pre-configured setup package without running the server locally.</li>
+                                <li>Useful for offline, automated, or remote installations.</li>
+                            </ul>
+                        }
+                    />
+                </div>
+                <div className="my-4">
+                    <h5 className="mb-1">I already have a setup package:</h5>
+                    <SelectableCard
+                        icon="default"
+                        addon="arrow-up"
+                        title="Use setup package"
+                        description="Set up the server using a previously created setup package"
+                        isSelected={selectedMethod === "usePackage"}
+                        onClick={() => {
+                            setValue("setupMethodStep.method", "usePackage");
+                            reportEvent(setupWizardGA4Prefixes.setupMethod, "select-method", "usePackage");
+                        }}
+                        popoverMessage={
+                            <>
+                                <ul className="ps-3">
+                                    <li>Setting up an additional node in an existing cluster.</li>
+                                    <li>Setting up a new cluster from a pre-configured package.</li>
+                                </ul>
+                                <p className="mb-0">
+                                    Note:
+                                    <br /> Setup packages are generated when creating a multi-node cluster in{" "}
+                                    <strong>Set up new cluster</strong> or using{" "}
+                                    <strong>Create package for external setup</strong>.
+                                </p>
+                            </>
+                        }
+                    />
+                </div>
             </div>
         </div>
     );

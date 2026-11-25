@@ -1,0 +1,68 @@
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+$dot-size: 18px;
+$connector-height: 14px;
+
+.wizard-steps-list {
+    .wizard-steps-list-progress {
+        width: 168px;
+
+        .progress {
+            height: 7px;
+            padding: 1px;
+            background-color: colors.$well-bg-var;
+        }
+    }
+
+    .step-item {
+        display: flex;
+        align-items: center;
+        gap: sizes.$gutter-sm;
+        min-height: $dot-size;
+        margin-bottom: $connector-height + 2 * sizes.$gutter-xxxs;
+        padding-left: 0;
+
+        &:last-of-type {
+            margin-bottom: 0;
+        }
+
+        &:not(:last-of-type)::after {
+            content: "";
+            position: absolute;
+            left: $dot-size * 0.5;
+            top: calc(100% + #{sizes.$gutter-xxxs});
+            height: $connector-height;
+            border-left: 1px solid colors.$border-color-light-var;
+        }
+
+        .dot {
+            position: static;
+            flex-shrink: 0;
+            width: $dot-size;
+            height: $dot-size;
+            padding: 0;
+            font-size: 10px;
+
+            &.inactive {
+                background-color: transparent;
+            }
+        }
+    }
+
+    .wizard-steps-list-title {
+        padding: 0;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: colors.$text-emphasis-var;
+        text-align: left;
+        cursor: inherit;
+
+        &:focus-visible {
+            outline: 2px solid colors.$primary-var;
+            outline-offset: 2px;
+            border-radius: sizes.$border-radius-sm;
+        }
+    }
+}

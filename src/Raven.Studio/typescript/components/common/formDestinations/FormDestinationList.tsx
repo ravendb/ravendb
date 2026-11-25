@@ -8,6 +8,7 @@ import Ftp from "./Ftp";
 import { FormDestinations } from "./utils/formDestinationsTypes";
 import { useFormContext } from "react-hook-form";
 import { FormLabel } from "components/common/Form";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 interface FormDestinationListProps {
     isForNewConnection: boolean;
@@ -15,10 +16,11 @@ interface FormDestinationListProps {
 
 export default function FormDestinationList({ isForNewConnection }: FormDestinationListProps) {
     const { formState } = useFormContext<FormDestinations>();
+    const t = useStudioTranslation("formDestinations");
 
     return (
         <>
-            <FormLabel>Destinations</FormLabel>
+            <FormLabel>{t("destinations")}</FormLabel>
             <div className="vstack gap-1">
                 <Local />
                 <AmazonS3 />

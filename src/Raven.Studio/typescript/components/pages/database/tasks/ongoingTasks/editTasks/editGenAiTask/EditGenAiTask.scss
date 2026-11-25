@@ -2,36 +2,6 @@
 @use "Content/scss/colors";
 
 .edit-gen-ai-task {
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(12, 1fr);
-    grid-column-gap: 0px;
-    grid-row-gap: 0px;
-
-    .main-container {
-        grid-area: 1 / 1 / 12 / 4;
-        padding: sizes.$gutter;
-        overflow-y: auto;
-    }
-    .footer {
-        grid-area: 12 / 1 / 13 / 4;
-        display: flex;
-        flex-direction: column;
-        justify-content: end;
-
-        .footer-content {
-            border-top: 1px solid colors.$border-color-light;
-            padding: sizes.$gutter-sm sizes.$gutter;
-        }
-    }
-
-    .sidebar {
-        grid-area: 1 / 4 / 13 / 6;
-        padding: sizes.$gutter;
-        background-color: colors.$panel-bg-1-var;
-    }
-
     .nav-item {
         .nav-link {
             color: inherit;

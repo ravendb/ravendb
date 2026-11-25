@@ -2,7 +2,11 @@
 import React, { JSX, useState } from "react";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
-import Select, { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
+import Select, {
+    OptionWithIconAndLicenseBadge,
+    SelectOptionWithIcon,
+    SingleValueWithIcon,
+} from "components/common/select/Select";
 import { Connection, EditConnectionStringFormProps, StudioConnectionType } from "./connectionStringsTypes";
 import RavenConnectionString from "./editForms/RavenConnectionString";
 import { useDispatch } from "react-redux";
@@ -20,8 +24,7 @@ import { mapConnectionStringToDto } from "./store/connectionStringsMapsToDto";
 import useConnectionStringsLicense, { ConnectionStringsLicenseFeatures } from "./useConnectionStringsLicense";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
-import { components, OptionProps } from "react-select";
+import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
@@ -122,7 +125,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                                 isSearchable={false}
                                 isDisabled={!isForNewConnection}
                                 components={{
-                                    Option: OptionWithIconAndBadge,
+                                    Option: OptionWithIconAndLicenseBadge,
                                     SingleValue: SingleValueWithIcon,
                                 }}
                             />
@@ -275,18 +278,4 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             isDisabled: !features.hasQueueEtl,
         },
     ];
-}
-
-function OptionWithIconAndBadge(props: OptionProps<ConnectionStringOption>) {
-    const { data, isDisabled } = props;
-
-    return (
-        <div className="cursor-pointer">
-            <components.Option {...props}>
-                {data.icon && <Icon icon={data.icon} color={data.iconColor} />}
-                <span>{data.label}</span>
-                {isDisabled ? <LicenseRestrictedBadge licenseRequired={data.licenseRequired} /> : ""}
-            </components.Option>
-        </div>
-    );
 }

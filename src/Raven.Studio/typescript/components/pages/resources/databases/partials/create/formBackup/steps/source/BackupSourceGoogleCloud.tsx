@@ -20,20 +20,20 @@ export default function BackupSourceGoogleCloud() {
         <div className="mt-2">
             <Row className="mt-2">
                 <Col lg="3">
-                    <FormLabel className="col-form-label">Bucket Name</FormLabel>
+                    <FormLabel className="col-form-label">Bucket name</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.googleCloud.bucketName"
-                        placeholder="Enter Google Cloud Storage Bucket Name"
+                        placeholder="e.g. company-backups"
                     />
                 </Col>
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <FormLabel className="col-form-label">Google Credentials</FormLabel>
+                    <FormLabel className="col-form-label">Google credentials JSON</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
@@ -42,14 +42,14 @@ export default function BackupSourceGoogleCloud() {
                         rows={18}
                         control={control}
                         name="sourceStep.sourceData.googleCloud.credentialsJson"
-                        placeholder={credentialsPlaceholder}
+                        placeholder="Paste the contents of your Google Cloud service account key file"
                     />
                 </Col>
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">
-                        Remote Folder Name <small>(optional)</small>
+                        Remote folder name <small>(optional)</small>
                     </FormLabel>
                 </Col>
                 <Col>
@@ -57,7 +57,7 @@ export default function BackupSourceGoogleCloud() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.googleCloud.remoteFolderName"
-                        placeholder="Enter Remote Folder Name"
+                        placeholder="e.g. backups/orders"
                     />
                 </Col>
             </Row>
@@ -110,17 +110,3 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
         />
     );
 }
-
-const credentialsPlaceholder = `e.g.
-{
-    "type": "service_account",
-    "project_id": "test-raven-237012",
-    "private_key_id": "12345678123412341234123456789101",
-    "private_key": "-----BEGIN PRIVATE KEY-----\\abCse=\n-----END PRIVATE KEY-----\n",
-    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
-    "client_id": "111390682349634407434",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
-}`;

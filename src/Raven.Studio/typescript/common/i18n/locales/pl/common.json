@@ -5,5 +5,25 @@
     "refresh": "Odśwież",
     "loadFromFile": "Wczytaj z pliku",
     "usefulLinks": "przydatne linki",
-    "defaultPlaceholder": "Domyślnie ({{value}})"
+    "defaultPlaceholder": "Domyślnie ({{value}})",
+    "back": "Wstecz",
+    "next": "Dalej",
+    "edit": "Edytuj",
+    "close": "Zamknij",
+    "copy": "Kopiuj",
+    "test": "Testuj",
+    "whenToUse": "Kiedy używać?",
+    "connectionTestFailed": "Test połączenia nie powiódł się",
+    "stepsCompleted": "Ukończone kroki: {{completed}}/{{total}}",
+    "responsibleNode": {
+        "setLabel": "Ustaw węzeł odpowiedzialny",
+        "shardedInfo": "Ta opcja jest niedostępna w bazach danych z shardingiem.",
+        "noNodesInfo": "W grupie bazy danych nie ma węzłów członkowskich do wybrania.",
+        "nodeOption": "Węzeł {{nodeTag}}",
+        "nodeOption_notMember": "Węzeł {{nodeTag}} (nie jest członkiem)",
+        "pinLabel": "Przypnij węzeł",
+        "pinTitle": "Przypnij zadanie do wybranego węzła",
+        "pinnedInfo": "Zadanie jest wykonywane tylko na wybranym węźle, dopóki należy on do grupy bazy danych.<br/>Jeśli węzeł przestanie działać, zadanie nie będzie wykonywane, dopóki węzeł nie wróci do działania.<br/>Jeśli węzeł zostanie usunięty z grupy bazy danych, klaster może przypisać zadanie do innego węzła.",
+        "preferredInfo": "Zadanie jest wykonywane na wybranym węźle, gdy jest on dostępny.<br/>Jeśli węzeł przestanie działać, a licencja obejmuje funkcję zadań o wysokiej dostępności, klaster może przenieść zadanie na inny węzeł z grupy bazy danych do czasu, aż wybrany węzeł wróci do działania."
+    }
 }

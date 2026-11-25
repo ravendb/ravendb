@@ -23,14 +23,14 @@ export default function BackupSourceAzure() {
         <div className="mt-2">
             <Row className="mt-2">
                 <Col lg="3">
-                    <FormLabel className="col-form-label">Account Name</FormLabel>
+                    <FormLabel className="col-form-label">Account name</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.accountName"
-                        placeholder="Enter Azure Storage Account Name"
+                        placeholder="e.g. companystorage"
                     />
                 </Col>
             </Row>
@@ -42,7 +42,7 @@ export default function BackupSourceAzure() {
             {authType === "sasToken" ? (
                 <Row className="mt-2">
                     <Col lg="3">
-                        <FormLabel className="col-form-label">SAS Token</FormLabel>
+                        <FormLabel className="col-form-label">SAS token</FormLabel>
                     </Col>
                     <Col>
                         <FormInput
@@ -50,7 +50,7 @@ export default function BackupSourceAzure() {
                             type="password"
                             control={control}
                             name="sourceStep.sourceData.azure.sasToken"
-                            placeholder="Enter Azure Storage SAS Token"
+                            placeholder="Enter a SAS token"
                             passwordPreview
                         />
                     </Col>
@@ -58,7 +58,7 @@ export default function BackupSourceAzure() {
             ) : (
                 <Row className="mt-2">
                     <Col lg="3">
-                        <FormLabel className="col-form-label">Account Key</FormLabel>
+                        <FormLabel className="col-form-label">Account key</FormLabel>
                     </Col>
                     <Col>
                         <FormInput
@@ -66,7 +66,7 @@ export default function BackupSourceAzure() {
                             type="password"
                             control={control}
                             name="sourceStep.sourceData.azure.accountKey"
-                            placeholder="Enter Azure Storage Account Key"
+                            placeholder="Enter an account key"
                             passwordPreview
                         />
                     </Col>
@@ -74,21 +74,21 @@ export default function BackupSourceAzure() {
             )}
             <Row className="mt-2">
                 <Col lg="3">
-                    <FormLabel className="col-form-label">Container</FormLabel>
+                    <FormLabel className="col-form-label">Storage container</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.container"
-                        placeholder="Enter Azure Storage Container Name"
+                        placeholder="e.g. backups"
                     />
                 </Col>
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">
-                        Remote Folder Name <small>(optional)</small>
+                        Remote folder name <small>(optional)</small>
                     </FormLabel>
                 </Col>
                 <Col>
@@ -96,7 +96,7 @@ export default function BackupSourceAzure() {
                         type="text"
                         control={control}
                         name="sourceStep.sourceData.azure.remoteFolderName"
-                        placeholder="Enter remote folder name"
+                        placeholder="e.g. backups/orders"
                     />
                 </Col>
             </Row>

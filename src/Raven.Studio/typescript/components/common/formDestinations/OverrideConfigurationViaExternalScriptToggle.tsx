@@ -4,9 +4,8 @@ import { FormDestinations } from "components/common/formDestinations/utils/formD
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import tasksCommonContent from "models/database/tasks/tasksCommonContent";
-import { useMemo } from "react";
 import { useFormContext } from "react-hook-form";
+import { useStudioTranslation } from "hooks/useStudioTranslation";
 
 type FieldBase = `destinations.${keyof FormDestinations["destinations"]}`;
 
@@ -18,27 +17,20 @@ export default function OverrideConfigurationViaExternalScriptToggle({
     fieldBase,
 }: OverrideConfigurationViaExternalScriptToggleProps) {
     const { control } = useFormContext<FormDestinations>();
+    const t = useStudioTranslation("formDestinations");
 
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
     const isRestrictExternalScriptUsageForNonClusterAdmin = useAppSelector(
         databaseSelectors.isRestrictExternalScriptUsageForNonClusterAdmin
     );
 
-    const disabledReason = useMemo(() => {
-        if (!isClusterAdminOrClusterNode && isRestrictExternalScriptUsageForNonClusterAdmin) {
-            return tasksCommonContent.externalScriptNotAllowedForNonClusterAdmins;
-        }
-
-        return null;
-    }, [isClusterAdminOrClusterNode, isRestrictExternalScriptUsageForNonClusterAdmin]);
-
-    const isDisabled = !!disabledReason;
+    const isDisabled = !isClusterAdminOrClusterNode && isRestrictExternalScriptUsageForNonClusterAdmin;
 
     return (
         <ConditionalPopover
             conditions={{
                 isActive: isDisabled,
-                message: disabledReason,
+                message: t("scriptNotAllowed"),
             }}
         >
             <FormSwitch
@@ -48,7 +40,7 @@ export default function OverrideConfigurationViaExternalScriptToggle({
                 color="secondary"
                 disabled={isDisabled}
             >
-                Override configuration via external script
+                {t("overrideViaScript")}
             </FormSwitch>
         </ConditionalPopover>
     );

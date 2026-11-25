@@ -86,6 +86,7 @@ export const defaultS3FormData: S3Destination = {
     forcePathStyle: false,
     disableChecksumValidation: false,
     bucketName: null,
+    storageClass: null,
 };
 
 function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings): S3Destination {
@@ -101,6 +102,7 @@ function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings)
         forcePathStyle: dto.ForcePathStyle,
         disableChecksumValidation: dto.DisableChecksumValidation,
         bucketName: dto.BucketName,
+        storageClass: dto.StorageClass ?? null,
     };
 }
 
