@@ -325,7 +325,7 @@ public sealed class BackupDecisionLogSummary : IDynamicJson
 
     public sealed class RunningSummary
     {
-        public int Current { get; set; }
+        public int DatabasesBackingUp { get; set; }
 
         public int Max { get; set; }
 
@@ -335,7 +335,7 @@ public sealed class BackupDecisionLogSummary : IDynamicJson
         {
             return new DynamicJsonValue
             {
-                [nameof(Current)] = Current,
+                [nameof(DatabasesBackingUp)] = DatabasesBackingUp,
                 [nameof(Max)] = Max,
                 [nameof(WaitingForSlot)] = WaitingForSlot
             };

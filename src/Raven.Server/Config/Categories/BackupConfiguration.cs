@@ -49,7 +49,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.AllowedAwsRegions", ConfigurationEntryScope.ServerWideOnly)]
         public string[] AllowedAwsRegions { get; set; }
 
-        [Description("Maximum number of concurrent backup tasks")]
+        [Description("Maximum number of databases that can back up at the same time. All shards and backup tasks of one database share one place.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxNumberOfConcurrentBackups { get; set; }

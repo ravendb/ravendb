@@ -76,6 +76,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             lock (_locker)
             {
+                // Counts databases that are backing up, not backups: all shards and tasks of one database share one place.
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups))
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups + 1;

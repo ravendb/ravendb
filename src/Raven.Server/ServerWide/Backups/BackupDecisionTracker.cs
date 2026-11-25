@@ -284,7 +284,7 @@ public sealed class BackupDecisionTracker
             ServerBlock = scheduleSummary.ServerBlock
         };
 
-        summary.Running.Current = counter.CurrentNumberOfRunningBackups;
+        summary.Running.DatabasesBackingUp = counter.CurrentNumberOfRunningBackups;
         summary.Running.Max = counter.MaxNumberOfConcurrentBackups;
         summary.Running.WaitingForSlot = scheduleSummary.Running.WaitingForSlot;
 
