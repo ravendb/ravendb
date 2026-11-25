@@ -16,6 +16,14 @@ namespace FastTests.Voron
         private const int Stride = 997; // prime, so consecutive operations land on different leaf pages
         private const int NumberOfOperations = 20_000;
 
+        private static readonly Slice AllEtagsSlice;
+
+        static WritePathAllocations()
+        {
+            using (StorageEnvironment.GetStaticContext(out var ctx))
+                Slice.From(ctx, "AllEtags", ByteStringType.Immutable, out AllEtagsSlice);
+        }
+
         [RavenFact(RavenTestCategory.Voron)]
         public void Tree_operations()
         {
@@ -109,6 +117,48 @@ namespace FastTests.Voron
                     if (tree.TryReadDecompressed(keys[i2++ % NumberOfKeys], out var value))
                         value.Dispose();
                 }));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public void FixedSizeTree_operations()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                var parent = tx.CreateTree("parent");
+                for (int i = 0; i < 10_000; i++)
+                {
+                    using (Slice.From(tx.Allocator, $"other/{i:D8}", out Slice key))
+                        parent.Add(key, (long)i);
+                }
+
+                var fst = parent.FixedTreeFor(AllEtagsSlice, valSize: 8);
+                for (long i = 0; i < NumberOfKeys; i++)
+                    fst.Add(i * 2, i);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var fst = tx.ReadTree("parent").FixedTreeFor(AllEtagsSlice, valSize: 8);
+
+                long i = 0;
+                AssertAtMost(8, "FST.ReadPtr, scattered", MeasurePerOperation(() => fst.ReadPtr((i++ * Stride % NumberOfKeys) * 2, out _)));
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var fst = tx.ReadTree("parent").FixedTreeFor(AllEtagsSlice, valSize: 8);
+
+                long i1 = 0;
+                AssertAtMost(8, "FST.Add update, scattered", MeasurePerOperation(() => fst.Add((i1++ * Stride % NumberOfKeys) * 2, i1)));
+
+                long i2 = NumberOfKeys * 2;
+                AssertAtMost(8, "FST.Add new key, appended", MeasurePerOperation(() => fst.Add(i2++, i2)));
+
+                long i3 = 0;
+                AssertAtMost(8, "FST.Delete, scattered", MeasurePerOperation(() => fst.Delete((i3++ * Stride % NumberOfKeys) * 2)));
             }
         }
 
