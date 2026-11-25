@@ -1088,6 +1088,45 @@ namespace Raven.Client.Util
             }
         }
 
+        internal sealed class IntegerDivisionSupport : JavascriptConversionExtension
+        {
+            public static readonly IntegerDivisionSupport Instance = new IntegerDivisionSupport();
+
+            private static readonly MethodInfo Truncate = typeof(Math).GetMethod(nameof(Math.Truncate), [typeof(double)]);
+
+            private IntegerDivisionSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                // C# truncates the quotient of two integers toward zero, while JavaScript divides in floating point
+                if (context.Node is not BinaryExpression { NodeType: ExpressionType.Divide } division || IsInteger(division.Type) == false)
+                    return;
+
+                context.PreventDefault();
+                context.Visitor.Visit(Expression.Call(Truncate, Expression.Divide(Expression.Convert(division.Left, typeof(double)), Expression.Convert(division.Right, typeof(double)))));
+            }
+
+            private static bool IsInteger(Type type)
+            {
+                switch (Type.GetTypeCode(Nullable.GetUnderlyingType(type) ?? type))
+                {
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
         internal sealed class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();
@@ -1096,7 +1135,7 @@ namespace Raven.Client.Util
                 {"Abs", "abs"}, {"Acos", "acos"}, {"Asin", "asin"}, {"Atan", "atan"}, {"Atan2", "atan2"},
                 {"Ceiling", "ceil"}, {"Cos", "cos"}, {"Exp", "exp"}, {"Floor", "floor"}, {"Log", "log"},
                 {"Max", "max"}, {"Min", "min" }, {"Pow", "pow" }, {"Round", "round"}, {"Sin", "sin"},
-                {"Sqrt", "sqrt"}, {"Tan", "tan"}
+                {"Sqrt", "sqrt"}, {"Tan", "tan"}, {"Truncate", "trunc"}
             };
 
             private MathSupport()

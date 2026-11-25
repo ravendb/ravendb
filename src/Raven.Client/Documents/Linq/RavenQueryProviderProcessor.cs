@@ -3641,6 +3641,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,
                 new JavascriptConversionExtensions.WrappedConstantSupport<T>(DocumentQuery, _projectionParameters),
+                JavascriptConversionExtensions.IntegerDivisionSupport.Instance,
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.ReservedWordsSupport.Instance,
