@@ -121,18 +121,34 @@ public class ServerBackupRunner : IDisposable
     private void Run(object state)
     {
         var waitHandles = new[] { _serverStore.ServerShutdown.WaitHandle, _wakeUp.WaitHandle };
+        var isFirstPass = true;
+        var waitBeforeNextRun = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan;
 
-        try
+        while (_serverStore.ServerShutdown.IsCancellationRequested == false)
         {
-            while (_serverStore.ServerShutdown.IsCancellationRequested == false)
+            List<DatabaseBackupState> skippedIncrementalBackups = null;
+
+            try
             {
+                if (isFirstPass == false)
+                {
+                    WaitHandle.WaitAny(waitHandles, waitBeforeNextRun < MaxWaitBeforeNextRun ? waitBeforeNextRun : MaxWaitBeforeNextRun);
+                    _wakeUp.Reset();
+
+                    if (_serverStore.ServerShutdown.IsCancellationRequested)
+                        return;
+                }
+
+                isFirstPass = false;
+                waitBeforeNextRun = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan;
+
                 _forTestingPurposes?.BeforeRunnerPass?.Invoke();
 
                 DatabaseBackupState firstState = null;
                 DatabaseBackupState firstRefusedState = null;
                 IServerBackupPolicy failedServerPolicy = null;
                 var now = _serverStore.Server.Time.GetUtcNow();
-                var skippedIncrementalBackups = new List<DatabaseBackupState>();
+                skippedIncrementalBackups = new List<DatabaseBackupState>();
 
                 while (_serverStore.ServerShutdown.IsCancellationRequested == false &&
                        _backupQueue.Count > 0 &&
@@ -171,28 +187,34 @@ public class ServerBackupRunner : IDisposable
 
                 MoveToHeadOfQueue(firstRefusedState);
 
-                SaveSkippedIncrementalBackups(skippedIncrementalBackups);
+                var statusUpdates = skippedIncrementalBackups;
+                skippedIncrementalBackups = null;
+                SaveSkippedIncrementalBackups(statusUpdates);
 
                 Decisions.RefreshSummary();
 
-                var waitBeforeNextRun = GetWaitBeforeNextRun(failedServerPolicy, concurrentBackupsLimitReached: firstRefusedState != null);
-                WaitHandle.WaitAny(waitHandles, waitBeforeNextRun < MaxWaitBeforeNextRun ? waitBeforeNextRun : MaxWaitBeforeNextRun);
-                _wakeUp.Reset();
+                waitBeforeNextRun = GetWaitBeforeNextRun(failedServerPolicy, concurrentBackupsLimitReached: firstRefusedState != null);
             }
-        }
-        catch (Exception e)
-        {
-            if (_logger.IsErrorEnabled)
-                _logger.Error("Server backup runner has stopped due to an unexpected error.", e);
+            catch (Exception e)
+            {
+                if (skippedIncrementalBackups != null)
+                {
+                    foreach (var backupState in skippedIncrementalBackups)
+                        backupState.StatusUpdateInProgress.Lower();
+                }
 
-            _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                null,
-                "Server Backup Runner",
-                "The server backup runner has stopped unexpectedly. No backups will be scheduled until the server is restarted.",
-                AlertReason.PeriodicBackup,
-                NotificationSeverity.Error,
-                key: nameof(ServerBackupRunner),
-                details: new ExceptionDetails(e)));
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"A pass of the server backup runner failed due to an unexpected error, the runner will check again in {waitBeforeNextRun}.", e);
+
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                    null,
+                    "Server Backup Runner",
+                    $"A pass of the server backup runner failed unexpectedly. The runner will check again in {waitBeforeNextRun}.",
+                    AlertReason.PeriodicBackup,
+                    NotificationSeverity.Error,
+                    key: nameof(ServerBackupRunner),
+                    details: new ExceptionDetails(e)));
+            }
         }
     }
 
