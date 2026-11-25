@@ -39,12 +39,18 @@ namespace FastTests.Voron
                 var i = 0;
                 AssertAtMost(8, "Tree.TryRead, scattered", MeasurePerOperation(() => tree.TryRead(keys[i++ % NumberOfKeys], out _)));
 
-                // a seek still creates a page object for each level, but the iterator keeps its cursor from one seek to the next
                 using (var it = tree.Iterate(prefetch: false))
                 {
                     var i1 = 0;
-                    AssertAtMost(40 * tree.State.Header.Depth, "TreeIterator.Seek, scattered", MeasurePerOperation(() => it.Seek(keys[i1++ % NumberOfKeys])));
+                    AssertAtMost(8, "TreeIterator.Seek, scattered", MeasurePerOperation(() => it.Seek(keys[i1++ % NumberOfKeys])));
                 }
+
+                var i2 = 0;
+                AssertAtMost(8, "Tree iterator + Seek, reused", MeasurePerOperation(() =>
+                {
+                    using (var it = tree.Iterate(prefetch: false))
+                        it.Seek(keys[i2++ % NumberOfKeys]);
+                }));
             }
 
             using (var tx = Env.WriteTransaction())

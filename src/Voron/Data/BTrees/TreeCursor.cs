@@ -6,7 +6,7 @@ namespace Voron.Data.BTrees
     /// <summary>
     /// The pages on the path from the root to the current page, the current page on top.
     /// </summary>
-    public sealed class TreeCursor
+    public sealed class TreeCursor : ITreeDescentPath
     {
         // trees with keys below 1KB are at most 8 levels deep, a deeper tree moves the path to _deepPath
         private const int InlineDepth = 8;
@@ -37,6 +37,16 @@ namespace Voron.Data.BTrees
         public TreePage CurrentPage => Path[_count - 1];
 
         public TreePage ParentPage => Path[_count - 2];
+
+        unsafe void ITreeDescentPath.PushBranch(TreePage branch)
+        {
+            // we copy, beause the branch we are passed is reused by the caller
+            Push(new TreePage(branch.Base, branch.PageSize)
+            {
+                LastSearchPosition = branch.LastSearchPosition,
+                LastMatch = branch.LastMatch
+            });
+        }
 
         public void Push(TreePage p)
         {

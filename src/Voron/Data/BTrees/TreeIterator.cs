@@ -4,17 +4,38 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Data.Compression;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreeIterator : IIterator
+    public sealed unsafe class TreeIterator : IIterator, ITreeDescentPath
     {
         private readonly Tree _tree;
         private readonly LowLevelTransaction _tx;
-        private readonly bool _prefetch;
+        private bool _prefetch;
 
-        private TreeCursor _cursor;
+        private struct PathEntry
+        {
+            public byte* Base;
+            public int LastSearchPosition;
+        }
+
+        // trees with keys below 1KB are at most 8 levels deep, a deeper tree moves the path to _deepPath
+        [InlineArray(8)]
+        private struct InlinePath
+        {
+            private PathEntry _element;
+        }
+
+        private InlinePath _inlinePath;
+        private PathEntry[] _deepPath;
+        private int _pathDepth;
+
+        // the iterator's own instance, pointed at the page it is on: the leaf, or a branch while it moves between leaves
+        private readonly TreePage _page = new(null, Constants.Storage.PageSize);
+
+        // _page, or _decompressedPage on a compressed leaf
         private TreePage _currentPage;
         private bool _disposed;
 
@@ -32,6 +53,64 @@ namespace Voron.Data.BTrees
             _tree = tree;
             _tx = tx;
             _prefetch = prefetch;
+        }
+
+        internal bool IsDisposed => _disposed;
+
+        internal void Reuse(bool prefetch)
+        {
+            Debug.Assert(_disposed);
+
+            _disposed = false;
+            _prefetch = prefetch;
+            _currentKey = default;
+            _currentInternalKey = default;
+            _prevKeyScope = default;
+            _requiredPrefix = default;
+            _maxKey = default;
+            _requireValidation = false;
+        }
+
+        private Span<PathEntry> Path
+        {
+            get
+            {
+                if (_deepPath != null)
+                    return _deepPath;
+                return _inlinePath;
+            }
+        }
+
+        void ITreeDescentPath.PushBranch(TreePage branch) => PushBranch(branch);
+
+        private void PushBranch(TreePage branch)
+        {
+            if (_pathDepth == Path.Length)
+            {
+                var deeper = new PathEntry[Path.Length * 2];
+                Path.CopyTo(deeper);
+                _deepPath = deeper;
+            }
+
+            ref var entry = ref Path[_pathDepth++];
+            entry.Base = branch.Base;
+            entry.LastSearchPosition = branch.LastSearchPosition;
+        }
+
+        // moves the iterator up to the branch above the current page
+        private void PopBranch()
+        {
+            ref var entry = ref Path[_pathDepth - 1];
+            _pathDepth--;
+
+            _currentPage = MoveTo(entry.Base);
+            _currentPage.LastSearchPosition = entry.LastSearchPosition;
+        }
+
+        private TreePage MoveTo(byte* pagePointer)
+        {
+            _page.Base = pagePointer;
+            return _page;
         }
 
         public int GetCurrentDataSize()
@@ -56,11 +135,8 @@ namespace Voron.Data.BTrees
             if (_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
-            // the cursor is kept for the lifetime of the iterator and refilled by every seek
-            _cursor ??= new TreeCursor();
-            _cursor.Clear();
-
-            _currentPage = _tree.FindPageFor(key, _cursor, out TreeNodeHeader* node, allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
+            _pathDepth = 0;
+            _currentPage = _tree.FindPageFor(key, this, _page, out TreeNodeHeader* node, allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
             if (_currentPage.IsCompressed)
             {
                 DecompressedCurrentPage();
@@ -145,9 +221,9 @@ namespace Voron.Data.BTrees
                         if (_prefetch)
                             MaybePrefetchPagesReferencedBy(_currentPage);
 
-                        _cursor.Push(_currentPage);
+                        PushBranch(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
+                        _currentPage = MoveTo(_tx.GetPage(node->PageNumber).Pointer);
 
                         if (_currentPage.IsCompressed)
                             DecompressedCurrentPage();
@@ -170,9 +246,9 @@ namespace Voron.Data.BTrees
 
                     return true;// there is another entry in this page
                 }
-                if (_cursor.PageCount == 0)
+                if (_pathDepth == 0)
                     break;
-                _currentPage = _cursor.Pop();
+                PopBranch();
             }
             _currentPage = null;
             return false;
@@ -200,9 +276,9 @@ namespace Voron.Data.BTrees
                         if (_prefetch)
                             MaybePrefetchPagesReferencedBy(_currentPage);
 
-                        _cursor.Push(_currentPage);
+                        PushBranch(_currentPage);
                         var node = _currentPage.GetNode(_currentPage.LastSearchPosition);
-                        _currentPage = _tree.GetReadOnlyTreePage(node->PageNumber);
+                        _currentPage = MoveTo(_tx.GetPage(node->PageNumber).Pointer);
 
                         if (_currentPage.IsCompressed)
                             DecompressedCurrentPage();
@@ -224,9 +300,9 @@ namespace Voron.Data.BTrees
                     _currentKey = _currentInternalKey;
                     return true;// there is another entry in this page
                 }
-                if (_cursor.PageCount == 0)
+                if (_pathDepth == 0)
                     break;
-                _currentPage = _cursor.Pop();
+                PopBranch();
             }
             _currentPage = null;
 
@@ -267,7 +343,10 @@ namespace Voron.Data.BTrees
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
             _decompressedPage?.Dispose();
+            _decompressedPage = null;
+            _currentPage = null;
             OnDisposal?.Invoke(this);
+            OnDisposal = null; // the next user of this iterator subscribes again
         }
 
 
@@ -307,7 +386,9 @@ namespace Voron.Data.BTrees
 
             _decompressedPage?.Dispose();
 
-            _currentPage = _decompressedPage = _tree.DecompressPage(_currentPage, DecompressionUsage.Read, skipCache: false);
+            // the decompressed page keeps the page it was made from, and _page moves on, so it gets a copy
+            var original = new TreePage(_currentPage.Base, _currentPage.PageSize);
+            _currentPage = _decompressedPage = _tree.DecompressPage(original, DecompressionUsage.Read, skipCache: false);
         }
     }
 

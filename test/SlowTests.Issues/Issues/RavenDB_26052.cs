@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
@@ -130,7 +130,7 @@ public class RavenDB_26052 : StorageTest
                     
                     Assert.Equal(entriesCount, indexTree.State.Header.NumberOfEntries);
 
-                    TreeIterator treeIterator = indexTree.Iterate(false);
+                    using TreeIterator treeIterator = indexTree.Iterate(false);
                     
                     treeIterator.Seek(Slices.BeforeAllKeys);
                     

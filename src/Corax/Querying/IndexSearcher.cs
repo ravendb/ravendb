@@ -881,7 +881,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         if (_pageToField != null) return _pageToField;
         var pageToField = new Dictionary<long, Slice>();
-        var it = _fieldsTree.Iterate(prefetch: false);
+        using var it = _fieldsTree.Iterate(prefetch: false);
         if (it.Seek(Slices.BeforeAllKeys))
         {
             do

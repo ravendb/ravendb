@@ -34,6 +34,9 @@ namespace Voron.Data.BTrees
 
         private RecentlyFoundTreePages _recentlyFoundPages;
 
+        // Iterate hands it out again once it is disposed: a tree has one open iterator at a time
+        private TreeIterator _reusableIterator;
+
         // Page pool to reduce allocations
         // Nested ops (e.g. a write from the free space handling of a write) rents the next instance, so two operations never share one.
         // the deepest nesting is 3, e.g. MultiAdd -> DirectAdd -> DescendToLeaf, a deeper one gets an instance that is not pooled
@@ -113,9 +116,6 @@ namespace Voron.Data.BTrees
             Name = name;
 
             _recentlyFoundPages = FoundPagesPool.Allocate();
-
-
-            _state = new TreeMutableState(llt, state);
             _state = state;
 
             llt.RegisterDisposable(new TreeDisposable(this));
@@ -819,9 +819,9 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// Also pushes the branch pages above the returned leaf into <paramref name="branches"/>.
         /// </summary>
-        internal TreePage FindPageFor(Slice key, TreeCursor branches, out TreeNodeHeader* node, bool allowCompressed, bool backward)
+        internal TreePage FindPageFor(Slice key, ITreeDescentPath branches, TreePage leafInstance, out TreeNodeHeader* node, bool allowCompressed, bool backward)
         {
-            return SearchForPage(key, allowCompressed, out node, branches, backward: backward);
+            return SearchForPage(key, allowCompressed, out node, branches, backward: backward, leafInstance: leafInstance);
         }
 
         // the branch pages on the path to the key, with the caller's leaf instance on top
@@ -840,7 +840,7 @@ namespace Voron.Data.BTrees
 
         private TreePage SearchForPage(Slice key, out TreeNodeHeader* node) => SearchForPage(key, allowCompressed: false, out node);
 
-        private TreePage SearchForPage(Slice key, bool allowCompressed, out TreeNodeHeader* node, TreeCursor branches = null, bool addToRecentlyFoundPages = true,
+        private TreePage SearchForPage(Slice key, bool allowCompressed, out TreeNodeHeader* node, ITreeDescentPath branches = null, bool addToRecentlyFoundPages = true,
             bool backward = false, TreePage leafInstance = null)
         {
             var leaf = DescendToLeaf(key, branches, out bool leftmostPage, out bool rightmostPage);
@@ -872,9 +872,9 @@ namespace Voron.Data.BTrees
         }
 
         // Returns the leaf page that the key belongs to. The branch pages on the way are pushed to branches, when given.
-        internal byte* DescendToLeaf(Slice key, TreeCursor branches, out bool leftmostPage, out bool rightmostPage)
+        internal byte* DescendToLeaf(Slice key, ITreeDescentPath branches, out bool leftmostPage, out bool rightmostPage)
         {
-            using var rental = RentPage(out var transientBranch);
+            using var rental = RentPage(out var p);
             var ptr = _llt.GetPage(State.Header.RootPageNumber).Pointer;
 
             leftmostPage = true;
@@ -882,18 +882,7 @@ namespace Voron.Data.BTrees
 
             while ((((TreePageHeader*)ptr)->TreeFlags & TreePageFlags.Branch) == TreePageFlags.Branch)
             {
-                TreePage p;
-                if (branches == null)
-                {
-                    // nobody keeps these branch pages, so one instance serves all levels
-                    p = transientBranch;
-                    p.Base = ptr;
-                }
-                else
-                {
-                    p = new TreePage(ptr, Constants.Storage.PageSize);
-                    branches.Push(p);
-                }
+                p.Base = ptr;
 
                 int nodePos;
                 if (key.Options == SliceOptions.Key)
@@ -910,6 +899,8 @@ namespace Voron.Data.BTrees
                     p.LastSearchPosition = nodePos = (ushort)(p.NumberOfEntries - 1);
                     leftmostPage = false;
                 }
+
+                branches?.PushBranch(p);
 
                 var pageNode = p.GetNode(nodePos);
                 ptr = _llt.GetPage(pageNode->PageNumber).Pointer;
@@ -1150,7 +1141,24 @@ namespace Voron.Data.BTrees
         {
             AssertNotDisposed();
 
+            var iterator = _reusableIterator;
+            if (iterator == null)
+                return _reusableIterator = new TreeIterator(this, _llt, prefetch);
+
+            if (iterator.IsDisposed == false)
+                return IterateWhileAnotherIsOpen(prefetch);
+
+            iterator.Reuse(prefetch);
+            return iterator;
+        }
+
+        private TreeIterator IterateWhileAnotherIsOpen(bool prefetch)
+        {
+#if DEBUG
+            throw new InvalidOperationException($"Tree {Name} already has an open iterator. This may be a bug, or change in requirements that does need it. Investigate this.");
+#else
             return new TreeIterator(this, _llt, prefetch);
+#endif
         }
 
         public bool TryRead(Slice key, out ValueReader value)

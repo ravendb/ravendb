@@ -1159,7 +1159,7 @@ namespace Voron
                                 if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
                                     tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
                                 {
-                                    var it = tree.Iterate(false);
+                                    using var it = tree.Iterate(false);
                                     if (it.Seek(Slices.BeforeAllKeys))
                                     {
                                         do
