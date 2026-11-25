@@ -48,7 +48,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 SubscriptionName = options.Name,
                 SubscriptionId = id,
                 PinToMentorNode = options.PinToMentorNode,
-                Disabled = disabled ?? false
+                Disabled = disabled ?? false,
+                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior ?? DatabaseContext.SubscriptionsStorage.GetDefaultArchivedDataProcessingBehavior()
             });
 
             await ServerStore.Cluster.WaitForIndexNotification(etag, ServerStore.Engine.OperationTimeout);

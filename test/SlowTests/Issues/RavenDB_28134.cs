@@ -38,4 +38,39 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
         Assert.True(state.PinToMentorNode);
         Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
     }
+
+    [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CreateKeepsArchivedDataProcessingBehavior(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+        {
+            Query = "from Users",
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+        });
+
+        var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
+        Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+    }
+
+    [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Sharding)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task UpdateKeepsStoredArchivedDataProcessingBehavior(Options options)
+    {
+        using var store = GetDocumentStore(options);
+
+        var name = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+        {
+            Query = "from Users",
+            ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior.ArchivedOnly
+        });
+
+        await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions { Name = name, Query = "from Users where Age > 1" });
+
+        var state = await store.Subscriptions.GetSubscriptionStateAsync(name);
+        Assert.Equal("from Users where Age > 1", state.Query);
+        Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+    }
 }
