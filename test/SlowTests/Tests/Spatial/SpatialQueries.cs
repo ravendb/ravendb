@@ -165,10 +165,10 @@ namespace SlowTests.Tests.Spatial
             public double Latitude { get; set; }
             public double Longitude { get; set; }
 
-            public DummyGeoDoc(double lat, double lng)
+            public DummyGeoDoc(double latitude, double longitude)
             {
-                Latitude = lat;
-                Longitude = lng;
+                Latitude = latitude;
+                Longitude = longitude;
             }
         }
     }
