@@ -999,7 +999,7 @@ public class ServerBackupRunner : IDisposable
                 if (_logger.IsDebugEnabled)
                     _logger.Debug(reason);
 
-                Decisions.AddServerDecision(category, backupPolicy.Name, reason, now, GetHeldUntil(backupPolicy));
+                Decisions.AddServerDecision(category, backupPolicy.Name, reason, now, backupPolicy.HeldUntil);
 
                 failedPolicy = backupPolicy;
                 return false;
@@ -1712,17 +1712,6 @@ public class ServerBackupRunner : IDisposable
         return _forTestingPurposes?.DatabaseTestingStuffInternals?.TryGetValue(databaseName, out testingStuff) == true;
     }
 
-    private static DateTime? GetHeldUntil(IServerBackupPolicy policy)
-    {
-        return policy switch
-        {
-            ServerCpuCreditsPolicy cpuCreditsPolicy => cpuCreditsPolicy.HeldUntil,
-            ServerLowMemoryPolicy lowMemoryPolicy => lowMemoryPolicy.HeldUntil,
-            ServerHighDirtyMemoryPolicy highDirtyMemoryPolicy => highDirtyMemoryPolicy.HeldUntil,
-            _ => null
-        };
-    }
-
     private DateTime? GetServerHeldUntil()
     {
         var serverBackupPolicies = _serverBackupPolicies;
@@ -1732,7 +1721,7 @@ public class ServerBackupRunner : IDisposable
         DateTime? serverHeldUntil = null;
         foreach (var policy in serverBackupPolicies)
         {
-            var heldUntil = GetHeldUntil(policy);
+            var heldUntil = policy.HeldUntil;
             if (heldUntil != null && (serverHeldUntil == null || heldUntil > serverHeldUntil))
                 serverHeldUntil = heldUntil;
         }
@@ -1746,7 +1735,7 @@ public class ServerBackupRunner : IDisposable
         // or ConcurrentBackupsDelayInSec instead of the regular BackupRunnerFrequencyInSec
         var runnerFrequency = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan;
 
-        var heldUntil = GetHeldUntil(failedServerPolicy);
+        var heldUntil = failedServerPolicy?.HeldUntil;
         if (heldUntil != null)
         {
             var hold = heldUntil.Value - _serverStore.Server.Time.GetUtcNow();

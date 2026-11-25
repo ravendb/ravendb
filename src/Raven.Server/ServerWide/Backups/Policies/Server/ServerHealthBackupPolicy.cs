@@ -8,7 +8,14 @@ public abstract class ServerHealthBackupPolicy : IServerBackupPolicy
 
     public abstract string Name { get; }
 
-    internal DateTime HeldUntil => _heldUntil;
+    public DateTime? HeldUntil
+    {
+        get
+        {
+            var heldUntil = _heldUntil;
+            return heldUntil == default ? null : heldUntil;
+        }
+    }
 
     protected abstract string HoldReason { get; }
 
@@ -42,6 +49,7 @@ public abstract class ServerHealthBackupPolicy : IServerBackupPolicy
             return false;
         }
 
+        _heldUntil = default;
         reason = null;
         return true;
     }

@@ -14,6 +14,8 @@ public class ServerStartupPolicy : IServerBackupPolicy
 
     public string Name => "Startup";
 
+    public DateTime? HeldUntil => null;
+
     public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason, out BackupDecisionCategory category)
     {
         category = BackupDecisionCategory.Waiting;
