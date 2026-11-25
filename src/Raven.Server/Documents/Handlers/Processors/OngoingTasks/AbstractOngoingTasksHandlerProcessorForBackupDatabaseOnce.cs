@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 AssertBackup(backupConfiguration);
 
                 var sw = Stopwatch.StartNew();
-                ServerStore.ConcurrentBackupsCounter.TakePlace(OriginalDatabaseName, backupName, Logger, enforceLimit: true);
+                ServerStore.ConcurrentBackupsCounter.TakePlace(OriginalDatabaseName, backupName, Logger);
                 var scheduled = false;
                 try
                 {

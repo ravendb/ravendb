@@ -50,9 +50,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             _skipModifications = skipModifications;
         }
 
-        public void TakePlace(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
+        public void TakePlace(string databaseName, string backupName, RavenLogger logger)
         {
-            if (TryTakePlace(databaseName, backupName, logger, enforceLimit, canTakeNewPlace: true))
+            if (TryTakePlace(databaseName, backupName, logger, canTakeNewPlace: true))
                 return;
 
             throw new BackupDelayException(
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
         }
 
-        internal bool TryTakePlace(string databaseName, string backupName, RavenLogger logger, bool enforceLimit, bool canTakeNewPlace)
+        internal bool TryTakePlace(string databaseName, string backupName, RavenLogger logger, bool canTakeNewPlace)
         {
             lock (_locker)
             {
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (canTakeNewPlace == false)
                     return false;
 
-                if (enforceLimit && MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
+                if (MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
                     return false;
 
                 _runningBackupsPerDatabase[databaseName] = 1;

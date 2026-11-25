@@ -406,6 +406,7 @@ public class ServerBackupRunner : IDisposable
         try
         {
             BackupUtils.CheckServerHealthBeforeBackup(_serverStore, backupState.Configuration.Name);
+            _serverStore.ConcurrentBackupsCounter.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
         }
         catch
         {
@@ -414,7 +415,6 @@ public class ServerBackupRunner : IDisposable
         }
 
         backupState.ResetCancelReason();
-        _serverStore.ConcurrentBackupsCounter.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, enforceLimit: false);
 
         if (StartBackup(database, backupState, isFullBackup, startTimeUtc ?? SystemTime.UtcNow, operationId, isBackupNow: true) == false)
             throw new InvalidOperationException($"Backup task id: {taskId} was disabled or removed while its backup was starting");
@@ -956,7 +956,7 @@ public class ServerBackupRunner : IDisposable
     private bool TryTakeConcurrentBackupsPlace(DatabaseBackupState backupState, DateTime now, bool afterRefusal)
     {
         // canTakeNewPlace is false after a refusal in this pass, so a free place is kept for the refused task (fairness).
-        if (_serverStore.ConcurrentBackupsCounter.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, enforceLimit: true, canTakeNewPlace: afterRefusal == false))
+        if (_serverStore.ConcurrentBackupsCounter.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, canTakeNewPlace: afterRefusal == false))
             return true;
 
         var reason = $"The maximum number of concurrent backups ({_serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
