@@ -734,7 +734,7 @@ namespace FastTests.Client
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
-                       "{\"Int\":3.0,\"Long\":4.0,\"Short\":5.0,\"Byte\":6.0,\"SByte\":-7.0,\"UInt\":8.0,\"ULong\":9.0,\"UShort\":10.0,\"NullableInt\":11.0,\"Truncated\":12.9,\"FromString\":\"13\"," +
+                       "{\"Int\":3.0,\"Long\":4.0,\"Short\":5.0,\"Byte\":6.0,\"SByte\":-7.0,\"UInt\":8.0,\"ULong\":9.0,\"UShort\":10.0,\"NullableInt\":11.0,\"FromString\":\"13\"," +
                        "\"IntKeys\":{\"1\":2},\"DoubleKeys\":{\"1.5\":3}}", "numbers"))
             {
                 var numbers = conventions.Serialization.DefaultConverter.FromBlittable<IntegralNumbers>(json);
@@ -748,7 +748,6 @@ namespace FastTests.Client
                 Assert.Equal(9ul, numbers.ULong);
                 Assert.Equal((ushort)10, numbers.UShort);
                 Assert.Equal(11, numbers.NullableInt);
-                Assert.Equal(12, numbers.Truncated);
                 Assert.Equal(13, numbers.FromString);
                 Assert.Equal(2, numbers.IntKeys[1]);
                 Assert.Equal(3, numbers.DoubleKeys[1.5]);
@@ -776,10 +775,29 @@ namespace FastTests.Client
             public ulong ULong { get; set; }
             public ushort UShort { get; set; }
             public int? NullableInt { get; set; }
-            public int Truncated { get; set; }
             public int FromString { get; set; }
             public Dictionary<int, int> IntKeys { get; set; }
             public Dictionary<double, int> DoubleKeys { get; set; }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [InlineData("{\"Int\":12.9}")]
+        [InlineData("{\"Long\":1.5}")]
+        [InlineData("{\"Byte\":0.5}")]
+        [InlineData("{\"ULong\":2.25}")]
+        [InlineData("{\"NullableInt\":-3.5}")]
+        [InlineData("{\"FromString\":\"5.7\"}")]
+        public void IntegralNumbersWithAFractionalPartAreRejected(string text)
+        {
+            var conventions = new DocumentConventions { Serialization = new SystemTextJsonSerializationConventions() };
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(text, "numbers"))
+            {
+                var e = Assert.ThrowsAny<Exception>(() => conventions.Serialization.DefaultConverter.FromBlittable<IntegralNumbers>(json));
+
+                Assert.Contains("fractional part", e.ToString());
+            }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
