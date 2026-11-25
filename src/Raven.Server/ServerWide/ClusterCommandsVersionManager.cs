@@ -214,6 +214,7 @@ namespace Raven.Server.ServerWide
 
             [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = 72_000,
             [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] = 72_000,
+            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
 
             [nameof(ModifyDatabaseSupportedFeaturesCommand)] = 72_001,
             [nameof(AddCdcSinkCommand)] = 72_001,
@@ -223,7 +224,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabaseCdcSinksMappingCommand)] = 72_001,
             [nameof(PutServerWideConnectionStringCommand)] = 72_001,
             [nameof(RemoveServerWideConnectionStringCommand)] = 72_001,
-            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
+
+            [nameof(RenameIndexCommand)] = 72_002,
         };
 
         public bool CanPutCommand(string command)

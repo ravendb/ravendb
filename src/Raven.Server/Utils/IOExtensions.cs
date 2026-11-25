@@ -85,6 +85,9 @@ namespace Raven.Server.Utils
             if (PlatformDetails.RunningOnWindows)
                 (src, dst) = NormalizeLongPathPrefixOnWindows(src, dst);
 
+            if (IsSameDirectory(src, dst)) // first step we do, is delete dst, that is bad if this is the src too
+                throw new InvalidOperationException($"Cannot move the directory '{src}' to '{dst}' because it is the same directory");
+
             for (var i = 0; i < Retries; i++)
             {
                 try
@@ -104,6 +107,32 @@ namespace Raven.Server.Utils
 
                     RunGc(src, i);
                 }
+            }
+        }
+
+        // Two different paths can be the same directory: a different letter case on a case-insensitive file system, or a link.
+        private static bool IsSameDirectory(string src, string dst)
+        {
+            var fullSrc = Path.TrimEndingDirectorySeparator(Path.GetFullPath(src));
+            var fullDst = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dst));
+
+            if (string.Equals(fullSrc, fullDst, StringComparison.Ordinal))
+                return true;
+
+            if (Directory.Exists(fullSrc) == false || Directory.Exists(fullDst) == false)
+                return false;
+
+            var probeName = Guid.NewGuid().ToString("N");
+            var probe = Path.Combine(fullSrc, probeName);
+            File.WriteAllBytes(probe, "raven-move-probe"u8);
+
+            try
+            {
+                return File.Exists(Path.Combine(fullDst, probeName));
+            }
+            finally
+            {
+                File.Delete(probe);
             }
         }
 

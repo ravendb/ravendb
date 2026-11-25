@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Indexes;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes;
 
@@ -29,7 +30,7 @@ public abstract class AbstractIndexDeleteController
 
     public async ValueTask<bool> TryDeleteIndexIfExistsAsync(string name, string raftRequestId)
     {
-        var indexDefinition = GetIndexDefinition(name);
+        var indexDefinition = FindIndexDefinition(name, out var nameToDelete);
         if (indexDefinition == null)
             return false;
 
@@ -41,7 +42,7 @@ public abstract class AbstractIndexDeleteController
 
         try
         {
-            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
+            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(nameToDelete, GetDatabaseName(), raftRequestId));
 
             await WaitForIndexNotificationAsync(index);
         }
@@ -56,13 +57,13 @@ public abstract class AbstractIndexDeleteController
 
     public async ValueTask DeleteIndexAsync(string name, string raftRequestId)
     {
-        var indexDefinition = GetIndexDefinition(name);
+        var indexDefinition = FindIndexDefinition(name, out var nameToDelete);
         if (indexDefinition == null)
             IndexDoesNotExistException.ThrowFor(name);
 
         try
         {
-            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(indexDefinition.Name, GetDatabaseName(), raftRequestId));
+            var (index, _) = await ServerStore.SendToLeaderAsync(new DeleteIndexCommand(nameToDelete, GetDatabaseName(), raftRequestId));
             
             await WaitForIndexNotificationAsync(index);
         }
@@ -70,6 +71,29 @@ public abstract class AbstractIndexDeleteController
         catch (Exception e)
         {
             IndexStore.ThrowIndexDeletionException(name, e);
+        }
+    }
+
+    private IndexDefinitionBaseServerSide FindIndexDefinition(string name, out string nameToDelete)
+    {
+        var indexDefinition = GetIndexDefinition(name);
+        if (indexDefinition != null)
+        {
+            nameToDelete = indexDefinition.Name;
+            return indexDefinition;
+        }
+
+        nameToDelete = name;
+
+        // During a rename, this node can have the index under the other name, figure out what the right name is
+        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        using (context.OpenReadTransaction())
+        using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, GetDatabaseName()))
+        {
+            if (record == null || RenameIndexCommand.TryGetRenameInProgress(record.RollingIndexes, name, out var oldName, out var newName) == false)
+                return null;
+
+            return GetIndexDefinition(name == newName ? oldName : newName);
         }
     }
 

@@ -275,10 +275,11 @@ namespace Raven.Client.ServerWide
             AddIndexHistory(definition, source, revisionsToKeep, createdAt);
 
             definition.ClusterState ??= new IndexDefinitionClusterState();
+            definition.ClusterState.RenamedFrom = null;
 
             if (isRolling)
             {
-                
+
                 definition.ClusterState.LastRollingDeploymentIndex = raftIndex;
                 if (differences == null || (differences.Value & IndexDefinition.ReIndexRequiredMask) != 0)
                 {
@@ -394,7 +395,7 @@ namespace Raven.Client.ServerWide
             return fromDefinition == IndexDeploymentMode.Rolling;
         }
 
-        private void InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
+        internal RollingIndex InitializeRollingDeployment(string indexName, DateTime createdAt, long raftIndex)
         {
             if (IsSharded)
             {
@@ -425,6 +426,8 @@ namespace Raven.Client.ServerWide
                 rollingIndex.ActiveDeployments[node] = deployment;
                 rollingIndex.RaftCommandIndex = raftIndex;
             }
+
+            return rollingIndex;
         }
 
         private string ChooseFirstNode()

@@ -438,6 +438,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutIndexesCommand):
                     case nameof(PutAutoIndexCommand):
                     case nameof(PutRollingIndexCommand):
+                    case nameof(RenameIndexCommand):
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):
                     case nameof(SetIndexPriorityCommand):
@@ -2877,6 +2878,7 @@ namespace Raven.Server.ServerWide
                 case nameof(PutIndexCommand):
                 case nameof(PutIndexesCommand):
                 case nameof(PutIndexHistoryCommand):
+                case nameof(RenameIndexCommand):
                 case nameof(PutOlapConnectionStringCommand):
                 case nameof(PutQueueConnectionStringCommand):
                 case nameof(PutSnowflakeConnectionStringCommand):

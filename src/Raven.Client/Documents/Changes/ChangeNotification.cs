@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Changes
 
         internal static bool ShouldUpdateAggressiveCache(IndexChange change)
         {
-            return change.Type is IndexChangeTypes.BatchCompleted or IndexChangeTypes.IndexRemoved;
+            return change.Type is IndexChangeTypes.BatchCompleted or IndexChangeTypes.IndexRemoved or IndexChangeTypes.Renamed;
         }
     }
 
@@ -344,11 +344,16 @@ namespace Raven.Client.Documents.Changes
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Type)] = Type.ToString()
             };
+
+            if (this is IndexRenameChange rename)
+                json[nameof(IndexRenameChange.OldIndexName)] = rename.OldIndexName;
+
+            return json;
         }
 
         internal static IndexChange FromJson(BlittableJsonReaderObject value)
@@ -356,9 +361,23 @@ namespace Raven.Client.Documents.Changes
             value.TryGet(nameof(Name), out string name);
             value.TryGet(nameof(Type), out string type);
 
+            var changeType = (IndexChangeTypes)Enum.Parse(typeof(IndexChangeTypes), type, ignoreCase: true);
+
+            if (changeType == IndexChangeTypes.Renamed)
+            {
+                value.TryGet(nameof(IndexRenameChange.OldIndexName), out string oldIndexName);
+
+                return new IndexRenameChange
+                {
+                    Type = changeType,
+                    Name = name,
+                    OldIndexName = oldIndexName
+                };
+            }
+
             return new IndexChange
             {
-                Type = (IndexChangeTypes)Enum.Parse(typeof(IndexChangeTypes), type, ignoreCase: true),
+                Type = changeType,
                 Name = name
             };
         }

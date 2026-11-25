@@ -14,10 +14,12 @@
             LastIndex = clusterState.LastIndex;
             LastStateIndex = clusterState.LastStateIndex;
             LastRollingDeploymentIndex = clusterState.LastRollingDeploymentIndex;
+            RenamedFrom = clusterState.RenamedFrom;
         }
 
         public long LastIndex;
         public long LastStateIndex;
         public long LastRollingDeploymentIndex;
+        public string RenamedFrom;
     }
 }

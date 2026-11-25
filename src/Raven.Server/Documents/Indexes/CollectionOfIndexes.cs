@@ -68,6 +68,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void Rename(string oldName, string newName, Index index)
+        {
+            _indexesByName[newName] = index;
+            _indexesByName.TryRemove(new KeyValuePair<string, Index>(oldName, index));
+        }
+
         public bool TryRemoveByName(string name, Index existingInstance)
         {
             var result = _indexesByName.TryGetValue(name, out var index);

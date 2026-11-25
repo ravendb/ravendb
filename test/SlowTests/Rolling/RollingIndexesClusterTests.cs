@@ -481,9 +481,27 @@ namespace SlowTests.Rolling
 
                 WaitForIndexingInTheCluster(store, store.Database);
 
-                await AssertWaitForValueAsync(() => Task.FromResult(count), 3L);
+                await AssertWaitForValueAsync(() => Task.FromResult(count), 2L);
 
-                await VerifyHistory(cluster, store);
+                await VerifyHistory(cluster, store, deployments: 2);
+
+                using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var history = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, store.Database).IndexesHistory[nameof(MyRollingIndex)][0].RollingDeployment;
+                    Assert.Equal(topology.AllNodes.Order(), history.Keys.Order());
+                }
+
+                var newNode = Servers.Single(x => topology.RelevantFor(x.ServerStore.NodeTag) == false);
+                var newDatabase = await newNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var index = newDatabase.IndexStore.GetIndex(nameof(MyRollingIndex));
+                Assert.NotNull(index);
+                Assert.False(index.IsPending);
+                Assert.Null(newDatabase.IndexStore.GetIndex(Constants.Documents.Indexing.SideBySideIndexNamePrefix + nameof(MyRollingIndex)));
+
+                using (var context = Raven.Server.Documents.Indexes.QueryOperationContext.Allocate(newDatabase, index))
+                using (context.OpenReadTransaction())
+                    Assert.False(index.IsStale(context));
             }
         }
 
@@ -963,7 +981,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        private async Task VerifyHistory((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
+        private async Task VerifyHistory((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store, int deployments = 3)
         {
             await AssertWaitForValueAsync(() =>
             {
@@ -977,7 +995,7 @@ namespace SlowTests.Rolling
 
                     return Task.FromResult(deployment.Count);
                 }
-            }, 3);
+            }, deployments);
 
             using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())

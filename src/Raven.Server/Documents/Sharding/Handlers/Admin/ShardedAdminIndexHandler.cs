@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Indexes;
+using Raven.Server.Documents.Sharding.Handlers.Processors;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Indexes;
 using Raven.Server.Routing;
 
@@ -54,6 +55,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
         public async Task Disable()
         {
             using (var processor = new ShardedAdminIndexHandlerProcessorForState(IndexState.Disabled, this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenShardedAction("/databases/*/admin/indexes/rename", "POST")]
+        public async Task Rename()
+        {
+            using (var processor = new NotSupportedInShardingProcessor(this, $"Database '{DatabaseName}' is a sharded database and does not support renaming an index."))
                 await processor.ExecuteAsync();
         }
 

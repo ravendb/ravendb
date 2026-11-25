@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
@@ -14,6 +13,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         public string FinishedNodeTag { get; set; }
         public DateTime? FinishedAt { get; set; }
         public bool CompleteAll { get; set; }
+        public long? DeploymentRaftCommandIndex { get; set; }
 
         public PutRollingIndexCommand()
         {
@@ -48,7 +48,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 return; // was already removed
             }
 
-            MaybeAddNewNodesToRollingDeployment(record, rollingIndex.ActiveDeployments);
+            if (DeploymentRaftCommandIndex != null && DeploymentRaftCommandIndex != rollingIndex.RaftCommandIndex)
+                return; // finish of an older deployment of this index
 
             if (CompleteAll)
             {
@@ -103,20 +104,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             rollingIndex.ActiveDeployments[chosenNode].StartedAt = FinishedAt;
         }
 
-        private static void MaybeAddNewNodesToRollingDeployment(DatabaseRecord record, Dictionary<string, RollingIndexDeployment> rollingIndex)
-        {
-            var allNodes = record.Topology.AllNodes;
-
-            foreach (var node in allNodes)
-            {
-                rollingIndex.TryAdd(node, new RollingIndexDeployment
-                {
-                    State = RollingIndexState.Pending, 
-                    CreatedAt = SystemTime.UtcNow
-                });
-            }
-        }
-
         private string ChooseNextNode(DatabaseRecord record, Dictionary<string, RollingIndexDeployment> rollingIndex)
         {
             var members = record.Topology.Members;
@@ -157,6 +144,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             json[nameof(FinishedNodeTag)] = FinishedNodeTag;
             json[nameof(FinishedAt)] = FinishedAt;
             json[nameof(CompleteAll)] = CompleteAll;
+            json[nameof(DeploymentRaftCommandIndex)] = DeploymentRaftCommandIndex;
         }
     }
 }
