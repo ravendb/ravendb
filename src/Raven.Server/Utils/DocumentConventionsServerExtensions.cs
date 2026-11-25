@@ -24,6 +24,7 @@ internal static class DocumentConventionsServerExtensions
                 IgnoreUnsafeMembers = true,
                 CustomizeJsonSerializerOptions = options =>
                 {
+                    options.MaxDepth = int.MaxValue;
                     options.Converters.Insert(0, BlittableJsonConverter.Instance);
                     options.Converters.Insert(0, BlittableJsonReaderArrayConverter.Instance);
                     options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);

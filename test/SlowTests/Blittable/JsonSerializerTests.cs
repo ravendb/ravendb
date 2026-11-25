@@ -135,6 +135,25 @@ namespace SlowTests.Blittable
         }
 
         [RavenFact(RavenTestCategory.Core)]
+        public void JsonDeserialize_WhenBlittableObjectPropertyIsDeeplyNested_ShouldResultInCopy()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+            {
+                var data = new DynamicJsonValue { ["Property"] = "Value" };
+                for (int i = 0; i < 200; i++)
+                    data = new DynamicJsonValue { ["Nested"] = data };
+
+                BlittableJsonReaderObject expected = readContext.ReadObject(data, "deep");
+
+                var toDeseialize = ReplayTxCommandHelper.Serialize(writeContext, new Command { BlittableObject = expected });
+                var actual = ReplayTxCommandHelper.Deserialize<Command>(readContext, toDeseialize);
+
+                Assert.Equal(expected, actual.BlittableObject);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonSerialize_WhenLazyStringValueIsProperty_ShouldSerialize()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

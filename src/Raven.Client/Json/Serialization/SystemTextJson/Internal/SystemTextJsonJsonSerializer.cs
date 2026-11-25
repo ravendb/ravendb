@@ -265,9 +265,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             return JsonSerializer.Deserialize<T>(stjReader.GetUtf8Json(), Options);
         }
 
-        private static void WriteJsonToBlittableWriter(SystemTextJsonBlittableWriter writer, ReadOnlySpan<byte> utf8Json)
+        private void WriteJsonToBlittableWriter(SystemTextJsonBlittableWriter writer, ReadOnlySpan<byte> utf8Json)
         {
-            var jsonReader = new Utf8JsonReader(utf8Json);
+            var jsonReader = new Utf8JsonReader(utf8Json, new JsonReaderOptions { MaxDepth = Options.MaxDepth });
             while (jsonReader.Read())
             {
                 switch (jsonReader.TokenType)

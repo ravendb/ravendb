@@ -277,6 +277,7 @@ namespace Raven.Server.Documents
                     IgnoreUnsafeMembers = true,
                     CustomizeJsonSerializerOptions = options =>
                     {
+                        options.MaxDepth = int.MaxValue;
                         options.Converters.Insert(0, SliceJsonConverter.Instance);
                         options.Converters.Insert(0, Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
                         options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);
