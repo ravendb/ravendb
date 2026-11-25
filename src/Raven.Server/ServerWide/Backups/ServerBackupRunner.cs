@@ -432,22 +432,43 @@ public class ServerBackupRunner : IDisposable
         if (TryGetBackupStates(database.Name, out var backupStates) == false || backupStates.TryGetValue(taskId, out var backupState) == false)
             throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
 
-        if (database.DisableOngoingTasks)
+        var now = DateTime.UtcNow;
+
+        if (DisableOngoingTasksPolicy.Instance.CanDoBackup(context: null, _serverStore, backupState, now, out var reason, out var category) == false)
+        {
+            backupState.AddToDecisionLog(category, DisableOngoingTasksPolicy.Instance.Name, reason, now);
             throw new InvalidOperationException($"Backup task is disabled via marker file for database '{database.Name}'.");
+        }
 
         lock (backupStates)
         {
-            if (backupState.StatusUpdateInProgress || backupState.Running.Raise() == false)
-                throw CreateBackupAlreadyRunningException(backupState);
+            if (BackupRunningPolicy.Instance.CanDoBackup(context: null, _serverStore, backupState, now, out reason, out category) == false || backupState.Running.Raise() == false)
+            {
+                var exception = CreateBackupAlreadyRunningException(backupState);
+                backupState.AddToDecisionLog(category, BackupRunningPolicy.Instance.Name, reason ?? exception.Message, now);
+                throw exception;
+            }
         }
 
         try
         {
-            CheckServerHealthBeforeBackup(backupState.Configuration.Name);
-            ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
+            CheckServerHealthBeforeBackup(backupState.Configuration.Name, backupState);
         }
         catch
         {
+            backupState.Running.Lower();
+            throw;
+        }
+
+        try
+        {
+            ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
+        }
+        catch (Exception e)
+        {
+            if (e is BackupDelayException)
+                backupState.AddToDecisionLog(BackupDecisionCategory.Waiting, ConcurrentBackupDetail, e.Message, now);
+
             backupState.Running.Lower();
             throw;
         }
@@ -460,14 +481,16 @@ public class ServerBackupRunner : IDisposable
         return operationId;
     }
 
-    internal void CheckServerHealthBeforeBackup(string backupName)
+    internal void CheckServerHealthBeforeBackup(string backupName, DatabaseBackupState backupState = null)
     {
         foreach (var policy in _serverHealthPolicies)
         {
             if (policy.IsServerUnhealthy(_serverStore) == false)
                 continue;
 
-            throw new BackupDelayException($"Failed to start Backup Task: '{backupName}'. The task cannot run because {policy.StartFailureReason}.");
+            var message = $"Failed to start Backup Task: '{backupName}'. The task cannot run because {policy.StartFailureReason}.";
+            backupState?.AddToDecisionLog(BackupDecisionCategory.HeldBack, policy.Name, message, DateTime.UtcNow);
+            throw new BackupDelayException(message);
         }
     }
 
