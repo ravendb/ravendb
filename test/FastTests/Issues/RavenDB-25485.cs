@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Reflection;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -35,7 +36,7 @@ public class RavenDB_25485 : RavenTestBase
 
         chat.AddActionResponse("tool-1", list);
 
-        var result = JArray.Parse(GetActionResponseContent(chat, "tool-1"));
+        var result = ParseActionResponse(chat, "tool-1");
         Assert.Equal(2, result.Count);
         Assert.Equal("Widget", result[0]["Name"].Value<string>());
         Assert.Equal(9.99m, result[0]["Price"].Value<decimal>());
@@ -58,7 +59,7 @@ public class RavenDB_25485 : RavenTestBase
 
         chat.AddActionResponse("tool-1", array);
 
-        var result = JArray.Parse(GetActionResponseContent(chat, "tool-1"));
+        var result = ParseActionResponse(chat, "tool-1");
         Assert.Equal(2, result.Count);
         Assert.Equal("Widget", result[0]["Name"].Value<string>());
         Assert.Equal(9.99m, result[0]["Price"].Value<decimal>());
@@ -75,8 +76,14 @@ public class RavenDB_25485 : RavenTestBase
 
         chat.AddActionResponse("tool-1", new List<ProductInfo>());
 
-        var result = JArray.Parse(GetActionResponseContent(chat, "tool-1"));
+        var result = ParseActionResponse(chat, "tool-1");
         Assert.Equal(0, result.Count);
+    }
+
+    private static JArray ParseActionResponse(IAiConversationOperations chat, string toolId)
+    {
+        // parse floats as decimals, a double -> decimal conversion is correctly rounded since .NET 11 (9.99 -> 9.990000000000000213162820728)
+        return JsonConvert.DeserializeObject<JArray>(GetActionResponseContent(chat, toolId), new JsonSerializerSettings { FloatParseHandling = FloatParseHandling.Decimal });
     }
 
     private static string GetActionResponseContent(IAiConversationOperations chat, string toolId)

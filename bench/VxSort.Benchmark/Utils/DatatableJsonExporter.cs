@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
 using BenchmarkDotNet.Exporters;
-using BenchmarkDotNet.Loggers;
+using BenchmarkDotNet.Helpers;
 using BenchmarkDotNet.Reports;
 using JsonSerializer = Bench.Utils.SimpleJson;
 
@@ -34,7 +36,7 @@ namespace Bench.Utils
             ExcludeMeasurements = excludeMeasurements;
         }
 
-        public override void ExportToLog(Summary summary, ILogger logger)
+        public override async ValueTask ExportAsync(Summary summary, CancelableStreamWriter writer, CancellationToken cancellationToken)
         {
             var reportIndex = -1;
             var benchmarks = summary.Reports.Select(report =>
@@ -109,7 +111,7 @@ namespace Bench.Utils
 
             //JsonSerializer.CurrentJsonSerializerStrategy.Indent = IndentJson;
             JsonSerializer.CurrentJsonSerializerStrategy.Indent = true;
-            logger.WriteLine(JsonSerializer.SerializeObject(flatData));
+            await writer.WriteLineAsync(JsonSerializer.SerializeObject(flatData), cancellationToken);
         }
 
         void FixRatio(Dictionary<string, object>[] flatData)

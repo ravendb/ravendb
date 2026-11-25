@@ -43,7 +43,7 @@ Every benchmark verifies a round trip during setup, so a broken binary or bindin
 
 ```bash
 dotnet build bench/Zstd.Benchmark -c Release
-bench/Zstd.Benchmark/bin/Release/net10.0/Zstd.Benchmark run --artifacts .agents/zstd-bench/<label>
+bench/Zstd.Benchmark/bin/Release/net11.0/Zstd.Benchmark run --artifacts .agents/zstd-bench/<label>
 ```
 
 Or use `run.ps1` (`-Label`, `-Filter`, `-Lib`, `-Quick`), which also writes the `report` output next to the results.
@@ -118,7 +118,7 @@ order and an effect is only confirmed when both agree.
 
 ```bash
 dotnet build src/Raven.Server -c Release
-Zstd.Benchmark e2e --server src/Raven.Server/bin/Release/net10.0/Raven.Server.dll --work <dir> \
+Zstd.Benchmark e2e --server src/Raven.Server/bin/Release/net11.0/Raven.Server.dll --work <dir> \
     [--size-gb 3] [--workers 0,2,4] [--levels Fastest,Optimal] [--rounds 2] [--iterations 3]
 ```
 

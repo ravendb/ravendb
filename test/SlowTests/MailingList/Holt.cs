@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -14,13 +15,19 @@ namespace SlowTests.MailingList
         {
         }
 
+        // decimal literals, a double -> decimal conversion is correctly rounded since .NET 11 (100.01 -> 100.01000000000000511590769747)
+        public static IEnumerable<object[]> Balances => new[]
+        {
+            new object[] { 100.0m, 100.0m, 0m },
+            new object[] { 100.0m, 101m, -1m },
+            new object[] { 100.0m, 100.01m, -0.01m },
+            new object[] { 100.0m, 100.001m, -0.001m },
+            new object[] { 100.0m, 100.0001m, -0.0001m },
+            new object[] { 100.0m, 100.00001m, -0.00001m }, // fails here with System.FormatException : Input string was not in a correct format.
+        };
+
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [InlineData(100.0, 100.0, 0)]
-        [InlineData(100.0, 101, -1)]
-        [InlineData(100.0, 100.01, -0.01)]
-        [InlineData(100.0, 100.001, -0.001)]
-        [InlineData(100.0, 100.0001, -0.0001)]
-        [InlineData(100.0, 100.00001, -0.00001)]         // fails here with System.FormatException : Input string was not in a correct format.
+        [MemberData(nameof(Balances))]
         public void Query_should_return_list_of_transaction_balances(decimal debit, decimal credit, decimal expected)
         {
             // Arrange

@@ -92,7 +92,7 @@ namespace SlowTests.Issues
             Assert.Contains("Database ID '6ZY2cIMkCEOzFD3CtbdH1AAA' isn't valid because its length (24) isn't 22", ex.Message);
 
             cmd1 = new UpdateUnusedDatabasesOperation(store.Database,
-                new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH1+" }, validate: true);
+                new HashSet<string> { "6ZY2cIMkCEOzFD3CtbdH+w" }, validate: true); // the last char must leave the padding bits zero, .NET 11 rejects non-canonical base64
 
             await store.Maintenance.Server.SendAsync(cmd1);
         }
