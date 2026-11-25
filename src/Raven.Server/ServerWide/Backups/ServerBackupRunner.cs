@@ -114,7 +114,8 @@ public class ServerBackupRunner : IDisposable
         [
             BackupDisabledPolicy.Instance,
             DatabaseExistsPolicy.Instance,
-            BackupShouldRunOnThisNodePolicy.Instance
+            BackupShouldRunOnThisNodePolicy.Instance,
+            DisableOngoingTasksPolicy.Instance
         ];
 
         _thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(Run, null, ThreadNames.ForServerBackupRunner());
@@ -265,7 +266,7 @@ public class ServerBackupRunner : IDisposable
 
             try
             {
-                if (CanStartAfterDatabaseLoad(database, backupState, out var category, out var detail, out var reason) == false)
+                if (CanStartAfterDatabaseLoad(backupState, out var category, out var detail, out var reason) == false)
                 {
                     FinishRunning(backupState, category, detail, reason);
                     return;
@@ -1619,7 +1620,7 @@ public class ServerBackupRunner : IDisposable
         backupState.NextBackup = backupState.Stale ? null : backupState.GetNextBackupDetails(backupStatus, out _);
     }
 
-    private bool CanStartAfterDatabaseLoad(DocumentDatabase database, DatabaseBackupState backupState, out BackupDecisionCategory category, out string detail, out string reason)
+    private bool CanStartAfterDatabaseLoad(DatabaseBackupState backupState, out BackupDecisionCategory category, out string detail, out string reason)
     {
         var now = DateTime.UtcNow;
 
@@ -1632,19 +1633,17 @@ public class ServerBackupRunner : IDisposable
                     continue;
 
                 detail = backupPolicy.Name;
+
+                if (backupPolicy == DisableOngoingTasksPolicy.Instance)
+                {
+                    backupState.NextBackup = backupState.GetNextOccurrenceAfter(now);
+
+                    var heldUntil = backupState.NextBackup == null ? string.Empty : $" until '{backupState.NextBackup.DateTime}' UTC";
+                    reason = $"{reason} Held back{heldUntil}.";
+                }
+
                 return false;
             }
-        }
-
-        if (database.DisableOngoingTasks)
-        {
-            backupState.NextBackup = backupState.GetNextOccurrenceAfter(now);
-
-            var heldUntil = backupState.NextBackup == null ? string.Empty : $" until '{backupState.NextBackup.DateTime}' UTC";
-            category = BackupDecisionCategory.HeldBack;
-            detail = DisableOngoingTasksDetail;
-            reason = $"The ongoing tasks of the database are disabled by the 'disable.tasks.marker' file. Held back{heldUntil}.";
-            return false;
         }
 
         category = default;

@@ -21,8 +21,6 @@ public sealed class BackupDecisionTracker
     internal const string CancelReasonUnloaded = "unloaded";
     internal const string CancelReasonUser = "user";
 
-    internal const string DisableOngoingTasksDetail = "DisableOngoingTasks";
-
     private readonly ServerBackupRunner _runner;
 
     private readonly ServerStore _serverStore;
