@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Raven.Client;
@@ -88,10 +88,13 @@ namespace Raven.Server.ServerWide
             if (metadataReader.TryGet(Constants.Documents.Metadata.Expires, out LazyStringValue expirationDate) == false)
                 return false;
 
-            if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
+            // Apply runs on every node, so it must not use the local time zone: a time without one is UTC (the sending node
+            // converts local times before the command is in the log), a time with an offset converts with that offset
+            if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date) == false)
                 throw new FormatException($"{Constants.Documents.Metadata.Expires} should contain date but has {expirationDate}': {value}");
 
-            ticks = date.ToUniversalTime().Ticks;
+            ticks = date.Ticks;
             return true;
         }
 
@@ -99,12 +102,14 @@ namespace Raven.Server.ServerWide
         {
             // we have to use a dictionary to remove from expired multi tree, because there is a chance that not all keys for certain ticks will be returned in single delete iteration
             var expired = new Dictionary<Slice, List<Slice>>(SliceComparer.Instance);
+            List<(Slice Key, long Ticks)> expiresLater = null;
 
             foreach ((Slice keySlice, long expiredTicks, Slice ticksSlice) in GetExpiredValues(context, ticks))
             {
                 if (take-- <= 0)
                 {
                     CleanExpired(context, expired);
+                    PutExpiresLater(context, expiresLater);
                     return true;
                 }
 
@@ -123,13 +128,27 @@ namespace Raven.Server.ServerWide
                     continue;
 
                 if (currentTicks > expiredTicks)
+                {
+                    expiresLater ??= new List<(Slice Key, long Ticks)>();
+                    expiresLater.Add((keySlice, currentTicks));
                     continue;
+                }
 
                 items.Delete(reader.Id);
             }
 
             CleanExpired(context, expired);
+            PutExpiresLater(context, expiresLater);
             return false;
+        }
+
+        private static void PutExpiresLater(ClusterOperationContext context, List<(Slice Key, long Ticks)> expiresLater)
+        {
+            if (expiresLater == null)
+                return;
+
+            foreach (var (key, ticks) in expiresLater)
+                Put(context, key, ticks);
         }
 
         private static void CleanExpired(ClusterOperationContext context, Dictionary<Slice, List<Slice>> expired)

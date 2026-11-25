@@ -350,6 +350,7 @@ namespace Raven.Server.ServerWide.Commands
             // and it was serialized. In that case, it is an _internal_ object, not a full document,
             // so we have to clone it to get it into a standalone mode.
             Value = Value.Clone(context);
+            ExpirationTicks = TryGetExpires(Value, out var expirationTicks) ? expirationTicks : null; // the sending node may be an older version that used its local time zone
             GetKeyAndPrefixIndexSlices(context.Allocator, Database, Key, index, out var keyTuple, out var indexTuple);
 
             using (keyTuple.Scope)

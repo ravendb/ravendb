@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.Backups;
@@ -22,6 +23,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -192,6 +194,84 @@ namespace SlowTests.Issues
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
                 return server.ServerStore.Cluster.ReadDatabase(context, database).Topology.Stamp.Term;
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
+        public async Task CompareExchangeExpirationWithoutATimeZoneIsUtcOnAllNodes()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+            // as an older node sends them: the value keeps the time the client wrote
+            await PutCompareExchangeAsIsAsync(leader, store.Database, "users/no-time-zone", "2030-01-01T00:00:00.0000000");
+            await PutCompareExchangeAsIsAsync(leader, store.Database, "users/offset", "2030-01-01T05:00:00.0000000+05:00");
+            await WaitForAllNodesToApplyAsync(nodes);
+
+            var expected = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+            Assert.All(nodes, node => Assert.Equal(new[] { expected, expected }, GetCompareExchangeExpirationTicks(node)));
+        }
+
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
+        public async Task CompareExchangeWhoseExpirationEntryIsEarlierThanItsValueIsDeletedAtItsValue()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+            using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = 3 });
+
+            await PutCompareExchangeAsIsAsync(leader, store.Database, "users/1", "2030-01-01T00:00:00.0000000Z");
+            await WaitForAllNodesToApplyAsync(nodes);
+
+            // an older version computed the entry with the local time zone of the node, here UTC+5
+            var expires = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
+            var entry = expires - TimeSpan.FromHours(5).Ticks;
+            foreach (var node in nodes)
+                MoveCompareExchangeExpirationEntry(node, expires, entry);
+
+            await leader.ServerStore.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(entry + 1, take: 100, RaftIdGenerator.NewId()));
+            await WaitForAllNodesToApplyAsync(nodes);
+            Assert.All(nodes, node => Assert.Equal(new[] { expires }, GetCompareExchangeExpirationTicks(node)));
+            Assert.NotNull(await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1")));
+
+            await leader.ServerStore.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(expires + 1, take: 100, RaftIdGenerator.NewId()));
+            await WaitForAllNodesToApplyAsync(nodes);
+            Assert.All(nodes, node => Assert.Empty(GetCompareExchangeExpirationTicks(node)));
+            Assert.Null(await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1")));
+        }
+
+        private static async Task PutCompareExchangeAsIsAsync(RavenServer server, string database, string key, string expires)
+        {
+            using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var value = context.ReadObject(new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Expires] = expires }
+                }, key);
+                await server.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeCommand(database, key, value, 0, context, RaftIdGenerator.NewId()));
+            }
+        }
+
+        private static void MoveCompareExchangeExpirationEntry(RavenServer server, long from, long to)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var (key, _, ticks) = CompareExchangeExpirationStorage.GetExpiredValues(context, from).Single(x => x.expiredTicks == from);
+                context.Transaction.InnerTransaction.ReadTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration).MultiDelete(ticks, key);
+                CompareExchangeExpirationStorage.Put(context, key, to);
+                tx.Commit();
+            }
+        }
+
+        private async Task WaitForAllNodesToApplyAsync(List<RavenServer> nodes)
+        {
+            var index = nodes.Max(x => x.ServerStore.LastRaftCommitIndex);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(index, nodes);
+        }
+
+        private static List<long> GetCompareExchangeExpirationTicks(RavenServer server)
+        {
+            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+                return CompareExchangeExpirationStorage.GetExpiredValues(context, long.MaxValue).Select(x => x.expiredTicks).ToList();
         }
 
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
