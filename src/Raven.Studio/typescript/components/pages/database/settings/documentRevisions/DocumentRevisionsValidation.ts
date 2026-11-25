@@ -38,8 +38,11 @@ const editCollectionConfigSchema = yup.object({
 });
 
 const editConfigSchema = editCollectionConfigSchema.omit(["collectionName"]);
+const conversationsConfigSchema = editCollectionConfigSchema.omit(["collectionName", "disabled"]);
 
 export const documentRevisionsConfigYupResolver = yupResolver(editConfigSchema);
 export const documentRevisionsCollectionConfigYupResolver = yupResolver(editCollectionConfigSchema);
+export const documentRevisionsConversationsConfigYupResolver = yupResolver(conversationsConfigSchema);
 
 export type EditDocumentRevisionsCollectionConfig = yup.InferType<typeof editCollectionConfigSchema>;
+export type EditDocumentRevisionsConversationsConfig = yup.InferType<typeof conversationsConfigSchema>;
