@@ -88,7 +88,6 @@ function useComputeImportRestrictions(documentToggleOverrides?: DocumentToggleOv
             restrictedOngoingTaskKeys,
             restrictedConnectionStringKeys,
             restrictedDocumentToggleKeys,
-            hasAnyRestriction: allRestrictedItems.length > 0 || restrictedDocumentToggleKeys.length > 0,
         };
     }, [licenseStatus, isSharded, canHandleOperation, documentToggleOverrides]);
 }

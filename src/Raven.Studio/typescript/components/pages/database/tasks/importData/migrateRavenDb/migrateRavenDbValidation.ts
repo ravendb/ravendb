@@ -1,8 +1,11 @@
 import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { importOptionsSchema } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
+export const serverUrlSchema = yup.string().required().basicUrl();
+
 const serverSchema = yup.object({
-    serverUrl: yup.string().required().url(),
+    serverUrl: serverUrlSchema,
     isSkipServerCertificateValidation: yup.boolean(),
     databaseName: yup.string().required(),
     isImportRavenFs: yup.boolean(),
@@ -17,3 +20,5 @@ const serverSchema = yup.object({
 export const migrateRavenDbSchema = importOptionsSchema.shape({ server: serverSchema });
 
 export type MigrateRavenDbFormData = yup.InferType<typeof migrateRavenDbSchema>;
+
+export const migrateRavenDbYupResolver = yupResolver(migrateRavenDbSchema);

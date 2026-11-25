@@ -2,6 +2,7 @@ import {
     DocumentToggleKey,
     documentToggleKeys,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportRestriction } from "components/pages/database/tasks/importData/shared/importRestrictions";
 
 type MajorVersion = Raven.Server.Smuggler.Migration.MajorVersion;
 
@@ -86,4 +87,29 @@ export function formatServerVersion(version: SourceServerVersion | null): string
         default:
             return version.fullVersion || version.productVersion;
     }
+}
+
+export function getUnsupportedVersionReason(version: SourceServerVersion): string {
+    return `Not supported by source server version ${formatServerVersion(version)}`;
+}
+
+export function getVisibleDocumentToggles(version: SourceServerVersion | null): DocumentToggleKey[] {
+    const isLegacy = !!version && isLegacyVersion(version);
+    return MIGRATE_DOCUMENT_TOGGLES.filter((key) => key !== "isIncludeLegacyAttachments" || isLegacy);
+}
+
+export function getVersionToggleRestrictions(
+    version: SourceServerVersion | null
+): Partial<Record<DocumentToggleKey, ImportRestriction>> {
+    if (!version) {
+        return {};
+    }
+    const restriction = {
+        reason: "sourceVersion",
+        label: "Source server version",
+        icon: "server",
+        tooltip: getUnsupportedVersionReason(version),
+    } satisfies ImportRestriction;
+
+    return Object.fromEntries(getUnsupportedDocumentToggles(version).map((key) => [key, restriction]));
 }

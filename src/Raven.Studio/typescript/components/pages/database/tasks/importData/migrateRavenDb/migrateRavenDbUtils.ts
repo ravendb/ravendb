@@ -94,11 +94,12 @@ export function toMigrateDto(
 ): SingleDatabaseMigrationConfiguration {
     const { server, documents, configuration, processing } = data;
     const isLegacy = isLegacyVersion(version);
+    const isImportRavenFs = isLegacy && server.isImportRavenFs;
 
     const databaseRecordTypes = getMigrateRecordTypes(data, version, restricted);
 
     const operateOnTypes: string[] = [];
-    if (!server.isImportRavenFs) {
+    if (!isImportRavenFs) {
         if (databaseRecordTypes.length) {
             operateOnTypes.push("DatabaseRecord");
         }
@@ -130,7 +131,7 @@ export function toMigrateDto(
                 ? databaseRecordTypes.join(",")
                 : "None") as DatabaseRecordItemType,
             RemoveAnalyzers: configuration.isRemoveAnalyzers,
-            ImportRavenFs: server.isImportRavenFs,
+            ImportRavenFs: isImportRavenFs,
             TransformScript: processing.isUseTransformScript ? processing.transformScript : "",
         },
         UserName: isWindows ? server.userName : null,
