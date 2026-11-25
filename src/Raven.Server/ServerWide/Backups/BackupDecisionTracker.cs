@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
-using Raven.Server.ServerWide.Backups.Policies.Server;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
@@ -359,7 +358,7 @@ public sealed class BackupDecisionTracker
                         continue;
                     }
 
-                    if (latest.Category == BackupDecisionCategory.Waiting && latest.Detail == ServerConcurrentBackupPolicy.PolicyName)
+                    if (latest.Category == BackupDecisionCategory.Waiting && latest.Detail == ServerBackupRunner.ConcurrentBackupDetail)
                     {
                         summary.Running.WaitingForSlot++;
                         continue;

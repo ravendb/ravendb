@@ -621,7 +621,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
 
         var counter = server.ServerStore.ConcurrentBackupsCounter;
         var logger = RavenLogManager.Instance.CreateNullLogger();
-        counter.StartBackup("OtherDatabase", "OtherBackup", logger, enforceLimit: true);
+        counter.TakePlace("OtherDatabase", "OtherBackup", logger, enforceLimit: true);
         var placeFreed = false;
 
         try

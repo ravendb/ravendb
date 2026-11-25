@@ -3560,18 +3560,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         AssertNumberOfConcurrentBackups(expectedNumber: 1);
 
-                        Assert.False(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup(database.Name + "_Test"));
-
-                        // checking for the same database name (imitating a different shard for the same database).
-                        Assert.True(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup(database.Name));
-
                         // Let's delay the backup task to 1 hour
                         var delayDuration = TimeSpan.FromHours(1);
                         await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                         AssertNumberOfConcurrentBackups(expectedNumber: 0);
-
-                        Assert.True(server.ServerStore.ConcurrentBackupsCounter.CanRunBackup(database.Name + "_Test"));
 
                         void AssertNumberOfConcurrentBackups(int expectedNumber)
                         {

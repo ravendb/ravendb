@@ -44,7 +44,6 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
         });
 
         var runner = server.ServerStore.ServerBackupRunner;
-        var counter = server.ServerStore.ConcurrentBackupsCounter;
 
         // database Y: its task is registered first, so it heads the queue; it is not due during the test
         using var storeY = GetDocumentStore(new Options { Server = server });
@@ -79,8 +78,6 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
         {
             runner.StartBackupNowTask(databaseX, task1, isFullBackup: true, databaseX.Operations.GetNextOperationId());
 
-            Assert.True(counter.CanRunBackup(storeX.Database), "precondition: database X may start more backups while it already backs up");
-            Assert.False(counter.CanRunBackup(storeY.Database), "precondition: the only concurrent backup place is taken");
             Assert.True(dueUtc > DateTime.UtcNow, "precondition: task 2 becomes due only after task 1 holds the place");
 
             var waitUntil = dueUtc + TimeSpan.FromSeconds(15);
@@ -94,8 +91,8 @@ public class ServerBackupRunnerCodeReviewRepros : ClusterTestBase
                 .Sum(x => x.Count);
 
             Assert.True(started,
-                $"Task 2 of '{storeX.Database}' was due at {dueUtc:O} and its database already holds a concurrent backup place " +
-                $"(CanRunBackup('{storeX.Database}') == true), but it never started. The runner logged {serverRejections} 'ConcurrentBackup' server rejections " +
+                $"Task 2 of '{storeX.Database}' was due at {dueUtc:O} and its database already holds a concurrent backup place, " +
+                $"but it never started. The runner logged {serverRejections} 'ConcurrentBackup' server rejections " +
                 $"for the head of the queue (task of '{storeY.Database}'). Newest decision of task 2: " +
                 $"{decisions2.Select(d => $"{d.LastTime:HH:mm:ss} x{d.Count} {d.Category} {d.Detail} {d.Reason}").FirstOrDefault() ?? "none"}");
         }

@@ -50,29 +50,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             _skipModifications = skipModifications;
         }
 
-        public bool CanRunBackup(string databaseName)
+        public void TakePlace(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
         {
-            lock (_locker)
-            {
-                if (_runningBackupsPerDatabase.TryGetValue(databaseName, out _))
-                {
-                    //  allow to backup all shards of the same database concurrently
-                    return true;
-                }
+            if (TryTakePlace(databaseName, backupName, logger, enforceLimit, canTakeNewPlace: true))
+                return;
 
-                return MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count >= 1;
-            }
+            throw new BackupDelayException(
+                $"Failed to start Backup Task: '{backupName}'. " +
+                $"The task exceeds the maximum number of concurrent backup tasks configured. " +
+                $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
         }
 
-        internal bool HasRunningBackup(string databaseName)
-        {
-            lock (_locker)
-            {
-                return _runningBackupsPerDatabase.ContainsKey(databaseName);
-            }
-        }
-
-        public void StartBackup(string databaseName, string backupName, RavenLogger logger, bool enforceLimit)
+        internal bool TryTakePlace(string databaseName, string backupName, RavenLogger logger, bool enforceLimit, bool canTakeNewPlace)
         {
             lock (_locker)
             {
@@ -80,16 +69,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups))
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups + 1;
-                    return;
+                    return true;
                 }
 
+                if (canTakeNewPlace == false)
+                    return false;
+
                 if (enforceLimit && MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{backupName}'. " +
-                        $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
-                }
+                    return false;
 
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
@@ -97,13 +84,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             RunningBackupsChanged?.Invoke(false);
 
             if (logger.IsInfoEnabled)
-                logger.Info($"Starting backup task '{backupName}'");
+                logger.Info($"Starting backup task '{backupName}' of database '{databaseName}'");
+
+            return true;
         }
 
-        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
+        internal void GiveBackPlace(string databaseName)
         {
-            bool fullLimitFreed;
+            RunningBackupsChanged?.Invoke(RemoveRunningBackup(databaseName));
+        }
 
+        private bool RemoveRunningBackup(string databaseName)
+        {
             lock (_locker)
             {
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups) == false)
@@ -120,8 +112,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _runningBackupsPerDatabase[databaseName] = runningBackups - 1;
                 }
 
-                fullLimitFreed = wasFull && _runningBackupsPerDatabase.Count < MaxNumberOfConcurrentBackups;
+                return wasFull && _runningBackupsPerDatabase.Count < MaxNumberOfConcurrentBackups;
             }
+        }
+
+        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
+        {
+            var fullLimitFreed = RemoveRunningBackup(databaseName);
 
             RunningBackupsChanged?.Invoke(fullLimitFreed);
 
