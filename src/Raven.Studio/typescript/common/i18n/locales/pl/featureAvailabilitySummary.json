@@ -1,5 +1,19 @@
 {
     "heading": "Licencjonowanie",
     "description_plans": "Zobacz, które plany obejmują tę funkcję i inne ciekawe możliwości",
-    "description_quill": "Zobacz, jakie funkcje obejmuje ta licencja"
+    "description_quill": "Zobacz, jakie funkcje obejmuje ta licencja",
+    "cloudFeatureState_turnedOff": "Niewłączona",
+    "cloudFeatureState_canBeTurnedOn": "Można włączyć",
+    "cloudFeatureFootnote_turnedOff": "Włącz {{feature}} w Cloud Portal (Product → Features). W planie rocznym skontaktuj się z pomocą techniczną.",
+    "cloudFeatureFootnote_canBeTurnedOn": "Po przejściu na plan Production możesz włączyć funkcję {{feature}}.",
+    "cloudFeatureNotTurnedOnForFeature": "Funkcja {{feature}} nie jest włączona w Twojej instancji Cloud. Włącz ją w Cloud Portal (Product → Features). W planie rocznym skontaktuj się z pomocą techniczną.",
+    "cloudProductionPlanOnly": "Dostępne w planie Production",
+    "cloudNotIncludedInPlan": "Nie jest objęte Twoim planem Cloud",
+    "cloudFeatureName_dataGovernance": "Data Governance",
+    "cloudFeatureName_olapEtl": "OLAP ETL",
+    "cloudFeatureName_queueEtl": "Queue ETL",
+    "cloudFeatureName_queueSink": "Queue Sink",
+    "cloudFeatureName_snowflakeEtl": "Snowflake ETL",
+    "cloudFeatureName_powerBi": "PowerBi",
+    "cloudFeatureName_ai": "AI Embeddings, GenAI & AI Agent"
 }

@@ -77,6 +77,7 @@ export function EditAzureQueueStorageEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Azure Queue Storage ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "azure-queue-storage-etl",
         community: { value: false },
         professional: { value: false },

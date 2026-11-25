@@ -113,6 +113,7 @@ function DocumentSchemaPlaygroundBody() {
                 title="Document Schema Playground"
                 backUrl={appUrl.forDocumentSchema(databaseName)}
                 licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
+                cloudOptionalFeature="dataGovernance"
             />
             <div className={hasSchemaValidation ? "" : "item-disabled pe-none"}>
                 <span>
@@ -124,7 +125,9 @@ function DocumentSchemaPlaygroundBody() {
                     <ConditionalPopover
                         conditions={{
                             isActive: !hasSchemaValidation,
-                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            message: (
+                                <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                            ),
                         }}
                     >
                         <Button type="submit" className="rounded-pill" disabled={!hasSchemaValidation}>
@@ -141,7 +144,9 @@ function DocumentSchemaPlaygroundBody() {
                             <ConditionalPopover
                                 conditions={{
                                     isActive: !hasSchemaValidation,
-                                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                    message: (
+                                        <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                    ),
                                 }}
                             >
                                 <Button

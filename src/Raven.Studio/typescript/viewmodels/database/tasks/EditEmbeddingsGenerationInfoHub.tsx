@@ -124,6 +124,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "External Models",
+        cloudOptionalFeature: "ai",
         featureIcon: "ai-etl",
         community: { value: false },
         professional: { value: false },

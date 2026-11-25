@@ -98,6 +98,7 @@ export default function DocumentSchema() {
                         title="Document Schema"
                         icon="document-schema"
                         licenseBadgeText={hasSchemaValidation ? null : "Professional +"}
+                        cloudOptionalFeature="dataGovernance"
                     />
                     <StickyHeader>
                         <DocumentSchemaSelectActions />
@@ -123,7 +124,9 @@ export default function DocumentSchema() {
                                 <ConditionalPopover
                                     conditions={{
                                         isActive: !hasSchemaValidation,
-                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                        message: (
+                                            <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                        ),
                                     }}
                                 >
                                     <Button
@@ -389,7 +392,9 @@ const CollectionSchemaRichPanel = ({
                                 <ConditionalPopover
                                     conditions={{
                                         isActive: !hasSchemaValidation,
-                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                        message: (
+                                            <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                        ),
                                     }}
                                 >
                                     <ButtonWithSpinner
@@ -420,7 +425,9 @@ const CollectionSchemaRichPanel = ({
                                     <ConditionalPopover
                                         conditions={{
                                             isActive: !hasSchemaValidation,
-                                            message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                            message: (
+                                                <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                            ),
                                         }}
                                     >
                                         <ButtonWithSpinner

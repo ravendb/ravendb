@@ -92,6 +92,7 @@ export default function DocumentSchemaAboutView() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Schema Validation",
+        cloudOptionalFeature: "dataGovernance",
         featureIcon: "document-schema",
         community: { value: false },
         professional: { value: true },

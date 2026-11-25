@@ -142,6 +142,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Snowflake ETL",
+        cloudOptionalFeature: "snowflakeEtl",
         featureIcon: "snowflake-etl",
         community: { value: false },
         professional: { value: false },
@@ -150,6 +151,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "OLAP ETL",
+        cloudOptionalFeature: "olapEtl",
         featureIcon: "olap-etl",
         community: { value: false },
         professional: { value: false },
@@ -166,6 +168,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Kafka ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "kafka-etl",
         community: { value: false },
         professional: { value: false },
@@ -174,6 +177,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "RabbitMQ ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "rabbitmq-etl",
         community: { value: false },
         professional: { value: false },
@@ -182,6 +186,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Azure Queue Storage ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "azure-queue-storage-etl",
         community: { value: false },
         professional: { value: false },
@@ -190,6 +195,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Amazon SQS ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "amazon-sqs-etl",
         community: { value: false },
         professional: { value: false },
@@ -198,6 +204,7 @@ const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     },
     {
         featureName: "Azure Service Bus ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "azure-service-bus",
         community: { value: false },
         professional: { value: false },

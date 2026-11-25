@@ -544,11 +544,13 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     const capabilitiesOf = (
         target: OngoingTaskTarget,
         customDisabledReason?: ReactNode
-    ): Pick<TaskCardInfo, "licenseBadge" | "showLicenseBadge" | "disabledConditions"> => {
-        const { licenseFlags, licenseBadge, isShardingSupported, accessRequired } = ongoingTaskCapabilities[target];
+    ): Pick<TaskCardInfo, "licenseBadge" | "cloudOptionalFeature" | "showLicenseBadge" | "disabledConditions"> => {
+        const { licenseFlags, licenseBadge, cloudOptionalFeature, isShardingSupported, accessRequired } =
+            ongoingTaskCapabilities[target];
 
         return {
             licenseBadge,
+            cloudOptionalFeature,
             showLicenseBadge: licenseFlags.length > 0 && licenseFlags.every((flag) => !licenseStatus?.[flag]),
             disabledConditions: getDisabledConditions({ accessRequired, isShardingSupported, customDisabledReason }),
         };

@@ -68,6 +68,7 @@ export function RemoteAttachmentsInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Remote Attachments",
+        cloudOptionalFeature: "dataGovernance",
         featureIcon: "remote-attachment",
         community: { value: false },
         professional: { value: false },

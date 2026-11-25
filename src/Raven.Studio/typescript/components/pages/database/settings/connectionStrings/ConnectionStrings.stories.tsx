@@ -7,22 +7,12 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { SharedStubs } from "test/stubs/SharedStubs";
 
-export default {
-    title: "Pages/Settings/Connection Strings",
-    decorators: [withStorybookContexts, withBootstrap5],
-    parameters: {
-        design: {
-            type: "figma",
-            url: "https://www.figma.com/design/S2r3Mrar3nB8OlZOGvHrlD/Pages---Connection-Strings?node-id=0-1&t=VTJvJLrCI0FvZpXO-1",
-        },
-    },
-} satisfies Meta;
-
 interface DefaultConnectionStringsProps {
     isEmpty: boolean;
     isTestSuccess: boolean;
     isSecuredServer: boolean;
     licenseType: Raven.Server.Commercial.LicenseType;
+    isCloud: boolean;
     databaseAccess: databaseAccessLevel;
     hasRavenEtl: boolean;
     hasSqlEtl: boolean;
@@ -33,8 +23,15 @@ interface DefaultConnectionStringsProps {
     hasEmbeddingsGeneration: boolean;
 }
 
-export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> = {
-    name: "Connection Strings",
+export default {
+    title: "Pages/Settings/Connection Strings",
+    decorators: [withStorybookContexts, withBootstrap5],
+    parameters: {
+        design: {
+            type: "figma",
+            url: "https://www.figma.com/design/S2r3Mrar3nB8OlZOGvHrlD/Pages---Connection-Strings?node-id=0-1&t=VTJvJLrCI0FvZpXO-1",
+        },
+    },
     render: (props: DefaultConnectionStringsProps) => {
         const { accessManager, license, databases } = mockStore;
         const { tasksService } = mockServices;
@@ -67,6 +64,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
 
         license.with_LicenseLimited({
             Type: props.licenseType,
+            IsCloud: props.isCloud,
             HasRavenEtl: props.hasRavenEtl,
             HasSqlEtl: props.hasSqlEtl,
             HasSnowflakeEtl: props.hasSnowflakeEtl,
@@ -83,6 +81,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         isTestSuccess: true,
         isSecuredServer: true,
         licenseType: "Enterprise",
+        isCloud: false,
         databaseAccess: "DatabaseAdmin",
         hasRavenEtl: true,
         hasSqlEtl: true,
@@ -95,6 +94,17 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
     argTypes: {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
+    },
+} satisfies Meta<DefaultConnectionStringsProps>;
+
+export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> = {
+    name: "Connection Strings",
+};
+
+export const CloudProductionQueueEtlNotTurnedOn: StoryObj<DefaultConnectionStringsProps> = {
+    args: {
+        isCloud: true,
+        hasQueueEtl: false,
     },
 };
 

@@ -23,20 +23,6 @@ export default {
         licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
-} satisfies Meta;
-
-interface AddNewOngoingTaskStoryArgs {
-    databaseType: DatabaseType;
-    licenseType: Raven.Server.Commercial.LicenseType;
-    databaseAccess: databaseAccessLevel;
-    isAiOnly: boolean;
-    hasSubscriptionLimits: boolean;
-    subscriptionsClusterUsage: number;
-    subscriptionsDatabaseCount: number;
-}
-
-export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
-    name: "Add New Ongoing Task",
     render: (props) => {
         commonInit(props);
 
@@ -46,16 +32,57 @@ export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
         isAiOnly: false,
         databaseType: "sharded",
         licenseType: "EnterpriseAi",
+        isCloud: false,
+        hasOptionalFeatures: true,
         databaseAccess: "DatabaseAdmin",
         hasSubscriptionLimits: false,
         subscriptionsClusterUsage: 0,
         subscriptionsDatabaseCount: 0,
     },
+} satisfies Meta<AddNewOngoingTaskStoryArgs>;
+
+interface AddNewOngoingTaskStoryArgs {
+    databaseType: DatabaseType;
+    licenseType: Raven.Server.Commercial.LicenseType;
+    isCloud: boolean;
+    hasOptionalFeatures: boolean;
+    databaseAccess: databaseAccessLevel;
+    isAiOnly: boolean;
+    hasSubscriptionLimits: boolean;
+    subscriptionsClusterUsage: number;
+    subscriptionsDatabaseCount: number;
+}
+
+export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
+    name: "Add New Ongoing Task",
 };
+
+export const CloudProductionFeaturesNotTurnedOn: StoryObj<AddNewOngoingTaskStoryArgs> = {
+    args: {
+        databaseType: "singleNode",
+        licenseType: "Enterprise",
+        isCloud: true,
+        hasOptionalFeatures: false,
+    },
+};
+
+const OPTIONAL_FEATURES_OFF = {
+    HasQueueEtl: false,
+    HasQueueSink: false,
+    HasOlapEtl: false,
+    HasSnowflakeEtl: false,
+    HasGenAi: false,
+    HasAiAgent: false,
+    HasEmbeddingsGeneration: false,
+    HasRemoteAttachments: false,
+    HasCdcSink: false,
+} satisfies Partial<LicenseStatus>;
 
 const commonInit = ({
     databaseType,
     licenseType,
+    isCloud,
+    hasOptionalFeatures,
     databaseAccess,
     hasSubscriptionLimits,
     subscriptionsClusterUsage,
@@ -83,14 +110,16 @@ const commonInit = ({
         [db.name]: databaseAccess,
     });
 
+    const licenseOverrides: Partial<LicenseStatus> = {
+        Type: licenseType,
+        IsCloud: isCloud,
+        ...(hasOptionalFeatures ? {} : OPTIONAL_FEATURES_OFF),
+    };
+
     if (hasSubscriptionLimits) {
-        license.with_LicenseLimited({
-            Type: licenseType,
-        });
+        license.with_LicenseLimited(licenseOverrides);
     } else {
-        license.with_License({
-            Type: licenseType,
-        });
+        license.with_License(licenseOverrides);
     }
 
     license.with_LimitsUsage({

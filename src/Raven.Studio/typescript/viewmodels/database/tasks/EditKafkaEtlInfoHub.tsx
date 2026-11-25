@@ -82,6 +82,7 @@ export function EditKafkaEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Kafka ETL",
+        cloudOptionalFeature: "queueEtl",
         featureIcon: "kafka-etl",
         community: { value: false },
         professional: { value: false },

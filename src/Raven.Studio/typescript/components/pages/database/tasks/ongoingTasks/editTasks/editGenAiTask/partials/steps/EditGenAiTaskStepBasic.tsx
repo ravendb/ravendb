@@ -30,6 +30,7 @@ export function EditGenAiTaskStepBasic() {
                     marginBottom={2}
                     icon="genai"
                     licenseBadgeText={hasGenAi ? null : "Enterprise AI"}
+                    cloudOptionalFeature="ai"
                 />
                 <EditGenAiTaskInfoHub />
             </div>

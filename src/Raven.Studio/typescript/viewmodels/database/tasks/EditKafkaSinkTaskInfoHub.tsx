@@ -59,6 +59,7 @@ export function EditKafkaSinkTaskInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Kafka Sink",
+        cloudOptionalFeature: "queueSink",
         featureIcon: "kafka-sink",
         community: { value: false },
         professional: { value: false },

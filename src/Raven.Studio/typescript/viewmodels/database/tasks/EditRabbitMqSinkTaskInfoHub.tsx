@@ -59,6 +59,7 @@ export function EditRabbitMqSinkTaskInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "RabbitMQ Sink",
+        cloudOptionalFeature: "queueSink",
         featureIcon: "rabbitmq-sink",
         community: { value: false },
         professional: { value: false },

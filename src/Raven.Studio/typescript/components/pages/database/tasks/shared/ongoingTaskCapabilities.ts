@@ -1,4 +1,5 @@
 import { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
+import type { CloudOptionalFeature } from "components/common/FeatureAvailabilitySummary";
 
 type LicenseStatusKey = keyof LicenseStatus;
 
@@ -29,6 +30,7 @@ export type OngoingTaskTarget =
 export interface OngoingTaskCapabilities {
     licenseFlags: LicenseStatusKey[];
     licenseBadge?: LicenseBadgeText;
+    cloudOptionalFeature?: CloudOptionalFeature;
     isShardingSupported?: boolean;
     accessRequired: databaseAccessLevel;
 }
@@ -37,16 +39,19 @@ export const ongoingTaskCapabilities: Record<OngoingTaskTarget, OngoingTaskCapab
     GenAi: {
         licenseFlags: ["HasGenAi"],
         licenseBadge: "Enterprise AI",
+        cloudOptionalFeature: "ai",
         accessRequired: "DatabaseAdmin",
     },
     AiAgent: {
         licenseFlags: ["HasAiAgent"],
         licenseBadge: "Enterprise AI",
+        cloudOptionalFeature: "ai",
         accessRequired: "DatabaseAdmin",
     },
     EmbeddingsGeneration: {
         licenseFlags: ["HasEmbeddingsGeneration"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "ai",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
@@ -92,6 +97,7 @@ export const ongoingTaskCapabilities: Record<OngoingTaskTarget, OngoingTaskCapab
     KafkaETL: {
         licenseFlags: ["HasQueueEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueEtl",
         accessRequired: "DatabaseAdmin",
     },
     SqlETL: {
@@ -103,43 +109,51 @@ export const ongoingTaskCapabilities: Record<OngoingTaskTarget, OngoingTaskCapab
     SnowflakeETL: {
         licenseFlags: ["HasSnowflakeEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "snowflakeEtl",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     OlapETL: {
         licenseFlags: ["HasOlapEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "olapEtl",
         isShardingSupported: true,
         accessRequired: "DatabaseAdmin",
     },
     RabbitMqETL: {
         licenseFlags: ["HasQueueEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueEtl",
         accessRequired: "DatabaseAdmin",
     },
     AzureQueueStorageETL: {
         licenseFlags: ["HasQueueEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueEtl",
         accessRequired: "DatabaseAdmin",
     },
     AmazonSqsETL: {
         licenseFlags: ["HasQueueEtl"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueEtl",
         accessRequired: "DatabaseAdmin",
     },
     KafkaSink: {
         licenseFlags: ["HasQueueSink"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueSink",
         accessRequired: "DatabaseAdmin",
     },
     RabbitMqSink: {
         licenseFlags: ["HasQueueSink"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueSink",
         accessRequired: "DatabaseAdmin",
     },
     AzureServiceBusSink: {
         licenseFlags: ["HasQueueSink"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "queueSink",
         accessRequired: "DatabaseAdmin",
     },
     CdcSink: {
@@ -150,6 +164,7 @@ export const ongoingTaskCapabilities: Record<OngoingTaskTarget, OngoingTaskCapab
     RemoteAttachments: {
         licenseFlags: ["HasRemoteAttachments"],
         licenseBadge: "Enterprise",
+        cloudOptionalFeature: "dataGovernance",
         accessRequired: "DatabaseAdmin",
     },
 };
@@ -160,6 +175,7 @@ export function mergeCapabilities(targets: OngoingTaskTarget[]): OngoingTaskCapa
     return {
         licenseFlags: [...new Set(entries.flatMap((x) => x.licenseFlags))],
         licenseBadge: entries[0].licenseBadge,
+        cloudOptionalFeature: entries[0].cloudOptionalFeature,
         isShardingSupported: entries.every((x) => x.isShardingSupported),
         accessRequired: entries[0].accessRequired,
     };

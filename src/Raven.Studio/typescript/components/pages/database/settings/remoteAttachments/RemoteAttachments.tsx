@@ -109,12 +109,15 @@ export default function RemoteAttachments() {
                                 title="Remote Attachments"
                                 icon="remote-attachment"
                                 licenseBadgeText={hasRemoteAttachments ? null : "Enterprise"}
+                                cloudOptionalFeature="dataGovernance"
                             />
                             <ConditionalPopover
                                 conditions={[
                                     {
                                         isActive: !hasRemoteAttachments,
-                                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                                        message: (
+                                            <FeatureNotAvailableInYourLicensePopoverBody cloudOptionalFeature="dataGovernance" />
+                                        ),
                                     },
                                     {
                                         isActive: !hasDatabaseAdminAccess,

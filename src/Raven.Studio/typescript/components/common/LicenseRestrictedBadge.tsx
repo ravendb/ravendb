@@ -6,19 +6,27 @@ import { licenseSelectors } from "./shell/licenseSlice";
 import { Icon } from "components/common/Icon";
 import IconName from "typings/server/icons";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { useCloudLicenseMessage } from "hooks/useCloudLicenseMessage";
+import type { CloudOptionalFeature } from "components/common/FeatureAvailabilitySummary";
 
 export type LicenseBadgeText = "Professional +" | "Enterprise" | "Enterprise AI";
 
 interface LicenseRestrictedBadgeProps {
     className?: string;
     licenseRequired: LicenseBadgeText;
+    cloudOptionalFeature?: CloudOptionalFeature;
 }
 
-export default function LicenseRestrictedBadge({ className, licenseRequired }: LicenseRestrictedBadgeProps) {
+export default function LicenseRestrictedBadge({
+    className,
+    licenseRequired,
+    cloudOptionalFeature,
+}: LicenseRestrictedBadgeProps) {
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+    const cloudLicenseMessage = useCloudLicenseMessage(cloudOptionalFeature);
 
     const iconName = getIconName(licenseRequired, isCloud);
-    const popoverMessage = getPopoverMessage(licenseRequired, isCloud);
+    const popoverMessage = cloudLicenseMessage ?? getPopoverMessage(licenseRequired);
 
     const isAiGradient = !isCloud && licenseRequired === "Enterprise AI";
 
@@ -67,11 +75,7 @@ function getIconName(licenseBadgeText: LicenseBadgeText, isCloud: boolean): Icon
     return "building";
 }
 
-function getPopoverMessage(licenseBadgeText: LicenseBadgeText, isCloud: boolean): string {
-    if (isCloud) {
-        return "Available in the Production plan";
-    }
-
+function getPopoverMessage(licenseBadgeText: LicenseBadgeText): string {
     switch (licenseBadgeText) {
         case "Professional +":
             return "Available from Professional license and above";

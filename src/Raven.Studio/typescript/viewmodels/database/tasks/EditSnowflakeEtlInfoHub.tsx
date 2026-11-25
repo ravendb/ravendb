@@ -85,6 +85,7 @@ export function EditSnowflakeEtlInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Snowflake ETL",
+        cloudOptionalFeature: "snowflakeEtl",
         featureIcon: "snowflake-etl",
         community: { value: false },
         professional: { value: false },
