@@ -99,7 +99,7 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
             foreach (var (nodeId, view) in EnumerateCache(cache, 500))
             {
                 int stateIdx = state.GetNodeIndexById(nodeId);
-                ref var stateNode = ref state.GetNodeByIndex(stateIdx);
+                ref var stateNode = ref state.GetDecodedNode(stateIdx);
 
                 Assert.Equal(stateNode.NodeId, view.Header->NodeId);
                 Assert.Equal(stateNode.VectorId, view.Header->VectorId);

@@ -60,6 +60,7 @@ public class VectorOptions
 
     /// <summary>
     /// Gets or sets the number of candidate vectors to consider during indexing for graph construction.
+    /// In the bottom layer of the graph, at least twice <see cref="NumberOfEdges"/> candidates are considered.
     /// </summary>
     public int? NumberOfCandidatesForIndexing { get; set; }
     

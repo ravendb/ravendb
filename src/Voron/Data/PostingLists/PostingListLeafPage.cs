@@ -163,6 +163,8 @@ public readonly unsafe struct PostingListLeafPage
             _reader = new FastPForBufferedReader(allocator);
         }
 
+        public void Dispose() => _reader.Dispose();
+
         public int Fill(Span<long> matches, out bool hasPrunedResults, long pruneGreaterThanOptimization)
         {
             int totalRead = 0;
@@ -200,7 +202,7 @@ public readonly unsafe struct PostingListLeafPage
             
             var buffer = stackalloc long[MinimumSizeOfBuffer];
             // we *copy* the reader to do the search without modifying 
-            //  the original position
+            //  the original position; the copy only reads, which does not replace the buffers it shares
             var innerReader = _reader.Decoder;
             while (true)
             {

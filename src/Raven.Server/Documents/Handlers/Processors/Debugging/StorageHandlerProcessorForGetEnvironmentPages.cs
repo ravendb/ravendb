@@ -48,7 +48,7 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
 
                 var list = new List<long>();
                 Span<long> buffer = stackalloc long[1024];
-                var it = postingList.Iterate();
+                using var _ = postingList.Iterate(out var it);
                 unsafe
                 {
                     while (it.Fill(buffer, out var read))

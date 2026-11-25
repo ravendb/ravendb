@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using Sparrow.Binary;
@@ -25,6 +27,9 @@ public unsafe struct FastPForDecoder : IDisposable
     private Vector256<long> _prev;
     private ByteString _buffer;
     private NativeList<long> _bigDeltaOffsets;
+    // The encoder writes at most one big-delta marker for each group of 4 values of a 256-value block. With room for all of them the list
+    // never grows, so a copy that reads ahead (PostingListLeafPage.Iterator.SkipHint) does not release storage that the original still holds.
+    private const int MaxBigDeltaMarkersPerBlock = 256 / 4;
     private int NumberOfIntegersInBuffer => _buffer.Length / sizeof(uint);
 
     public FastPForDecoder(ByteStringContext allocator)
@@ -33,7 +38,7 @@ public unsafe struct FastPForDecoder : IDisposable
         const int initialExceptionsSize = 1024;
         _exceptionsScope = allocator.Allocate(initialExceptionsSize * sizeof(uint), out _buffer);
         _exceptions = (uint*)_buffer.Ptr;
-        _bigDeltaOffsets.Initialize(allocator);
+        _bigDeltaOffsets.Initialize(allocator, MaxBigDeltaMarkersPerBlock);
     }
 
     public void MarkInvalid()
@@ -120,7 +125,7 @@ public unsafe struct FastPForDecoder : IDisposable
             {
                 case FastPForEncoder.BiggerThanMaxMarker:
                     if (bigDeltaOffsets.TryAdd((long)_metadata) == false)
-                        bigDeltaOffsets.Add(_allocator, (long)_metadata);
+                        ThrowTooManyBigDeltaMarkers();
                     // we don't need to worry about block fit, because we are ensured that we have at least
                     // 256 items to read into the output here, and these marker are for the next blcok
                     
@@ -240,6 +245,10 @@ public unsafe struct FastPForDecoder : IDisposable
             read += Vector256<long>.Count;
         }
     }
+
+    [DoesNotReturn]
+    private static void ThrowTooManyBigDeltaMarkers() =>
+        throw new InvalidDataException($"A block of the posting list has more than {MaxBigDeltaMarkersPerBlock} big-delta markers.");
 
     public void Dispose()
     {
