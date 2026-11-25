@@ -2,7 +2,7 @@ using Voron.Data.BTrees;
 
 namespace Voron.Data.Compression
 {
-    public sealed unsafe class CompressionResult
+    public unsafe struct CompressionResult
     {
         public TreePage CompressedPage;
 

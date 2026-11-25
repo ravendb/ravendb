@@ -103,6 +103,12 @@ namespace FastTests.Voron
                 var i1 = 0;
                 AssertAtMost(8, "Compressed Tree.Add update", MeasurePerOperation(() => tree.Add(keys[i1++ % NumberOfKeys], (long)i1)));
 
+                var i2 = 0;
+                AssertAtMost(128, "Compressed Tree.TryReadDecompressed", MeasurePerOperation(() =>
+                {
+                    if (tree.TryReadDecompressed(keys[i2++ % NumberOfKeys], out var value))
+                        value.Dispose();
+                }));
             }
         }
 

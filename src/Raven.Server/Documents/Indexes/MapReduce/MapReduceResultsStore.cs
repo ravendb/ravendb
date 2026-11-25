@@ -154,8 +154,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (Tree.IsLeafCompressionSupported)
                         {
-                            var read = Tree.ReadDecompressed(entrySlice);
-                            if (read == null)
+                            if (Tree.TryReadDecompressed(entrySlice, out var read) == false)
                                 throw new InvalidOperationException($"Could not find a map result with id '{id}' in '{Tree.Name}' tree");
                             return new ReadMapEntryScope(read);
                         }

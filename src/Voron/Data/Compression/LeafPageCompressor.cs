@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Sparrow.Compression;
+using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Voron.Impl;
@@ -11,7 +12,7 @@ namespace Voron.Data.Compression
 {
     public sealed unsafe class LeafPageCompressor
     {
-        public static IDisposable TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult result, bool defrag = true)
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope TryGetCompressedTempPage(LowLevelTransaction tx, TreePage page, out CompressionResult? result, bool defrag = true)
         {
             var returnTempPage = tx.GetTempPage(ushort.MaxValue, out var tmp);
 
@@ -124,7 +125,7 @@ namespace Voron.Data.Compression
             return returnTempPage;
         }
 
-        public static void CopyToPage(CompressionResult compressed, TreePage dest)
+        public static void CopyToPage(in CompressionResult compressed, TreePage dest)
         {
             // let us copy the compressed values at the end of the page
             // so we will handle additional, uncompressed values as usual

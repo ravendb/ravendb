@@ -32,9 +32,9 @@ namespace Voron.Data.BTrees
             if (alreadyCompressed)
                 pageToCompress = decompressedPage = DecompressPage(page, usage: DecompressionUsage.Write, skipCache: false); // no need to dispose, it's going to be cached anyway
 
-            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult result, defrag: alreadyCompressed == false))
+            using (LeafPageCompressor.TryGetCompressedTempPage(_llt, pageToCompress, out CompressionResult? compressionResult, defrag: alreadyCompressed == false))
             {
-                if (result == null || result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
+                if (compressionResult is not { } result || result.CompressedPage.GetRequiredSpace(key, len) > result.CompressedPage.SizeLeft)
                 {
                     // need to check if the compressed page has space for entry that we want to insert
                     // we don't use HasSpaceFor here intentionally because underneath CalcSizeUsed could be called
@@ -325,6 +325,11 @@ namespace Voron.Data.BTrees
 
         public DecompressedReadResult ReadDecompressed(Slice key)
         {
+            return TryReadDecompressed(key, out var value) ? new DecompressedReadResult(value.Reader, value.Page) : null;
+        }
+
+        public bool TryReadDecompressed(Slice key, out DecompressedValue value)
+        {
             TreeNodeHeader* node;
 
             if (DecompressionsCache.TryFindPageForReading(key, _llt, out DecompressedLeafPage decompressed))
@@ -332,11 +337,16 @@ namespace Voron.Data.BTrees
                 node = decompressed.Search(_llt, key);
 
                 if (decompressed.LastMatch != 0)
-                    return null;
+                {
+                    value = default;
+                    return false;
+                }
             }
             else
             {
-                var page = SearchForPage(key, allowCompressed: true, out node, addToRecentlyFoundPages: false);
+                // the leaf instance isn't kept: DecompressPage copies a pooled page for the decompressed page's Original
+                using var rental = RentPage(out var leafInstance);
+                var page = SearchForPage(key, allowCompressed: true, out node, addToRecentlyFoundPages: false, leafInstance: leafInstance);
 
                 if (page.IsCompressed)
                 {
@@ -345,10 +355,14 @@ namespace Voron.Data.BTrees
                 }
 
                 if (page.LastMatch != 0)
-                    return null;
+                {
+                    value = default;
+                    return false;
+                }
             }
 
-            return new DecompressedReadResult(GetValueReaderFromHeader(node), decompressed);
+            value = new DecompressedValue(GetValueReaderFromHeader(node), decompressed);
+            return true;
         }
 
         public struct DecompressionInput

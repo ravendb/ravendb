@@ -91,7 +91,7 @@ namespace Voron.Data.Compression
                         return;
                     }
 
-                    LeafPageCompressor.CopyToPage(compressed, Original);
+                    LeafPageCompressor.CopyToPage(compressed.Value, Original);
                 }
             }
 
