@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Sparrow;
 using Voron.Data.BTrees;
@@ -107,8 +107,6 @@ namespace Voron.Data.Compression
 
             using (GetNodeKey(tx, middleNodeIndex, out var middleNodeKey))
             {
-                tree.FindPageFor(middleNodeKey, node: out _, cursor: out var cursorConstructor, allowCompressed: true);
-
                 // let's copy key and data of a node that we'll remove
 
                 var key = middleNodeKey.Clone(tx.Allocator);
@@ -132,18 +130,16 @@ namespace Voron.Data.Compression
 
                     Search(tx, key);
 
-                    using (var cursor = cursorConstructor.Build(key))
-                    {
-                        cursor.Update(cursor.Pages, this); // we need to use uncompressed page here because it might have some modifications (e.g. deleted node)
+                    // the uncompressed page goes on the cursor, it might have some modifications (e.g. deleted node)
+                    var cursor = tree.BuildCursor(key, this);
 
-                        var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, cursor,
-                            splittingOnDecompressed: true);
+                    var pageSplitter = new TreePageSplitter(tx, tree, key, len, pageNumber, flags, cursor,
+                        splittingOnDecompressed: true);
 
-                        var pos = pageSplitter.Execute();
+                    var pos = pageSplitter.Execute();
 
-                        if (isPageRef == false)
-                            tempValueOutput.CopyTo(pos);
-                    }
+                    if (isPageRef == false)
+                        tempValueOutput.CopyTo(pos);
                 }
             }
         }

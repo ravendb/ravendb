@@ -7,11 +7,11 @@ using Voron.Data.Fixed;
 
 namespace Voron.Impl.FreeSpace
 {
-    public sealed class FreeSpaceHandling : IFreeSpaceHandling
+    public sealed class FreeSpaceHandling
     {
         private static readonly Slice FreeSpaceKey;
 
-        private readonly FreeSpaceHandlingDisabler _disableStatus = new FreeSpaceHandlingDisabler();
+        private int _disableCount;
 
         private readonly FreeSpaceRecursiveCallGuard _guard;
 
@@ -54,7 +54,7 @@ namespace Voron.Impl.FreeSpace
             if (tx.RootObjects == null)
                 return null;
 
-            if (_disableStatus.DisableCount > 0)
+            if (_disableCount > 0)
                 return null;
 
             if (_guard.IsProcessingFixedSizeTree)
@@ -495,9 +495,11 @@ namespace Voron.Impl.FreeSpace
 
         public FreeSpaceHandlingDisabler Disable()
         {
-            _disableStatus.DisableCount++;
-            return _disableStatus;
+            _disableCount++;
+            return new FreeSpaceHandlingDisabler(this);
         }
+
+        internal void EndDisable() => _disableCount--;
 
         private static FixedSizeTree GetFreeSpaceTree(LowLevelTransaction tx)
         {

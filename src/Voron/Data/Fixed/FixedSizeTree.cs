@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -432,7 +432,7 @@ namespace Voron.Data.Fixed
         {
             FixedSizeTreePage<TVal> allocatePage;
 
-            using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
+            using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : default)
             {
                 // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being changed allocated

@@ -244,8 +244,8 @@ namespace SlowTests.Issues
                     Assert.True(tree.StreamExist(largeKey));
 
                     // Verify small is inline
-                    Assert.True(tree.IsInlineStream("stream/small", out _, out _, out _));
-                    Assert.False(tree.IsInlineStream("stream/large", out _, out _, out _));
+                    Assert.True(tree.IsInlineStream("stream/small", out _, out _));
+                    Assert.False(tree.IsInlineStream("stream/large", out _, out _));
                 }
 
                 // Verify data integrity for both
@@ -429,7 +429,7 @@ namespace SlowTests.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("Streams");
-                Assert.False(tree.IsInlineStream("stream/transition", out _, out _, out _),
+                Assert.False(tree.IsInlineStream("stream/transition", out _, out _),
                     "Stream should be chunked (8KB > inline limit)");
             }
 
@@ -446,7 +446,7 @@ namespace SlowTests.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("Streams");
-                Assert.True(tree.IsInlineStream("stream/transition", out _, out _, out _),
+                Assert.True(tree.IsInlineStream("stream/transition", out _, out _),
                     "After compaction with small data, stream should be inline");
 
                 using var stream = tree.ReadStream("stream/transition");
@@ -487,7 +487,7 @@ namespace SlowTests.Issues
                 byte* inlinePtr = null;
                 int inlineSize = 0;
 
-                if (tree.IsInlineStream("tiny_file", out inlinePtr, out inlineSize, out _))
+                if (tree.IsInlineStream("tiny_file", out inlinePtr, out inlineSize))
                 {
                     // IsInlineStream returns pointer to header. Skip past header and tag to get actual data.
                     var header = (Tree.InlineStreamHeader*)inlinePtr;
@@ -671,7 +671,7 @@ namespace SlowTests.Issues
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("Streams");
-                Assert.True(tree.IsInlineStream(longKey, out _, out _, out _),
+                Assert.True(tree.IsInlineStream(longKey, out _, out _),
                     "Small stream should be inlined even with long key");
 
                 using var stream = tree.ReadStream(longKey);

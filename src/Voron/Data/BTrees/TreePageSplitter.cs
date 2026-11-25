@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Text;
 using Voron.Data.Compression;
@@ -10,7 +10,7 @@ using Voron.Impl.Paging;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreePageSplitter
+    public unsafe struct TreePageSplitter
     {
         private const DecompressionUsage WriteDecompressionUsage = DecompressionUsage.Write;
         private readonly TreeCursor _cursor;
@@ -43,7 +43,7 @@ namespace Voron.Data.BTrees
             _nodeType = nodeType;
             _cursor = cursor;
             _splittingOnDecompressed = splittingOnDecompressed;
-            TreePage page = _cursor.Pages.Peek();
+            TreePage page = _cursor.CurrentPage;
 
             if (_splittingOnDecompressed == false)
                 _page = _tree.ModifyPage(page);
@@ -65,11 +65,7 @@ namespace Voron.Data.BTrees
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
         {
-            if (_tree == _tx.RootObjects)
-            {
-                return _tx.Environment.FreeSpaceHandling.Disable();
-            }
-            return new FreeSpaceHandlingDisabler();
+            return _tree == _tx.RootObjects ? _tx.Environment.FreeSpaceHandling.Disable() : default;
         }
 
         public byte* Execute()
@@ -132,7 +128,7 @@ namespace Voron.Data.BTrees
 
                     _parentPage = _tree.ModifyPage(_cursor.CurrentPage);
 
-                    _cursor.Update(_cursor.Pages, _parentPage);
+                    _cursor.Update(_parentPage);
 
                     ParentPageAction.EnsureValidLastSearchPosition(_parentPage, _page.PageNumber, _parentPage.LastSearchPosition);
 
@@ -263,12 +259,13 @@ namespace Voron.Data.BTrees
             // would add a leaf pointer next to branch pointers
             int count = _parentPage.NumberOfEntries;
             int position = _parentPage.LastSearchPosition;
-            return IsBranchPage((position - 1 + count) % count) || IsBranchPage((position + 1) % count);
+            return IsBranchPage(_tree, _parentPage, _page, (position - 1 + count) % count) ||
+                   IsBranchPage(_tree, _parentPage, _page, (position + 1) % count);
 
-            bool IsBranchPage(int pos)
+            static bool IsBranchPage(Tree tree, TreePage parentPage, TreePage page, int pos)
             {
-                long pageNumber = _parentPage.GetNode(pos)->PageNumber;
-                return pageNumber != _page.PageNumber && _tree.GetReadOnlyTreePage(pageNumber).IsBranch;
+                long pageNumber = parentPage.GetNode(pos)->PageNumber;
+                return pageNumber != page.PageNumber && tree.GetReadOnlyTreePage(pageNumber).IsBranch;
             }
         }
 

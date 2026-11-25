@@ -68,7 +68,7 @@ namespace Raven.Server.Indexing
 
             using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
-                if (fileTree.IsInlineStream(fileName, out var inlineData, out _, out _))
+                if (fileTree.IsInlineStream(fileName, out var inlineData, out _))
                 {
                     var header = (Tree.InlineStreamHeader*)inlineData;
                     var tagSize = header->Info.TagSize;

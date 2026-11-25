@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Sparrow;
 using Voron.Global;
@@ -66,7 +66,9 @@ namespace Voron.Data.BTrees
         // so the uncompressed nodes found on a cache hit were all added after it and HandleUncompressedNodes applies them for the first time.
         public DecompressedLeafPage DecompressPage(TreePage p, DecompressionUsage usage, bool skipCache)
         {
-            var input = new DecompressionInput(p.CompressionHeader, p);
+            // the decompressed page keeps its original (also in DecompressionsCache) after this call, so it can't be a reused instance
+            var original = IsPooled(p) ? new TreePage(p.Base, p.PageSize) { Dirty = p.Dirty } : p;
+            var input = new DecompressionInput(p.CompressionHeader, original);
 
             DecompressedLeafPage decompressedPage;
             DecompressedLeafPage cached = null;
@@ -277,7 +279,7 @@ namespace Voron.Data.BTrees
             decompressedPage.RemoveNode(decompressedPage.LastSearchPosition);
         }
 
-        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete, ref TreeCursorConstructor cursorConstructor)
+        private void DeleteOnCompressedPage(TreePage page, Slice keyToDelete)
         {
             var tombstoneNodeSize = page.GetRequiredSpace(keyToDelete, 0);
 
@@ -305,14 +307,12 @@ namespace Voron.Data.BTrees
 
                 RemoveLeafNode(decompressed);
 
-                using (var cursor = cursorConstructor.Build(keyToDelete))
+                var cursor = BuildCursor(keyToDelete, page);
+                var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
+                var changedPage = (TreePage)decompressed;
+                while (changedPage != null)
                 {
-                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
-                    var changedPage = (TreePage)decompressed;
-                    while (changedPage != null)
-                    {
-                        changedPage = treeRebalancer.Execute(changedPage);
-                    }
+                    changedPage = treeRebalancer.Execute(changedPage);
                 }
 
                 page.DebugValidate(this, State.Header.RootPageNumber);
@@ -336,7 +336,7 @@ namespace Voron.Data.BTrees
             }
             else
             {
-                var page = SearchForPage(key, true, out _, out node, addToRecentlyFoundPages: false);
+                var page = SearchForPage(key, allowCompressed: true, out node, addToRecentlyFoundPages: false);
 
                 if (page.IsCompressed)
                 {

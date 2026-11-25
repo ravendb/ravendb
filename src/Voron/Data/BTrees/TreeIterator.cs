@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -56,17 +56,16 @@ namespace Voron.Data.BTrees
             if (_disposed)
                 throw new ObjectDisposedException("TreeIterator " + _tree.Name);
 
-            TreeNodeHeader* node;
-            TreeCursorConstructor constructor;
-            _currentPage = _tree.FindPageFor(key, node: out node, cursor: out constructor, allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
+            // the cursor is kept for the lifetime of the iterator and refilled by every seek
+            _cursor ??= new TreeCursor();
+            _cursor.Clear();
+
+            _currentPage = _tree.FindPageFor(key, _cursor, out TreeNodeHeader* node, allowCompressed: _tree.IsLeafCompressionSupported, backward: backward);
             if (_currentPage.IsCompressed)
             {
                 DecompressedCurrentPage();
                 node = _currentPage.Search(_tx, key, backward: backward);
             }
-
-            _cursor = constructor.Build(key);
-            _cursor.Pop();
 
             if (node != null)
             {
@@ -267,7 +266,6 @@ namespace Voron.Data.BTrees
             if (MaxKey.HasValue)
                 MaxKey.Release(_tx.Allocator);
             _prevKeyScope.Dispose();
-            _cursor?.Dispose();
             _decompressedPage?.Dispose();
             OnDisposal?.Invoke(this);
         }
