@@ -47,7 +47,7 @@ describe("AI connection string maps", () => {
         expect(mapAiConnectionStringToDto(connection)).toEqual(_.omit(anthropicDto, "UsedBy"));
     });
 
-    it("keeps OpenAI settings that have no Studio field", () => {
+    it("keeps the OpenAI chat API on save", () => {
         const dto = chatDtoWith({
             OpenAiSettings: {
                 ApiKey: "sk-key",
@@ -63,7 +63,7 @@ describe("AI connection string maps", () => {
         expect(saveAfterLoad(dto).OpenAiSettings.ChatApi).toBe("ChatCompletions");
     });
 
-    it("keeps Azure OpenAI settings that have no Studio field", () => {
+    it("keeps the Azure OpenAI reasoning effort and chat API on save", () => {
         const dto = chatDtoWith({
             AzureOpenAiSettings: {
                 ApiKey: "azure-key",
@@ -97,5 +97,39 @@ describe("AI connection string maps", () => {
             ChatApi: "Responses",
             EnablePromptCache: false,
         });
+    });
+
+    it("loads an unset chat API as null, the value of the Default option", () => {
+        const [connection] = mapAiConnectionsFromDto({
+            gpt: chatDtoWith({
+                OpenAiSettings: {
+                    ApiKey: "sk-key",
+                    Endpoint: "https://api.openai.com/v1/",
+                    Model: "gpt-5",
+                    OrganizationId: null,
+                    ProjectId: null,
+                    ReasoningEffort: null,
+                },
+            }),
+        });
+
+        expect(connection.openAiSettings.chatApi).toBeNull();
+    });
+
+    it("drops the chat API from a text embeddings connection string", () => {
+        const dto = chatDtoWith({
+            ModelType: "TextEmbeddings",
+            OpenAiSettings: {
+                ApiKey: "sk-key",
+                Endpoint: "https://api.openai.com/v1/",
+                Model: "text-embedding-3-small",
+                OrganizationId: null,
+                ProjectId: null,
+                ReasoningEffort: null,
+                ChatApi: "ChatCompletions",
+            },
+        });
+
+        expect(saveAfterLoad(dto).OpenAiSettings.ChatApi).toBeNull();
     });
 });

@@ -7,6 +7,9 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { SharedStubs } from "test/stubs/SharedStubs";
 
+type AiConnectorType = Raven.Client.Documents.Operations.AI.AiConnectorType;
+type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
+
 export default {
     title: "Pages/Settings/Connection Strings",
     decorators: [withStorybookContexts, withBootstrap5],
@@ -97,6 +100,84 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
         databaseAccess: databaseAccessArgType,
     },
 };
+
+type OpenAiChatApiConnectorType = Extract<AiConnectorType, "OpenAi" | "AzureOpenAi" | "Ollama">;
+
+interface AiChatConnectionStringProps {
+    connectorType: OpenAiChatApiConnectorType;
+}
+
+export const AiChatConnectionString: StoryObj<AiChatConnectionStringProps> = {
+    name: "AI Chat Connection String",
+    render: ({ connectorType }: AiChatConnectionStringProps) => {
+        const { accessManager, license, databases } = mockStore;
+        const { tasksService } = mockServices;
+
+        tasksService.withAiModels();
+        tasksService.withGetTasks();
+        tasksService.withTestAiConnectionString();
+        tasksService.withConnectionStrings({
+            ...DatabasesStubs.emptyConnectionStrings(),
+            AiConnectionStrings: { "ai-chat": aiChatConnectionString(connectorType) },
+        });
+
+        const db = databases.withActiveDatabase_NonSharded_SingleNode();
+        accessManager.with_securityClearance("ValidUser");
+        accessManager.with_databaseAccess({ [db.name]: "DatabaseAdmin" });
+        license.with_License();
+
+        return <ConnectionStrings />;
+    },
+    args: {
+        connectorType: "OpenAi",
+    },
+    argTypes: {
+        connectorType: {
+            control: "select",
+            options: ["OpenAi", "AzureOpenAi", "Ollama"] satisfies OpenAiChatApiConnectorType[],
+        },
+    },
+};
+
+function aiChatConnectionString(connectorType: OpenAiChatApiConnectorType): AiConnectionStringDto {
+    const chatApiSettings = {
+        ApiKey: "api-key",
+        Model: "gpt-5.5",
+        ReasoningEffort: "high",
+        ChatApi: "ChatCompletions",
+    } satisfies Partial<Raven.Client.Documents.Operations.AI.OpenAiChatApiSettings>;
+
+    return {
+        Type: "Ai",
+        Name: "ai-chat",
+        Identifier: "ai-chat",
+        ModelType: "Chat",
+        UsedBy: [],
+        OpenAiSettings:
+            connectorType === "OpenAi"
+                ? {
+                      ...chatApiSettings,
+                      Endpoint: "https://api.openai.com/v1/",
+                      OrganizationId: null,
+                      ProjectId: null,
+                  }
+                : null,
+        AzureOpenAiSettings:
+            connectorType === "AzureOpenAi"
+                ? { ...chatApiSettings, Endpoint: "https://example.openai.azure.com/", DeploymentName: "gpt-5.5" }
+                : null,
+        OllamaSettings:
+            connectorType === "Ollama"
+                ? { ...chatApiSettings, Endpoint: "http://localhost:11434", Uri: "http://localhost:11434" }
+                : null,
+        AnthropicSettings: null,
+        EmbeddedSettings: null,
+        GoogleSettings: null,
+        HuggingFaceSettings: null,
+        MistralAiSettings: null,
+        VertexSettings: null,
+    };
+}
 
 function mockTestResults(isSuccess: boolean) {
     const { tasksService, manageServerService } = mockServices;

@@ -278,7 +278,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Temperature: mapTemperatureToDto(connection),
                       ReasoningEffort:
                           connection.modelType === "Chat" ? connection.azureOpenAiSettings.reasoningEffort : null,
-                      ChatApi: connection.azureOpenAiSettings.chatApi,
+                      ChatApi: connection.modelType === "Chat" ? connection.azureOpenAiSettings.chatApi : null,
                   }
                 : null,
         GoogleSettings:
@@ -314,7 +314,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Temperature: mapTemperatureToDto(connection),
                       ReasoningEffort:
                           connection.modelType === "Chat" ? connection.ollamaSettings.reasoningEffort : null,
-                      ChatApi: connection.ollamaSettings.chatApi,
+                      ChatApi: connection.modelType === "Chat" ? connection.ollamaSettings.chatApi : null,
                       EnablePromptCache: connection.ollamaSettings.enablePromptCache,
                   }
                 : null,
@@ -338,7 +338,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.openAiSettings.enablePromptCache,
                       Temperature: mapTemperatureToDto(connection),
-                      ChatApi: connection.openAiSettings.chatApi,
+                      ChatApi: connection.modelType === "Chat" ? connection.openAiSettings.chatApi : null,
                   }
                 : null,
         MistralAiSettings:

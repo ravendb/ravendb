@@ -18,6 +18,8 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import TemperatureField from "./TemperatureField";
+import ChatApiField from "./ChatApiField";
+import ReasoningEffortField from "./ReasoningEffortField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -40,6 +42,8 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             Uri: formValues.ollamaSettings.uri,
             Think: formValues.ollamaSettings.think,
             Temperature: formValues.ollamaSettings.isSetTemperature ? formValues.ollamaSettings.temperature : null,
+            ReasoningEffort: formValues.modelType === "Chat" ? formValues.ollamaSettings.reasoningEffort : null,
+            ChatApi: formValues.modelType === "Chat" ? formValues.ollamaSettings.chatApi : null,
         };
         return isServerWide
             ? tasksService.testServerWideAiConnectionString("Ollama", formValues.modelType, settings)
@@ -100,6 +104,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     isLoading={asyncGetModelOptions.loading}
                 />
             </div>
+            <ChatApiField baseName="ollamaSettings" defaultDescription="Chat Completions." />
 
             {formValues.modelType === "Chat" && (
                 <div className="mb-2">
@@ -145,6 +150,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     <FormSelect control={control} name="ollamaSettings.think" options={thinkOptions} />
                 </div>
             )}
+            <ReasoningEffortField baseName="ollamaSettings" />
             <TemperatureField baseName="ollamaSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}
             <div className="d-flex mb-2">

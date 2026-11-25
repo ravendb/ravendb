@@ -20,6 +20,8 @@ import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import { SelectOption } from "components/common/select/Select";
 import TemperatureField from "./TemperatureField";
 import PromptCacheField from "./PromptCacheField";
+import ChatApiField from "./ChatApiField";
+import ReasoningEffortField from "./ReasoningEffortField";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
@@ -45,6 +47,8 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             Temperature: formValues.azureOpenAiSettings.isSetTemperature
                 ? formValues.azureOpenAiSettings.temperature
                 : null,
+            ReasoningEffort: formValues.modelType === "Chat" ? formValues.azureOpenAiSettings.reasoningEffort : null,
+            ChatApi: formValues.modelType === "Chat" ? formValues.azureOpenAiSettings.chatApi : null,
         };
         return isServerWide
             ? tasksService.testServerWideAiConnectionString("AzureOpenAi", formValues.modelType, settings)
@@ -136,6 +140,8 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 </FormLabel>
                 <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
             </div>
+            <ChatApiField baseName="azureOpenAiSettings" defaultDescription="Responses." />
+            <ReasoningEffortField baseName="azureOpenAiSettings" />
             {formValues.modelType === "TextEmbeddings" && (
                 <div className="mb-2">
                     <FormLabel>
