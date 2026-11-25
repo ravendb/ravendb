@@ -134,6 +134,15 @@ namespace Raven.Server.Documents.Indexes
 
         public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes = true)
         {
+            return HandleDatabaseRecordChange(record, raftIndex, startIndexes, out _);
+        }
+
+        /// <param name="anyErrors">true when some of the changes couldn't be applied (e.g. an index that couldn't be created or started),
+        /// the errors are reported to the waiters of <paramref name="raftIndex"/> and the next call applies these changes again</param>
+        public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex, bool startIndexes, out bool anyErrors)
+        {
+            anyErrors = false;
+
             ForTestingPurposes?.BeforeHandleDatabaseRecordChange?.Invoke();
 
             try
@@ -141,18 +150,18 @@ namespace Raven.Server.Documents.Indexes
                 if (record == null)
                     return 0;
 
-                HandleSorters(record, raftIndex);
-                HandleAnalyzers(record, raftIndex);
+                HandleSorters(record, raftIndex, ref anyErrors);
+                HandleAnalyzers(record, raftIndex, ref anyErrors);
 
-                HandleDeletes(record, raftIndex);
+                HandleDeletes(record, raftIndex, ref anyErrors);
 
                 var newIndexesToStart = new List<Index>();
                 ConcurrentSet<Index> indexesToDelete = null;
 
                 try
                 {
-                    HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart);
-                    HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart);
+                    HandleChangesForStaticIndexes(record, raftIndex, newIndexesToStart, ref anyErrors);
+                    HandleChangesForAutoIndexes(record, raftIndex, newIndexesToStart, ref anyErrors);
 
                     if (newIndexesToStart.Count <= 0)
                         return 0;
@@ -166,6 +175,9 @@ namespace Raven.Server.Documents.Indexes
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"Starting {newIndexesToStart.Count} new index{(newIndexesToStart.Count > 1 ? "es" : string.Empty)}");
 
+                        // an out parameter can't be used in a lambda
+                        var anyStartErrors = false;
+
                         ExecuteForIndexes(newIndexesToStart, index =>
                         {
                             var indexLock = GetIndexLock(index.Name);
@@ -176,6 +188,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (OperationCanceledException e)
                             {
+                                anyStartErrors = true;
                                 AddToIndexesToDelete(index);
                                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
                                 return;
@@ -187,6 +200,7 @@ namespace Raven.Server.Documents.Indexes
                             }
                             catch (Exception e)
                             {
+                                anyStartErrors = true;
                                 AddToIndexesToDelete(index);
 
                                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftIndex, e);
@@ -198,6 +212,9 @@ namespace Raven.Server.Documents.Indexes
                                 indexLock.Release();
                             }
                         });
+
+                        if (anyStartErrors)
+                            anyErrors = true;
 
                         if (Logger.IsInfoEnabled)
                             Logger.Info(
@@ -252,7 +269,7 @@ namespace Raven.Server.Documents.Indexes
             }, action);
         }
 
-        private void HandleSorters(DatabaseRecord record, long index)
+        private void HandleSorters(DatabaseRecord record, long index, ref bool anyErrors)
         {
             try
             {
@@ -260,13 +277,14 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
+                anyErrors = true;
                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update sorters", e);
             }
         }
 
-        private void HandleAnalyzers(DatabaseRecord record, long index)
+        private void HandleAnalyzers(DatabaseRecord record, long index, ref bool anyErrors)
         {
             try
             {
@@ -274,13 +292,14 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
+                anyErrors = true;
                 _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Could not update analyzers", e);
             }
         }
 
-        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index, List<Index> indexesToStart, ref bool anyErrors)
         {
             var mode = _documentDatabase.Configuration.Indexing.AutoIndexDeploymentMode;
 
@@ -301,6 +320,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    anyErrors = true;
                     _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not create auto index {name}", e);
@@ -429,7 +449,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index, List<Index> indexesToStart, ref bool anyErrors)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -452,6 +472,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
+                    anyErrors = true;
                     _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
 
                     var indexName = name;
@@ -812,7 +833,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
+        private void HandleDeletes(DatabaseRecord record, long raftLogIndex, ref bool anyErrors)
         {
             foreach (var index in _indexes)
             {
@@ -833,6 +854,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    anyErrors = true;
                     _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Could not delete index {index.Name}", e);
@@ -851,8 +873,9 @@ namespace Raven.Server.Documents.Indexes
 
             return Task.Run(() =>
             {
-                HandleSorters(record, raftIndex);
-                HandleAnalyzers(record, raftIndex);
+                var anyErrors = false;
+                HandleSorters(record, raftIndex, ref anyErrors);
+                HandleAnalyzers(record, raftIndex, ref anyErrors);
                 
                 if (_documentDatabase.Configuration.Indexing.RunInMemory == false)
                     OpenIndexesFromRecord(record, raftIndex, addToInitLog);

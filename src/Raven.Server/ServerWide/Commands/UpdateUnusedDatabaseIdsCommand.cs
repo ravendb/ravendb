@@ -6,6 +6,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class UpdateUnusedDatabaseIdsCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public HashSet<string> UnusedDatabaseIds;
 
         public UpdateUnusedDatabaseIdsCommand()

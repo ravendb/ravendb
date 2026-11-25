@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.Sorters
 {
     public sealed class PutSortersCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Sorters;
+
         public List<SorterDefinition> Sorters = new List<SorterDefinition>();
 
         public PutSortersCommand()

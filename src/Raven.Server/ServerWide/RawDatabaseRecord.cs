@@ -38,6 +38,7 @@ using QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.Queue
 using SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
+using ClientConfiguration = Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
 
 namespace Raven.Server.ServerWide
 {
@@ -420,6 +421,38 @@ namespace Raven.Server.ServerWide
                     _studioConfiguration = JsonDeserializationServer.StudioConfiguration(config);
 
                 return _studioConfiguration;
+            }
+        }
+
+        private ClientConfiguration _clientConfiguration;
+
+        public ClientConfiguration ClientConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.Client;
+
+                if (_clientConfiguration == null && _record.TryGet(nameof(DatabaseRecord.Client), out BlittableJsonReaderObject config) && config != null)
+                    _clientConfiguration = JsonDeserializationCluster.ClientConfiguration(config);
+
+                return _clientConfiguration;
+            }
+        }
+
+        private DatabaseRecordClusterState _clusterState;
+
+        public DatabaseRecordClusterState ClusterState
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.ClusterState;
+
+                if (_clusterState == null && _record.TryGet(nameof(DatabaseRecord.ClusterState), out BlittableJsonReaderObject state) && state != null)
+                    _clusterState = JsonDeserializationCluster.DatabaseRecordClusterState(state);
+
+                return _clusterState;
             }
         }
 

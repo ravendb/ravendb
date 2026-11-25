@@ -5,6 +5,8 @@ namespace Raven.Server.ServerWide.Commands.Sorters
 {
     public sealed class DeleteSorterCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Sorters;
+
         public string SorterName;
 
         public DeleteSorterCommand()

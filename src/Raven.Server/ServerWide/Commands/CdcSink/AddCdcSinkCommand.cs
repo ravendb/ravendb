@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
 {
     public class AddCdcSinkCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.CdcSinks;
+
         public CdcSinkConfiguration Configuration { get; protected set; }
 
         public AddCdcSinkCommand()

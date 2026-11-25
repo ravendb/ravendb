@@ -121,6 +121,29 @@ namespace Raven.Server.Documents
 
         private readonly DatabasesLandlord.StateChange _databaseStateChange;
 
+        // the features are notified about a database record change only if one of the sections they depend on was changed
+        private readonly DatabaseRecordChangeConsumer _indexStoreRecordConsumer = new(nameof(IndexStore),
+            DatabaseRecordSections.Indexes | DatabaseRecordSections.Sorters | DatabaseRecordSections.Analyzers | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _replicationRecordConsumer = new(nameof(ReplicationLoader),
+            DatabaseRecordSections.Replication | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _periodicBackupRecordConsumer = new(nameof(PeriodicBackupRunner),
+            DatabaseRecordSections.PeriodicBackups | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _embeddingsGeneratorQueriesRecordConsumer = new(nameof(EmbeddingsGeneratorQueries),
+            DatabaseRecordSections.EmbeddingsGenerations | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _embeddingsGeneratorEtlRecordConsumer = new(nameof(EmbeddingsGeneratorEtl),
+            DatabaseRecordSections.EmbeddingsGenerations | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _etlRecordConsumer = new(nameof(EtlLoader),
+            DatabaseRecordSections.Etls | DatabaseRecordSections.EmbeddingsGenerations | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _subscriptionsRecordConsumer = new(nameof(SubscriptionStorage),
+            DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _queueSinkRecordConsumer = new(nameof(QueueSinkLoader),
+            DatabaseRecordSections.QueueSinks | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+        private readonly DatabaseRecordChangeConsumer _cdcSinkRecordConsumer = new(nameof(CdcSinkLoader),
+            DatabaseRecordSections.CdcSinks | DatabaseRecordSections.ConnectionStrings | DatabaseRecordSections.Topology);
+
+        // all of the above, when none of them has to handle a change we don't deserialize their sections of the record
+        private readonly DatabaseRecordChangeConsumer[] _recordChangeConsumers;
+
         public readonly DatabaseLoggersContext Loggers;
 
         public DocumentsCompressionConfiguration DocumentsCompression => _documentsCompression;
@@ -153,6 +176,11 @@ namespace Raven.Server.Documents
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _databaseStateChange = new DatabasesLandlord.StateChange(ServerStore, name, _logger, UpdateOnStateChange, 0, _databaseShutdown.Token);
+            _recordChangeConsumers =
+            [
+                _indexStoreRecordConsumer, _replicationRecordConsumer, _periodicBackupRecordConsumer, _embeddingsGeneratorQueriesRecordConsumer,
+                _embeddingsGeneratorEtlRecordConsumer, _etlRecordConsumer, _subscriptionsRecordConsumer, _queueSinkRecordConsumer, _cdcSinkRecordConsumer
+            ];
 
             try
             {
@@ -523,7 +551,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(Initialize));
+                        await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(index, _databaseStateChange, nameof(Initialize), changeType: null, forced: true);
                         RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
                     }
                     catch (Exception e)
@@ -1688,23 +1716,32 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async ValueTask StateChangedAsync(long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        public async ValueTask StateChangedAsync(long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
         {
             try
             {
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
+                DatabaseTopology topology;
+                ClientConfiguration clientConfiguration;
+                StudioConfiguration studioConfiguration;
+
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
+                using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name))
                 {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                    if (rawRecord == null)
+                        DatabaseDoesNotExistException.Throw(Name);
+
+                    topology = rawRecord.Topology;
+                    clientConfiguration = rawRecord.ClientConfiguration;
+                    studioConfiguration = rawRecord.StudioConfiguration;
                 }
 
-                if (ServerStore.ShouldUpdateTopology(record.Topology.Stamp.Index, _lastTopologyIndex, out string url))
+                if (ServerStore.ShouldUpdateTopology(topology.Stamp.Index, _lastTopologyIndex, out string url))
                 {
-                    _lastTopologyIndex = record.Topology.Stamp.Index;
+                    _lastTopologyIndex = topology.Stamp.Index;
 
                     Changes.RaiseNotifications(new TopologyChange
                     {
@@ -1726,15 +1763,16 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                ClientConfiguration = record.Client;
-                _localIdentityPartsSeparator = record.Client is { Disabled: false, IdentityPartsSeparator: not null }
-                    ? record.Client.IdentityPartsSeparator
+                ClientConfiguration = clientConfiguration;
+                _localIdentityPartsSeparator = clientConfiguration is { Disabled: false, IdentityPartsSeparator: not null }
+                    ? clientConfiguration.IdentityPartsSeparator
                     : null;
-                StudioConfiguration = record.Studio;
+                StudioConfiguration = studioConfiguration;
 
                 ServerStore.DatabasesLandlord.ForTestingPurposes?.DelayNotifyFeaturesAboutStateChange?.Invoke();
 
-                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, type, changeType);
+                var forced = DatabasesLandlord.ShouldForceFeaturesNotification(type, changeState);
+                await DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(_ => ReadDatabaseRecordForStateChange(forced), index, _databaseStateChange, type, changeType, forced);
 
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e: null);
             }
@@ -1757,14 +1795,47 @@ namespace Raven.Server.Documents
             }
         }
 
-        public async Task UpdateOnStateChange(DatabaseRecord record, long index)
+        private DatabaseRecord ReadDatabaseRecordForStateChange(bool forced)
+        {
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name))
+            {
+                if (rawRecord == null)
+                    return null;
+
+                // called under the lock, so the features will make the same decision in UpdateOnStateChange
+                var withFeatureSections = _recordChangeConsumers.Any(c => c.ShouldProcess(rawRecord.ClusterState, forced, out _));
+
+                ForTestingPurposes?.OnDatabaseRecordReadForStateChange?.Invoke(withFeatureSections);
+
+                // the sections of the features can be large (e.g. the index definitions and their history), most of the record changes don't need them
+                return withFeatureSections
+                    ? rawRecord.MaterializedRecord
+                    : JsonDeserializationCluster.DatabaseRecordForEveryChange(rawRecord.Raw);
+            }
+        }
+
+        /// <summary>
+        /// The record might contain only the sections handled on every change (<see cref="DatabaseRecordSectionsExtensions.HandledOnEveryChange"/>),
+        /// when none of the features that depend on the other sections has to handle it.
+        /// </summary>
+        public async Task UpdateOnStateChange(DatabaseRecord record, long index, bool forced)
         {
             SetIds(record);
             SetUnusedDatabaseIds(record);
             InitializeFromDatabaseRecord(record);
-            IndexStore.HandleDatabaseRecordChange(record, index);
-            ReplicationLoader?.HandleDatabaseRecordChange(record, index);
 
+            if (ShouldHandle(_indexStoreRecordConsumer, out var version))
+            {
+                IndexStore.HandleDatabaseRecordChange(record, index, startIndexes: true, out var anyErrors);
+
+                // the changes that failed (e.g. an index that couldn't be started) are applied again on the next record change
+                if (anyErrors == false)
+                    MarkHandled(_indexStoreRecordConsumer, version);
+            }
+
+            Handle(_replicationRecordConsumer, () => ReplicationLoader?.HandleDatabaseRecordChange(record, index));
 
             // We've already begun executing the operation and aim to see it through without interruption,
             // hence we won't be passing the cancellation token.
@@ -1774,21 +1845,43 @@ namespace Raven.Server.Documents
             try
             {
                 UpdateSchemaValidation(record.SchemaValidation);
-                PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
-                EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
-                EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
-                EtlLoader?.HandleDatabaseRecordChange(record);
-                SubscriptionStorage?.HandleDatabaseRecordChange();
+
+                Handle(_periodicBackupRecordConsumer, () => PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups));
+                Handle(_embeddingsGeneratorQueriesRecordConsumer, () => EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record));
+                Handle(_embeddingsGeneratorEtlRecordConsumer, () => EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record));
+                Handle(_etlRecordConsumer, () => EtlLoader?.HandleDatabaseRecordChange(record));
+                Handle(_subscriptionsRecordConsumer, () => SubscriptionStorage?.HandleDatabaseRecordChange());
             }
             finally
             {
                 _updateValuesLocker.Release();
             }
 
-            QueueSinkLoader?.HandleDatabaseRecordChange(record);
-            CdcSinkLoader?.HandleDatabaseRecordChange(record);
+            Handle(_queueSinkRecordConsumer, () => QueueSinkLoader?.HandleDatabaseRecordChange(record));
+            Handle(_cdcSinkRecordConsumer, () => CdcSinkLoader?.HandleDatabaseRecordChange(record));
 
             OnDatabaseRecordChanged(record);
+
+            void Handle(DatabaseRecordChangeConsumer consumer, Action handle)
+            {
+                if (ShouldHandle(consumer, out var v) == false)
+                    return;
+
+                handle();
+                MarkHandled(consumer, v);
+            }
+
+            bool ShouldHandle(DatabaseRecordChangeConsumer consumer, out long v)
+            {
+                Debug.Assert(_recordChangeConsumers.Contains(consumer), $"{consumer.Name} must be in {nameof(_recordChangeConsumers)}, otherwise it might get a record without its sections");
+                return consumer.ShouldProcess(record, forced, out v);
+            }
+
+            void MarkHandled(DatabaseRecordChangeConsumer consumer, long v)
+            {
+                consumer.MarkProcessed(v);
+                ForTestingPurposes?.OnDatabaseRecordChangeHandled?.Invoke(consumer.Name, index);
+            }
         }
 
         private void UpdateSchemaValidation(SchemaValidationConfiguration configuration)
@@ -1831,7 +1924,10 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool CanSkipValueChange(long index, string type)
+        private long _lastSubscriptionsValueChangeIndex;
+        private long _lastEtlValueChangeIndex;
+
+        private bool CanSkipValueChange(long index, string type, DatabaseValueChangeConsumers consumers)
         {
             switch (type)
             {
@@ -1841,20 +1937,28 @@ namespace Raven.Server.Documents
                     return false;
             }
 
-            if (LastValueChangeIndex > index)
-            {
-                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks.
-                if (_logger.IsDebugEnabled)
-                    _logger.Debug($"Skipping value change for index {index} (current {LastValueChangeIndex}) for {Name} because it was already precessed.");
-                return true;
-            }
+            // each consumer reads the current state, so it has already seen all the changes up to the index it handled
+            if (ShouldNotify(consumers, DatabaseValueChangeConsumers.Subscriptions, Volatile.Read(ref _lastSubscriptionsValueChangeIndex), index) ||
+                ShouldNotify(consumers, DatabaseValueChangeConsumers.Etl, Volatile.Read(ref _lastEtlValueChangeIndex), index))
+                return false;
 
-            return false;
+            if (_logger.IsDebugEnabled)
+                _logger.Debug($"Skipping value change of type '{type}' for index {index} (current {LastValueChangeIndex}) for {Name} because it was already processed or isn't relevant.");
+
+            return true;
+        }
+
+        private static bool ShouldNotify(DatabaseValueChangeConsumers consumers, DatabaseValueChangeConsumers consumer, long lastIndex, long index)
+        {
+            // index and the last index could have equal values when we transit from/to passive and want to update the tasks.
+            return consumers.Contain(consumer) && lastIndex <= index;
         }
 
         private async ValueTask NotifyFeaturesAboutValueChangeAsync(long index, string type, object changeState)
         {
-            if (CanSkipValueChange(index, type))
+            var consumers = DatabaseValueChangeConsumersExtensions.ForType(type);
+
+            if (CanSkipValueChange(index, type, consumers))
                 return;
 
             var taken = false;
@@ -1864,7 +1968,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    if (CanSkipValueChange(index, type))
+                    if (CanSkipValueChange(index, type, consumers))
                         return;
 
                     DatabaseShutdown.ThrowIfCancellationRequested();
@@ -1872,11 +1976,23 @@ namespace Raven.Server.Documents
                     if (taken == false)
                         continue;
 
-                    SubscriptionStorage?.HandleDatabaseRecordChange();
-                    EtlLoader?.HandleDatabaseValueChanged();
+                    if (ShouldNotify(consumers, DatabaseValueChangeConsumers.Subscriptions, _lastSubscriptionsValueChangeIndex, index))
+                    {
+                        SubscriptionStorage?.HandleDatabaseRecordChange();
+                        Volatile.Write(ref _lastSubscriptionsValueChangeIndex, index);
+                        ForTestingPurposes?.OnValueChangeHandled?.Invoke(nameof(SubscriptionStorage), index);
+                    }
+
+                    if (ShouldNotify(consumers, DatabaseValueChangeConsumers.Etl, _lastEtlValueChangeIndex, index))
+                    {
+                        EtlLoader?.HandleDatabaseValueChanged();
+                        Volatile.Write(ref _lastEtlValueChangeIndex, index);
+                        ForTestingPurposes?.OnValueChangeHandled?.Invoke(nameof(EtlLoader), index);
+                    }
+
                     PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
 
-                    LastValueChangeIndex = index;
+                    LastValueChangeIndex = Math.Max(LastValueChangeIndex, index);
                 }
                 finally
                 {
@@ -1891,15 +2007,16 @@ namespace Raven.Server.Documents
             if (_databaseShutdown.IsCancellationRequested)
                 ThrowDatabaseShutdown();
 
-            DatabaseRecord record;
             long index;
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
+            using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, Name, out index))
             {
-                record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
+                if (rawRecord == null)
+                    return ValueTask.CompletedTask;
             }
 
-            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(record, index, _databaseStateChange, nameof(RefreshFeaturesAsync));
+            return DatabasesLandlord.NotifyFeaturesAboutStateChangeAsync(index, _databaseStateChange, nameof(RefreshFeaturesAsync), changeType: null, forced: true);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
@@ -2293,6 +2410,21 @@ namespace Raven.Server.Documents
             internal AsyncManualResetEvent DelayDeleteBucket;
 
             internal bool EnableWritesToTheWrongShard = false;
+
+            /// <summary>
+            /// Called with the name of the feature that handled a database record change and the raft index of the change.
+            /// </summary>
+            internal Action<string, long> OnDatabaseRecordChangeHandled;
+
+            /// <summary>
+            /// Called when the database record is read to handle its change, with false if it was read without the sections of the features.
+            /// </summary>
+            internal Action<bool> OnDatabaseRecordReadForStateChange;
+
+            /// <summary>
+            /// Called with the name of the feature that handled a database value change and the raft index of the change.
+            /// </summary>
+            internal Action<string, long> OnValueChangeHandled;
             
             internal TimeSpan? EtlFallbackTime;
 

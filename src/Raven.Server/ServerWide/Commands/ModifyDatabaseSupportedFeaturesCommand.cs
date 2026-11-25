@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class ModifyDatabaseSupportedFeaturesCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Replication;
+
         public string[] Add;
         public string[] Remove;
 

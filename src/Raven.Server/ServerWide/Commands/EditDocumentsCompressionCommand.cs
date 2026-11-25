@@ -8,6 +8,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditDocumentsCompressionCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Configuration;
+
         public DocumentsCompressionConfiguration Configuration;
         
         public EditDocumentsCompressionCommand()

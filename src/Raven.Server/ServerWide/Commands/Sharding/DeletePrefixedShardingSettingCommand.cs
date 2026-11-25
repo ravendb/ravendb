@@ -9,6 +9,8 @@ namespace Raven.Server.ServerWide.Commands.Sharding
 {
     public sealed class DeletePrefixedShardingSettingCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology;
+
         public PrefixedShardingSetting Setting;
 
         public DeletePrefixedShardingSettingCommand()

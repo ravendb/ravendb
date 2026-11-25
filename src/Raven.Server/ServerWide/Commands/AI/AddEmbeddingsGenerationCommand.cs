@@ -9,6 +9,8 @@ namespace Raven.Server.ServerWide.Commands.AI;
 
 public sealed class AddEmbeddingsGenerationCommand : AddEtlCommand<EmbeddingsGenerationConfiguration, AiConnectionString>
 {
+    public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.EmbeddingsGenerations;
+
     public AddEmbeddingsGenerationCommand()
     {
         // for deserialization

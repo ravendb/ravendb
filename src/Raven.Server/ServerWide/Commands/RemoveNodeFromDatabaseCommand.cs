@@ -7,6 +7,9 @@ namespace Raven.Server.ServerWide.Commands
 {
     public sealed class RemoveNodeFromDatabaseCommand : UpdateDatabaseCommand
     {
+        // removing a node also completes its rolling index deployments and adds its database id to the unused ones
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Topology | DatabaseRecordSections.Indexes | DatabaseRecordSections.Configuration;
+
         public string NodeTag;
         public string DatabaseId;
 

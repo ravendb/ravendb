@@ -16,6 +16,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class PutAutoIndexCommand : UpdateDatabaseRecordFeaturesCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public DateTime CreatedAt;
         public AutoIndexDefinition Definition;
         public IndexDeploymentMode? DefaultStaticDeploymentMode;

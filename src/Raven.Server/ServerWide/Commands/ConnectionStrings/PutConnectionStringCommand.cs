@@ -18,6 +18,8 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 {
     public abstract class PutConnectionStringCommand<T> : UpdateDatabaseCommand where T : ConnectionString
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.ConnectionStrings;
+
         public T ConnectionString { get; protected set; }
 
         protected PutConnectionStringCommand()

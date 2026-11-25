@@ -14,6 +14,20 @@ namespace Sparrow.Json
 
         protected internal static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutine<T>()
         {
+            return GenerateJsonDeserializationRoutineInternal<T>(shouldDeserializeMember: null);
+        }
+
+        /// <summary>
+        /// Generates a routine that deserializes only the top level fields and properties whose names are accepted by <paramref name="shouldDeserializeMember"/>,
+        /// the other members are left with the values set by the constructor.
+        /// </summary>
+        protected internal static Func<BlittableJsonReaderObject, T> GeneratePartialJsonDeserializationRoutine<T>(Func<string, bool> shouldDeserializeMember)
+        {
+            return GenerateJsonDeserializationRoutineInternal<T>(shouldDeserializeMember ?? throw new ArgumentNullException(nameof(shouldDeserializeMember)));
+        }
+
+        private static Func<BlittableJsonReaderObject, T> GenerateJsonDeserializationRoutineInternal<T>(Func<string, bool> shouldDeserializeMember)
+        {
             try
             {
                 var type = typeof(T);
@@ -81,6 +95,9 @@ namespace Sparrow.Json
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
                         continue;
 
+                    if (shouldDeserializeMember != null && shouldDeserializeMember(fieldInfo.Name) == false)
+                        continue;
+
                     if (fieldInfo.IsPublic && fieldInfo.IsInitOnly)
                         ThrowDeserializationError(type, fieldInfo);
 
@@ -96,6 +113,9 @@ namespace Sparrow.Json
                         continue;
 
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
+                        continue;
+
+                    if (shouldDeserializeMember != null && shouldDeserializeMember(propertyInfo.Name) == false)
                         continue;
 
                     var propertyValue = GetValue(propertyInfo.Name, propertyInfo.PropertyType, propertyInfo.GetCustomAttributes().ToList(), json, vars);

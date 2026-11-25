@@ -7,6 +7,8 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 {
     public sealed class SetIndexLockCommand : UpdateDatabaseCommand
     {
+        public override DatabaseRecordSections GetChangedSections() => DatabaseRecordSections.Indexes;
+
         public string IndexName;
 
         public IndexLockMode LockMode;
