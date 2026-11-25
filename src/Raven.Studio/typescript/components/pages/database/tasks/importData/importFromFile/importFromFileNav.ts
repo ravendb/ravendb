@@ -1,8 +1,4 @@
-import {
-    ErrorFieldTarget,
-    SectionNavItem,
-    getSectionIds,
-} from "components/pages/database/tasks/importData/shared/importNav";
+import { ErrorFieldTarget, SectionNavItem } from "components/pages/database/tasks/importData/shared/importNav";
 
 export const sectionNav: SectionNavItem[] = [
     { id: "select-file", label: "Select file to import", icon: "folder" },
@@ -26,8 +22,6 @@ export const sectionNav: SectionNavItem[] = [
     },
     { id: "import-processing", label: "Import processing & security", icon: "settings" },
 ];
-
-export const sectionIds = getSectionIds(sectionNav);
 
 export const errorFieldTargets: ErrorFieldTarget[] = [
     { path: "processing", sectionId: "import-processing" },
