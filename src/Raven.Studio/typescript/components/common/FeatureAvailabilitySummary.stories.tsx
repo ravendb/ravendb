@@ -20,6 +20,7 @@ interface FeatureAvailabilitySummaryStoryArgs {
     community: FeatureAvailabilityValueData;
     professional: FeatureAvailabilityValueData;
     enterprise: FeatureAvailabilityValueData;
+    enterpriseAi?: FeatureAvailabilityValueData;
     quill: FeatureAvailabilityValueData;
 }
 
@@ -53,6 +54,7 @@ export default {
                             community: args.community,
                             professional: args.professional,
                             enterprise: args.enterprise,
+                            enterpriseAi: args.enterpriseAi,
                             quill: args.quill,
                         },
                     ]}
@@ -103,6 +105,34 @@ export const CloudFree: Story = {
         featureName: "Remote Attachments",
         cloudOptionalFeature: "dataGovernance",
         professional: { value: false },
+    },
+};
+
+export const CloudFreeAiFeature: Story = {
+    args: {
+        isCloud: true,
+        featureIcon: "ai-agents",
+        featureName: "AI Agents",
+        cloudOptionalFeature: "ai",
+        professional: { value: false },
+        enterprise: { value: false },
+        enterpriseAi: { value: true },
+    },
+};
+
+export const CloudProductionFeatureNotTurnedOnWithOwnFootnote: Story = {
+    args: {
+        licenseType: "Enterprise",
+        isCloud: true,
+        featureIcon: "ai-agents",
+        featureName: "AI Agents",
+        cloudOptionalFeature: "ai",
+        professional: { value: false },
+        enterprise: {
+            value: false,
+            footnote: { title: "Available connectors", items: [{ label: "OpenAI" }, { label: "Embedded" }] },
+        },
+        enterpriseAi: { value: true },
     },
 };
 

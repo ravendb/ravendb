@@ -72,11 +72,13 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
     const { allLicenseTextTypes, getIsCurrent, getLicenseTypeClass } = useLicenseTextTypes();
 
     const getCloudFeatureFootnote = useCloudFeatureFootnote();
-    const columns = getAvailabilityColumns(currentLicense, isCloud).map((column) =>
-        column.canBeTurnedOnInCloud ? withCloudFeatureFootnote(column, getCloudFeatureFootnote) : column
-    );
+    const columns = getAvailabilityColumns(currentLicense, isCloud);
+    const getCellFootnotes = (column: AvailabilityColumn, row: FeatureAvailabilityData) =>
+        [column.getValue(row).footnote, getCloudFeatureFootnote(row, getCloudFeatureState(column, row))].filter(
+            Boolean
+        );
     const footnotes: FeatureAvailabilityFootnote[] = uniqWith(
-        data.flatMap((row) => columns.map((column) => column.getValue(row).footnote)).filter(Boolean),
+        data.flatMap((row) => columns.flatMap((column) => getCellFootnotes(column, row))),
         isEqual
     );
     const getFootnoteNumber = (footnote: FeatureAvailabilityFootnote) =>
@@ -170,28 +172,37 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                                     )}
                                 </th>
                                 {columns.map((column) => {
-                                    const valueData = column.getValue(data);
-                                    const footnoteNumber = valueData.footnote && getFootnoteNumber(valueData.footnote);
+                                    const formattedValue = formatAvailabilityValue(
+                                        column.getValue(data),
+                                        getCloudFeatureState(column, data)
+                                    );
+                                    const cellFootnotes = getCellFootnotes(column, data);
 
                                     return (
                                         <td
                                             key={column.className}
                                             className={classNames(column.className, { current: column.isCurrent })}
                                         >
-                                            {valueData.footnote ? (
+                                            {cellFootnotes.length > 0 ? (
                                                 <div className="position-relative d-inline-block">
-                                                    {formatAvailabilityValue(
-                                                        valueData,
-                                                        isTurnedOffInCloud(column, data)
-                                                    )}
-                                                    <FootnoteMark
-                                                        footnote={valueData.footnote}
-                                                        number={footnoteNumber}
-                                                        descriptionId={getFootnoteId(footnoteNumber)}
-                                                    />
+                                                    {formattedValue}
+                                                    <span className="footnote-marks">
+                                                        {cellFootnotes.map((footnote) => {
+                                                            const footnoteNumber = getFootnoteNumber(footnote);
+
+                                                            return (
+                                                                <FootnoteMark
+                                                                    key={footnoteNumber}
+                                                                    footnote={footnote}
+                                                                    number={footnoteNumber}
+                                                                    descriptionId={getFootnoteId(footnoteNumber)}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </span>
                                                 </div>
                                             ) : (
-                                                formatAvailabilityValue(valueData, isTurnedOffInCloud(column, data))
+                                                formattedValue
                                             )}
                                         </td>
                                     );
@@ -253,8 +264,10 @@ interface AvailabilityColumn {
     className: string;
     isCurrent: boolean;
     getValue: (data: FeatureAvailabilityData) => FeatureAvailabilityValueData;
-    canBeTurnedOnInCloud?: boolean;
+    cloudFeatureState?: CloudFeatureState;
 }
+
+type CloudFeatureState = "turnedOff" | "canBeTurnedOn";
 
 function getAvailabilityColumns(
     currentLicense: Raven.Server.Commercial.LicenseType,
@@ -288,7 +301,7 @@ function getAvailabilityColumns(
         className: "enterprise",
         isCurrent: isEnterpriseCurrent,
         getValue: (x) => x.enterprise,
-        canBeTurnedOnInCloud: isCloud && isEnterpriseCurrent,
+        cloudFeatureState: isCloud ? (isEnterpriseCurrent ? "turnedOff" : "canBeTurnedOn") : undefined,
     });
 
     if (!isCloud) {
@@ -304,7 +317,7 @@ function getAvailabilityColumns(
             className: "developer",
             isCurrent: true,
             getValue: getEnterpriseAiValue,
-            canBeTurnedOnInCloud: isCloud,
+            cloudFeatureState: isCloud ? "turnedOff" : undefined,
         });
     }
 
@@ -511,35 +524,33 @@ function getDisplayedValue(data: FeatureAvailabilityValueData): AvailabilityValu
     return data.overwrittenValue ?? data.value;
 }
 
-function isTurnedOffInCloud(column: AvailabilityColumn, row: FeatureAvailabilityData): boolean {
-    return (
-        column.canBeTurnedOnInCloud &&
-        row.cloudOptionalFeature != null &&
-        getDisplayedValue(column.getValue(row)) === false
-    );
+function getCloudFeatureState(column: AvailabilityColumn, row: FeatureAvailabilityData): CloudFeatureState | null {
+    if (!column.cloudFeatureState || !row.cloudOptionalFeature) {
+        return null;
+    }
+
+    if (column.cloudFeatureState === "turnedOff" && getDisplayedValue(column.getValue(row)) !== false) {
+        return null;
+    }
+
+    return column.cloudFeatureState;
 }
 
 function useCloudFeatureFootnote() {
     const t = useStudioTranslation("featureAvailabilitySummary");
 
-    return (row: FeatureAvailabilityData): FeatureAvailabilityFootnote => ({
-        title: t("cloudFeatureFootnoteForFeature", {
-            feature: t("cloudFeatureName", { context: row.cloudOptionalFeature }),
-        }),
-        items: [],
-    });
-}
+    return (row: FeatureAvailabilityData, state: CloudFeatureState | null): FeatureAvailabilityFootnote | null => {
+        if (!state) {
+            return null;
+        }
 
-function withCloudFeatureFootnote(
-    column: AvailabilityColumn,
-    getCloudFeatureFootnote: (row: FeatureAvailabilityData) => FeatureAvailabilityFootnote
-): AvailabilityColumn {
-    return {
-        ...column,
-        getValue: (row) =>
-            isTurnedOffInCloud(column, row)
-                ? { ...column.getValue(row), footnote: getCloudFeatureFootnote(row) }
-                : column.getValue(row),
+        return {
+            title: t("cloudFeatureFootnote", {
+                context: state,
+                feature: t("cloudFeatureName", { context: row.cloudOptionalFeature }),
+            }),
+            items: [],
+        };
     };
 }
 
@@ -551,13 +562,24 @@ function formatFootnote(footnote: FeatureAvailabilityFootnote): string {
     return `${footnote.title}: ${footnote.items.map((x) => x.label).join(", ")}`;
 }
 
-function CloudFeatureOffBadge() {
+function CloudFeatureStateBadge({ state }: { state: CloudFeatureState }) {
     const t = useStudioTranslation("featureAvailabilitySummary");
 
-    return <Badge bg="faded-warning">{t("cloudFeatureOff")}</Badge>;
+    return (
+        <Badge bg={state === "turnedOff" ? "faded-warning" : "faded-info"}>
+            {t("cloudFeatureState", { context: state })}
+        </Badge>
+    );
 }
 
-function formatAvailabilityValue(data: FeatureAvailabilityValueData, isOffInCloud: boolean): ReactNode {
+function formatAvailabilityValue(
+    data: FeatureAvailabilityValueData,
+    cloudFeatureState: CloudFeatureState | null
+): ReactNode {
+    if (cloudFeatureState) {
+        return <CloudFeatureStateBadge state={cloudFeatureState} />;
+    }
+
     const value = getDisplayedValue(data);
 
     let formattedValue: ReactNode = value;
@@ -566,9 +588,6 @@ function formatAvailabilityValue(data: FeatureAvailabilityValueData, isOffInClou
         formattedValue = <Icon icon="check" margin="m-0" color="success" />;
     }
     if (value === false) {
-        if (isOffInCloud) {
-            return <CloudFeatureOffBadge />;
-        }
         formattedValue = <Icon icon="cancel" margin="m-0" color="danger" />;
     }
     if (value === Infinity) {

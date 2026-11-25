@@ -8,7 +8,9 @@ type LicenseType = Raven.Server.Commercial.LicenseType;
 const {
     FeatureAvailabilitySummaryStory,
     CloudFree,
+    CloudFreeAiFeature,
     CloudProductionFeatureNotTurnedOn,
+    CloudProductionFeatureNotTurnedOnWithOwnFootnote,
     CloudProductionFeatureTurnedOn,
     CloudProductionFeatureWithoutCloudSwitch,
 } = composeStories(stories);
@@ -61,12 +63,42 @@ describe("FeatureAvailabilitySummary", () => {
             expect(screen.getByRole("link", { name: /Cloud pricing/ })).toBeInTheDocument();
         });
 
-        it("can hide the hint on the Free plan", () => {
+        it("can show that the feature can be turned on in Production on the Free plan", () => {
+            const { screen } = rtlRender(<CloudFreeAiFeature />);
+
+            expect(screen.getByText("Can be turned on")).toBeInTheDocument();
+            expect(
+                screen.getByText("After upgrading to Production, you can turn on AI Embeddings, GenAI & AI Agent.")
+            ).toBeInTheDocument();
+            expect(screen.queryByText("Not turned on")).not.toBeInTheDocument();
+        });
+
+        it("can keep the row's own footnote next to the Cloud hint", () => {
+            const { screen } = rtlRender(<CloudProductionFeatureNotTurnedOnWithOwnFootnote />);
+
+            expect(screen.getByText("Available connectors: OpenAI, Embedded")).toBeInTheDocument();
+            expect(
+                screen.getByText(
+                    "Turn on AI Embeddings, GenAI & AI Agent in Cloud Portal (Product → Features). On a yearly plan, contact support."
+                )
+            ).toBeInTheDocument();
+        });
+
+        it("can show that a feature included in Production still has to be turned on there on the Free plan", () => {
             const { screen } = rtlRender(<CloudFree />);
 
-            expect(screen.queryByText("Not turned on")).not.toBeInTheDocument();
-            expect(screen.queryByText(/yearly plan, contact support/)).not.toBeInTheDocument();
+            expect(screen.getByText("Can be turned on")).toBeInTheDocument();
+            expect(
+                screen.getByText("After upgrading to Production, you can turn on Data Governance.")
+            ).toBeInTheDocument();
             expect(screen.getByRole("link", { name: /Cloud pricing/ })).toBeInTheDocument();
+        });
+
+        it("can hide the hint on the Free plan when the feature cannot be turned on in Cloud", () => {
+            const { screen } = rtlRender(<FeatureAvailabilitySummaryStory isCloud />);
+
+            expect(screen.queryByText("Can be turned on")).not.toBeInTheDocument();
+            expect(screen.queryByText(/After upgrading to Production/)).not.toBeInTheDocument();
         });
     });
 
