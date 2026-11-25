@@ -58,7 +58,7 @@ describe("cronEditorUtils", () => {
 
     it("rejects an expression that does not have 5 parts", () => {
         expect(cronEditorUtils.getValidationError("0 2 * *")).toBe(
-            "Expression has 4 parts. Exactly 5 parts are required."
+            "A cron expression must have exactly 5 fields. This one has 4."
         );
     });
 

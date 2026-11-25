@@ -115,7 +115,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
                     <FormSelectCreatable
                         name="s3.awsRegionName"
                         control={control}
-                        placeholder="Select an AWS region (or enter new one)"
+                        placeholder="Select or enter an AWS region"
                         options={availableS3Regions}
                     />
                 )}
@@ -145,7 +145,7 @@ export function RemoteAttachmentsS3Fields({ asyncTest }: RemoteAttachmentsDestin
             </FormGroup>
 
             <FormGroup>
-                <FormLabel>S3 Storage Class</FormLabel>
+                <FormLabel>Storage class</FormLabel>
                 <FormSelect
                     name="s3.storageClass"
                     control={control}
@@ -175,7 +175,7 @@ function ConnectionPill({ asyncTest }: ConnectionPillProps) {
         return (
             <Badge bg="success" pill>
                 <Icon icon="check" />
-                Successfully connected
+                Connection successful
             </Badge>
         );
     }
@@ -183,7 +183,7 @@ function ConnectionPill({ asyncTest }: ConnectionPillProps) {
     return (
         <Badge bg="danger" pill>
             <Icon icon="warning" />
-            Failed connection
+            Connection failed
         </Badge>
     );
 }

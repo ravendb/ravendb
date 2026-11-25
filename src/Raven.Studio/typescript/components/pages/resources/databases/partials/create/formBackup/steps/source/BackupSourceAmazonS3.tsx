@@ -102,7 +102,7 @@ export default function BackupSourceAmazonS3() {
                     <FormInput
                         control={control}
                         name="sourceStep.sourceData.amazonS3.secretKey"
-                        placeholder="Enter secret key"
+                        placeholder="Enter a secret key"
                         type="password"
                         passwordPreview
                     />
@@ -120,7 +120,7 @@ export default function BackupSourceAmazonS3() {
                     <FormInput
                         control={control}
                         name="sourceStep.sourceData.amazonS3.sessionToken"
-                        placeholder="Enter session token"
+                        placeholder="Enter a session token"
                         type="password"
                         passwordPreview
                     />
@@ -129,7 +129,7 @@ export default function BackupSourceAmazonS3() {
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">
-                        Aws Region
+                        AWS region
                         <br />
                         {isUseCustomHost && <small>(optional)</small>}
                     </FormLabel>
@@ -147,7 +147,7 @@ export default function BackupSourceAmazonS3() {
                         <FormSelectAutocomplete
                             name="sourceStep.sourceData.amazonS3.awsRegion"
                             control={control}
-                            placeholder="Select an AWS region (or enter new one)"
+                            placeholder="Select or enter an AWS region"
                             options={availableS3Regions}
                         />
                     )}
@@ -155,7 +155,7 @@ export default function BackupSourceAmazonS3() {
             </Row>
             <Row className="mt-2">
                 <Col lg="3">
-                    <FormLabel className="col-form-label">Bucket Name</FormLabel>
+                    <FormLabel className="col-form-label">Bucket name</FormLabel>
                 </Col>
                 <Col>
                     <FormInput
@@ -169,7 +169,7 @@ export default function BackupSourceAmazonS3() {
             <Row className="mt-2">
                 <Col lg="3">
                     <FormLabel className="col-form-label">
-                        Remote Folder Name
+                        Remote folder name
                         <br />
                         <small>(optional)</small>
                     </FormLabel>

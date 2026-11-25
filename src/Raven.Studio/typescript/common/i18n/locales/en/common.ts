@@ -16,16 +16,16 @@ export default {
     connectionTestFailed: "Connection test failed",
     stepsCompleted: "{{completed}}/{{total}} steps completed",
     responsibleNode: {
-        setLabel: "Set Responsible Node",
-        shardedInfo: "This option is not respected in case of sharded databases.",
-        noNodesInfo: "Currently, the responsible node cannot be selected because there are no nodes available.",
+        setLabel: "Set responsible node",
+        shardedInfo: "This option is not available for sharded databases.",
+        noNodesInfo: "The database group has no member nodes to select.",
         nodeOption: "Node {{nodeTag}}",
         nodeOption_notMember: "Node {{nodeTag}} (not a member)",
         pinLabel: "Pin node",
-        pinTitle: "Toggle on to pin selected node",
+        pinTitle: "Pin the task to the selected node",
         pinnedInfo:
-            "The selected node is now Pinned to handle this task.<br/>When this node is down, the task will Not execute as no other node will be selected to handle the task.<br/>In case the node is removed from the Database Group, a failover will occur as the cluster will select another node to handle the task.",
+            "The task runs only on the selected node while it's in the database group.<br/>If the node goes down, the task won't run until the node is back.<br/>If the node is removed from the database group, the cluster can assign the task to another node.",
         preferredInfo:
-            "The selected node will be the Preferred Node to handle the task.<br/>When this node is down, the cluster selects another node from the Database Group to handle the task.",
+            "The task runs on the selected node when it's available.<br/>If the node goes down and the license includes the highly available tasks feature, the cluster can move the task to another node in the database group until the selected node is back.",
     },
 } as const;

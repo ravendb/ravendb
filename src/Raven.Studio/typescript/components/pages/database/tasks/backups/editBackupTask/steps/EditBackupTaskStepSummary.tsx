@@ -83,14 +83,16 @@ export default function EditBackupTaskStepSummary({ context }: EditBackupTaskSte
                                 ? t(formValues.isPinResponsibleNode ? "summary.pinnedNodeValue" : "summary.nodeValue", {
                                       nodeTag: formValues.responsibleNode,
                                   })
-                                : null
+                                : t("summary.automaticValue")
                         }
                     />
                 )}
                 <SummaryRow
                     label={t("settings.maxReadOps")}
                     value={
-                        formValues.isSetMaxReadOpsPerSecond ? formValues.maxReadOpsPerSecond?.toLocaleString() : null
+                        formValues.isSetMaxReadOpsPerSecond
+                            ? formValues.maxReadOpsPerSecond?.toLocaleString()
+                            : t("summary.databaseDefaultValue")
                     }
                 />
                 {isPeriodic && (

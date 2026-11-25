@@ -52,8 +52,8 @@ export default function EditBackupTaskStepType({ context }: EditBackupTaskStepTy
                     isDisabled={!canChangeBackupType}
                     popoverMessage={
                         <ul className="mb-0 ps-3">
-                            <li>{t("type.backup.formatInfo")}</li>
                             <li>{t("type.backup.storageInfo")}</li>
+                            <li>{t("type.backup.fullBackupComparisonInfo")}</li>
                             <li>{t("type.backup.indexesInfo")}</li>
                         </ul>
                     }
@@ -86,8 +86,8 @@ export default function EditBackupTaskStepType({ context }: EditBackupTaskStepTy
                         }
                         popoverMessage={
                             <ul className="mb-0 ps-3">
-                                <li>{t("type.snapshot.imageInfo")}</li>
                                 <li>{t("type.snapshot.restoreInfo")}</li>
+                                <li>{t("type.snapshot.indexDataInfo")}</li>
                                 <li>{t("type.snapshot.shardingInfo")}</li>
                             </ul>
                         }

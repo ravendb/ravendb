@@ -93,7 +93,7 @@ export function FtpFields() {
                     <input id="ftpCertificatePicker" type="file" onChange={selectFile} className="d-none" />
                     <InputGroup>
                         <span className="static-name form-control d-flex align-items-center">
-                            {certificateAsBase64 ? "<certificate>" : t("ftp.selectFile")}
+                            {certificateAsBase64 ? t("ftp.certificateProvided") : t("ftp.selectFile")}
                         </span>
                         <InputGroup.Text>
                             <label htmlFor="ftpCertificatePicker" className="cursor-pointer">

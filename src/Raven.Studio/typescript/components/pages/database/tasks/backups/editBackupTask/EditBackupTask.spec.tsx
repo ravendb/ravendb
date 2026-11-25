@@ -79,7 +79,7 @@ describe("EditBackupTask", () => {
 
         await fireClick(within(errorDialog).getByText("Close"));
         await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-        expect(within(s3Panel).getByRole("button", { name: "Failed connection" })).toBeInTheDocument();
+        expect(within(s3Panel).getByRole("button", { name: "Connection failed" })).toBeInTheDocument();
     });
 
     it("hides the destination test result after the user edits the destination", async () => {
@@ -90,14 +90,14 @@ describe("EditBackupTask", () => {
         await fireClick(within(s3Panel).getByRole("button", { name: "Test credentials" }));
         await fireClick(within(await screen.findByRole("dialog")).getByText("Close"));
         await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-        expect(within(s3Panel).getByText("Failed connection")).toBeInTheDocument();
+        expect(within(s3Panel).getByText("Connection failed")).toBeInTheDocument();
 
         await fireClick(screen.getByTitle("Edit the S3 Compatible destination"));
         await fillInput(screen.getByName("destinations.s3.awsSecretKey"), "new-secret-key");
         await fireClick(screen.getByRole("button", { name: "Apply configuration" }));
 
         expect(await within(s3Panel).findByRole("button", { name: "Test credentials" })).toBeInTheDocument();
-        expect(within(s3Panel).queryByText("Failed connection")).not.toBeInTheDocument();
+        expect(within(s3Panel).queryByText("Connection failed")).not.toBeInTheDocument();
     });
 
     it("hides the destination test result after the user edits a field in the destination editor", async () => {
@@ -111,12 +111,12 @@ describe("EditBackupTask", () => {
         await fireClick(editor.getByRole("button", { name: "Test credentials" }));
         await fireClick(within(await screen.findByRole("dialog")).getByText("Close"));
         await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-        expect(editor.getByRole("button", { name: "Failed connection" })).toBeInTheDocument();
+        expect(editor.getByRole("button", { name: "Connection failed" })).toBeInTheDocument();
 
         await fillInput(secretKeyInput, "new-secret-key");
 
         expect(await editor.findByRole("button", { name: "Test credentials" })).toBeInTheDocument();
-        expect(editor.queryByText("Failed connection")).not.toBeInTheDocument();
+        expect(editor.queryByText("Connection failed")).not.toBeInTheDocument();
     });
 
     it("saves an edited task", async () => {
@@ -215,7 +215,7 @@ describe("EditBackupTask", () => {
 
         await fireClick(screen.getByRole("button", { name: "Discard" }));
         await waitFor(() => expect(screen.queryByName("destinations.s3.bucketName")).not.toBeInTheDocument());
-        expect(screen.getByRole("heading", { level: 2, name: /Schedule your backup/ })).toBeInTheDocument();
+        expect(screen.getByRole("heading", { level: 2, name: /Schedule backups/ })).toBeInTheDocument();
     });
 
     it("shows the remaining destinations when the license covers none of them", async () => {
@@ -288,7 +288,7 @@ describe("EditBackupTask", () => {
         await fireClick(screen.getByRole("radio", { name: "Backup" }));
         await fireClick(screen.getByRole("button", { name: "Next" }));
         await fireClick(await screen.findByRole("button", { name: "Next" }));
-        await screen.findByRole("heading", { level: 2, name: /Schedule your backup/ });
+        await screen.findByRole("heading", { level: 2, name: /Schedule backups/ });
         await fireClick(screen.getByRole("button", { name: "Next" }));
         expect(await screen.findByText(noScheduleError)).toBeInTheDocument();
 
@@ -371,7 +371,7 @@ describe("EditBackupTask saved configuration", () => {
             const wizard = await renderBackupTask({ mode: "newPeriodic" });
 
             await wizard.completeAllSteps({
-                settings: () => wizard.selectByLabel("Backup upload mode", "Direct Upload"),
+                settings: () => wizard.selectByLabel("Backup upload mode", "Direct upload"),
             });
 
             expect(await getSavedPeriodicDto()).toEqual(newPeriodicDto({ BackupUploadMode: "DirectUpload" }));
@@ -385,7 +385,7 @@ describe("EditBackupTask saved configuration", () => {
                 settings: async () => {
                     await wizard.selectByLabel("Compression algorithm", "Default");
                     await wizard.selectByLabel("Compression level", "Optimal");
-                    await wizard.toggle("Exclude indexes data");
+                    await wizard.toggle("Exclude index data");
                 },
             });
 
@@ -404,7 +404,7 @@ describe("EditBackupTask saved configuration", () => {
                 backupType: "Snapshot",
                 settings: async () => {
                     await wizard.selectByLabel("Compression algorithm", "Deflate");
-                    await wizard.selectByLabel("Compression level", "Smallest Size");
+                    await wizard.selectByLabel("Compression level", "Smallest size");
                 },
             });
 
@@ -473,7 +473,7 @@ describe("EditBackupTask saved configuration", () => {
             expect(await wizard.screen.findAllByText("Rejected by the server")).not.toHaveLength(0);
             await wizard.fireClick(wizard.screen.getByRole("button", { name: "Next" }));
 
-            expect(wizard.screen.getByRole("heading", { level: 2 })).toHaveTextContent("Schedule your backup");
+            expect(wizard.screen.getByRole("heading", { level: 2 })).toHaveTextContent("Schedule backups");
         });
 
         it("sends the retention policy", async () => {
@@ -481,9 +481,9 @@ describe("EditBackupTask saved configuration", () => {
 
             await wizard.completeAllSteps({
                 settings: async () => {
-                    await wizard.toggle("Limit # of backups by age");
+                    await wizard.toggle("Set a retention period");
                     await wizard.fillInput(
-                        await wizard.screen.findByRole("combobox", { name: "Minimum retention time" }),
+                        await wizard.screen.findByRole("combobox", { name: "Retention period" }),
                         "3d"
                     );
                 },
@@ -523,7 +523,7 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.fireClick(wizard.screen.getByRole("radio", { name: "Backup" }));
             await wizard.fireClick(wizard.screen.getByRole("button", { name: "Next" }));
 
-            const toggleSwitch = await wizard.screen.findByRole("checkbox", { name: "Set Responsible Node" });
+            const toggleSwitch = await wizard.screen.findByRole("checkbox", { name: "Set responsible node" });
             await wizard.fireClick(toggleSwitch);
             const settingRow = toggleSwitch.closest<HTMLElement>(".edit-backup-task-settings-row");
             fireEvent.keyDown(within(settingRow).getByRole("combobox"), { key: "ArrowDown" });
@@ -552,7 +552,7 @@ describe("EditBackupTask saved configuration", () => {
                 settings: async () => {
                     await wizard.selectResponsibleNode("Node B");
                     await wizard.toggle("Pin node");
-                    await wizard.toggle("Set Responsible Node");
+                    await wizard.toggle("Set responsible node");
                 },
             });
 
@@ -579,7 +579,7 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.completeAllSteps({
                 backupType: null,
                 settings: async () => {
-                    expect(wizard.screen.getByRole("checkbox", { name: "Set Responsible Node" })).toBeDisabled();
+                    expect(wizard.screen.getByRole("checkbox", { name: "Set responsible node" })).toBeDisabled();
                 },
             });
 
@@ -639,7 +639,7 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.completeAllSteps({
                 settings: async () => {
                     await wizard.selectOption(
-                        wizard.screen.getByRole("combobox", { name: "Authentication method" }),
+                        wizard.screen.getByRole("combobox", { name: "Encryption key source" }),
                         "Provide your own encryption key"
                     );
                     await wizard.confirmEncryptionKeySaved();
@@ -666,7 +666,7 @@ describe("EditBackupTask saved configuration", () => {
                         )
                     ).toBeInTheDocument();
 
-                    await wizard.toggle("Allow unencrypted backup for encrypted database");
+                    await wizard.toggle("Allow an unencrypted backup");
                 },
             });
 
@@ -732,7 +732,7 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.completeAllSteps({
                 destinations: () =>
                     wizard.addDestination("S3 Compatible", async () => {
-                        await wizard.selectByLabel("Provider", "Custom");
+                        await wizard.selectByLabel("Provider", "Custom server");
                         await wizard.fill("destinations.s3.customServerUrl", "https://minio.example.com:9000");
                         await wizard.fill("destinations.s3.awsRegionName", "custom-region-1");
                         await wizard.toggle(/Force path style/);
@@ -770,7 +770,7 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.completeAllSteps({
                 destinations: () =>
                     wizard.addDestination("S3 Compatible", async () => {
-                        await wizard.selectByLabel("Provider", "Custom");
+                        await wizard.selectByLabel("Provider", "Custom server");
                         await wizard.fill("destinations.s3.customServerUrl", "https://minio.example.com:9000");
                         await wizard.toggle(/Force path style/);
                         await wizard.useExternalScript("s3");
@@ -1052,7 +1052,7 @@ describe("EditBackupTask saved configuration", () => {
                 destinations: async () => {
                     await wizard.addLocalDestination("  /var/backups  ");
                     await wizard.addDestination("S3 Compatible", async () => {
-                        await wizard.selectByLabel("Provider", "Custom");
+                        await wizard.selectByLabel("Provider", "Custom server");
                         await wizard.fill("destinations.s3.customServerUrl", "https://minio.example.com:9000");
                         await wizard.fill("destinations.s3.awsRegionName", " custom-region-1 ");
                         await wizard.fill("destinations.s3.awsAccessKey", " access-key ");
@@ -1193,7 +1193,7 @@ describe("EditBackupTask saved configuration", () => {
                         await wizard.fill("destinations.azure.storageContainer", "backups");
                         await wizard.fireClick(wizard.screen.getByRole("button", { name: "Test credentials" }));
                         expect(
-                            await wizard.screen.findByRole("button", { name: "Successfully connected" })
+                            await wizard.screen.findByRole("button", { name: "Connection successful" })
                         ).toBeInTheDocument();
                     }),
             });
@@ -1245,9 +1245,9 @@ describe("EditBackupTask saved configuration", () => {
             await wizard.completeAllSteps({
                 backupType: "Snapshot",
                 settings: async () => {
-                    await wizard.selectByLabel("Backup upload mode", "Direct Upload");
-                    await wizard.selectByLabel("Compression level", "No Compression");
-                    await wizard.toggle("Exclude indexes data");
+                    await wizard.selectByLabel("Backup upload mode", "Direct upload");
+                    await wizard.selectByLabel("Compression level", "No compression");
+                    await wizard.toggle("Exclude index data");
                     await wizard.toggle("Set max read operations per second");
                     await wizard.fill("maxReadOpsPerSecond", "100");
                 },
@@ -1466,13 +1466,13 @@ describe("EditBackupTask saved configuration", () => {
             expect(wizard.screen.getByRole("heading", { level: 2 })).toHaveTextContent("Define destinations");
         });
 
-        it("drops the custom server settings after the user switches the S3 destination to Amazon AWS", async () => {
+        it("drops the custom server settings after the user switches the S3 destination to Amazon S3", async () => {
             const dto = existingTaskDto();
             const wizard = await renderBackupTask({ mode: "editPeriodic", dto });
 
             await wizard.goToStep("Define destinations");
             await wizard.fireClick(wizard.screen.getByTitle("Edit the S3 Compatible destination"));
-            await wizard.selectByLabel("Provider", "Amazon AWS");
+            await wizard.selectByLabel("Provider", "Amazon S3");
             await wizard.fireClick(wizard.screen.getByRole("button", { name: "Apply configuration" }));
             await wizard.saveFromCurrentStep();
 
@@ -1491,7 +1491,7 @@ describe("EditBackupTask saved configuration", () => {
 
             await wizard.goToStep("Define destinations");
             await wizard.fireClick(wizard.screen.getByTitle("Edit the Azure destination"));
-            await wizard.fireClick(wizard.screen.getByRole("radio", { name: "Static credentials" }));
+            await wizard.fireClick(wizard.screen.getByRole("radio", { name: "Manual entry" }));
             await wizard.fireClick(wizard.screen.getByRole("button", { name: "Apply configuration" }));
             await wizard.saveFromCurrentStep();
 
@@ -1854,7 +1854,7 @@ async function renderBackupTask(setup: BackupTaskSetup) {
     };
 
     const selectResponsibleNode = async (optionLabel: string) => {
-        const toggleSwitch = screen.getByRole("checkbox", { name: "Set Responsible Node" });
+        const toggleSwitch = screen.getByRole("checkbox", { name: "Set responsible node" });
         await fireClick(toggleSwitch);
         const settingRow = toggleSwitch.closest<HTMLElement>(".edit-backup-task-settings-row");
         await selectOption(within(settingRow).getByRole("combobox"), optionLabel);
@@ -1895,13 +1895,13 @@ async function renderBackupTask(setup: BackupTaskSetup) {
         fireEvent.change(document.getElementById("ftpCertificatePicker"), {
             target: { files: [new File([content], "certificate.pem")] },
         });
-        await screen.findByText("<certificate>");
+        await screen.findByText("Certificate provided");
     };
 
     const addLocalDestination = (folderPath: string) =>
         addDestination("Local", () => fill("destinations.local.folderPath", folderPath));
 
-    const submit = () => fireClick(screen.getByRole("button", { name: /^(Create backup|Save)$/ }));
+    const submit = () => fireClick(screen.getByRole("button", { name: /^(Create backup( task)?|Save)$/ }));
 
     const completeAllSteps = async ({ backupType = "Backup", settings, schedule, destinations }: WizardSteps = {}) => {
         if (backupType) {

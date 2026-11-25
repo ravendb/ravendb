@@ -138,7 +138,7 @@ export default function FormCronEditor<TFieldValues extends FieldValues, TName e
                                     options={cronEditorUtils.getHourOptions()}
                                     value={basicSchedule.hour}
                                     onChange={(hour) => changeBasicSchedule({ hour })}
-                                    formatValue={(hour) => t("hourValue", { hour })}
+                                    formatValue={() => t("hourValue", { hour: basicSchedule.hour % 12 || 12 })}
                                 />
                             </div>
                             <span className="text-muted">:</span>
@@ -152,6 +152,7 @@ export default function FormCronEditor<TFieldValues extends FieldValues, TName e
                                     isCustomValue={cronEditorUtils.isCustomMinute}
                                 />
                             </div>
+                            <span className="text-muted">{basicSchedule.hour < 12 ? t("am") : t("pm")}</span>
                         </div>
                     )}
                     {!period && expression && (

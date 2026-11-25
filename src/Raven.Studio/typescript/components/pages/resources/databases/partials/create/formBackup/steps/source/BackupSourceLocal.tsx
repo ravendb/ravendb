@@ -28,13 +28,13 @@ export default function BackupSourceLocal() {
         <>
             <Row className="mt-2">
                 <Col lg="3">
-                    <label className="col-form-label">Directory Path</label>
+                    <label className="col-form-label">Backup directory</label>
                 </Col>
                 <Col>
                     <FormPathSelector
                         control={control}
                         name="sourceStep.sourceData.local.directory"
-                        selectorTitle="Select backup directory path"
+                        selectorTitle="Select backup directory"
                         placeholder="e.g. /var/backups/ravendb or D:\Backups\RavenDB"
                         getPathsProvider={(path: string) => getLocalFolderPathsProvider(path)}
                         getPathDependencies={(path: string) => [path]}

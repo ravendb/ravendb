@@ -25,6 +25,7 @@ export default function EditBackupTaskFooter({ steps, currentStepId, context, on
         useEditBackupTaskRestrictions(context);
     const t = useStudioTranslation("editBackupTask");
     const commonT = useStudioTranslation("common");
+    const createButtonLabel = context.isManual ? t("footer.createBackup") : t("footer.createBackupTask");
 
     const currentStepIdx = steps.findIndex((x) => x.id === currentStepId);
     const previousStep = steps[currentStepIdx - 1];
@@ -97,7 +98,7 @@ export default function EditBackupTaskFooter({ steps, currentStepId, context, on
                             }
                             icon="save"
                         >
-                            {context.isEditing ? commonT("save") : t("footer.createBackup")}
+                            {context.isEditing ? commonT("save") : createButtonLabel}
                         </ButtonWithSpinner>
                     </AccessPopover>
                 )}
