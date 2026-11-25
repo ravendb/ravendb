@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Operations.Backups;
@@ -163,7 +164,18 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
         await CreateSubscriptionWithAllSettingsAsync(store);
 
         var backupTaskId = await Backup.CreateAndRunBackupAsync(store, options.DatabaseMode, backupPath);
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User { Name = "John" });
+            await session.SaveChangesAsync();
+        }
+
         var configuration = await Backup.RunBackupAndCreateRestoreConfigurationAsync(store, options.DatabaseMode, backupTaskId, backupPath);
+
+        // one backup folder per shard; the document changed a single shard, so only that one has an incremental backup
+        var expectedFolders = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : (await Sharding.GetShardingConfigurationAsync(store)).Shards.Count;
+        AssertBackupFiles(backupPath, Constants.Documents.PeriodicBackup.FullBackupExtension, expectedFolders, expectedIncrementalBackups: 1);
 
         using (Backup.RestoreDatabase(store, configuration))
         {
@@ -199,6 +211,8 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
             await Backup.RunBackupAsync(Server, taskId, store, isFullBackup: false);
         }
 
+        AssertBackupFiles(backupPath, Constants.Documents.PeriodicBackup.SnapshotExtension, expectedFolders: 1, expectedIncrementalBackups: withIncrementalBackup ? 1 : 0);
+
         var restoredDatabaseName = GetDatabaseName();
         using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
         {
@@ -215,6 +229,22 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     private const string SubscriptionName = "AllSettings";
+
+    private static void AssertBackupFiles(string backupPath, string fullBackupExtension, int expectedFolders, int expectedIncrementalBackups)
+    {
+        var folders = Directory.GetDirectories(backupPath);
+        Assert.Equal(expectedFolders, folders.Length);
+
+        var incrementalBackups = 0;
+        foreach (var folder in folders)
+        {
+            var files = Directory.GetFiles(folder);
+            Assert.Single(files, file => Path.GetExtension(file) == fullBackupExtension);
+            incrementalBackups += files.Count(file => Path.GetExtension(file) == Constants.Documents.PeriodicBackup.IncrementalBackupExtension);
+        }
+
+        Assert.Equal(expectedIncrementalBackups, incrementalBackups);
+    }
 
     private static async Task CreateSubscriptionWithAllSettingsAsync(IDocumentStore store)
     {
