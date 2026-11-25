@@ -67,6 +67,8 @@ public class ServerBackupRunner : IDisposable
 
     private readonly ConcurrentDictionary<string, IdleDatabaseSnapshot> _idleDatabases = new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly ConcurrentDictionary<string, long> _databasesToTrackAgain = new(StringComparer.OrdinalIgnoreCase);
+
     public ServerBackupRunner(ServerStore serverStore)
     {
         _serverStore = serverStore;
@@ -143,6 +145,8 @@ public class ServerBackupRunner : IDisposable
                 waitBeforeNextRun = _serverStore.Configuration.Backup.BackupRunnerFrequency.AsTimeSpan;
 
                 _forTestingPurposes?.BeforeRunnerPass?.Invoke();
+
+                TrackFailedDatabasesAgain();
 
                 DatabaseBackupState firstState = null;
                 DatabaseBackupState firstRefusedState = null;
@@ -646,14 +650,14 @@ public class ServerBackupRunner : IDisposable
             {
                 case DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged:
                 case DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored:
-                    UpdateBackupTracking(databaseName);
+                    UpdateBackupTrackingOrRetryLater(databaseName);
                     break;
 
                 case DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged:
                     switch (type)
                     {
                         case nameof(UpdateResponsibleNodeForTasksCommand):
-                            UpdateBackupTracking(databaseName);
+                            UpdateBackupTrackingOrRetryLater(databaseName);
                             break;
 
                         case nameof(DelayBackupCommand):
@@ -809,8 +813,16 @@ public class ServerBackupRunner : IDisposable
                     _logger.Debug($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, recalculating the next backup, which will be executed by the current node '{_serverStore.NodeTag}'.");
 
 
-                var localBackupStatus = existingBackupState.GetMostUpdatedLocalBackupStatus(inMemoryBackupStatus: null);
-                existingBackupState.NextBackup = existingBackupState.GetNextBackupDetails(localBackupStatus, skipErrorLog: false);
+                try
+                {
+                    var localBackupStatus = existingBackupState.GetMostUpdatedLocalBackupStatus(inMemoryBackupStatus: null);
+                    existingBackupState.NextBackup = existingBackupState.GetNextBackupDetails(localBackupStatus, skipErrorLog: false);
+                }
+                catch
+                {
+                    existingBackupState.NextBackup = null;
+                    throw;
+                }
 
                 return;
 
@@ -1120,12 +1132,47 @@ public class ServerBackupRunner : IDisposable
         {
             try
             {
-                UpdateBackupTracking(databaseName);
+                UpdateBackupTrackingOrRetryLater(databaseName);
             }
             catch (Exception e)
             {
                 if (_logger.IsWarnEnabled)
                     _logger.Warn($"Failed to register the backup tasks of database '{databaseName}'.", e);
+            }
+        }
+    }
+
+    private void UpdateBackupTrackingOrRetryLater(string databaseName)
+    {
+        try
+        {
+            UpdateBackupTracking(databaseName);
+        }
+        catch
+        {
+            TrackAgainOnNextPass(databaseName);
+            throw;
+        }
+    }
+
+    private void TrackAgainOnNextPass(string databaseName)
+    {
+        _databasesToTrackAgain.AddOrUpdate(databaseName, 1, (_, version) => version + 1);
+    }
+
+    private void TrackFailedDatabasesAgain()
+    {
+        foreach (var (databaseName, version) in _databasesToTrackAgain)
+        {
+            try
+            {
+                UpdateBackupTracking(databaseName);
+                _databasesToTrackAgain.TryRemove(new KeyValuePair<string, long>(databaseName, version));
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsWarnEnabled)
+                    _logger.Warn($"Failed again to update the backup tasks of database '{databaseName}', will retry on the next pass.", e);
             }
         }
     }
