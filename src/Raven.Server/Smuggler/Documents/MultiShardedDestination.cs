@@ -107,7 +107,7 @@ namespace Raven.Server.Smuggler.Documents
         public IDatabaseRecordActions DatabaseRecord() => throw new NotImplementedException();
         public IIndexActions Indexes() => new DatabaseIndexActions(_databaseContext.Indexes.Create, _databaseContext.Time);
         public IKeyValueActions<long> Identities() => throw new NotImplementedException();
-        public ISubscriptionActions Subscriptions() => throw new NotImplementedException();
+        public ISubscriptionActions Subscriptions(BackupKind? backupKind = null) => throw new NotImplementedException();
         public IReplicationHubCertificateActions ReplicationHubCertificates() => throw new NotImplementedException();
 
         public ICompareExchangeActions CompareExchange(string databaseName, JsonOperationContext context, BackupKind? backupKind, bool withDocuments)

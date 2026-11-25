@@ -331,7 +331,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected override async Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result)
         {
-            await using (var actions = new ShardedDatabaseSubscriptionActions(_server, _databaseRecord.DatabaseName))
+            await using (var actions = new ShardedDatabaseSubscriptionActions(_server, _databaseRecord.DatabaseName, BackupKind, _result))
             {
                 return await ProcessSubscriptionsInternalAsync(result, actions);
             }

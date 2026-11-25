@@ -141,9 +141,9 @@ namespace Raven.Server.Smuggler.Documents
             return new CounterActions(_database, result);
         }
 
-        public virtual ISubscriptionActions Subscriptions()
+        public virtual ISubscriptionActions Subscriptions(BackupKind? backupKind = null)
         {
-            return new DatabaseSubscriptionActions(_database.ServerStore, _database.Name);
+            return new DatabaseSubscriptionActions(_database.ServerStore, _database.Name, backupKind, _result);
         }
 
         public IReplicationHubCertificateActions ReplicationHubCertificates()

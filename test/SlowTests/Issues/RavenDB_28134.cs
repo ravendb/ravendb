@@ -119,7 +119,7 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Smuggler)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-    public async Task ImportKeepsDisabledAndArchivedDataProcessingBehavior(Options options)
+    public async Task ImportKeepsSettingsButDropsMentorNode(Options options)
     {
         var file = GetTempFileName();
         try
@@ -135,11 +135,16 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
             using (var target = GetDocumentStore(options))
             {
                 var import = await target.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions { OperateOnTypes = DatabaseItemType.Subscriptions }, file);
-                await import.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                var result = await import.WaitForCompletionAsync<SmugglerResult>(TimeSpan.FromMinutes(1));
 
                 var state = await target.Subscriptions.GetSubscriptionStateAsync(SubscriptionName);
                 Assert.True(state.Disabled);
                 Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+
+                // the mentor node refers to a node of the source cluster
+                Assert.Null(state.MentorNode);
+                Assert.False(state.PinToMentorNode);
+                Assert.Contains(result.Messages, m => m.Contains($"Subscription '{SubscriptionName}' was imported without its mentor node 'A'"));
             }
         }
         finally
@@ -148,27 +153,25 @@ public class RavenDB_28134(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
-    [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
-    public async Task RestoreFromBackupKeepsDisabledAndArchivedDataProcessingBehavior()
+    [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task RestoreFromBackupKeepsAllSubscriptionSettings(Options options)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
 
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         await CreateSubscriptionWithAllSettingsAsync(store);
 
-        var config = Backup.CreateBackupConfiguration(backupPath);
-        await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+        var backupTaskId = await Backup.CreateAndRunBackupAsync(store, options.DatabaseMode, backupPath);
+        var configuration = await Backup.RunBackupAndCreateRestoreConfigurationAsync(store, options.DatabaseMode, backupTaskId, backupPath);
 
-        var restoredDatabaseName = GetDatabaseName();
-        using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+        using (Backup.RestoreDatabase(store, configuration))
         {
-            BackupLocation = Directory.GetDirectories(backupPath).First(),
-            DatabaseName = restoredDatabaseName
-        }))
-        {
-            var state = await store.Subscriptions.GetSubscriptionStateAsync(SubscriptionName, restoredDatabaseName);
+            var state = await store.Subscriptions.GetSubscriptionStateAsync(SubscriptionName, configuration.DatabaseName);
             Assert.True(state.Disabled);
             Assert.Equal(ArchivedDataProcessingBehavior.ArchivedOnly, state.ArchivedDataProcessingBehavior);
+            Assert.Equal("A", state.MentorNode);
+            Assert.True(state.PinToMentorNode);
         }
     }
 

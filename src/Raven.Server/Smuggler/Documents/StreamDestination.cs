@@ -209,7 +209,7 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamCounterActions(_writer, _context, this, nameof(DatabaseItemType.CounterGroups));
         }
 
-        public ISubscriptionActions Subscriptions()
+        public ISubscriptionActions Subscriptions(BackupKind? backupKind = null)
         {
             return new StreamSubscriptionActions(_writer, _context, nameof(DatabaseItemType.Subscriptions));
         }
