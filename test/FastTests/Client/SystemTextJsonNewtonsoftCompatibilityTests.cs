@@ -2327,6 +2327,56 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private interface IHasTitle
+    {
+        string Title { get; set; }
+    }
+
+    private class PrivateCaseCollision : IHasTitle
+    {
+        private string url { get; set; }
+
+        public string Url { get; set; }
+
+        public string Title { get; set; }
+
+        public static PrivateCaseCollision Existing() => new PrivateCaseCollision { Url = "old public", Title = "old title", url = "old private" };
+
+        public override string ToString() => $"{Url}|{url}|{Title}";
+    }
+
+    private class HoldsPrivateCaseCollisions
+    {
+        public PrivateCaseCollision GetOnly { get; } = PrivateCaseCollision.Existing();
+
+        public IHasTitle Open { get; set; } = PrivateCaseCollision.Existing();
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData("{\"url\":\"private\",\"Url\":\"public\",\"title\":\"t\"}")]
+    [InlineData("{\"Url\":\"public\"}")]
+    [InlineData("{\"url\":\"private\"}")]
+    [InlineData("{\"URL\":\"x\",\"TITLE\":\"t\"}")]
+    public void SystemTextJsonMatchesMembersOfATypeWithAPrivateCaseOnlyCollisionLikeNewtonsoft(string item)
+    {
+        Assert.Equal(Describe(Newtonsoft, item), Describe(SystemTextJson, item));
+    }
+
+    private static string Describe(DocumentConventions conventions, string item)
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(item, "item"))
+        using (BlittableJsonReaderObject holderJson = context.Sync.ReadForMemory($"{{\"GetOnly\":{item},\"Open\":{item}}}", "holder"))
+        {
+            var loaded = conventions.Serialization.DefaultConverter.FromBlittable<PrivateCaseCollision>(json);
+            var holder = conventions.Serialization.DefaultConverter.FromBlittable<HoldsPrivateCaseCollisions>(holderJson);
+            PrivateCaseCollision refreshed = PrivateCaseCollision.Existing();
+            conventions.Serialization.DefaultConverter.PopulateEntity(refreshed, json);
+
+            return $"load: {loaded}; get-only member: {holder.GetOnly}; interface member: {holder.Open}; refresh: {refreshed}";
+        }
+    }
+
     private class PolymorphicValuesByNonStringKeys
     {
         public Dictionary<int, Animal> ByNumber { get; set; }

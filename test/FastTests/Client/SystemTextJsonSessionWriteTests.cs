@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Json.Serialization.SystemTextJson;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -88,6 +90,36 @@ public class SystemTextJsonSessionWriteTests(ITestOutputHelper output) : RavenTe
             IMetadataDictionary metadata = session.Advanced.GetMetadataFor(reading);
             metadata["Extra"] = "x";
             metadata["Nested"] = new Dictionary<string, object> { ["Depth"] = 3 };
+            await session.SaveChangesAsync();
+        });
+    }
+
+    private class PrivateCaseCollision
+    {
+        private string url { get; set; }
+
+        public string Url { get; set; }
+
+        public string Title { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public async Task EditsOfATypeWithAPrivateCaseOnlyCollisionAreWrittenLikeNewtonsoft()
+    {
+        await AssertSessionWritesLikeNewtonsoft(async session =>
+        {
+            session.Advanced.Defer(new PutCommandData("readings/1", null, new DynamicJsonValue
+            {
+                ["url"] = "private",
+                ["Url"] = "public",
+                ["title"] = "t",
+                ["@metadata"] = new DynamicJsonValue { ["@collection"] = "Readings" }
+            }));
+            await session.SaveChangesAsync();
+        }, async session =>
+        {
+            var item = await session.LoadAsync<PrivateCaseCollision>("readings/1");
+            item.Title = "new";
             await session.SaveChangesAsync();
         });
     }

@@ -93,7 +93,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (newInstance == null || TryPopulateDictionary(entity, newInstance))
                 return;
 
-            Dictionary<string, JsonPropertyInfo> properties = Conventions.GetJsonProperties(type);
+            JsonPropertyMap properties = Conventions.GetJsonProperties(type);
             foreach (string propertyName in json.GetPropertyNames())
             {
                 if (properties.TryGetValue(propertyName, out JsonPropertyInfo property) == false || property.Get == null)
@@ -102,7 +102,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 GetPopulateSetter(property)?.Invoke(entity, property.Get(newInstance));
             }
 
-            foreach (JsonPropertyInfo property in properties.Values)
+            foreach (JsonPropertyInfo property in properties.ByName.Values)
             {
                 if (property.IsExtensionData)
                     PopulateExtensionData(entity, newInstance, property);

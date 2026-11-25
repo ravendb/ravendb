@@ -141,7 +141,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             AssertNoNewtonsoftNamingStrategy(type, container);
             AssertNoNewtonsoftItemConverter(type, container);
 
-            return RedirectNonPublicCaseOnlyNameCollisions(CreateTypeInfo(type, options, sourceGenerationContext));
+            return RedirectCaseOnlyNameCollisions(CreateTypeInfo(type, options, sourceGenerationContext));
         }
 
         private JsonTypeInfo CreateTypeInfo(Type type, JsonSerializerOptions options, IJsonTypeInfoResolver sourceGenerationContext)
@@ -154,10 +154,19 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return typeInfo;
         }
 
-        internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type)
+        internal static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type) => GetObjectTypeInfo(options, type, out _);
+
+        private static JsonTypeInfo GetObjectTypeInfo(JsonSerializerOptions options, Type type, out bool hasCaseOnlyNameCollisions)
         {
             JsonTypeInfo typeInfo = options.GetTypeInfo(type);
-            return typeInfo.Converter is IObjectTypeInfoRedirect redirect ? redirect.ObjectTypeInfo : typeInfo;
+            if (typeInfo.Converter is IObjectTypeInfoRedirect redirect)
+            {
+                hasCaseOnlyNameCollisions = true;
+                return redirect.ObjectTypeInfo;
+            }
+
+            hasCaseOnlyNameCollisions = false;
+            return typeInfo;
         }
 
         private static JsonTypeInfo CreateRedirect(Type converterDefinition, Type type, JsonSerializerOptions options, params object[] arguments)
@@ -180,66 +189,74 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public JsonTypeInfo CreateTypeInfo(JsonSerializerOptions options) => JsonMetadataServices.CreateValueInfo<T>(options, this);
         }
 
-        private const string HiddenNamePrefix = "$raven-non-public:";
+        private const string ShadowedNamePrefix = "$raven-shadowed:";
 
-        private static JsonTypeInfo RedirectNonPublicCaseOnlyNameCollisions(JsonTypeInfo typeInfo)
+        private static JsonTypeInfo RedirectCaseOnlyNameCollisions(JsonTypeInfo typeInfo)
         {
             if (typeInfo.Options.PropertyNameCaseInsensitive == false || typeInfo.Kind != JsonTypeInfoKind.Object)
                 return typeInfo;
 
-            Dictionary<string, string> hiddenNames = HideNonPublicCaseOnlyNameCollisions(typeInfo);
-            if (hiddenNames == null)
+            string[] shadowedNames = RenameShadowedMembers(typeInfo);
+            if (shadowedNames == null)
                 return typeInfo;
 
             JsonSerializerOptions caseSensitiveOptions = _caseSensitiveOptions.GetValue(typeInfo.Options, static o => new JsonSerializerOptions(o) { PropertyNameCaseInsensitive = false });
-            return CreateRedirect(typeof(NonPublicCaseOnlyCollisionConverter<>), typeInfo.Type, typeInfo.Options, caseSensitiveOptions, typeInfo, hiddenNames);
+            return CreateRedirect(typeof(CaseOnlyCollisionConverter<>), typeInfo.Type, typeInfo.Options, caseSensitiveOptions, typeInfo, shadowedNames);
         }
 
-        private static Dictionary<string, string> HideNonPublicCaseOnlyNameCollisions(JsonTypeInfo typeInfo)
+        private static string[] RenameShadowedMembers(JsonTypeInfo typeInfo)
         {
-            Dictionary<string, JsonPropertyInfo> kept = null;
-            List<JsonPropertyInfo> hidden = null;
+            Dictionary<string, JsonPropertyInfo> first = null;
+            List<JsonPropertyInfo> shadowed = null;
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
                 if (property.IsExtensionData)
                     continue;
 
-                kept ??= new Dictionary<string, JsonPropertyInfo>(StringComparer.OrdinalIgnoreCase);
-                if (kept.TryGetValue(property.Name, out JsonPropertyInfo existing) == false)
+                first ??= new Dictionary<string, JsonPropertyInfo>(StringComparer.OrdinalIgnoreCase);
+                if (first.TryGetValue(property.Name, out JsonPropertyInfo existing) == false)
                 {
-                    kept[property.Name] = property;
+                    first[property.Name] = property;
                     continue;
                 }
 
-                bool isPublic = IsPublicMember(property.AttributeProvider as MemberInfo);
-                if (isPublic && IsPublicMember(existing.AttributeProvider as MemberInfo))
+                if (IsPublicMember(property.AttributeProvider as MemberInfo) && IsPublicMember(existing.AttributeProvider as MemberInfo))
                     return null;
 
-                hidden ??= new List<JsonPropertyInfo>();
-                if (isPublic)
-                {
-                    kept[property.Name] = property;
-                    hidden.Add(existing);
-                }
-                else
-                {
-                    hidden.Add(property);
-                }
+                (shadowed ??= new List<JsonPropertyInfo>()).Add(property);
             }
 
-            if (hidden == null)
+            if (shadowed == null)
                 return null;
 
-            var hiddenNames = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (JsonPropertyInfo property in hidden)
+            var names = new string[shadowed.Count];
+            for (int i = 0; i < names.Length; i++)
             {
-                string name = property.Name;
-                property.Name = HiddenNamePrefix + name;
-                hiddenNames[name] = property.Name;
+                names[i] = shadowed[i].Name;
+                shadowed[i].Name = ShadowedNamePrefix + names[i];
             }
 
-            return hiddenNames;
+            return names;
+        }
+
+        private static int FindMember(JsonTypeInfo typeInfo, ReadOnlySpan<char> name, StringComparison comparison)
+        {
+            int match = -1;
+            for (int i = 0; i < typeInfo.Properties.Count; i++)
+            {
+                ReadOnlySpan<char> member = typeInfo.Properties[i].Name.AsSpan();
+                if (name.Equals(member, comparison) == false)
+                    continue;
+
+                if (name.SequenceEqual(member))
+                    return i;
+
+                if (match == -1)
+                    match = i;
+            }
+
+            return match;
         }
 
         private static bool IsPublicMember(MemberInfo member)
@@ -252,8 +269,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             };
         }
 
-        private sealed class NonPublicCaseOnlyCollisionConverter<T>(JsonSerializerOptions caseSensitiveOptions, JsonTypeInfo readTypeInfo, Dictionary<string, string> hiddenNames) : RedirectConverter<T>
+        private sealed class CaseOnlyCollisionConverter<T>(JsonSerializerOptions caseSensitiveOptions, JsonTypeInfo readTypeInfo, string[] shadowedNames) : RedirectConverter<T>
         {
+            private readonly string[] _renamed = Array.ConvertAll(shadowedNames, static name => ShadowedNamePrefix + name);
+
             public override JsonTypeInfo ObjectTypeInfo => GetObjectTypeInfo(caseSensitiveOptions, typeof(T));
 
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -269,7 +288,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                         writer.WriteStartObject();
                         foreach (JsonProperty property in document.RootElement.EnumerateObject())
                         {
-                            writer.WritePropertyName(hiddenNames.TryGetValue(property.Name, out string hiddenName) ? hiddenName : property.Name);
+                            int shadowed = IndexOfShadowed(property);
+                            if (shadowed == -1)
+                            {
+                                property.WriteTo(writer);
+                                continue;
+                            }
+
+                            writer.WritePropertyName(_renamed[shadowed]);
                             property.Value.WriteTo(writer);
                         }
 
@@ -278,6 +304,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                     return (T)JsonSerializer.Deserialize(buffer.WrittenSpan, readTypeInfo);
                 }
+            }
+
+            private int IndexOfShadowed(JsonProperty property)
+            {
+                for (int i = 0; i < shadowedNames.Length; i++)
+                {
+                    if (property.NameEquals(shadowedNames[i]))
+                        return i;
+                }
+
+                return -1;
             }
 
             public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options) => JsonSerializer.Serialize(writer, value, caseSensitiveOptions);
@@ -1473,21 +1510,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
             private readonly HashSet<string> _names;
 
+            private readonly List<string> _caseVariants;
+
             public PresentMembers(JsonTypeInfo typeInfo, bool[] flags)
             {
                 _typeInfo = typeInfo;
                 _flags = flags;
             }
 
-            public PresentMembers(HashSet<string> names)
+            public PresentMembers(HashSet<string> names, List<string> caseVariants)
             {
                 _names = names;
+                _caseVariants = caseVariants;
             }
 
-            public bool Contains(JsonTypeInfo typeInfo, int index, string name)
+            public bool Contains(JsonTypeInfo typeInfo, int index, string name, bool hasCaseOnlyNameCollisions)
             {
                 if (_names != null)
-                    return _names.Contains(name);
+                    return hasCaseOnlyNameCollisions ? ContainsMatchFor(typeInfo, index) : _names.Contains(name);
 
                 if (ReferenceEquals(_typeInfo, typeInfo))
                     return _flags[index];
@@ -1501,6 +1541,28 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
                 return false;
             }
+
+            private bool ContainsMatchFor(JsonTypeInfo typeInfo, int index)
+            {
+                foreach (string name in _names)
+                {
+                    if (IsMatch(typeInfo, name, index))
+                        return true;
+                }
+
+                if (_caseVariants != null)
+                {
+                    foreach (string name in _caseVariants)
+                    {
+                        if (IsMatch(typeInfo, name, index))
+                            return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private static bool IsMatch(JsonTypeInfo typeInfo, string name, int index) => FindMember(typeInfo, name.AsSpan(), StringComparison.OrdinalIgnoreCase) == index;
         }
 
         private sealed class PresentMembersConverter<T> : JsonConverter<T>
@@ -1519,7 +1581,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
                 PresentMembers present = ReadsIntoExisting
-                    ? ReadPropertyNames(reader, options) is { } names ? new PresentMembers(names) : null
+                    ? ReadPropertyNames(reader, options)
                     : ReadPresentMembers(reader, _typeInfo ??= GetObjectTypeInfo(options, typeof(T)), options);
                 if (ReadsIntoExisting && (reader.TokenType == JsonTokenType.StartArray || present != null && TypeNameConverter.TryPeekTypeName(reader, out _) == false))
                 {
@@ -1548,7 +1610,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     return null;
 
                 if (typeInfo.Kind != JsonTypeInfoKind.Object)
-                    return ReadPropertyNames(reader, options) is { } names ? new PresentMembers(names) : null;
+                    return ReadPropertyNames(reader, options);
 
                 var flags = new bool[typeInfo.Properties.Count];
                 Span<char> buffer = stackalloc char[128];
@@ -1569,30 +1631,30 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 long length = reader.HasValueSequence ? reader.ValueSequence.Length : reader.ValueSpan.Length;
                 ReadOnlySpan<char> name = length <= buffer.Length ? buffer.Slice(0, reader.CopyString(buffer)) : reader.GetString().AsSpan();
 
-                for (int i = 0; i < flags.Length; i++)
-                {
-                    if (name.Equals(typeInfo.Properties[i].Name.AsSpan(), comparison))
-                    {
-                        flags[i] = true;
-                        return;
-                    }
-                }
+                int index = FindMember(typeInfo, name, comparison);
+                if (index != -1)
+                    flags[index] = true;
             }
 
-            private static HashSet<string> ReadPropertyNames(Utf8JsonReader reader, JsonSerializerOptions options)
+            private static PresentMembers ReadPropertyNames(Utf8JsonReader reader, JsonSerializerOptions options)
             {
                 if (reader.TokenType != JsonTokenType.StartObject)
                     return null;
 
                 var names = new HashSet<string>(options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+                List<string> caseVariants = null;
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    names.Add(reader.GetString());
+                    string name = reader.GetString();
+
+                    if (names.Add(name) == false)
+                        (caseVariants ??= new List<string>()).Add(name);
+
                     if (reader.Read() == false || reader.TrySkip() == false)
                         return null;
                 }
 
-                return names;
+                return new PresentMembers(names, caseVariants);
             }
         }
 
@@ -1614,14 +1676,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (contractType == null)
                 return;
 
-            JsonTypeInfo typeInfo = GetObjectTypeInfo(options, contractType);
+            JsonTypeInfo typeInfo = GetObjectTypeInfo(options, contractType, out bool hasCaseOnlyNameCollisions);
             if (typeInfo.Kind != JsonTypeInfoKind.Object)
                 return;
 
             for (int i = 0; i < typeInfo.Properties.Count; i++)
             {
                 JsonPropertyInfo property = typeInfo.Properties[i];
-                if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(typeInfo, i, property.Name)))
+                if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(typeInfo, i, property.Name, hasCaseOnlyNameCollisions)))
                     property.Set(target, property.Get(value));
             }
         }

@@ -14,9 +14,9 @@ internal sealed class MissingPropertiesShape
 
     public readonly bool OwnsUnknownProperties;
 
-    public readonly Dictionary<string, JsonPropertyInfo> Properties;
+    public readonly JsonPropertyMap Properties;
 
-    public MissingPropertiesShape(JsonTypeInfo typeInfo, Dictionary<string, JsonPropertyInfo> properties)
+    public MissingPropertiesShape(JsonTypeInfo typeInfo, JsonPropertyMap properties)
     {
         IsObject = typeInfo.Kind == JsonTypeInfoKind.Object;
         OwnsUnknownProperties = IsObject && RavenJsonTypeInfoResolver.OwnsUnknownProperties(typeInfo);
@@ -36,19 +36,28 @@ internal sealed class MissingPropertiesShape
 #endif
 
         int index = 0;
-        foreach (KeyValuePair<string, JsonPropertyInfo> property in properties)
+        foreach (KeyValuePair<string, JsonPropertyInfo> property in properties.ByName)
+            AddMember(ref index, property.Key, property.Value);
+
+        if (properties.Shadowed != null)
         {
-            byte[] name = Encoding.UTF8.GetBytes(property.Key);
-            int bucket = GetBucket(name);
-            _members[index] = new Member
-            {
-                Name = name,
-                Property = property.Value,
-                CanHoldMissingProperties = CanHoldMissingProperties(property.Value),
-                Next = _buckets[bucket]
-            };
-            _buckets[bucket] = index++;
+            foreach (KeyValuePair<string, JsonPropertyInfo> property in properties.Shadowed)
+                AddMember(ref index, property.Key, property.Value);
         }
+    }
+
+    private void AddMember(ref int index, string propertyName, JsonPropertyInfo property)
+    {
+        byte[] name = Encoding.UTF8.GetBytes(propertyName);
+        int bucket = GetBucket(name);
+        _members[index] = new Member
+        {
+            Name = name,
+            Property = property,
+            CanHoldMissingProperties = CanHoldMissingProperties(property),
+            Next = _buckets[bucket]
+        };
+        _buckets[bucket] = index++;
     }
 
     public static bool CanHoldMissingProperties(JsonPropertyInfo property)

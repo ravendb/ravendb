@@ -277,7 +277,7 @@ internal abstract class BlittableJsonConverterWithMissingProperties : BlittableJ
         if (IsObject(type) == false)
             return modified;
 
-        Dictionary<string, JsonPropertyInfo> knownProperties = Conventions.GetJsonProperties(type);
+        JsonPropertyMap knownProperties = Conventions.GetJsonProperties(type);
         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
         for (int i = 0; i < json.Count; i++)

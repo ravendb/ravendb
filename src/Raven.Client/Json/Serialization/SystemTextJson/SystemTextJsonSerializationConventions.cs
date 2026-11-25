@@ -28,7 +28,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         internal static readonly JsonWriterOptions MetadataWriterOptions = new() { Encoder = SupplementaryPlaneJavaScriptEncoder.Instance, SkipValidation = true };
 
         private readonly BlittableJsonConverter _defaultConverter;
-        private readonly ConcurrentDictionary<Type, Dictionary<string, JsonPropertyInfo>> _jsonProperties = new();
+        private readonly ConcurrentDictionary<Type, JsonPropertyMap> _jsonProperties = new();
         private readonly ConcurrentDictionary<Type, MissingPropertiesShape> _missingPropertiesShapes = new();
         private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
@@ -170,27 +170,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             return JsonPropertyNameResolver.GetSystemTextJsonPropertyName(member);
         }
 
-        internal Dictionary<string, JsonPropertyInfo> GetJsonProperties(Type type)
+        internal JsonPropertyMap GetJsonProperties(Type type)
         {
-            return _jsonProperties.GetOrAdd(type, t =>
-            {
-                JsonTypeInfo typeInfo = RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t);
-                StringComparer comparer = typeInfo.Options.PropertyNameCaseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-                var properties = new Dictionary<string, JsonPropertyInfo>(comparer);
-
-                if (typeInfo.Kind != JsonTypeInfoKind.Object)
-                    return properties;
-
-                foreach (JsonPropertyInfo property in typeInfo.Properties)
-                {
-                    if (property.AttributeProvider == null && property.Get == null)
-                        continue;
-
-                    properties[property.Name] = property;
-                }
-
-                return properties;
-            });
+            return _jsonProperties.TryGetValue(type, out JsonPropertyMap properties)
+                ? properties
+                : _jsonProperties.GetOrAdd(type, t => new JsonPropertyMap(RavenJsonTypeInfoResolver.GetObjectTypeInfo(Options, t), Options.PropertyNameCaseInsensitive));
         }
 
         internal MissingPropertiesShape GetMissingPropertiesShape(Type type)
