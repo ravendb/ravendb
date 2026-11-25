@@ -18,9 +18,16 @@ export function getTaskConnectionStatus(task: OngoingTaskInfo): OngoingTaskConne
 }
 
 function isProblemConnectionStatus(task: OngoingTaskInfo, connectionStatus: OngoingTaskConnectionStatus) {
-    return (
-        connectionStatus === "Reconnect" || (connectionStatus === "NotActive" && task.shared.taskState === "Enabled")
-    );
+    switch (connectionStatus) {
+        case "Reconnect":
+            return true;
+        case "NotActive":
+            return task.shared.taskState === "Enabled";
+        case "None":
+            return getVisibleNodes(task).some((x) => x.details.error);
+        default:
+            return false;
+    }
 }
 
 interface TaskConnectionStatusItemProps {

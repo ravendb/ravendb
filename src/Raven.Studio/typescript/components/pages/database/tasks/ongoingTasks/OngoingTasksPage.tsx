@@ -171,7 +171,10 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                     startTrackingEtlProgress();
                 }
 
-                if ((tasks.OngoingTasks ?? []).some((t) => replicationTaskTypes.includes(t.TaskType))) {
+                const hasReplication = (tasks.OngoingTasks ?? []).some((t) =>
+                    replicationTaskTypes.includes(t.TaskType)
+                );
+                if (!isAiOnly && hasReplication) {
                     startTrackingReplicationProgress();
                 }
             } catch (e) {
@@ -186,7 +189,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps = {
                 );
             }
         },
-        [db, tasksService, dispatch, startTrackingEtlProgress, startTrackingReplicationProgress]
+        [db, tasksService, dispatch, startTrackingEtlProgress, startTrackingReplicationProgress, isAiOnly]
     );
 
     const reload = useCallback(async () => {
