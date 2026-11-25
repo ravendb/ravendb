@@ -18,6 +18,7 @@ interface DocumentsToImportCardProps {
 interface ToggleExtras {
     afterChange?: (value: boolean) => void;
     warning?: string;
+    className?: string;
 }
 
 export default function DocumentsToImportCard({ visibleToggles = documentToggleKeys }: DocumentsToImportCardProps) {
@@ -49,12 +50,13 @@ export default function DocumentsToImportCard({ visibleToggles = documentToggleK
                 restriction={restrictions[key]}
                 afterChange={extras?.afterChange}
                 warning={extras?.warning}
+                className={extras?.className}
             >
                 {label}
             </RestrictedSwitch>
         );
 
-    const documentsToggle = renderToggle("isIncludeDocuments", "Include Documents");
+    const documentsToggle = renderToggle("isIncludeDocuments", "Include Documents", { className: "pb-1" });
     const extensionToggles = [
         renderToggle("isIncludeAttachments", "Include Attachments", { afterChange: forceDocumentsOn }),
         renderToggle("isIncludeCounters", "Include Counters", { afterChange: forceDocumentsOn }),

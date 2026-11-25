@@ -15,6 +15,7 @@ interface RestrictedSwitchProps {
     restriction?: ImportRestriction;
     warning?: ReactNode;
     afterChange?: (value: boolean) => void;
+    className?: string;
     children: ReactNode;
 }
 
@@ -24,13 +25,20 @@ export default function RestrictedSwitch({
     restriction,
     warning,
     afterChange,
+    className,
     children,
 }: RestrictedSwitchProps) {
     return (
         <div className="d-flex align-items-center gap-2">
             <ConditionalPopover conditions={{ isActive: !!restriction, message: restriction?.tooltip }}>
                 <div className={classNames({ "item-disabled": !!restriction })}>
-                    <FormSwitch control={control} name={name} disabled={!!restriction} afterChange={afterChange}>
+                    <FormSwitch
+                        control={control}
+                        name={name}
+                        disabled={!!restriction}
+                        className={className}
+                        afterChange={afterChange}
+                    >
                         {children}
                     </FormSwitch>
                 </div>

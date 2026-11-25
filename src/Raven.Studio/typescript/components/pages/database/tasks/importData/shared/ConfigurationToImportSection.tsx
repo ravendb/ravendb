@@ -12,9 +12,9 @@ import {
     connectionStringKeys,
     DatabaseSettingKey,
     databaseSettingKeys,
+    ImportOptionsFormData,
     ongoingTaskKeys,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
-import { ImportOptionsFormData } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { getTasksMissingConnectionStrings } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
@@ -76,7 +76,8 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
         );
     };
 
-    const areAllEntitiesSelected = isIncludeIndexes && isIncludeIndexHistory && isIncludeIdentities && isIncludeTasks;
+    const areAllEntitiesSelected =
+        isIncludeIndexes && isIncludeIndexHistory && (isUnsupported || (isIncludeIdentities && isIncludeTasks));
 
     const ongoingTasks = useWatch({ control, name: "configuration.ongoingTasks" });
     const connectionStrings = useWatch({ control, name: "configuration.connectionStrings" });
@@ -122,15 +123,22 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
     const setAllEntities = (value: boolean) => {
         setValue("configuration.isIncludeIndexes", value, { shouldDirty: true });
         setValue("configuration.isIncludeIndexHistory", value, { shouldDirty: true });
-        setValue("configuration.isIncludeIdentities", value, { shouldDirty: true });
-        setValue("configuration.isIncludeConnectionStringsAndOngoingTasks", value, { shouldDirty: true });
+        if (!isUnsupported) {
+            setValue("configuration.isIncludeIdentities", value, { shouldDirty: true });
+            setValue("configuration.isIncludeConnectionStringsAndOngoingTasks", value, { shouldDirty: true });
+        }
     };
 
-    const renderUnsupportable = (children: ReactNode, className?: string) => (
-        <ConditionalPopover conditions={{ isActive: isUnsupported, message: unsupportedReason }} className={className}>
-            <div className={classNames("w-100", { "item-disabled": isUnsupported })}>{children}</div>
-        </ConditionalPopover>
-    );
+    const renderUnsupportable = (children: ReactNode) =>
+        isUnsupported ? (
+            <ConditionalPopover conditions={{ isActive: true, message: unsupportedReason }}>
+                <fieldset disabled className="item-disabled w-100 border-0 p-0 m-0">
+                    {children}
+                </fieldset>
+            </ConditionalPopover>
+        ) : (
+            children
+        );
 
     return (
         <ImportSection id="configuration-to-import" title="Configuration to import">
