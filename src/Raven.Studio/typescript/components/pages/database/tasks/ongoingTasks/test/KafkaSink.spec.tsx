@@ -33,6 +33,15 @@ describe("Kafka Sink", function () {
         expect(await container.findByText("Reconnect")).toHaveClass("text-warning");
     });
 
+    it("shows when the sink process did not start", async () => {
+        const Story = composeStory(stories.NotStarted, stories.default);
+
+        const { screen } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        expect(await container.findByText("None")).toHaveClass("text-warning");
+    });
+
     it("can render disabled", async () => {
         const Story = composeStory(stories.Disabled, stories.default);
 

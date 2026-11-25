@@ -63,6 +63,18 @@ describe("OngoingTasksPage", function () {
         await waitFor(() => expect(getEtlProgress).toHaveBeenCalled(), { timeout: 2000 });
     });
 
+    it("does not track replication progress on the AI tasks view", async () => {
+        const getEtlProgress = jest.mocked(mockServices.tasksService.mock.getEtlProgress);
+        const getReplicationProgress = jest.mocked(mockServices.tasksService.mock.getReplicationProgress);
+        getEtlProgress.mockClear();
+        getReplicationProgress.mockClear();
+
+        rtlRender(<FullView isAiOnly />);
+
+        await waitFor(() => expect(getEtlProgress).toHaveBeenCalled(), { timeout: 2000 });
+        expect(getReplicationProgress).not.toHaveBeenCalled();
+    });
+
     it("does not refetch a node while its previous request is still pending", async () => {
         jest.useFakeTimers();
         const getOngoingTasks = jest.mocked(mockServices.tasksService.mock.getOngoingTasks);

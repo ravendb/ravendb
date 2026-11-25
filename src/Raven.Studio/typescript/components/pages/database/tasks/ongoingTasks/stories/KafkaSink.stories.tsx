@@ -12,6 +12,7 @@ import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 interface KafkaSinkProps {
     isDisabled: boolean;
     isReconnecting: boolean;
+    isNotStarted: boolean;
     hasLongValues: boolean;
     databaseType: "sharded" | "cluster" | "singleNode";
 }
@@ -39,6 +40,10 @@ export default {
             if (args.isReconnecting) {
                 ongoingTask.TaskConnectionStatus = "Reconnect";
             }
+            if (args.isNotStarted) {
+                ongoingTask.TaskConnectionStatus = "None";
+                ongoingTask.Error = `Queue Sink process '${ongoingTask.TaskName}' was not found.`;
+            }
             if (args.hasLongValues) {
                 ongoingTask.TaskName =
                     "Kafka Sink consuming customer order and payment events from the EU production cluster";
@@ -57,6 +62,7 @@ export default {
     args: {
         isDisabled: false,
         isReconnecting: false,
+        isNotStarted: false,
         hasLongValues: false,
         databaseType: "sharded",
     },
@@ -84,6 +90,12 @@ export const Disabled: StoryObj<KafkaSinkProps> = {
 export const Reconnecting: StoryObj<KafkaSinkProps> = {
     args: {
         isReconnecting: true,
+    },
+};
+
+export const NotStarted: StoryObj<KafkaSinkProps> = {
+    args: {
+        isNotStarted: true,
     },
 };
 

@@ -260,8 +260,12 @@ function LastBackupErrorItem({ task, isBackupRunning }: LastBackupErrorItemProps
             task.shared.taskId,
             task.shared.lastFullBackup,
             task.shared.lastIncrementalBackup,
+            task.shared.nextBackup?.DateTime,
             isBackupRunning,
-        ]
+        ],
+        {
+            setLoading: (state) => ({ ...state, loading: true }),
+        }
     );
 
     const lastError = (asyncStatuses.result ?? [])

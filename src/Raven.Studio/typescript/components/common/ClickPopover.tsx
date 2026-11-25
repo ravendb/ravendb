@@ -1,5 +1,5 @@
 import React, { ReactElement, ReactNode } from "react";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Popover from "react-bootstrap/Popover";
 import useUniqueId from "components/hooks/useUniqueId";
 
