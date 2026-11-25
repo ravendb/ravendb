@@ -1,6 +1,5 @@
 ﻿using System;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Database;
 
@@ -18,21 +17,29 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
     {
         category = BackupDecisionCategory.Waiting;
 
-        var nodeTag = BackupUtils.GetResponsibleNodeTag(context, backupState.DatabaseName, backupState.Configuration.TaskId);
-        if (nodeTag == null)
-        {
-            reason = "No node is responsible for the task.";
-            category = BackupDecisionCategory.HeldBack;
-            return false;
-        }
+        var taskStatus = serverStore.ServerBackupRunner.GetTaskStatus(backupState.Configuration, backupState.DatabaseName, out var nodeTag, context);
 
-        if (nodeTag != serverStore.NodeTag)
+        switch (taskStatus)
         {
-            reason = $"Node '{nodeTag}' is responsible for the task.";
-            return false;
-        }
+            case ServerBackupRunner.TaskStatus.Disabled:
+                BackupDisabledPolicy.IsDisabled(backupState.Configuration, out reason, out category);
+                return false;
 
-        reason = null;
-        return true;
+            case ServerBackupRunner.TaskStatus.MissingResponsibleNode:
+                reason = "No node is responsible for the task.";
+                category = BackupDecisionCategory.HeldBack;
+                return false;
+
+            case ServerBackupRunner.TaskStatus.ActiveByOtherNode:
+                reason = $"Node '{nodeTag}' is responsible for the task.";
+                return false;
+
+            case ServerBackupRunner.TaskStatus.ActiveByCurrentNode:
+                reason = null;
+                return true;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(taskStatus), taskStatus, $"Unknown backup task status '{taskStatus}' of {backupState}");
+        }
     }
 }

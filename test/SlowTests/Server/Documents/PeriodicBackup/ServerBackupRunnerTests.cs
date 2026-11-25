@@ -590,7 +590,7 @@ public class ServerBackupRunnerTests : ClusterTestBase
         var databases = new[] { GetDatabaseName(), GetDatabaseName() };
 
         foreach (var database in databases)
-            runner.GetTaskStatus(new PeriodicBackupConfiguration { TaskId = 1, FullBackupFrequency = "* * * * *" }, database, out _);
+            runner.RaiseAllDestinationsDisabledAlert(database, taskId: 1);
 
         foreach (var database in databases)
         {

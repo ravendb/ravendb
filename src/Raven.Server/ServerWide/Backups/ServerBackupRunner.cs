@@ -317,7 +317,7 @@ public class ServerBackupRunner : IDisposable
             {
                 backupTask.TaskCancelToken.Dispose();
 
-                var cancelReason = backupState.Configuration.Disabled || backupState.Configuration.HasBackup() == false ? CancelReasonDisabled : CancelReasonTaskDeleted;
+                var cancelReason = BackupDisabledPolicy.IsDisabled(backupState.Configuration, out _, out _) ? CancelReasonDisabled : CancelReasonTaskDeleted;
                 FinishRunning(backupState, BackupDecisionCategory.Cancelled, cancelReason, GetCancelReasonText(cancelReason));
                 return false;
             }
@@ -755,7 +755,16 @@ public class ServerBackupRunner : IDisposable
     {
         var existingBackupState = GetDatabaseStateByTaskId(databaseName, configuration.TaskId);
         var alreadyKnownWithoutDestinations = existingBackupState != null && existingBackupState.Configuration.HasBackup() == false;
-        var taskState = GetTaskStatus(configuration, databaseName, out _, disableLog: alreadyKnownWithoutDestinations, context: context);
+        var taskState = GetTaskStatus(configuration, databaseName, out var responsibleNodeTag, context);
+        if (alreadyKnownWithoutDestinations == false)
+        {
+            if (configuration.Disabled == false && configuration.HasBackup() == false)
+                RaiseAllDestinationsDisabledAlert(databaseName, configuration.TaskId);
+            else if (taskState == TaskStatus.ActiveByOtherNode && _logger.IsDebugEnabled)
+                _logger.Debug($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
+                              $"by '{responsibleNodeTag}' node and not the current node ({_serverStore.NodeTag})");
+        }
+
         if (TryGetTestingStuff(databaseName, out var testingStuffInternal))
         {
             if (testingStuffInternal.SimulateActiveByOtherNodeStatus_UpdateConfigurations)
@@ -873,28 +882,10 @@ public class ServerBackupRunner : IDisposable
         }
     }
 
-    public TaskStatus GetTaskStatus(PeriodicBackupConfiguration configuration, string databaseName, out string responsibleNodeTag, bool disableLog = false, ClusterOperationContext context = null)
+    public TaskStatus GetTaskStatus(PeriodicBackupConfiguration configuration, string databaseName, out string responsibleNodeTag, ClusterOperationContext context = null)
     {
-        if (configuration.Disabled)
+        if (BackupDisabledPolicy.IsDisabled(configuration, out _, out _))
         {
-            responsibleNodeTag = null;
-            return TaskStatus.Disabled;
-        }
-
-        if (configuration.HasBackup() == false)
-        {
-            if (disableLog == false)
-            {
-                var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
-                AddDatabaseAlert(databaseName, AlertRaised.Create(
-                    databaseName,
-                    "Periodic Backup",
-                    message,
-                    AlertReason.PeriodicBackup,
-                    NotificationSeverity.Info,
-                    key: databaseName));
-            }
-
             responsibleNodeTag = null;
             return TaskStatus.Disabled;
         }
@@ -912,14 +903,19 @@ public class ServerBackupRunner : IDisposable
             return TaskStatus.MissingResponsibleNode;
         }
 
-        if (responsibleNodeTag == _serverStore.NodeTag)
-            return TaskStatus.ActiveByCurrentNode;
+        return responsibleNodeTag == _serverStore.NodeTag ? TaskStatus.ActiveByCurrentNode : TaskStatus.ActiveByOtherNode;
+    }
 
-        if (disableLog == false && _logger.IsDebugEnabled)
-            _logger.Debug($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
-                          $"by '{responsibleNodeTag}' node and not the current node ({_serverStore.NodeTag})");
-
-        return TaskStatus.ActiveByOtherNode;
+    internal void RaiseAllDestinationsDisabledAlert(string databaseName, long taskId)
+    {
+        var message = $"All backup destinations are disabled for backup task id: {taskId}";
+        AddDatabaseAlert(databaseName, AlertRaised.Create(
+            databaseName,
+            "Periodic Backup",
+            message,
+            AlertReason.PeriodicBackup,
+            NotificationSeverity.Info,
+            key: databaseName));
     }
 
     private static string GetBackupTypeText(bool isFullBackup, BackupType backupType)
@@ -940,17 +936,14 @@ public class ServerBackupRunner : IDisposable
             throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
         }
 
-        if (databaseBackupState.Configuration.Disabled)
+        if (GetTaskStatus(databaseBackupState.Configuration, databaseBackupState.DatabaseName, out var responsibleNodeTag) == TaskStatus.Disabled)
         {
-            throw new InvalidOperationException($"Backup task id: {taskId} is disabled");
+            throw new InvalidOperationException(databaseBackupState.Configuration.Disabled
+                ? $"Backup task id: {taskId} is disabled"
+                : $"All backup destinations are disabled for backup task id: {taskId}");
         }
 
-        if (databaseBackupState.Configuration.HasBackup() == false)
-        {
-            throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
-        }
-
-        return BackupUtils.GetResponsibleNodeTag(_serverStore, databaseBackupState.DatabaseName, databaseBackupState.Configuration.TaskId);
+        return responsibleNodeTag;
     }
 
     public DatabaseBackupState GetDatabaseStateByTaskId(string databaseName, long taskId)
@@ -1711,7 +1704,7 @@ public class ServerBackupRunner : IDisposable
         {
             var canStart = isBackupNow
                 ? backupStates.TryGetValue(backupState.Configuration.TaskId, out var current) && ReferenceEquals(current, backupState) &&
-                  backupState.Configuration.Disabled == false && backupState.Configuration.HasBackup()
+                  BackupDisabledPolicy.IsDisabled(backupState.Configuration, out _, out _) == false
                 : backupState.Stale == false;
 
             if (canStart == false)
@@ -1725,7 +1718,7 @@ public class ServerBackupRunner : IDisposable
 
     internal bool IsActiveOnThisNode(ClusterOperationContext context, DatabaseBackupState backupState)
     {
-        return GetTaskStatus(backupState.Configuration, backupState.DatabaseName, out _, disableLog: true, context: context) == TaskStatus.ActiveByCurrentNode;
+        return GetTaskStatus(backupState.Configuration, backupState.DatabaseName, out _, context) == TaskStatus.ActiveByCurrentNode;
     }
 
     private bool TryGetTestingStuff(string databaseName, out TestingStuffInternal testingStuff)
