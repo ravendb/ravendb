@@ -17,10 +17,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public UploadToFtp FtpBackup => (_result as BackupResult)?.FtpBackup;
 
-        private BackupProgress() : base(null)
-        {
-        }
-
         public BackupProgress(BackupResult result) : base(result)
         {
         }

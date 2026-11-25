@@ -4,14 +4,11 @@ namespace Raven.Client.Documents.Smuggler
 {
     public sealed class OfflineMigrationProgress : SmugglerResult.SmugglerProgress
     {
-        public Counts DataExporter => ((OfflineMigrationResult)_result)?.DataExporter;
-
-        private OfflineMigrationProgress() : base(null)
-        {
-        }
+        public Counts DataExporter => ((OfflineMigrationResult)_result).DataExporter;
 
         public OfflineMigrationProgress(OfflineMigrationResult result) : base(result)
         {
+            
         }
 
         public override DynamicJsonValue ToJson()

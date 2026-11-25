@@ -835,6 +835,27 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class SettingsOwner
+    {
+        public Settings Settings { get; set; }
+    }
+
+    private class ViewOfUnboundOwner
+    {
+        private readonly SettingsOwner _owner;
+
+        public ViewOfUnboundOwner(SettingsOwner source)
+        {
+            _owner = source;
+        }
+
+        public Settings Derived => _owner.Settings;
+
+        public Settings Settings { get; } = new() { Timeout = 5 };
+
+        public List<string> Tags { get; } = ["a"];
+    }
+
     private class ViewOfBoundName
     {
         public ViewOfBoundName(string name)
@@ -856,6 +877,14 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         using (BlittableJsonReaderObject json = context.Sync.ReadForMemory(
                    "{\"Name\":\"n\",\"Derived\":{\"Timeout\":1},\"Settings\":{\"Timeout\":2},\"Tags\":[\"b\"]}", "view"))
         {
+            var expectedUnbound = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ViewOfUnboundOwner>(json);
+            var actualUnbound = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ViewOfUnboundOwner>(json);
+
+            Assert.Equal(5, actualUnbound.Settings.Timeout);
+            Assert.Equal(expectedUnbound.Settings.Timeout, actualUnbound.Settings.Timeout);
+            Assert.Equal(new[] { "a", "b" }, actualUnbound.Tags);
+            Assert.Equal(expectedUnbound.Tags, actualUnbound.Tags);
+
             var expectedBound = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ViewOfBoundName>(json);
             var actualBound = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ViewOfBoundName>(json);
 
@@ -1174,6 +1203,36 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class WithServiceConstructor
+    {
+        public WithServiceConstructor(string name, int age, IServiceProvider services)
+        {
+            Name = name;
+            Age = age;
+        }
+
+        public string Name { get; }
+
+        public int Age { get; }
+    }
+
+    [RavenTheory(RavenTestCategory.ClientApi)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ConstructorWithUnboundParameterStillReceivesBoundValues(bool useSystemTextJson)
+    {
+        DocumentConventions conventions = useSystemTextJson ? SystemTextJson : Newtonsoft;
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Name\":\"Oren\",\"Age\":40}", "constructor"))
+        {
+            var read = conventions.Serialization.DefaultConverter.FromBlittable<WithServiceConstructor>(json);
+
+            Assert.Equal("Oren", read.Name);
+            Assert.Equal(40, read.Age);
+        }
+    }
+
     private class NullHandling
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -1226,6 +1285,37 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             Assert.True(json.TryGet(nameof(Person.Name), out string name));
             Assert.Equal(person.Name, name);
             Assert.Equal(person.Name, SystemTextJson.Serialization.DefaultConverter.FromBlittable<Person>(json).Name);
+        }
+    }
+
+    private class Location
+    {
+        public Location(double lat, double lng)
+        {
+            Latitude = lat;
+            Longitude = lng;
+        }
+
+        public double Latitude { get; set; }
+
+        public double Longitude { get; set; }
+
+        public string Label { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonReadsThroughConstructorsWithUnboundParametersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Latitude\":1.5,\"Longitude\":2.5,\"Label\":\"home\"}", "location"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<Location>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<Location>(json);
+
+            Assert.Equal(1.5, actual.Latitude);
+            Assert.Equal(expected.Latitude, actual.Latitude);
+            Assert.Equal(expected.Longitude, actual.Longitude);
+            Assert.Equal(expected.Label, actual.Label);
         }
     }
 
@@ -3011,6 +3101,81 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
             SystemTextJson.Serialization.DefaultConverter.PopulateEntity(getOnly, json);
             Assert.Equal("new", getOnly.Name);
             Assert.Equal("new", getOnly.Extra["Legacy"].GetString());
+        }
+    }
+
+    private class ValidatedCustomer
+    {
+        public ValidatedCustomer(string customerId, IServiceProvider services)
+        {
+            CustomerId = customerId ?? throw new ArgumentNullException(nameof(customerId));
+        }
+
+        public string CustomerId { get; }
+
+        public string Name { get; set; }
+    }
+
+    private class PricedLine
+    {
+        public PricedLine(int quantity, decimal price, IServiceProvider services)
+        {
+            Quantity = quantity;
+            Price = price;
+            Total = quantity * price;
+        }
+
+        public int Quantity { get; }
+
+        public decimal Price { get; }
+
+        public decimal Total { get; }
+    }
+
+    private class ServicedKennel
+    {
+        public ServicedKennel(Animal star, IServiceProvider services)
+        {
+            Star = star;
+        }
+
+        public Animal Star { get; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonPassesBoundValuesToConstructorsWithUnboundParametersLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"customerId\":\"customers/1\",\"Name\":\"Oren\"}", "customer"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ValidatedCustomer>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ValidatedCustomer>(json);
+
+                Assert.Equal("customers/1", actual.CustomerId);
+                Assert.Equal(expected.CustomerId, actual.CustomerId);
+                Assert.Equal(expected.Name, actual.Name);
+            }
+
+            using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("{\"Quantity\":3,\"Price\":2.5}", "line"))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<PricedLine>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<PricedLine>(json);
+
+                Assert.Equal(7.5m, actual.Total);
+                Assert.Equal(expected.Total, actual.Total);
+                Assert.Equal(expected.Quantity, actual.Quantity);
+                Assert.Equal(expected.Price, actual.Price);
+            }
+
+            using (BlittableJsonReaderObject json = SystemTextJson.Serialization.DefaultConverter.ToBlittable(new ServicedKennel(new Dog { Name = "Rex", Barks = true }, null), context))
+            {
+                var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ServicedKennel>(json);
+                var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ServicedKennel>(json);
+
+                Assert.True(Assert.IsType<Dog>(actual.Star).Barks);
+                Assert.Equal(expected.Star.GetType(), actual.Star.GetType());
+            }
         }
     }
 
