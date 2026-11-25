@@ -96,6 +96,13 @@ namespace Raven.Client.Extensions
             writer.WritePropertyName(nameof(options.MentorNode));
             writer.WriteString(options.MentorNode);
 
+            if (options.ArchivedDataProcessingBehavior.HasValue)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(options.ArchivedDataProcessingBehavior));
+                writer.WriteString(options.ArchivedDataProcessingBehavior.Value.ToString());
+            }
+
             if (options.DisabledWasSet)
             {
                 writer.WriteComma();

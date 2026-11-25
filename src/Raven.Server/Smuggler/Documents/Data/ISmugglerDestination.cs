@@ -42,7 +42,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         ICounterActions Counters(SmugglerResult result);
 
-        ISubscriptionActions Subscriptions();
+        ISubscriptionActions Subscriptions(BackupKind? backupKind = null);
 
         IReplicationHubCertificateActions ReplicationHubCertificates();
 

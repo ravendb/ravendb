@@ -45,14 +45,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns>Created subscription</returns>
         public string Create<T>(SubscriptionCreationOptions<T> options, string database = null)
         {
-            return Create(CreateSubscriptionOptionsFromGeneric(_store.Conventions, new SubscriptionCreationOptions
-            {
-                Name = options.Name,
-                ChangeVector = options.ChangeVector,
-                MentorNode = options.MentorNode,
-                Disabled = options.Disabled,
-                ArchivedDataProcessingBehavior = options.ArchivedDataProcessingBehavior,
-            }, options.Filter, options.Projection, options.Includes), database);
+            return Create(options.ToSubscriptionCreationOptions(_store.Conventions), database);
         }
 
         /// <summary>
@@ -86,13 +79,7 @@ namespace Raven.Client.Documents.Subscriptions
         public Task<string> CreateAsync<T>(
             SubscriptionCreationOptions<T> options, string database = null, CancellationToken token = default)
         {
-            return CreateAsync(CreateSubscriptionOptionsFromGeneric(_store.Conventions, new SubscriptionCreationOptions
-            {
-                Name = options.Name,
-                ChangeVector = options.ChangeVector,
-                MentorNode = options.MentorNode,
-                Disabled = options.Disabled
-            }, options.Filter, options.Projection, options.Includes), database, token);
+            return CreateAsync(options.ToSubscriptionCreationOptions(_store.Conventions), database, token);
         }
 
         /// <summary>

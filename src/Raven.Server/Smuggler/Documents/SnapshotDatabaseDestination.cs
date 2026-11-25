@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.Smuggler.Documents.Actions;
 using Raven.Server.Smuggler.Documents.Data;
@@ -21,7 +22,7 @@ namespace Raven.Server.Smuggler.Documents
             _subscriptions = subscriptions;
         }
 
-        public override ISubscriptionActions Subscriptions()
+        public override ISubscriptionActions Subscriptions(BackupKind? backupKind = null)
         {
             return new SnapshotSubscriptionActions(_database, _subscriptions);
         }
@@ -46,10 +47,9 @@ namespace Raven.Server.Smuggler.Documents
 
                 var command = new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
                 {
-                    SubscriptionName = subscriptionState.SubscriptionName,
-                    InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint,
-                    Disabled = subscriptionState.Disabled
+                    InitialChangeVector = subscriptionState.ChangeVectorForNextBatchStartingPoint
                 };
+                command.CopySettingsFrom(subscriptionState, keepMentorNode: true);
                 return command;
             }
 

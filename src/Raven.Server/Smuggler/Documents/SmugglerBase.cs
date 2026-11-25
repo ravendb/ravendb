@@ -928,7 +928,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessSubscriptionsAsync(SmugglerResult result) =>
-            ProcessSubscriptionsInternalAsync(result, _destination.Subscriptions());
+            ProcessSubscriptionsInternalAsync(result, _destination.Subscriptions(BackupKind));
 
         protected virtual Task<SmugglerProgressBase.Counts> ProcessReplicationHubCertificatesAsync(SmugglerResult result) =>
             ProcessReplicationHubCertificatesInternalAsync(result, _destination.ReplicationHubCertificates());

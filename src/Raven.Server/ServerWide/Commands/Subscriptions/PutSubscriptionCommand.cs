@@ -40,6 +40,23 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             SubscriptionConnection.ParseSubscriptionQuery(query);
         }
 
+        /// <summary>
+        /// Copies the settings of an exported or backed up subscription. The mentor node refers to a node of the cluster
+        /// the subscription came from, so it is copied, together with the pin, only when <paramref name="keepMentorNode"/> is set.
+        /// </summary>
+        internal void CopySettingsFrom(SubscriptionState state, bool keepMentorNode)
+        {
+            SubscriptionName = state.SubscriptionName;
+            Disabled = state.Disabled;
+            ArchivedDataProcessingBehavior = state.ArchivedDataProcessingBehavior;
+
+            if (keepMentorNode)
+            {
+                MentorNode = state.MentorNode;
+                PinToMentorNode = state.PinToMentorNode;
+            }
+        }
+
         protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue)
         {
             throw new NotImplementedException();

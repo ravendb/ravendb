@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Subscriptions
                 SetSubscriptionChangeVectorOnUpdate(options, state);
                 options.MentorNode ??= state.MentorNode;
                 options.Query ??= state.Query;
-                options.ArchivedDataProcessingBehavior = state.ArchivedDataProcessingBehavior;
+                options.ArchivedDataProcessingBehavior ??= state.ArchivedDataProcessingBehavior;
 
                 if (pinToMentorNodeWasSet == false)
                     options.PinToMentorNode = state.PinToMentorNode;

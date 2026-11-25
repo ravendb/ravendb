@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 
@@ -8,7 +10,7 @@ namespace Raven.Server.Smuggler.Documents.Actions;
 
 public sealed class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBase<PutSubscriptionCommand>
 {
-    public DatabaseSubscriptionActions(ServerStore serverStore, string name) : base(serverStore, name)
+    public DatabaseSubscriptionActions(ServerStore serverStore, string name, BackupKind? backupKind = null, SmugglerResult result = null) : base(serverStore, name, backupKind, result)
     {
     }
 
@@ -16,11 +18,10 @@ public sealed class DatabaseSubscriptionActions : DatabaseSubscriptionActionsBas
     {
         var command = new PutSubscriptionCommand(_name, subscriptionState.Query, null, RaftIdGenerator.DontCareId)
         {
-            SubscriptionName = subscriptionState.SubscriptionName,
             //After restore/export , subscription will start from the start
-            InitialChangeVector = null,
-            ArchivedDataProcessingBehavior = subscriptionState.ArchivedDataProcessingBehavior
+            InitialChangeVector = null
         };
+        command.CopySettingsFrom(subscriptionState, ShouldKeepMentorNode(subscriptionState));
 
         return command;
     }
