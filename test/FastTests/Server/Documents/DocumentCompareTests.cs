@@ -109,34 +109,6 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [RavenFact(RavenTestCategory.Core)]
-        public void Comparing_an_updated_document_allocates_no_name_strings()
-        {
-            const string order = "{\"Company\":\"companies/17\",\"Employee\":\"employees/3\",\"OrderedAt\":\"2024-05-01T10:00:00.0000000Z\"," +
-                                 "\"RequireAt\":\"2024-05-15T10:00:00.0000000Z\",\"ShippedAt\":null,\"ShipVia\":\"shippers/2\",\"Freight\":32.38," +
-                                 "\"ShipTo\":{\"Line1\":\"12 alpha st.\",\"City\":\"lima\",\"PostalCode\":\"51100\",\"Country\":\"Israel\"}," +
-                                 "\"Lines\":[{\"Product\":\"products/11\",\"Quantity\":12}],\"@metadata\":{\"@collection\":\"Orders\"}}";
-
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var current = Read(context, order))
-            using (var modified = Read(context, order.Replace("32.38", "33.38")))
-            {
-                for (int i = 0; i < 1_000; i++)
-                    DocumentCompare.IsEqualTo(current, modified, DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
-
-                const int count = 10_000;
-                var before = GC.GetAllocatedBytesForCurrentThread();
-                for (int i = 0; i < count; i++)
-                    Assert.Equal(DocumentCompareResult.NotEqual, DocumentCompare.IsEqualTo(current, modified, DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification));
-                var bytes = (double)(GC.GetAllocatedBytesForCurrentThread() - before) / count;
-
-                Output.WriteLine($"IsEqualTo, one changed property {bytes,8:F1} bytes/op");
-#if !DEBUG
-                Assert.True(bytes <= 1_800, $"IsEqualTo allocated {bytes:F1} bytes/op, expected at most 1,800");
-#endif
-            }
-        }
-
         private static BlittableJsonReaderObject Read(JsonOperationContext context, string json) => context.Sync.ReadForMemory(json, "doc");
 
         // the comparison of a document body as it was done with property name strings

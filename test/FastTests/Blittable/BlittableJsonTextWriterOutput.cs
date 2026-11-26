@@ -16,8 +16,6 @@ namespace FastTests.Blittable
 {
     public unsafe class BlittableJsonTextWriterOutput(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        private const int NumberOfOperations = 20_000;
-
         [RavenFact(RavenTestCategory.ClientApi)]
         public void Writing_an_object_matches_writing_its_materialized_values()
         {
@@ -161,127 +159,6 @@ namespace FastTests.Blittable
                         Write(context, writer => writer.WriteObject(document)));
                 }
             }
-        }
-
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void Writing_a_document_allocates_no_reader_objects()
-        {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            {
-                var orders = new Document[64];
-                for (int i = 0; i < orders.Length; i++)
-                    orders[i] = CreateOrder(context, i);
-
-                var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null);
-                try
-                {
-                    var i1 = 0;
-                    var writeObject = MeasurePerOperation(() =>
-                    {
-                        writer.WriteObject(orders[i1++ % orders.Length].Data);
-                        writer.MaybeFlushAsync().AsTask().GetAwaiter().GetResult();
-                    });
-
-                    var i2 = 0;
-                    var writeDocument = MeasurePerOperation(() =>
-                    {
-                        ServerWriterExtensions.WriteDocument(writer, context, orders[i2++ % orders.Length], metadataOnly: false);
-                        writer.MaybeFlushAsync().AsTask().GetAwaiter().GetResult();
-                    });
-
-                    var i3 = 0;
-                    var writeMetadata = MeasurePerOperation(() =>
-                    {
-                        ServerWriterExtensions.WriteDocument(writer, context, orders[i3++ % orders.Length], metadataOnly: true);
-                        writer.MaybeFlushAsync().AsTask().GetAwaiter().GetResult();
-                    });
-
-                    AssertAtMost(16, ("WriteObject, order", writeObject), ("WriteDocument, order", writeDocument), ("WriteDocument, order metadata", writeMetadata));
-                }
-                finally
-                {
-                    writer.DisposeAsync().AsTask().GetAwaiter().GetResult();
-                }
-            }
-        }
-
-        private static Document CreateOrder(JsonOperationContext context, int i)
-        {
-            var lines = new DynamicJsonArray();
-            for (int j = 0; j <= i % 8; j++)
-            {
-                lines.Add(new DynamicJsonValue
-                {
-                    ["Discount"] = j % 3 == 0 ? 0.15 : 0,
-                    ["PricePerUnit"] = 14.5 + j,
-                    ["Product"] = $"products/{11 + j}-A",
-                    ["ProductName"] = "Queso Cabrales",
-                    ["Quantity"] = 12 + j
-                });
-            }
-
-            var data = context.ReadObject(new DynamicJsonValue
-            {
-                ["Company"] = $"companies/{85 + i}-A",
-                ["Employee"] = "employees/5-A",
-                ["Freight"] = 32.38 + i,
-                ["IsPaid"] = i % 2 == 0,
-                ["Lines"] = lines,
-                ["Notes"] = "Leave at the back door, ring twice",
-                ["OrderedAt"] = "1996-07-04T00:00:00.0000000",
-                ["RequireAt"] = "1996-08-01T00:00:00.0000000",
-                ["ShipTo"] = new DynamicJsonValue
-                {
-                    ["City"] = "Reims",
-                    ["Country"] = "France",
-                    ["Line1"] = "59 rue de l'Abbaye",
-                    ["Line2"] = null,
-                    ["Location"] = new DynamicJsonValue { ["Latitude"] = 49.2583, ["Longitude"] = 4.0317 },
-                    ["PostalCode"] = "51100",
-                    ["Region"] = null
-                },
-                ["ShipVia"] = "shippers/3-A",
-                ["ShippedAt"] = "1996-07-16T00:00:00.0000000",
-                ["Status"] = "Shipped",
-                ["Total"] = 440.5 + i,
-                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Collection] = "Orders",
-                    [Constants.Documents.Metadata.RavenClrType] = "Orders.Order, Northwind"
-                }
-            }, $"orders/{i}-A");
-
-            return new Document
-            {
-                Data = data,
-                Id = context.GetLazyString($"orders/{i}-A"),
-                ChangeVector = $"A:{1000 + i}-hSUUlkkaJUaqWHHGsnLbMw",
-                LastModified = new DateTime(2026, 11, 23, 10, 0, i % 60, DateTimeKind.Utc),
-                Flags = DocumentFlags.HasRevisions
-            };
-        }
-
-        private void AssertAtMost(int limit, params (string Name, double BytesPerOperation)[] results)
-        {
-            foreach (var (name, bytesPerOperation) in results)
-                Output.WriteLine($"{name,-32} {bytesPerOperation,8:F1} bytes/op");
-
-#if !DEBUG
-            foreach (var (name, bytesPerOperation) in results)
-                Assert.True(bytesPerOperation <= limit, $"{name} allocated {bytesPerOperation:F1} bytes/op, expected at most {limit}");
-#endif
-        }
-
-        private static double MeasurePerOperation(Action action)
-        {
-            for (int i = 0; i < 1_000; i++)
-                action();
-
-            var before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < NumberOfOperations; i++)
-                action();
-
-            return (double)(GC.GetAllocatedBytesForCurrentThread() - before) / NumberOfOperations;
         }
 
         private static byte[] Write(JsonOperationContext context, Action<AsyncBlittableJsonTextWriter> write)

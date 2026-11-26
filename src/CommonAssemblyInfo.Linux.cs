@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Tests.Infrastructure")]
 [assembly: InternalsVisibleTo("FastTests")]
@@ -14,6 +14,7 @@
 [assembly: InternalsVisibleTo("Tryouts")]
 [assembly: InternalsVisibleTo("LicenseTests")]
 [assembly: InternalsVisibleTo("Subscriptions.Benchmark")]
+[assembly: InternalsVisibleTo("Allocations.Benchmark")]
 [assembly: InternalsVisibleTo("Regression.Benchmark")]
 [assembly: InternalsVisibleTo("Raven.Debug")]
 [assembly: InternalsVisibleTo("SlowTests.Tools")]

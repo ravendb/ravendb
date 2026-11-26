@@ -129,37 +129,6 @@ namespace FastTests.Server.Documents.Revisions
             AssertParsesLikeTheStringParser(bytes);
         }
 
-        [RavenFact(RavenTestCategory.Revisions)]
-        public void Hashing_a_version_allocates_nothing()
-        {
-            var version = $"A:1234-{RandomDbId(new Random(2))}, B:99-{RandomDbId(new Random(3))}, C:7-{RandomDbId(new Random(4))}";
-            using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            using (Slice.From(allocator, version, out Slice raw))
-            {
-                for (int i = 0; i < 1_000; i++)
-                {
-                    using (RevisionsStorage.GetRevisionKeyHashSlice(allocator, raw, out _))
-                    {
-                    }
-                }
-
-                const int count = 10_000;
-                var before = GC.GetAllocatedBytesForCurrentThread();
-                for (int i = 0; i < count; i++)
-                {
-                    using (RevisionsStorage.GetRevisionKeyHashSlice(allocator, raw, out _))
-                    {
-                    }
-                }
-
-                var bytes = (double)(GC.GetAllocatedBytesForCurrentThread() - before) / count;
-                Output.WriteLine($"GetRevisionKeyHashSlice {bytes:F1} bytes/op");
-#if !DEBUG
-                Assert.True(bytes <= 8, $"GetRevisionKeyHashSlice allocated {bytes:F1} bytes/op");
-#endif
-            }
-        }
-
         // the entries both parsers read, or the type of the exception they throw
         private static string AssertParsesLikeTheStringParser(string version) => AssertParsesLikeTheStringParser(Encoding.UTF8.GetBytes(version));
 

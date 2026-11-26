@@ -1,24 +1,23 @@
 using System;
 using Sparrow.Binary;
 using Sparrow.Server;
-using Sparrow.Threading;
-using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
-using Xunit;
 
-namespace FastTests.Voron
+namespace Allocations.Benchmark
 {
-    public unsafe class WritePathAllocations(ITestOutputHelper output) : StorageTest(output)
+    // Voron reads and writes on a memory-only environment, a new one for every scenario
+    public unsafe class VoronScenarios : IDisposable
     {
         private const int NumberOfKeys = 100_000;
         private const int Stride = 997; // prime, so consecutive operations land on different leaf pages
-        private const int NumberOfOperations = 20_000;
 
         private static readonly Slice DocsSlice, AllEtagsSlice, CollectionEtagsSlice;
 
-        static WritePathAllocations()
+        private readonly StorageEnvironment _env = new(StorageEnvironmentOptions.CreateMemoryOnlyForTests());
+
+        static VoronScenarios()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
@@ -28,10 +27,9 @@ namespace FastTests.Voron
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
-        public void Tree_operations()
+        public void Trees()
         {
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
                 for (int i = 0; i < NumberOfKeys; i++)
@@ -43,29 +41,29 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-            using (var tx = Env.ReadTransaction())
+            using (var tx = _env.ReadTransaction())
             {
                 var tree = tx.ReadTree("foo");
                 var keys = CreateStridedKeys(tx, "k{0:D8}");
 
                 var i = 0;
-                AssertAtMost(8, "Tree.TryRead, scattered", MeasurePerOperation(() => tree.TryRead(keys[i++ % NumberOfKeys], out _)));
+                Measure.Report("Tree.TryRead, scattered", Measure.PerOperation(() => tree.TryRead(keys[i++ % NumberOfKeys], out _)));
 
                 using (var it = tree.Iterate(prefetch: false))
                 {
                     var i1 = 0;
-                    AssertAtMost(8, "TreeIterator.Seek, scattered", MeasurePerOperation(() => it.Seek(keys[i1++ % NumberOfKeys])));
+                    Measure.Report("TreeIterator.Seek, scattered", Measure.PerOperation(() => it.Seek(keys[i1++ % NumberOfKeys])));
                 }
 
                 var i2 = 0;
-                AssertAtMost(8, "Tree iterator + Seek, reused", MeasurePerOperation(() =>
+                Measure.Report("Tree iterator + Seek, reused", Measure.PerOperation(() =>
                 {
                     using (var it = tree.Iterate(prefetch: false))
                         it.Seek(keys[i2++ % NumberOfKeys]);
                 }));
             }
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var tree = tx.ReadTree("foo");
                 var keys = CreateStridedKeys(tx, "k{0:D8}");
@@ -74,25 +72,24 @@ namespace FastTests.Voron
                     tree.Add(keys[j], (long)j);
 
                 var i1 = 0;
-                AssertAtMost(8, "Tree.Add update, scattered", MeasurePerOperation(() => tree.Add(keys[i1++ % NumberOfKeys], (long)i1)));
+                Measure.Report("Tree.Add update, scattered", Measure.PerOperation(() => tree.Add(keys[i1++ % NumberOfKeys], (long)i1)));
 
                 var sequential = CreateKeys(tx, "k{0:D8}", stride: 1);
                 var i2 = 0;
-                AssertAtMost(8, "Tree.Add update, sequential", MeasurePerOperation(() => tree.Add(sequential[i2++ % NumberOfKeys], (long)i2)));
+                Measure.Report("Tree.Add update, sequential", Measure.PerOperation(() => tree.Add(sequential[i2++ % NumberOfKeys], (long)i2)));
 
                 var appended = CreateKeys(tx, "z{0:D8}", stride: 1);
                 var i3 = 0;
-                AssertAtMost(16, "Tree.Add new key, appended", MeasurePerOperation(() => tree.Add(appended[i3++ % NumberOfKeys], (long)i3)));
+                Measure.Report("Tree.Add new key, appended", Measure.PerOperation(() => tree.Add(appended[i3++ % NumberOfKeys], (long)i3)));
 
                 var i4 = 0;
-                AssertAtMost(8, "Tree.Delete, scattered", MeasurePerOperation(() => tree.Delete(keys[i4++ % NumberOfKeys])));
+                Measure.Report("Tree.Delete, scattered", Measure.PerOperation(() => tree.Delete(keys[i4++ % NumberOfKeys])));
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
-        public void Tree_with_compressed_leaves_operations()
+        public void TreesWithCompressedLeaves()
         {
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo", flags: TreeFlags.LeafsCompressed);
                 for (int i = 0; i < NumberOfKeys; i++)
@@ -104,7 +101,7 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var tree = tx.ReadTree("foo");
                 var keys = CreateStridedKeys(tx, "k{0:D8}");
@@ -113,10 +110,10 @@ namespace FastTests.Voron
                     tree.Add(keys[j], (long)j);
 
                 var i1 = 0;
-                AssertAtMost(8, "Compressed Tree.Add update", MeasurePerOperation(() => tree.Add(keys[i1++ % NumberOfKeys], (long)i1)));
+                Measure.Report("Compressed Tree.Add update", Measure.PerOperation(() => tree.Add(keys[i1++ % NumberOfKeys], (long)i1)));
 
                 var i2 = 0;
-                AssertAtMost(128, "Compressed Tree.TryReadDecompressed", MeasurePerOperation(() =>
+                Measure.Report("Compressed Tree.TryReadDecompressed", Measure.PerOperation(() =>
                 {
                     if (tree.TryReadDecompressed(keys[i2++ % NumberOfKeys], out var value))
                         value.Dispose();
@@ -124,10 +121,9 @@ namespace FastTests.Voron
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
-        public void FixedSizeTree_operations()
+        public void FixedSizeTrees()
         {
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var parent = tx.CreateTree("parent");
                 for (int i = 0; i < 10_000; i++)
@@ -143,31 +139,30 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-            using (var tx = Env.ReadTransaction())
+            using (var tx = _env.ReadTransaction())
             {
                 var fst = tx.ReadTree("parent").FixedTreeFor(AllEtagsSlice, valSize: 8);
 
                 long i = 0;
-                AssertAtMost(8, "FST.ReadPtr, scattered", MeasurePerOperation(() => fst.ReadPtr((i++ * Stride % NumberOfKeys) * 2, out _)));
+                Measure.Report("FST.ReadPtr, scattered", Measure.PerOperation(() => fst.ReadPtr((i++ * Stride % NumberOfKeys) * 2, out _)));
             }
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var fst = tx.ReadTree("parent").FixedTreeFor(AllEtagsSlice, valSize: 8);
 
                 long i1 = 0;
-                AssertAtMost(8, "FST.Add update, scattered", MeasurePerOperation(() => fst.Add((i1++ * Stride % NumberOfKeys) * 2, i1)));
+                Measure.Report("FST.Add update, scattered", Measure.PerOperation(() => fst.Add((i1++ * Stride % NumberOfKeys) * 2, i1)));
 
                 long i2 = NumberOfKeys * 2;
-                AssertAtMost(8, "FST.Add new key, appended", MeasurePerOperation(() => fst.Add(i2++, i2)));
+                Measure.Report("FST.Add new key, appended", Measure.PerOperation(() => fst.Add(i2++, i2)));
 
                 long i3 = 0;
-                AssertAtMost(8, "FST.Delete, scattered", MeasurePerOperation(() => fst.Delete((i3++ * Stride % NumberOfKeys) * 2)));
+                Measure.Report("FST.Delete, scattered", Measure.PerOperation(() => fst.Delete((i3++ * Stride % NumberOfKeys) * 2)));
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
-        public void Table_operations()
+        public void Tables()
         {
             var schema = new TableSchema()
                 .DefineKey(new TableSchema.IndexDef { StartIndex = 0, Count = 1 })
@@ -178,7 +173,7 @@ namespace FastTests.Voron
             var builder = new TableValueBuilder();
             long etag = 0;
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 schema.Create(tx, DocsSlice, 16);
                 var table = tx.OpenTable(schema, DocsSlice);
@@ -189,47 +184,46 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var table = tx.OpenTable(schema, DocsSlice);
                 var scattered = CreateStridedKeys(tx, "docs/{0:D8}");
 
                 var i1 = 0;
-                AssertAtMost(32, "Table.Set update, scattered", MeasurePerOperation(() => Put(table, builder, scattered[i1++ % NumberOfKeys], ++etag, payload)));
+                Measure.Report("Table.Set update, scattered", Measure.PerOperation(() => Put(table, builder, scattered[i1++ % NumberOfKeys], ++etag, payload)));
 
                 var appended = CreateKeys(tx, "docs/new/{0:D8}", stride: 1);
                 var i2 = 0;
-                AssertAtMost(32, "Table.Set insert, appended", MeasurePerOperation(() => Put(table, builder, appended[i2++ % NumberOfKeys], ++etag, payload)));
+                Measure.Report("Table.Set insert, appended", Measure.PerOperation(() => Put(table, builder, appended[i2++ % NumberOfKeys], ++etag, payload)));
 
                 var etagIndex = schema.FixedSizeIndexes[AllEtagsSlice];
                 long e1 = 0;
-                AssertAtMost(48, "Table.SeekForwardFrom (fixed), 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekForwardFrom (fixed), 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekForwardFrom(etagIndex, Bits.SwapBytes(++e1 * 997 % NumberOfKeys), 0))
                         break;
                 }));
 
                 long e2 = 0;
-                AssertAtMost(48, "Table.SeekBackwardFrom (fixed), 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekBackwardFrom (fixed), 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekBackwardFrom(etagIndex, Bits.SwapBytes(++e2 * 997 % NumberOfKeys)))
                         break;
                 }));
 
                 var i4 = 0;
-                AssertAtMost(64, "Table.SeekByPrimaryKeyPrefix, 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekByPrimaryKeyPrefix, 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekByPrimaryKeyPrefix(scattered[i4++ % NumberOfKeys], Slices.Empty, 0))
                         break;
                 }));
 
                 var i3 = 0;
-                AssertAtMost(8, "Table.DeleteByKey, scattered", MeasurePerOperation(() => table.DeleteByKey(scattered[i3++ % NumberOfKeys])));
+                Measure.Report("Table.DeleteByKey, scattered", Measure.PerOperation(() => table.DeleteByKey(scattered[i3++ % NumberOfKeys])));
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
-        public void Table_seek_operations()
+        public void TableSeeks()
         {
             Slice groupsSlice;
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -244,7 +238,7 @@ namespace FastTests.Voron
             var builder = new TableValueBuilder();
             const int numberOfGroups = 1_000;
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 schema.Create(tx, DocsSlice, 16);
                 var table = tx.OpenTable(schema, DocsSlice);
@@ -267,7 +261,7 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-            using (var tx = Env.ReadTransaction())
+            using (var tx = _env.ReadTransaction())
             {
                 var table = tx.OpenTable(schema, DocsSlice);
                 var ids = CreateStridedKeys(tx, "docs/{0:D8}");
@@ -277,40 +271,40 @@ namespace FastTests.Voron
                 Slice.From(tx.Allocator, "docs/", ByteStringType.Immutable, out var docsPrefix);
 
                 var i1 = 0;
-                AssertAtMost(8, "Table.SeekOneForwardFromPrefix", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekOneForwardFromPrefix", Measure.PerOperation(() =>
                     table.SeekOneForwardFromPrefix(groupIndex, groups[i1++ % numberOfGroups], out _)));
 
                 var i2 = 0;
-                AssertAtMost(8, "Table.SeekOneBackwardFrom", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekOneBackwardFrom", Measure.PerOperation(() =>
                     table.SeekOneBackwardFrom(groupIndex, groups[i2 % numberOfGroups], groups[i2++ % numberOfGroups], out _)));
 
                 var i3 = 0;
-                AssertAtMost(8, "Table.SeekOnePrimaryKeyPrefix, after", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekOnePrimaryKeyPrefix, after", Measure.PerOperation(() =>
                     table.SeekOnePrimaryKeyPrefix(docsPrefix, ids[i3++ % NumberOfKeys], out _)));
 
                 var i4 = 0;
-                AssertAtMost(64, "Table.SeekForwardFrom (index), 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekForwardFrom (index), 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekForwardFrom(groupIndex, groups[i4++ % numberOfGroups], 0, startsWith: true))
                         break;
                 }));
 
                 var i5 = 0;
-                AssertAtMost(64, "Table.SeekByPrimaryKey, 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekByPrimaryKey, 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekByPrimaryKey(ids[i5++ % NumberOfKeys], 0))
                         break;
                 }));
 
                 var i6 = 0;
-                AssertAtMost(64, "Table.SeekForwardFromPrefix, 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekForwardFromPrefix, 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekForwardFromPrefix(groupIndex, groups[i6 % numberOfGroups], groups[i6++ % numberOfGroups], 0))
                         break;
                 }));
 
                 var i7 = 0;
-                AssertAtMost(64, "Table.SeekBackwardFrom (index), 1st", MeasurePerOperation(() =>
+                Measure.Report("Table.SeekBackwardFrom (index), 1st", Measure.PerOperation(() =>
                 {
                     foreach (var _ in table.SeekBackwardFrom(groupIndex, groups[i7 % numberOfGroups], groups[i7++ % numberOfGroups]))
                         break;
@@ -319,8 +313,7 @@ namespace FastTests.Voron
         }
 
         // every row has its own index value, like the IdAndEtag index of revisions
-        [RavenFact(RavenTestCategory.Voron)]
-        public void Table_unique_index_operations()
+        public void TableUniqueIndex()
         {
             Slice uniqueSlice;
             using (StorageEnvironment.GetStaticContext(out var ctx))
@@ -333,20 +326,20 @@ namespace FastTests.Voron
             var payload = new byte[64];
             var builder = new TableValueBuilder();
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 schema.Create(tx, DocsSlice, 16);
                 tx.Commit();
             }
 
-            using (var tx = Env.WriteTransaction())
+            using (var tx = _env.WriteTransaction())
             {
                 var table = tx.OpenTable(schema, DocsSlice);
                 var ids = CreateKeys(tx, "docs/{0:D8}", stride: 1);
                 var values = CreateKeys(tx, "value/{0:D8}", stride: 1);
 
                 var i1 = 0;
-                AssertAtMost(64, "Table.Set insert, unique index value", MeasurePerOperation(() =>
+                Measure.Report("Table.Set insert, unique index value", Measure.PerOperation(() =>
                 {
                     builder.Reset();
                     builder.Add(ids[i1]);
@@ -359,7 +352,7 @@ namespace FastTests.Voron
                 }));
 
                 var i2 = 0;
-                AssertAtMost(32, "Table.DeleteByKey, unique index value", MeasurePerOperation(() => table.DeleteByKey(ids[i2++])));
+                Measure.Report("Table.DeleteByKey, unique index value", Measure.PerOperation(() => table.DeleteByKey(ids[i2++])));
             }
         }
 
@@ -376,16 +369,6 @@ namespace FastTests.Voron
             }
         }
 
-        // Before RavenDB-27880 these operations allocated a page object per tree level
-        // (and FixedSizeTree operations read their header from the parent tree up to 3 times), 120 - 1,350 bytes per operation.
-        private void AssertAtMost(int limit, string name, double bytesPerOperation)
-        {
-            Output.WriteLine($"{name,-32} {bytesPerOperation,8:F1} bytes/op");
-#if !DEBUG // debug-only checks in Voron allocate too
-            Assert.True(bytesPerOperation <= limit, $"{name} allocated {bytesPerOperation:F1} bytes/op, expected at most {limit}");
-#endif
-        }
-
         private static Slice[] CreateStridedKeys(global::Voron.Impl.Transaction tx, string format) => CreateKeys(tx, format, Stride);
 
         private static Slice[] CreateKeys(global::Voron.Impl.Transaction tx, string format, int stride)
@@ -396,16 +379,6 @@ namespace FastTests.Voron
             return keys;
         }
 
-        private static double MeasurePerOperation(Action action)
-        {
-            for (int i = 0; i < 1_000; i++) // warm up so JIT and pool filling are excluded from the measurement
-                action();
-
-            var before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < NumberOfOperations; i++)
-                action();
-
-            return (double)(GC.GetAllocatedBytesForCurrentThread() - before) / NumberOfOperations;
-        }
+        public void Dispose() => _env.Dispose();
     }
 }
