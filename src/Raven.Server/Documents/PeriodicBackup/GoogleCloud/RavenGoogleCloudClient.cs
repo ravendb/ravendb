@@ -29,6 +29,12 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 
         private const string ProjectIdPropertyName = "project_id";
 
+        private static readonly JsonDocumentOptions CredentialsReadOptions = new()
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
+
         public RavenGoogleCloudClient(GoogleCloudSettings settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken? cancellationToken = null)
         {
             if (settings == null)
@@ -51,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
-            using (JsonDocument credentials = JsonDocument.Parse(settings.GoogleCredentialsJson))
+            using (JsonDocument credentials = JsonDocument.Parse(settings.GoogleCredentialsJson, CredentialsReadOptions))
             {
                 foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
                 {
