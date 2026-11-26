@@ -111,15 +111,15 @@ namespace Voron.Data.Tables
             }
         }
 
-        public readonly struct PrimaryKeySeek(Table table, Slice value, long skip) : IEnumerable<TableValueHolder>
+        public readonly struct PrimaryKeySeek(Table table, Slice value, long skip, bool backward) : IEnumerable<TableValueHolder>
         {
-            public Enumerator GetEnumerator() => new(table, value, skip);
+            public Enumerator GetEnumerator() => new(table, value, skip, backward);
 
             IEnumerator<TableValueHolder> IEnumerable<TableValueHolder>.GetEnumerator() => GetEnumerator();
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-            public struct Enumerator(Table table, Slice value, long skip) : IEnumerator<TableValueHolder>
+            public struct Enumerator(Table table, Slice value, long skip, bool backward) : IEnumerator<TableValueHolder>
             {
                 private TreeIterator _it;
                 private SeekState _state;
@@ -140,14 +140,14 @@ namespace Voron.Data.Tables
                                 return Finish();
 
                             _it = tree.Iterate(table._prefetch);
-                            if (_it.Seek(value) == false || _it.Skip(skip) == false)
+                            if (_it.Seek(value) == false || _it.Skip(backward ? -skip : skip) == false)
                                 return Finish();
 
                             Current = new TableValueHolder();
                             break;
 
                         case SeekState.Running:
-                            if (_it.MoveNext() == false)
+                            if ((backward ? _it.MovePrev() : _it.MoveNext()) == false)
                                 return Finish();
                             break;
 
@@ -266,8 +266,6 @@ namespace Voron.Data.Tables
             }
         }
 
-        // An index seek: from start, forward or backward over the index values within prefix (none when it has no value), and
-        // for each value over its ids, in the same direction.
         public readonly struct IndexSeek(Table table, TableSchema.AbstractTreeIndexDef index, Slice start, Slice prefix, long skip, bool backward) : IEnumerable<SeekResult>
         {
             public Enumerator GetEnumerator() => new(table, index, start, prefix, skip, backward);
@@ -283,6 +281,7 @@ namespace Voron.Data.Tables
                 private TreeIterator _it;
                 private FixedSizeTree.IFixedSizeIterator _idsIt; // null when the value has a single id
                 private bool _valueOpened;
+                private bool _idIsKeyValue;
                 private TableValueHolder _result;
                 private SeekState _state;
 
@@ -301,6 +300,7 @@ namespace Voron.Data.Tables
                             if (_tree == null)
                                 return Finish();
 
+                            _idIsKeyValue = index is TableSchema.DynamicKeyIndexDef { SupportDuplicateKeys: false };
                             _it = _tree.Iterate(table._prefetch);
                             if (SeekFirstValue() == false)
                                 return Finish();
@@ -373,6 +373,12 @@ namespace Voron.Data.Tables
 
                 private bool OpenValue(out long id)
                 {
+                    if (_idIsKeyValue)
+                    {
+                        id = _it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                        return true;
+                    }
+
                     var ids = table.GetFixedSizeTree(_tree, _it.CurrentKey, 0, index.IsGlobal);
                     if (ids.NumberOfEntries == 1) // the common case of a unique value, without an iterator
                         return backward ? ids.TryGetLastKey(out id) : ids.TryGetFirstKey(out id);
