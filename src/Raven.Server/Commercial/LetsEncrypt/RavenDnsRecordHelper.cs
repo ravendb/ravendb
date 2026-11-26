@@ -324,7 +324,10 @@ public static class RavenDnsRecordHelper
                                                         Environment.NewLine +
                                                         "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
                 
-                return dnsResponse.GetProperty("Answer").EnumerateArray().Select(answer => answer.GetProperty("data").ToString()).ToHashSet();
+                if (dnsResponse.TryGetProperty("Answer", out JsonElement answers) == false || answers.ValueKind != JsonValueKind.Array)
+                    return [];
+
+                return answers.EnumerateArray().Select(answer => answer.GetProperty("data").ToString()).ToHashSet();
             }
         }
 
