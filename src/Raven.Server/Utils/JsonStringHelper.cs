@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -41,6 +42,32 @@ public sealed class JsonStringHelper
         };
     }
 
+    private static readonly JsonSerializerOptions DeserializerOptions = new(SerializerOptions)
+    {
+        Converters = { new JsonStringEnumConverter(), LenientDateTimeConverter.Instance }
+    };
+
+    private sealed class LenientDateTimeConverter : JsonConverter<DateTime>
+    {
+        public static readonly LenientDateTimeConverter Instance = new();
+
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType != JsonTokenType.String)
+                return reader.GetDateTime();
+
+            if (reader.TryGetDateTime(out DateTime value))
+                return value;
+
+            return DateTime.Parse(reader.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value);
+        }
+    }
+
     private sealed class ScalarToStringConverter : JsonConverter<string>
     {
         public static readonly ScalarToStringConverter Instance = new();
@@ -77,7 +104,7 @@ public sealed class JsonStringHelper
         if (string.IsNullOrWhiteSpace(json))
             return default;
 
-        return JsonSerializer.Deserialize<T>(json, SerializerOptions);
+        return JsonSerializer.Deserialize<T>(json, DeserializerOptions);
     }
 
     public static string Indent(string json)

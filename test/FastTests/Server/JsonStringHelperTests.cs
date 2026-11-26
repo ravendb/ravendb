@@ -118,6 +118,29 @@ public class JsonStringHelperTests(ITestOutputHelper output) : NoDisposalNeeded(
         Assert.Equal("12345", JsonStringHelper.Deserialize<RegistrationResult>("{\"Status\":12345}").Status);
     }
 
+    [RavenTheory(RavenTestCategory.Licensing)]
+    [InlineData("{\"SentToEmail\":\"a@b.c\",\"NewExpirationDate\":\"2027-01-02T03:04:05.1234567Z\"}")]
+    [InlineData("{\"SentToEmail\":\"a@b.c\",\"NewExpirationDate\":\"2027-01-02 03:04:05\"}")]
+    [InlineData("{\"SentToEmail\":\"a@b.c\",\"NewExpirationDate\":\"01/02/2027 03:04:05\"}")]
+    [InlineData("{\"SentToEmail\":\"a@b.c\",\"NewExpirationDate\":null}")]
+    public void ReadsDatesLikeNewtonsoft(string json)
+    {
+        LicenseRenewalResult expected = JsonConvert.DeserializeObject<LicenseRenewalResult>(json);
+        LicenseRenewalResult actual = JsonStringHelper.Deserialize<LicenseRenewalResult>(json);
+
+        Assert.Equal(expected.NewExpirationDate, actual.NewExpirationDate);
+        Assert.Equal(expected.NewExpirationDate?.Kind, actual.NewExpirationDate?.Kind);
+    }
+
+    [RavenTheory(RavenTestCategory.Licensing)]
+    [InlineData("{\"Type\":\"Linux\",\"Is64Bit\":true}")]
+    [InlineData("{\"Type\":\"linux\",\"Is64Bit\":true}")]
+    [InlineData("{\"Type\":1,\"Is64Bit\":true}")]
+    public void ReadsEnumNamesAndNumbersLikeNewtonsoft(string json)
+    {
+        Assert.Equal(JsonConvert.DeserializeObject<OsInfo>(json).Type, JsonStringHelper.Deserialize<OsInfo>(json).Type);
+    }
+
     [RavenFact(RavenTestCategory.Certificates)]
     public void LetsEncryptAccountCacheWrittenByNewtonsoftIsReadBack()
     {
