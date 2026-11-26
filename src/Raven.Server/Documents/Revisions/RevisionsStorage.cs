@@ -1347,52 +1347,52 @@ namespace Raven.Server.Documents.Revisions
 
             var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
-
-            IEnumerable<TableValueHolder> revisions;
-
             using var _ = GetEtagAsSlice(context, 0, out var startSlice);
 
+            long prevStorageId = -1;
             switch (type)
             {
                 case RevisionType.All:
-                    revisions = table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip);
+                    foreach (var tvh in table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], skip))
+                    {
+                        var revision = ReadRevision(context, type, tvh, ref prevStorageId);
+                        if (revision == null)
+                            yield break;
+
+                        yield return revision;
+                        if (--take <= 0)
+                            yield break;
+                    }
                     break;
                 case RevisionType.Regular:
-                    revisions = EnumerateSeekResults(table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: startSlice, skip));
-                    break;
                 case RevisionType.Deleted:
-                    revisions = EnumerateSeekResults(table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last: Slices.AfterAllKeys, skip));
+                    var last = type == RevisionType.Regular ? startSlice : Slices.AfterAllKeys;
+                    foreach (var result in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], prefix: null, last, skip))
+                    {
+                        var revision = ReadRevision(context, type, result.Result, ref prevStorageId);
+                        if (revision == null)
+                            yield break;
+
+                        yield return revision;
+                        if (--take <= 0)
+                            yield break;
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported revision type: {type}");
             }
 
-            long prevStorageId = -1;
-            foreach (var tvh in revisions)
+            static Document ReadRevision(DocumentsOperationContext context, RevisionType type, TableValueHolder tvh, ref long prevStorageId)
             {
                 if (prevStorageId != -1)
                     context.Transaction.InnerTransaction.ForgetAbout(prevStorageId);
 
                 prevStorageId = tvh.Reader.Id;
 
-                if (type == RevisionType.Deleted)
-                {
-                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvh.Reader);
-                    if (etag == NotDeletedRevisionMarker)
-                        yield break;
-                }
+                if (type == RevisionType.Deleted && TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvh.Reader) == NotDeletedRevisionMarker)
+                    return null;
 
-                yield return TableValueToRevision(context, ref tvh.Reader, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
-                if (--take <= 0)
-                    yield break;
-            }
-
-            yield break;
-
-            static IEnumerable<TableValueHolder> EnumerateSeekResults(IEnumerable<SeekResult> enumerable)
-            {
-                foreach (var seekResult in enumerable)
-                    yield return seekResult.Result;
+                return TableValueToRevision(context, ref tvh.Reader, DocumentFields.Id | DocumentFields.ChangeVector | DocumentFields.Data);
             }
         }
 
