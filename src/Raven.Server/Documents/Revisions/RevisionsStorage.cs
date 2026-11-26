@@ -652,16 +652,18 @@ namespace Raven.Server.Documents.Revisions
                 revisionsToDelete = GetAllRevisions(context, table, lowerIdPrefix,
                     maxDeletesUponUpdate: null, shouldSkip: null, result);
             }
-            else if (KeepsAllRevisions(configuration, result.PreviousCount))
-            {
-                revisionsToDelete = Array.Empty<Document>();
-            }
             else
             {
-                revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
-                    configuration, result.PreviousCount,
-                    stopWhenReachingAge: nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false,
-                    result);
+                var numberOfRevisionsToDelete = GetNumberOfRevisionsToDelete(configuration, result.PreviousCount, out var hasMaxUponUpdate);
+                if (numberOfRevisionsToDelete <= 0)
+                {
+                    result.Remaining = result.PreviousCount;
+                    return result;
+                }
+
+                var stopWhenReachingAge = nonPersistentFlags.Contain(NonPersistentDocumentFlags.ByEnforceRevisionConfiguration) == false;
+                revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix, configuration,
+                    numberOfRevisionsToDelete, hasMaxUponUpdate, stopWhenReachingAge, result);
             }
 
             var deleted = DeleteRevisionsInternal(context, table, lowerIdPrefix, collectionName, changeVector, lastModifiedTicks, revisionsToDelete, result, tombstoneFlags: flags);
@@ -777,54 +779,42 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private static bool KeepsAllRevisions(RevisionsCollectionConfiguration configuration, long revisionsCount)
+        // The most revisions a put deletes (0 or less: none), and whether MaximumRevisionsToDeleteUponDocumentUpdate is the limit
+        private static long GetNumberOfRevisionsToDelete(RevisionsCollectionConfiguration configuration, long revisionsCount, out bool hasMaxUponUpdate)
         {
-            if (configuration.MinimumRevisionsToKeep.HasValue == false)
-                return configuration.MinimumRevisionAgeToKeep.HasValue == false;
+            hasMaxUponUpdate = false;
 
-            return revisionsCount - configuration.MinimumRevisionsToKeep.Value <= 0;
+            if (configuration.MinimumRevisionsToKeep.HasValue)
+            {
+                var numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep.Value;
+                if (numberOfRevisionsToDelete > 0 && configuration.MaximumRevisionsToDeleteUponDocumentUpdate < numberOfRevisionsToDelete)
+                {
+                    hasMaxUponUpdate = true;
+                    return configuration.MaximumRevisionsToDeleteUponDocumentUpdate.Value;
+                }
+
+                return numberOfRevisionsToDelete;
+            }
+
+            if (configuration.MinimumRevisionAgeToKeep.HasValue == false) // no limit in the configuration except PurgeOnDelete
+                return 0;
+
+            // the revisions whose age has passed
+            hasMaxUponUpdate = configuration.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue;
+            return configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
         }
 
         private IEnumerable<Document> GetRevisionsForCollectionOrDefault(
             DocumentsOperationContext context, Table table,
             Slice prefixSlice,
             RevisionsCollectionConfiguration configuration,
-            long revisionsCount,
+            long numberOfRevisionsToDelete,
+            bool hasMaxUponUpdate,
             bool stopWhenReachingAge,
             DeleteOldRevisionsResult result)
         {
             result.HasMore = false;
             var deleted = 0L;
-
-            long numberOfRevisionsToDelete;
-            var hasMaxUponUpdate = false;
-
-            if (configuration.MinimumRevisionsToKeep.HasValue == false
-                && configuration.MinimumRevisionAgeToKeep.HasValue == false) // doc isn't deleted and there's no limmit in the config except PurgeOnDelete
-            {
-                yield break;
-            }
-
-            if
-                (configuration.MinimumRevisionsToKeep.HasValue) // obey the configuration.MinimumRevisionsToKeep (and the configuration.MaximumRevisionsToDeleteUponDocumentUpdate)
-            {
-                numberOfRevisionsToDelete = revisionsCount - configuration.MinimumRevisionsToKeep.Value;
-                if (numberOfRevisionsToDelete > 0 && configuration.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue &&
-                    configuration.MaximumRevisionsToDeleteUponDocumentUpdate.Value < numberOfRevisionsToDelete)
-                {
-                    numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate.Value;
-                    hasMaxUponUpdate = true;
-                }
-
-                if (numberOfRevisionsToDelete <= 0)
-                    yield break;
-            }
-            else //  obey the configuration.MinimumRevisionAgeToKeep
-            {
-                hasMaxUponUpdate = configuration.MaximumRevisionsToDeleteUponDocumentUpdate.HasValue;
-                // delete all revisions which age has passed
-                numberOfRevisionsToDelete = configuration.MaximumRevisionsToDeleteUponDocumentUpdate ?? long.MaxValue;
-            }
 
             var position = new RevisionsScanPosition();
             try
