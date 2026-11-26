@@ -122,6 +122,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             css: 'icon-import-database',
             dynamicHash: appUrls.migrateRavenDbDatabaseUrl,
             itemRouteToHighlight: 'databases/tasks/importOptions',
+            requiredAccess: "DatabaseReadWrite",
             search: {
                 overrideTitle: "Import Database From RavenDB Server",
             },
