@@ -105,9 +105,9 @@ namespace SlowTests.Issues
 
         private class Phone
         {
-            public Phone(string prefix, string value)
+            public Phone(string countryPrefix, string value)
             {
-                CountryPrefix = prefix;
+                CountryPrefix = countryPrefix;
                 Value = value;
             }
 

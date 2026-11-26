@@ -923,21 +923,45 @@ namespace Sparrow.Json
             return GetPropertyNameAsSpan(propertyId);
         }
 
+        internal bool HasPropertyNameInDocument(ReadOnlySpan<byte> name)
+        {
+            AssertContextNotDisposed();
+
+            int end = _size - 2;
+            ReadVariableSizeIntInReverse(_mem, end, out byte offset);
+            end -= offset;
+            ReadVariableSizeIntInReverse(_mem, end, out offset);
+            end -= offset;
+
+            int count = (int)((_mem + end - _propNames) / _propNamesDataOffsetSize);
+            for (int propertyId = 0; propertyId < count; propertyId++)
+            {
+                if (GetPropertyNameAsSpan(propertyId).SequenceEqual(name))
+                    return true;
+            }
+
+            return false;
+        }
+
         internal int GetPropertyIndex(ReadOnlySpan<byte> name)
         {
             AssertContextNotDisposed();
-            if (_propCount == 0)
+            return GetPropertyIndex(name, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        private int GetPropertyIndex(ReadOnlySpan<byte> name, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize)
+        {
+            if (propCount == 0)
                 return -1;
 
-            int min = 0, max = _propCount - 1;
-            long metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            byte* metadataPtr = _metadataPtr;
+            int min = 0, max = propCount - 1;
+            long metadataSize = offsetSize + propertyIdSize + sizeof(byte);
 
             int mid = (min + max) / 2;
             do
             {
                 var propertyIntPtr = metadataPtr + mid * metadataSize;
-                var propertyId = ReadNumber(propertyIntPtr + _currentOffsetSize, _currentPropertyIdSize);
+                var propertyId = ReadNumber(propertyIntPtr + offsetSize, propertyIdSize);
 
                 // same ordering as LazyStringValue.Compare: memcmp on the common prefix, then by length
                 var cmpResult = name.SequenceCompareTo(GetPropertyNameAsSpan(propertyId));
@@ -952,6 +976,103 @@ namespace Sparrow.Json
             } while (min <= max);
 
             return -1;
+        }
+
+        internal readonly struct ObjectView
+        {
+            public readonly BlittableJsonReaderObject Owner;
+
+            public readonly int Count;
+
+            private readonly byte* _objStart;
+
+            private readonly byte* _metadataPtr;
+
+            private readonly long _offsetSize;
+
+            private readonly long _propertyIdSize;
+
+            public ObjectView(BlittableJsonReaderObject owner, byte* objStart, byte* metadataPtr, int count, long offsetSize, long propertyIdSize)
+            {
+                Owner = owner;
+                Count = count;
+                _objStart = objStart;
+                _metadataPtr = metadataPtr;
+                _offsetSize = offsetSize;
+                _propertyIdSize = propertyIdSize;
+            }
+
+            public ReadOnlySpan<byte> GetPropertyName(int index, out BlittableJsonToken token, out int position)
+            {
+                if (index < 0 || index >= Count)
+                    ThrowOutOfRangeException(index);
+
+                byte* property = _metadataPtr + index * (_offsetSize + _propertyIdSize + sizeof(byte));
+                position = (int)(_objStart - Owner._mem - Owner.ReadNumber(property, _offsetSize));
+                token = (BlittableJsonToken)(*(property + _offsetSize + _propertyIdSize));
+                return Owner.GetPropertyNameAsSpan(Owner.ReadNumber(property + _offsetSize, _propertyIdSize));
+            }
+
+            public int GetPropertyIndex(ReadOnlySpan<byte> name)
+            {
+                return Owner.GetPropertyIndex(name, _metadataPtr, Count, _offsetSize, _propertyIdSize);
+            }
+        }
+
+        internal readonly struct ArrayView
+        {
+            public readonly BlittableJsonReaderObject Owner;
+
+            public readonly int Count;
+
+            private readonly byte* _dataStart;
+
+            private readonly byte* _metadataPtr;
+
+            private readonly long _offsetSize;
+
+            public ArrayView(BlittableJsonReaderObject owner, byte* dataStart, byte* metadataPtr, int count, long offsetSize)
+            {
+                Owner = owner;
+                Count = count;
+                _dataStart = dataStart;
+                _metadataPtr = metadataPtr;
+                _offsetSize = offsetSize;
+            }
+
+            public BlittableJsonToken GetItem(int index, out int position)
+            {
+                if (index < 0 || index >= Count)
+                    ThrowOutOfRangeException(index);
+
+                byte* item = _metadataPtr + index * (_offsetSize + sizeof(byte));
+                position = (int)(_dataStart - Owner._mem - Owner.ReadNumber(item, _offsetSize));
+                return (BlittableJsonToken)(*(item + _offsetSize));
+            }
+        }
+
+        internal ObjectView AsView()
+        {
+            AssertContextNotDisposed();
+
+            if (_metadataPtr == null)
+                ThrowObjectDisposed();
+
+            return new ObjectView(this, _objStart, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        internal ObjectView GetObjectView(BlittableJsonToken token, int position)
+        {
+            byte* objStart = _mem + position;
+            int propCount = ReadVariableSizeInt(position, out int propCountOffset);
+            return new ObjectView(this, objStart, objStart + propCountOffset, propCount, ProcessTokenOffsetFlags(token), ProcessTokenPropertyFlags(token));
+        }
+
+        internal ArrayView GetArrayView(BlittableJsonToken token, int position)
+        {
+            byte* dataStart = _mem + position;
+            int count = ReadVariableSizeInt(position, out int countOffset);
+            return new ArrayView(this, dataStart, dataStart + countOffset, count, ProcessTokenOffsetFlags(token));
         }
 
         // materializes just the value - not the property name
@@ -1097,6 +1218,144 @@ namespace Sparrow.Json
             sorter.Sort(new Span<int>(buffers.Offsets, buffers.Size), new Span<int>(buffers.Properties, buffers.Size), 0, _propCount);
 
             return buffers;
+        }
+
+        private const int MaxStackAllocatedInsertionOrderProperties = 64;
+
+        internal void WriteJsonTo(AbstractBlittableJsonTextWriter writer)
+        {
+            AssertContextNotDisposed();
+
+            if (_metadataPtr == null)
+                ThrowObjectDisposed();
+
+            WriteObjectTo(writer, _objStart, _metadataPtr, _propCount, _currentOffsetSize, _currentPropertyIdSize);
+        }
+
+        private void WriteObjectTo(AbstractBlittableJsonTextWriter writer, byte* objStart, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            writer.WriteStartObject();
+
+            if (propCount > 0)
+            {
+                AllocatedMemoryData allocation = null;
+                Span<int> order = propCount <= MaxStackAllocatedInsertionOrderProperties
+                    ? stackalloc int[propCount * 2]
+                    : new Span<int>((allocation = _context.GetMemory(propCount * 2 * sizeof(int))).Address, propCount * 2);
+
+                try
+                {
+                    WritePropertiesTo(writer, objStart, metadataPtr, propCount, offsetSize, propertyIdSize, order);
+                }
+                finally
+                {
+                    if (allocation != null)
+                        _context.ReturnMemory(allocation);
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private void WritePropertiesTo(AbstractBlittableJsonTextWriter writer, byte* objStart, byte* metadataPtr, int propCount, long offsetSize, long propertyIdSize, Span<int> order)
+        {
+            long metadataSize = offsetSize + propertyIdSize + sizeof(byte);
+            Span<int> offsets = order.Slice(0, propCount);
+            Span<int> properties = order.Slice(propCount, propCount);
+
+            for (int i = 0; i < propCount; i++)
+            {
+                offsets[i] = ReadNumber(metadataPtr + i * metadataSize, offsetSize);
+                properties[i] = i;
+            }
+
+            Sorter<int, int, NumericDescendingComparer> sorter;
+            sorter.Sort(offsets, properties, 0, propCount);
+
+            for (int i = 0; i < propCount; i++)
+            {
+                if (i != 0)
+                    writer.WriteComma();
+
+                byte* property = metadataPtr + properties[i] * metadataSize;
+                int propertyId = ReadNumber(property + offsetSize, propertyIdSize);
+                var token = (BlittableJsonToken)(*(property + offsetSize + propertyIdSize));
+
+                int nameOffset = ReadNumber(_propNames + sizeof(byte) + propertyId * _propNamesDataOffsetSize, _propNamesDataOffsetSize);
+                byte* name = _propNames - nameOffset;
+                int nameSize = VariableSizeEncoding.Read<int>(name, out int nameLengthSize);
+                writer.WritePropertyName(name + nameLengthSize, nameSize);
+
+                WriteValueTo(writer, token, (int)(objStart - _mem - offsets[i]));
+            }
+        }
+
+        private void WriteValueTo(AbstractBlittableJsonTextWriter writer, BlittableJsonToken token, int position)
+        {
+            switch (token & TypesMask)
+            {
+                case BlittableJsonToken.String:
+                {
+                    int size = ReadVariableSizeInt(position, out int offset);
+                    writer.WriteString(_mem + position + offset, size, skipEscaping: false);
+                    break;
+                }
+                case BlittableJsonToken.Integer:
+                    writer.WriteInteger(ReadVariableSizeLong(position));
+                    break;
+                case BlittableJsonToken.LazyNumber:
+                {
+                    int size = ReadVariableSizeInt(position, out int offset);
+                    writer.WriteLazyNumber(_mem + position + offset, size);
+                    break;
+                }
+                case BlittableJsonToken.Boolean:
+                    writer.WriteBool(ReadNumber(_mem + position, sizeof(byte)) == 1);
+                    break;
+                case BlittableJsonToken.Null:
+                    writer.WriteNull();
+                    break;
+                case BlittableJsonToken.StartObject:
+                {
+                    byte* objStart = _mem + position;
+                    int propCount = ReadVariableSizeInt(position, out int propCountOffset);
+                    WriteObjectTo(writer, objStart, objStart + propCountOffset, propCount, ProcessTokenOffsetFlags(token), ProcessTokenPropertyFlags(token));
+                    break;
+                }
+                case BlittableJsonToken.StartArray:
+                    WriteArrayTo(writer, token, position);
+                    break;
+                default:
+                    writer.WriteValue(token & TypesMask, GetObject(token, position, out _));
+                    break;
+            }
+        }
+
+        private void WriteArrayTo(AbstractBlittableJsonTextWriter writer, BlittableJsonToken token, int position)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            byte* dataStart = _mem + position;
+            int count = ReadVariableSizeInt(position, out int countOffset);
+            byte* metadataPtr = dataStart + countOffset;
+            long offsetSize = ProcessTokenOffsetFlags(token);
+
+            writer.WriteStartArray();
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i != 0)
+                    writer.WriteComma();
+
+                byte* item = metadataPtr + i * (offsetSize + 1);
+                int offset = ReadNumber(item, offsetSize);
+                var itemToken = (BlittableJsonToken)(*(item + offsetSize));
+                WriteValueTo(writer, itemToken, (int)(dataStart - _mem - offset));
+            }
+
+            writer.WriteEndArray();
         }
 
         public ulong GetHashOfPropertyNames()

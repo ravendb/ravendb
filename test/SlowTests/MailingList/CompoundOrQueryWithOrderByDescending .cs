@@ -111,9 +111,9 @@ namespace SlowTests.MailingList
 
         private class Item
         {
-            public Item(string propvalue)
+            public Item(string myProp)
             {
-                MyProp = propvalue;
+                MyProp = myProp;
             }
 
             public string MyProp { get; set; }

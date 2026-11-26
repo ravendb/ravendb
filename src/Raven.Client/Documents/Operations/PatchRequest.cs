@@ -52,13 +52,18 @@ namespace Raven.Client.Documents.Operations
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
+            return ToJson(conventions, context, writeTypeNames: false);
+        }
+
+        internal DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context, bool writeTypeNames)
+        {
             var json = new DynamicJsonValue
             {
                 [nameof(Script)] = Script
             };
 
             if (Values != null)
-                json[nameof(Values)] = TypeConverter.ToBlittableSupportedType(Values, conventions, context);
+                json[nameof(Values)] = TypeConverter.ToBlittableSupportedType(Values, conventions, context, writeTypeNames);
 
             return json;
         }

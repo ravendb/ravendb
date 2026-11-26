@@ -336,7 +336,7 @@ namespace Sparrow.Json
 
             for (var index = 0; index < propertyArrayOffset.Length; index++)
             {
-                var str = _context.GetLazyStringForFieldWithCaching(cachedProperties.GetProperty(index));
+                LazyStringValue str = cachedProperties.GetProperty(index);
                 if (str.EscapePositions == null || str.EscapePositions.Length == 0)
                 {
                     propertyArrayOffset[index] = WriteValue(str.Buffer, str.Size);

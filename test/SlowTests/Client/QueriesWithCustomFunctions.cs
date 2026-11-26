@@ -246,7 +246,7 @@ namespace SlowTests.Client
                         .Select(u => new { LuckyNumber = u.IdNumber / u.Birthday.Year, Active = u.IsActive ? "yes" : "no" });
 
                     Assert.Equal(
-                        "from 'Users' as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
+                        "from 'Users' as u select { LuckyNumber : Math.trunc((u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear())), Active : u.IsActive?\"yes\":\"no\" }",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -283,7 +283,7 @@ namespace SlowTests.Client
                         .Select(u => new { LuckyNumber = u.IdNumber / u.Birthday.Year, Active = u.IsActive ? "yes" : "no" });
 
                     Assert.Equal(
-                        "from 'Users' as u select { LuckyNumber : u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear(), Active : u.IsActive?\"yes\":\"no\" }",
+                        "from 'Users' as u select { LuckyNumber : Math.trunc((u.IdNumber/new Date(Date.parse(u.Birthday)).getFullYear())), Active : u.IsActive?\"yes\":\"no\" }",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();

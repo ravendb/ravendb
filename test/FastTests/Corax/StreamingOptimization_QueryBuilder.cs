@@ -521,7 +521,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         var (store, index, mapping, factories) = await GetDatabaseWithIndex<TIndex>(self);
         using var _ = store;
         using var context = JsonOperationContext.ShortTermSingleUse();
-        var serializer = (JsonSerializer)store.Conventions.Serialization.CreateSerializer();
+        var serializer = (JsonSerializer)NewtonsoftTestConventions.Default.Serialization.CreateSerializer();
         {
             using var session = store.OpenAsyncSession();
             var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues, bitmapAndFillMode);

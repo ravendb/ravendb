@@ -6,9 +6,9 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 using Lambda2Js;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -1088,6 +1088,45 @@ namespace Raven.Client.Util
             }
         }
 
+        internal sealed class IntegerDivisionSupport : JavascriptConversionExtension
+        {
+            public static readonly IntegerDivisionSupport Instance = new IntegerDivisionSupport();
+
+            private static readonly MethodInfo Truncate = typeof(Math).GetMethod(nameof(Math.Truncate), [typeof(double)]);
+
+            private IntegerDivisionSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                // C# truncates the quotient of two integers toward zero, while JavaScript divides in floating point
+                if (context.Node is not BinaryExpression { NodeType: ExpressionType.Divide } division || IsInteger(division.Type) == false)
+                    return;
+
+                context.PreventDefault();
+                context.Visitor.Visit(Expression.Call(Truncate, Expression.Divide(Expression.Convert(division.Left, typeof(double)), Expression.Convert(division.Right, typeof(double)))));
+            }
+
+            private static bool IsInteger(Type type)
+            {
+                switch (Type.GetTypeCode(Nullable.GetUnderlyingType(type) ?? type))
+                {
+                    case TypeCode.SByte:
+                    case TypeCode.Byte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+
         internal sealed class MathSupport : JavascriptConversionExtension
         {
             public static readonly MathSupport Instance = new MathSupport();
@@ -1096,7 +1135,7 @@ namespace Raven.Client.Util
                 {"Abs", "abs"}, {"Acos", "acos"}, {"Asin", "asin"}, {"Atan", "atan"}, {"Atan2", "atan2"},
                 {"Ceiling", "ceil"}, {"Cos", "cos"}, {"Exp", "exp"}, {"Floor", "floor"}, {"Log", "log"},
                 {"Max", "max"}, {"Min", "min" }, {"Pow", "pow" }, {"Round", "round"}, {"Sin", "sin"},
-                {"Sqrt", "sqrt"}, {"Tan", "tan"}
+                {"Sqrt", "sqrt"}, {"Tan", "tan"}, {"Truncate", "trunc"}
             };
 
             private MathSupport()
@@ -1230,10 +1269,11 @@ namespace Raven.Client.Util
 
         internal sealed class JsonPropertyAttributeSupport : JavascriptConversionExtension
         {
-            public static readonly JsonPropertyAttributeSupport Instance = new JsonPropertyAttributeSupport();
+            private readonly DocumentConventions _conventions;
 
-            private JsonPropertyAttributeSupport()
+            public JsonPropertyAttributeSupport(DocumentConventions conventions)
             {
+                _conventions = conventions;
             }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
@@ -1241,10 +1281,8 @@ namespace Raven.Client.Util
                 if (context.Node is not MemberExpression memberExpression)
                     return;
 
-                var jsonPropertyAttribute = memberExpression.Member.GetCustomAttributes()
-                                                                    .OfType<JsonPropertyAttribute>()
-                                                                    .FirstOrDefault();
-                if (jsonPropertyAttribute == null)
+                string propertyName = Raven.Client.Json.JsonPropertyNameResolver.GetJsonPropertyName(memberExpression.Member, _conventions);
+                if (propertyName == null)
                     return;
 
                 context.PreventDefault();
@@ -1254,7 +1292,7 @@ namespace Raven.Client.Util
                 {
                     context.Visitor.Visit(memberExpression.Expression);
                     writer.Write(".");
-                    writer.Write(jsonPropertyAttribute.PropertyName ?? memberExpression.Member.Name);
+                    writer.Write(propertyName);
                 }
             }
         }
@@ -2946,7 +2984,55 @@ namespace Raven.Client.Util
             if (value == null)
                 return "null";
 
-            return JsonConvert.ToString(value);
+            var builder = new StringBuilder(value.Length + 2);
+            builder.Append('"');
+
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '"':
+                        builder.Append("\\\"");
+                        break;
+                    case '\\':
+                        builder.Append("\\\\");
+                        break;
+                    case '\b':
+                        builder.Append("\\b");
+                        break;
+                    case '\f':
+                        builder.Append("\\f");
+                        break;
+                    case '\n':
+                        builder.Append("\\n");
+                        break;
+                    case '\r':
+                        builder.Append("\\r");
+                        break;
+                    case '\t':
+                        builder.Append("\\t");
+                        break;
+                    case '\u0085':
+                    case '\u2028':
+                    case '\u2029':
+                        AppendUnicodeEscape(builder, c);
+                        break;
+                    default:
+                        if (c < ' ')
+                            AppendUnicodeEscape(builder, c);
+                        else
+                            builder.Append(c);
+                        break;
+                }
+            }
+
+            builder.Append('"');
+            return builder.ToString();
+        }
+
+        private static void AppendUnicodeEscape(StringBuilder builder, char c)
+        {
+            builder.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
         }
 
         internal sealed class PatchPathWrappedConstantSupport : JavascriptConversionExtension

@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
         {
             using (var old = _subscriptionLocalRequestExecutor)
             {
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _dbName, cert, DocumentConventions.Default);
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, _dbName, cert, DocumentConventions.DefaultForServer);
             }
         }
 

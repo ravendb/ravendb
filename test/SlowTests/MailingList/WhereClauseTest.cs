@@ -39,9 +39,9 @@ namespace SlowTests.MailingList
 
         private class TestEntity
         {
-            public TestEntity(int intValue)
+            public TestEntity(int intType)
             {
-                IntType = intValue;
+                IntType = intType;
             }
 
             public string Id { get; set; }

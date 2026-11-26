@@ -576,6 +576,54 @@ select timeseries(
             }
         }
 
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.TimeSeries)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LinearInterpolationKeepsCountsWhole(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                const string id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    // one entry in the first hour, none in the second, two in the third
+                    tsf.Append(baseline, 10);
+                    tsf.Append(baseline.AddHours(2), 20);
+                    tsf.Append(baseline.AddHours(2).AddMinutes(30), 30);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
+                            .GroupBy(g => g
+                                .Hours(1)
+                                .WithOptions(new TimeSeriesAggregationOptions
+                                {
+                                    Interpolation = InterpolationType.Linear
+                                }))
+                            .Select(x => x.Max())
+                            .ToList())
+                        .First();
+
+                    Assert.Equal(3, result.Results.Length);
+                    Assert.Equal(1, result.Results[0].Count[0]);
+
+                    // halfway between one and two entries is 1.5 entries, truncated to a whole count
+                    Assert.Equal(1, result.Results[1].Count[0]);
+                    Assert.Equal(2, result.Results[2].Count[0]);
+                }
+            }
+        }
+
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanFillGaps_LinearInterpolation_Linq(Options options)

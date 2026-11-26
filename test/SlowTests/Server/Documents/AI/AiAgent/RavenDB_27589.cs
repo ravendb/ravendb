@@ -81,7 +81,7 @@ public class RavenDB_27589 : RavenTestBase
     [RavenFact(RavenTestCategory.Ai)]
     public async Task Mock_Ollama_AsksForTheSchemaInAFinalRequestAfterAPlainTextAnswer()
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
         // Ollama sends "" next to tool_calls
         var toolCall = MockLlm.CreateToolCallResponse("RecentOrder").Replace("\"content\": null", "\"content\": \"\"");
@@ -180,7 +180,7 @@ public class RavenDB_27589 : RavenTestBase
     [RavenFact(RavenTestCategory.Ai)]
     public async Task Mock_Ollama_SplitsAfterTheClientSendsAnActionResult()
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
         var ollama = MockOllama();
 
         // the action call stops the conversation until the client sends its result
@@ -236,7 +236,7 @@ public class RavenDB_27589 : RavenTestBase
     [RavenFact(RavenTestCategory.Ai)]
     public async Task Mock_Ollama_NoSchema_TheTextAnswerEndsTheTurn()
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
         var ollama = MockOllama();
         var requests = await RunMockConversationAsync(store, ollama, [MockLlm.CreateAnswerResponse("\"done\"")], noSchema: true);
 
@@ -416,6 +416,7 @@ public class RavenDB_27589 : RavenTestBase
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiTaskWithQueries_WritesTheCityFromTheDatabase(Options options, GenAiConfiguration config)
     {
+        options.ModifyDocumentStore = Options.UseNewtonsoftJson;
         using var store = await CreateStoreWithOrdersAsync(options, config);
 
         config.Name = "order-city";

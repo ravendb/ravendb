@@ -25,6 +25,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanProvideInitialContextToQuery(Options options, GenAiConfiguration config)
     {
+        options.ModifyDocumentStore = Options.UseNewtonsoftJson;
         using var store = GetDocumentStore(options);
         using (var session = store.OpenAsyncSession())
         {
@@ -50,6 +51,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanProvideInitialContextToQueryWithStreaming(Options options, GenAiConfiguration config)
     {
+        options.ModifyDocumentStore = Options.UseNewtonsoftJson;
         using var store = GetDocumentStore(options);
         using (var session = store.OpenAsyncSession())
         {

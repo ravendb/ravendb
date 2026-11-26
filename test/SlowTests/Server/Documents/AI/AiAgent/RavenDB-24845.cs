@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithSingleString()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -112,7 +112,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithMultipleStrings()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -189,7 +189,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithStringArray()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -247,7 +247,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task CanSetUserPromptWithStringList()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(Options.ForNewtonsoftJson());
 
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

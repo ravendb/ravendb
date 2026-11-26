@@ -170,6 +170,7 @@ order by spatial.distance(
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectDistanceComputation(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
@@ -208,6 +209,7 @@ select {
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProjectDistanceComputation_WithParameters(Options options)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());

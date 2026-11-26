@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Extensions;
-using Newtonsoft.Json;
 using Sparrow.Json.Sync;
 using System;
 using System.Collections.Generic;
@@ -9,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 using System.IO;
@@ -31,9 +31,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     private readonly List<ICommandData> _attachmentsCommands = new();
-    private StringBuilder _jsonBuffer;
-    private StringWriter _jsonWriter;
-    
+
     public string ChangeVector => _changeVector;
 
     private delegate Task HandleActionDelegate(JsonOperationContext context, AiAgentActionRequest actionRequest, CancellationToken token);
@@ -480,12 +478,8 @@ internal class AiConversation : IAiConversationOperations
 
     private string SerializeToJson(object value)
     {
-        _jsonBuffer ??= new StringBuilder();
-        _jsonWriter ??= new StringWriter(_jsonBuffer);
-        _jsonBuffer.Clear();
-        var serializer = (JsonSerializer)_aiOperations._store.Conventions.Serialization.CreateSerializer();
-        serializer.Serialize(_jsonWriter, value);
-        return _jsonBuffer.ToString();
+        using (_aiOperations.AllocateOperationContext(out JsonOperationContext context))
+            return _aiOperations._store.Conventions.Serialization.SerializeToJson(value, context);
     }
 
     internal class AiActionContext<TActionParametersSchema>

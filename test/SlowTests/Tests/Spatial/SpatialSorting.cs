@@ -25,10 +25,10 @@ namespace SlowTests.Tests.Spatial
             public double Latitude { get; set; }
             public double Longitude { get; set; }
 
-            public Shop(double lat, double lng)
+            public Shop(double latitude, double longitude)
             {
-                Latitude = lat;
-                Longitude = lng;
+                Latitude = latitude;
+                Longitude = longitude;
             }
         }
 

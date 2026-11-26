@@ -3641,6 +3641,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                 JavascriptConversionExtensions.CounterSupport.Instance,
                 new JavascriptConversionExtensions.WrappedConstantSupport<T>(DocumentQuery, _projectionParameters),
+                JavascriptConversionExtensions.IntegerDivisionSupport.Instance,
                 JavascriptConversionExtensions.MathSupport.Instance,
                 new JavascriptConversionExtensions.TransparentIdentifierSupport(),
                 JavascriptConversionExtensions.ReservedWordsSupport.Instance,
@@ -3653,7 +3654,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.StringSupport.Instance,
                 new JavascriptConversionExtensions.ConstSupport(DocumentQuery.Conventions),
                 JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
-                JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
+                new JavascriptConversionExtensions.JsonPropertyAttributeSupport(DocumentQuery.Conventions),
                 JavascriptConversionExtensions.NullComparisonSupport.Instance,
                 JavascriptConversionExtensions.NullableSupport.Instance,
                 JavascriptConversionExtensions.NewSupport.Instance,
@@ -3884,7 +3885,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private static string ExtractProjectedName(MemberInfo fieldMember)
+        private string ExtractProjectedName(MemberInfo fieldMember)
         {
             if (fieldMember == null)
                 return null;
@@ -4005,9 +4006,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             throw new NotSupportedException($"Map-Reduce operation '{mapReduceOperation}' in '{mapReduceOperationCall}' is not supported.");
         }
 
-        private static string GetSelectPath(MemberInfo member)
+        private string GetSelectPath(MemberInfo member)
         {
-            return LinqPathProvider.HandlePropertyRenames(member, member.Name);
+            return LinqPathProvider.HandlePropertyRenames(member, member.Name, _conventions);
         }
 
         private string GetSelectPath(MemberExpression expression)

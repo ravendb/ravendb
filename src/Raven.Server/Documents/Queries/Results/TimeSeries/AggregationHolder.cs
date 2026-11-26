@@ -281,6 +281,14 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                             for (int i = 0; i < startData.Length; i++)
                             {
                                 LinearInterpolation(quotient, initial[i], final[i], interpolated);
+
+                                // A count is a whole number of entries, and clients read it as an integer
+                                if (startData[i].Aggregation == AggregationType.Count)
+                                {
+                                    for (int j = 0; j < interpolated.Length; j++)
+                                        interpolated[j] = Math.Truncate(interpolated[j]);
+                                }
+
                                 gap[startData[i].Name] = new DynamicJsonArray(interpolated.Cast<object>());
                             }
                             

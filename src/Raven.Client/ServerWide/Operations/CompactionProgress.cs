@@ -110,7 +110,7 @@ namespace Raven.Client.ServerWide.Operations
                 
                 return _cachedIndexesResults;
             }
-            set => throw new NotSupportedException();
+            set => _cachedIndexesResults = value;
         }
 
         public override bool Skipped

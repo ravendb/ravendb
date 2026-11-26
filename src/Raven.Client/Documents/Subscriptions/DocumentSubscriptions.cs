@@ -159,6 +159,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = predicate.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
+                        JavascriptConversionExtensions.IntegerDivisionSupport.Instance,
                         JavascriptConversionExtensions.MathSupport.Instance,
                         new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,
@@ -187,6 +188,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var script = project.CompileToJavascript(
                     new JavascriptCompilationOptions(
                         JsCompilationFlags.BodyOnly,
+                        JavascriptConversionExtensions.IntegerDivisionSupport.Instance,
                         JavascriptConversionExtensions.MathSupport.Instance,
                         new JavascriptConversionExtensions.DictionarySupport(),
                         JavascriptConversionExtensions.LinqMethodsSupport.Instance,

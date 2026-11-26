@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Tests.Infrastructure;
@@ -20,10 +21,12 @@ public class RavenDB_25485 : RavenTestBase
         public decimal Price { get; set; }
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAList()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAList(bool useNewtonsoftJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useNewtonsoftJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -43,10 +46,12 @@ public class RavenDB_25485 : RavenTestBase
         Assert.Equal(19.99m, result[1]["Price"].Value<decimal>());
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAnArray()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAnArray(bool useNewtonsoftJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useNewtonsoftJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -66,10 +71,12 @@ public class RavenDB_25485 : RavenTestBase
         Assert.Equal(19.99m, result[1]["Price"].Value<decimal>());
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public void AddActionResponseShouldWorkWhenReturningAnEmptyList()
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AddActionResponseShouldWorkWhenReturningAnEmptyList(bool useNewtonsoftJson)
     {
-        using var store = GetDocumentStore();
+        using var store = GetStore(useNewtonsoftJson);
 
         var chat = store.AI.Conversation("agents/test", "chats/123", new AiConversationCreationOptions());
 
@@ -77,6 +84,11 @@ public class RavenDB_25485 : RavenTestBase
 
         var result = JArray.Parse(GetActionResponseContent(chat, "tool-1"));
         Assert.Equal(0, result.Count);
+    }
+
+    private IDocumentStore GetStore(bool useNewtonsoftJson)
+    {
+        return GetDocumentStore(useNewtonsoftJson ? Options.ForNewtonsoftJson() : null);
     }
 
     private static string GetActionResponseContent(IAiConversationOperations chat, string toolId)
