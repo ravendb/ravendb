@@ -50,7 +50,7 @@ internal struct SpatialDistanceReader
         var found = false;
         result = default;
 
-        using var _ = _searcher.GetEntryTermsReader(entryId, ref _lastPage, out var termsReader);
+        var termsReader = _searcher.GetEntryTermsReader(entryId, ref _lastPage);
         while (termsReader.FindNextSpatial(_fieldRootPage))
         {
             var coordinates = (termsReader.Latitude, termsReader.Longitude);

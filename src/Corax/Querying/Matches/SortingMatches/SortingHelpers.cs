@@ -2,13 +2,61 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using Corax.Querying.Matches.Meta;
 using Sparrow;
+using Sparrow.Server;
+using Sparrow.Server.Utils;
 
 namespace Corax.Querying.Matches.SortingMatches;
 
 internal static class SortingHelpers
 {
     public const long InvalidTermId = -1;
+
+    /// <summary>Drains match into an allocator-backed buffer; the caller is responsible for disposing the scope once done.</summary>
+    public static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope DrainMatch<TInner>(
+        ref TInner inner, ByteStringContext allocator, out Span<long> results, out bool sortedById)
+        where TInner : IQueryMatch
+    {
+        var count = inner.Count;
+        int bufferSize = count is > 0 and < (1024 * 1024) ? (int)count : 4096;
+        var scope = allocator.Allocate(bufferSize * sizeof(long), out var bs);
+        var buffer = new Span<long>(bs.Ptr, bufferSize);
+        int filled = 0;
+        int r;
+        while ((r = inner.Fill(buffer[filled..])) > 0)
+        {
+            filled += r;
+            if (filled < buffer.Length) 
+                continue;
+            
+            allocator.GrowAllocation(ref bs, ref scope, buffer.Length * sizeof(long));
+            buffer = new Span<long>(bs.Ptr, bs.Length / sizeof(long));
+        }
+
+        sortedById = inner is not (VectorSearchMatch { ReturnsResultsByDistance: true } or MultiVectorSearchMatch { ReturnsResultsByDistance: true });
+        if (sortedById)
+            filled = Sorting.SortAndRemoveDuplicates(buffer[..filled]);
+        results = buffer[..filled];
+
+        return scope;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static long PackScore(float score, int position, int direction)
+    {
+        int key;
+        if (score > 0)
+            key = BitConverter.SingleToInt32Bits(score);
+        else if (float.IsNaN(score))
+            key = int.MinValue;
+        else if (score == 0)
+            key = 0;
+        else
+            key = BitConverter.SingleToInt32Bits(score) ^ int.MaxValue;
+
+        return ((long)(key ^ direction) << 32) | (uint)position;
+    }
     
     /// <summary>
     /// There are textual values for fields that are either null or do not exist. However, since we want to specifically control the order of the nulls,

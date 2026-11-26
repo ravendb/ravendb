@@ -87,9 +87,8 @@ namespace FastTests.Corax
                 using var searcher = new IndexSearcher(Env, fields);
                 var eagles = searcher.TermQuery("Content", "eagles");
                 Assert.Equal(1, eagles.Fill(matches));
-                
                 Page p = default;
-                searcher.GetEntryTermsReader(matches[0], ref p, out var reader);
+                var reader = searcher.GetEntryTermsReader(matches[0], ref p);
                 long contentFieldRootPage = fieldNamesByRootPage.Single(x=>x.Value == "Content").Key;
                 Assert.True(reader.FindNext(contentFieldRootPage));
                 Assert.Equal("eagles", reader.Current.ToString());
@@ -308,7 +307,8 @@ namespace FastTests.Corax
                 Assert.Equal(2, read);
 
                 Page p = default;
-                searcher.GetEntryTermsReader(ids[0], ref p, out var reader);
+
+                var reader = searcher.GetEntryTermsReader(ids[0], ref p);
                 var output = reader.Debug(searcher);
                 Assert.Contains("Content", output);
                 Assert.Contains("maciej", output);

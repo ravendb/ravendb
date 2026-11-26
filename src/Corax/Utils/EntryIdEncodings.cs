@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
@@ -68,18 +67,7 @@ public static class EntryIdEncodings
     {
         return new ContainerEntryId(entryId >> EntryIdOffset);
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static void Encode(Span<long> entries, Span<short> frequencies)
-    {
-        for (int idX = 0; idX < entries.Length; ++idX)
-        {
-            ref var entryId = ref Unsafe.Add(ref MemoryMarshal.GetReference(entries), idX); 
-            ref var frequency = ref Unsafe.Add(ref MemoryMarshal.GetReference(frequencies), idX);
-            entryId = (entryId << EntryIdOffset) | (FrequencyQuantization(frequency) << ContainerTypeOffset);
-        }
-    }
-    
+
     // Decodes single-document entries (TermIdMask.Single) to DocumentEntryId, discarding frequency.
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static DocumentEntryId DecodeAndDiscardFrequency(long entryId) => new DocumentEntryId(entryId >> EntryIdOffset);

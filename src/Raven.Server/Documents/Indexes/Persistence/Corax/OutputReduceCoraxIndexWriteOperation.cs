@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Threading;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron.Impl;
 

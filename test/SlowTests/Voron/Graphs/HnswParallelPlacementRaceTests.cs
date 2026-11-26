@@ -68,7 +68,7 @@ public unsafe class HnswParallelPlacementRaceTests(ITestOutputHelper output) : S
             int total = 0, read;
             do
             {
-                read = retriever.Fill(docs, scores, filter: null);
+                read = retriever.Fill(docs, scores);
                 total += read;
             } while (read != 0);
 

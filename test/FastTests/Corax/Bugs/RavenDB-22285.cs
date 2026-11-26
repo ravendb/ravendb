@@ -6,6 +6,7 @@ using Corax.Analyzers;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying;
+using Corax.Querying.Matches.Meta;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
@@ -52,7 +53,7 @@ public class RavenDB_22285 : StorageTest
             var termMatch = indexSearcher.TermQuery(mapping.GetByFieldId(Content2).Metadata, "common0");
             var buffer = new long[512];
             var results = termMatch.Fill(buffer);
-            results = exists.AndWith(buffer, results);
+            results = ((IBitmapQueryMatch)exists).BitmapState.AndWith(buffer, results);
             AssertSorted(buffer, results);
 
             var inMemoryResult = database.Where(x => x.Content2 == "common0").OrderBy(x => x.Position).ToList();

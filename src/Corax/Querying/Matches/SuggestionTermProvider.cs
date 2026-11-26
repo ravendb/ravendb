@@ -187,7 +187,7 @@ namespace Corax.Querying.Matches
                     ref var ngramStart = ref MemoryMarshal.GetReference(ngram);
 
                     ReadOnlySpan<byte> key;
-                    while (iter.MoveNext(gramCompactKey, out _, out _))
+                    while (iter.MoveNext(gramCompactKey, out long _))
                     {
                         var gramKey = gramCompactKey.Decoded();
 

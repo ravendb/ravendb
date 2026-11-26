@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Threading;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -12,13 +11,25 @@ using Spatial4n.Context;
 using Spatial4n.Shapes;
 using Voron;
 using Voron.Data.CompactTrees;
+using Voron.Data.RoaringBitmaps;
 using SpatialRelation = Spatial4n.Shapes.SpatialRelation;
 
 namespace Corax.Querying.Matches.SpatialMatch;
 
-public sealed class SpatialMatch<TBoosting> : IQueryMatch
+public sealed class SpatialMatch<TBoosting> : IPostFilterMatch, ISpatialFilterQuery, IDisposable
     where TBoosting : IBoostingMarker
 {
+    private const int CandidateToIndexRatio = 32; // cost of reading a candidate entry vs. scanning the index 
+    /// <summary>Set by <c>QueryPlanBuilder.ApplyPostFilters</c> when this spatial match was lifted to a top-level
+    /// post-filter. Left false when it is an ordinary leaf inside an OR branch.</summary>
+    public bool IsPostFilter { get; set; }
+
+    public IQueryMatch FilterQuery
+    {
+        get => _filterQuery;
+        set => _filterQuery = value;
+    }
+
     private readonly Querying.IndexSearcher _indexSearcher;
     private readonly SpatialContext _spatialContext;
     private readonly double _error;
@@ -40,7 +51,14 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     private long _fieldRootPage;
     private double _xShapeCenter;
     private double _yShapeCenter;
-    
+    private IQueryMatch _filterQuery;
+
+    private RoaringBitmap _filterBitmap;
+    private RoaringBitmapIterator _filterIterator;
+    private bool _filterInitialized;
+    private bool _ownsFilterBitmap;
+    private bool _driveByShape;
+    private bool _disposed;
 
     public SpatialMatch(Querying.IndexSearcher indexSearcher, ByteStringContext allocator, SpatialContext spatialContext, in FieldMetadata field, IShape shape,
         CompactTree tree,
@@ -65,8 +83,6 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         _fieldRootPage = _indexSearcher.FieldCache.GetLookupRootPage(field.FieldName);
     }
 
-    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
-    
     private bool GoNextMatch()
     {
         if (_termGenerator.MoveNext())
@@ -79,59 +95,111 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
             return true;
         }
-        _currentMatch = TermMatch.CreateEmpty(_indexSearcher, _indexSearcher.Allocator);
+        _currentMatch = TermMatch.CreateEmpty();
         return false;
     }
 
-    public long Count => _indexSearcher.NumberOfEntries;
+    public long Count => -1;
 
-    public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
-    public QueryCountConfidence Confidence => QueryCountConfidence.Low;
     public bool IsBoosting => typeof(TBoosting) == typeof(HasBoosting);
 
     public int Fill(Span<long> matches)
     {
-        int iterations = 1;
+        if (_filterQuery != null)
+        {
+            EnsureFilterInitialized();
+            if (_driveByShape == false)
+                return FillCandidateDriven(matches);
+        }
+
+        return FillShapeDriven(matches);
+    }
+
+    private void EnsureFilterInitialized()
+    {
+        if (_filterInitialized)
+            return;
+        _filterInitialized = true;
+
+        _filterBitmap = IndexSearcher.VectorSearchUtils.LoadFilterMatches(_indexSearcher, ref _filterQuery, out _ownsFilterBitmap);
+
+        long candidateCount = _filterBitmap.ComputeCount();
+        long indexSize = _indexSearcher.NumberOfEntries;
+
+        bool driveByCandidates = candidateCount <= SpatialUtils.Threshold || candidateCount * CandidateToIndexRatio < indexSize;
+        _driveByShape = driveByCandidates == false;
+
+        if (driveByCandidates)
+            _filterIterator = _filterBitmap.GetIterator();
+    }
+
+    private int FillCandidateDriven(Span<long> matches)
+    {
+        while (true)
+        {
+            int read = _filterIterator.Fill(ref _filterBitmap, matches);
+            if (read == 0)
+                return 0;
+
+            int w = 0;
+            for (int i = 0; i < read; ++i)
+            {
+                if ((i & 1023) == 0)
+                    _token.ThrowIfCancellationRequested();
+
+                if (CheckEntryManually(matches[i]))
+                    matches[w++] = matches[i];
+            }
+
+            if (w > 0)
+                return w;
+        }
+    }
+
+    private int FillShapeDriven(Span<long> matches)
+    {
         int currentIdx = 0;
         do
         {
+            _token.ThrowIfCancellationRequested();
+
             int read;
             if ((read = _currentMatch.Fill(matches.Slice(currentIdx))) == 0)
             {
                 if (GoNextMatch() == false)
-                {
                     break;
-                }
 
-                iterations++;
                 continue;
             }
 
+            var slicedMatches = matches.Slice(currentIdx);
+            // Scoped to a candidate set: drop non-candidates (compacted to the front) before any geo work.
+            int kept = _driveByShape ? _filterBitmap.AndWith(slicedMatches[..read], read) : read;
+
             if (_isTermMatch)
             {
-                // the cell is entirely inside the shape, so every entry is a match; Score still needs a distance for each
+                // the cell is entirely inside the shape, so every (surviving) entry is a match; Score still needs a distance for each
                 if (typeof(TBoosting) == typeof(HasBoosting))
-                    RecordDistances(matches.Slice(currentIdx, read));
-                currentIdx += read;
+                    RecordDistances(slicedMatches[..kept]);
+                currentIdx += kept;
             }
-            else if (read > 0)
+            else
             {
-                var slicedMatches = matches.Slice(currentIdx);
-                for (int i = 0; i < read; ++i)
+                for (int i = 0; i < kept; ++i)
                 {
+                    if ((i & 1023) == 0)
+                        _token.ThrowIfCancellationRequested();
+
                     if (CheckEntryManually(slicedMatches[i]))
-                    {
                         matches[currentIdx++] = slicedMatches[i];
-                    }
                 }
             }
         } while (currentIdx != matches.Length);
 
-        
-        if (iterations > 1)
-            currentIdx = Sorting.SortAndRemoveDuplicates(matches.Slice(0, currentIdx));
-        
-        return currentIdx;
+        // A single Fill spans several geohash cells (each sorted on its own, but concatenated across cells), and an
+        // entry can appear in both an interior and a boundary cell within the page. IQueryMatch.Fill must return
+        // sorted, unique ids per call, so normalize the page before returning.
+        return Sorting.SortAndRemoveDuplicates(matches[..currentIdx]);
     }
 
     private bool CheckEntryManually(long id)
@@ -142,8 +210,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         }
         _alreadyReturned ??= new Dictionary<long, double>();
 
-        using var keyScope = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
-        if (TryGetMatchingPoint(id, existingKey, out var latitude, out var longitude) == false)
+        if (TryGetMatchingPoint(id, out var latitude, out var longitude) == false)
             return false;
 
         // the entry is open right here, so keep its distance for Score instead of reading it again there
@@ -157,8 +224,6 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     {
         _alreadyReturned ??= new Dictionary<long, double>();
 
-        // one key for the whole batch - acquiring per entry would give back what the pooled CompactKey bought
-        using var keyScope = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
         for (int i = 0; i < ids.Length; ++i)
         {
             if (i % 1024 == 0)
@@ -168,7 +233,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
             if (_alreadyReturned.ContainsKey(id))
                 continue;
 
-            Record(id, TryGetMatchingPoint(id, existingKey, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
+            Record(id, TryGetMatchingPoint(id, out var latitude, out var longitude) ? DistanceFromCentre(latitude, longitude) : -1);
         }
     }
 
@@ -183,9 +248,9 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         => SpatialUtils.HaverstineDistanceInInternationalNauticalMiles(_yShapeCenter, _xShapeCenter, latitude, longitude);
 
     // The first point of the entry that satisfies the relation.
-    private bool TryGetMatchingPoint(long id, CompactKey existingKey, out double latitude, out double longitude)
+    private bool TryGetMatchingPoint(long id, out double latitude, out double longitude)
     {
-        _indexSearcher.GetEntryTermsReader(id, ref _lastPage, out var termsReader, existingKey);
+        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage);
         while (termsReader.MoveNextSpatial())
         {
             if (termsReader.FieldRootPage != _fieldRootPage)
@@ -202,9 +267,10 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return false;
     }
 
-    // Corax indexes points only, so a point inside the shape satisfies within, contains and intersects alike.
     private bool IsTrue(SpatialRelation answer) => answer switch
     {
+        // RavenDB-27508: Corax indexes points only, so a point inside the shape satisfies within, contains and
+        // intersects alike. Anything but Disjoint is a match for all three.
         SpatialRelation.Within or SpatialRelation.Contains or SpatialRelation.Intersects
             => _spatialRelation is not Utils.Spatial.SpatialRelation.Disjoint,
         SpatialRelation.Disjoint => _spatialRelation is Utils.Spatial.SpatialRelation.Disjoint,
@@ -227,6 +293,9 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return currentIdx;
     }
 
+    // Spatial scoring is distance-based per entry, independent of order; no sorted fast path.
+    public void ScoreSorted(Span<long> matches, Span<float> scores, float boostFactor) => Score(matches, scores, boostFactor);
+
     /// <summary>
     /// Calculates relevance by distance to the center of the figure. When spatial relation is not disjoint, we treat the center as the most relevant point and grant it a score of 1.01 (*boostFactor).
     /// We take the whole result set as a subset, so the farthest point returned by this query is the least relevant point and gets a score of 0.01 (just not being 0).
@@ -238,8 +307,10 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
     /// </summary>
     public void Score(Span<long> matches, Span<float> scores, float boostFactor)
     {
+        // CompiledQueryMatch.Score calls every resolved leaf, negated ones included, and a negated leaf is resolved
+        // without boost - it has no score data to hand over. Same contract as TermMatch.Score.
         if (typeof(TBoosting) != typeof(HasBoosting))
-            ThrowPrimitiveHasNoBoostingData();
+            return;
 
         // Fill and AndWith recorded every entry this match returned together with its distance and kept the farthest one,
         // so this is a single pass with nothing read and nothing allocated. A miss means the entry came from the other
@@ -261,20 +332,37 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         }
     }
 
-    private void ThrowPrimitiveHasNoBoostingData()
-    {
-        throw new InvalidDataException($"{nameof(SpatialMatch<TBoosting>)}");
-    }
-
     public QueryInspectionNode Inspect()
     {
         return new QueryInspectionNode($"{nameof(SpatialMatch)}",
             parameters: new Dictionary<string, string>()
             {
-                {"Field", _field.ToString()},
+                {"Field", _field.FieldName.ToString()},
                 {"Shape", _shape.ToString()},
                 {"Error", _error.ToString(CultureInfo.InvariantCulture)},
                 {"SpatialRelation", _spatialRelation.ToString()},
-            });
+            })
+        {
+            // Reflects the lifting decision recorded on this match, not the type: a spatial leaf inside an OR is
+            // a pipeline leaf, not a post-filter (see IPostFilterMatch).
+            IsPostFilter = IsPostFilter
+        };
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        // Iterator first, then the bitmap it was built over (reverse allocation order). The iterator is default
+        // (a no-op Dispose) unless the candidate-driven path created it; the bitmap is disposed only when owned
+        // — a borrowed IBitmapQueryMatch bitmap belongs to its source.
+        _filterIterator.Dispose();
+        if (_ownsFilterBitmap)
+            _filterBitmap.Dispose();
+
+        _startsWithDisposeHandler?.Dispose();
+        _termGenerator?.Dispose();
     }
 }

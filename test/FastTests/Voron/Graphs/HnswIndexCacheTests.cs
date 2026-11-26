@@ -167,7 +167,7 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
             int read;
             do
             {
-                read = retriever.Fill(docs, scores, filter: null);
+                read = retriever.Fill(docs, scores);
                 total += read;
             } while (read != 0);
 

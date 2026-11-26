@@ -72,8 +72,7 @@ public class RawCoraxFlag : StorageTest
             var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             Page p = default;
-            searcher.GetEntryTermsReader(mem[0], ref p, out var result);
-            
+            var result = searcher.GetEntryTermsReader(mem[0], ref p);
             long fieldRootPage = searcher.FieldCache.GetLookupRootPage(fieldName);
             Assert.True(result.FindNextStored(fieldRootPage));
             {
@@ -160,32 +159,53 @@ public class RawCoraxFlag : StorageTest
 
         {
             using var indexSearcher = new IndexSearcher(Env, _analyzers);
-            var searchMatch = indexSearcher.SearchQuery(_analyzers.GetByFieldId(1).Metadata,
-                new[]
-                {
-                    "sanctus est Lorem ipsum dolor sit amet. MOCKUPWORD Lorem ipsum dolor sit amet, consetetur"
-                }, Constants.Search.Operator.Or);
-            
-            Span<long> ids = stackalloc long[16];
-            Assert.Equal(1, indexSearcher.AllEntries().Fill(ids));
-            
-            Assert.IsType<PhraseMatch<IQueryMatch>>(searchMatch);
-            var phraseQuery = (PhraseMatch<IQueryMatch>)searchMatch;
 
-            var projectedSentence = phraseQuery.RenderOriginalSentence(ids[0]);
-            var analyzer = _analyzers.GetByFieldId(1).Analyzer;
-            analyzer.GetOutputBuffersSize(Encodings.Utf8.GetByteCount(sentence), out var bC, out var tC);
-            var bufferOutput = new byte[bC].AsSpan();
-            var tokens = new Token[tC].AsSpan();
-            analyzer.Execute(Encodings.Utf8.GetBytes(sentence), ref bufferOutput, ref tokens);
-            var output = new List<string>();
-            foreach (var token in tokens)
+            const string phrase = "sanctus est Lorem ipsum dolor sit amet. MOCKUPWORD Lorem ipsum dolor sit amet, consetetur";
+            var contentField = _analyzers.GetByFieldId(1);
+            var contentAnalyzer = contentField.Analyzer;
+
+            contentAnalyzer.GetOutputBuffersSize(Encodings.Utf8.GetByteCount(phrase), out var phraseBC, out var phraseTC);
+            var phraseBufferOutput = new byte[phraseBC].AsSpan();
+            var phraseTokens = new Token[phraseTC].AsSpan();
+            contentAnalyzer.Execute(Encodings.Utf8.GetBytes(phrase), ref phraseBufferOutput, ref phraseTokens);
+
+            var disposables = new List<IDisposable>();
+            var termSlices = new Slice[phraseTokens.Length];
+            for (int i = 0; i < phraseTokens.Length; i++)
             {
-                output.Add(Encodings.Utf8.GetString(bufferOutput.Slice(token.Offset, (int)token.Length)));
+                var tk = phraseTokens[i];
+                disposables.Add(Slice.From(Allocator, phraseBufferOutput.Slice(tk.Offset, (int)tk.Length), out termSlices[i]));
             }
 
-            var sentenceFromAnalyzer = string.Join(' ', output);
-            Assert.Equal(sentenceFromAnalyzer, projectedSentence);
+            try
+            {
+                var phraseMatch = (PhraseMatch<AllEntriesMatch>)indexSearcher.PhraseQuery(
+                    indexSearcher.AllEntries(),
+                    contentField.Metadata,
+                    termSlices);
+
+                Span<long> ids = stackalloc long[16];
+                Assert.Equal(1, phraseMatch.Fill(ids));
+
+                var projectedSentence = phraseMatch.RenderOriginalSentence(ids[0]);
+                contentAnalyzer.GetOutputBuffersSize(Encodings.Utf8.GetByteCount(sentence), out var bC, out var tC);
+                var bufferOutput = new byte[bC].AsSpan();
+                var tokens = new Token[tC].AsSpan();
+                contentAnalyzer.Execute(Encodings.Utf8.GetBytes(sentence), ref bufferOutput, ref tokens);
+                var output = new List<string>();
+                foreach (var token in tokens)
+                {
+                    output.Add(Encodings.Utf8.GetString(bufferOutput.Slice(token.Offset, (int)token.Length)));
+                }
+
+                var sentenceFromAnalyzer = string.Join(' ', output);
+                Assert.Equal(sentenceFromAnalyzer, projectedSentence);
+            }
+            finally
+            {
+                foreach (var d in disposables)
+                    d.Dispose();
+            }
         }
     }
     
@@ -219,8 +239,7 @@ public class RawCoraxFlag : StorageTest
             var match = searcher.SearchQuery(_analyzers.GetByFieldId(0).Metadata, new List<string>(){"1"}, Constants.Search.Operator.Or);
             Assert.Equal(1, match.Fill(mem));
             Page p = default;
-            
-            searcher.GetEntryTermsReader(mem[0], ref p, out var result);
+            var result = searcher.GetEntryTermsReader(mem[0], ref p);
             var fieldRootPage = searcher.FieldCache.GetLookupRootPage(_analyzers.GetByFieldId(1).FieldName);
             Assert.True(result.FindNextStored(fieldRootPage));
 

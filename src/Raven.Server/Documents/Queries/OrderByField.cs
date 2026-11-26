@@ -6,52 +6,17 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
 {
-    public struct OrderByField
+    public record struct OrderByField(QueryFieldName Name, OrderByFieldType OrderingType, bool Ascending, MethodType? Method = null, OrderByField.Argument[] Arguments = null, NullsOrderingType NullsOrdering = NullsOrderingType.Implicit)
     {
-        public OrderByField(QueryFieldName name, OrderByFieldType orderingType, bool ascending, MethodType? method = null, Argument[] arguments = null, NullsOrderingType nullsOrdering = NullsOrderingType.Implicit)
+        public readonly string OrderByName = OrderingType switch
         {
-            Method = method;
-            Name = name;
-            OrderingType = orderingType;
-            Ascending = ascending;
-            Arguments = arguments;
-            NullsOrdering = nullsOrdering;
-            AggregationOperation = AggregationOperation.None;
+            OrderByFieldType.Long => $"{Name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}",
+            OrderByFieldType.Double => $"{Name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}",
+            _ => Name
+        };
 
-            OrderByName = orderingType switch
-            {
-                OrderByFieldType.Long => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixLong}",
-                OrderByFieldType.Double => $"{name}{Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble}",
-                _ => name
-            };
-        }
-
-        public readonly QueryFieldName Name;
-
-        public readonly OrderByFieldType OrderingType;
-
-        public readonly bool Ascending;
-
-        public readonly NullsOrderingType NullsOrdering;
-
-        public readonly Argument[] Arguments;
-
-        public readonly MethodType? Method;
-
-        public readonly string OrderByName;
-
-        public struct Argument
+        public readonly record struct Argument(string NameOrValue, ValueTokenType Type)
         {
-            public Argument(string nameOrValue, ValueTokenType type)
-            {
-                NameOrValue = nameOrValue;
-                Type = type;
-            }
-
-            public readonly string NameOrValue;
-
-            public readonly ValueTokenType Type;
-
             public double GetDouble(BlittableJsonReaderObject parameters)
             {
                 double value;
@@ -75,6 +40,6 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public AggregationOperation AggregationOperation;
+        public AggregationOperation AggregationOperation = AggregationOperation.None;
     }
 }

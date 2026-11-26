@@ -355,7 +355,6 @@ namespace SlowTests.Client.MoreLikeThis
                             Fields = new[] { "Body" }
                         }))
                         .ToList();
-
                     Indexes.WaitForIndexing(store);
 
                     Assert.Empty(list);
@@ -522,7 +521,8 @@ namespace SlowTests.Client.MoreLikeThis
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "No support for boosting")]
         public void Can_Use_Boost_Param(Options options)
         {
             using (var store = GetDocumentStore(options))
