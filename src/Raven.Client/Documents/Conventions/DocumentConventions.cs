@@ -780,7 +780,7 @@ namespace Raven.Client.Documents.Conventions
 
         /// <summary>
         ///     Gets or sets the max size of the cache in requestExecutor.
-        ///     Default value is 512MB on 64 bits, 32MB on 32 bits
+        ///     Default value is 128MB on 64 bits, 32MB on 32 bits
         /// </summary>
         /// <value>The max size of cache in requestExecutor.</value>
         public Size MaxHttpCacheSize
