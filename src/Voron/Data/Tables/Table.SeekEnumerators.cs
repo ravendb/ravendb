@@ -379,7 +379,7 @@ namespace Voron.Data.Tables
                         return true;
                     }
 
-                    var ids = table.GetFixedSizeTree(_tree, _it.CurrentKey, 0, index.IsGlobal);
+                    var ids = table.GetFixedSizeTreeForValue(_tree, _it.CurrentKey, index.IsGlobal);
                     if (ids.NumberOfEntries == 1) // the common case of a unique value, without an iterator
                         return backward ? ids.TryGetLastKey(out id) : ids.TryGetFirstKey(out id);
 

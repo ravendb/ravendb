@@ -39,8 +39,8 @@ namespace Voron.Data.Tables
         private FixedSizeTree _activeCandidateSection;
 
         private Dictionary<Slice, Tree> _treesBySliceCache;
-        private Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache;
-        private Dictionary<Slice, FixedSizeTree> _fixedSizeTreesForWrite;
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTreeCache;
+        private Dictionary<Tree, FixedSizeTree> _fixedSizeTreesForValues;
 
         public readonly Slice Name;
         private readonly byte _tableType;
@@ -72,9 +72,9 @@ namespace Voron.Data.Tables
             }
         }
 
-        public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
+        public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0);
 
-        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true);
+        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0);
 
         internal int CurrentCompressionDictionaryId
         {
@@ -674,7 +674,7 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(indexDef);
                 using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                 {
-                    var fst = GetFixedSizeTreeForWrite(indexTree, val, indexDef.IsGlobal);
+                    var fst = GetFixedSizeTreeForValue(indexTree, val, indexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
@@ -957,8 +957,8 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(indexDef);
-                            GetFixedSizeTreeForWrite(indexTree, oldVal, indexDef.IsGlobal).Delete(id);
-                            GetFixedSizeTreeForWrite(indexTree, newVal, indexDef.IsGlobal).Add(id);
+                            GetFixedSizeTreeForValue(indexTree, oldVal, indexDef.IsGlobal).Delete(id);
+                            GetFixedSizeTreeForValue(indexTree, newVal, indexDef.IsGlobal).Add(id);
                         }
                     }
                 }
@@ -1008,7 +1008,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var index = GetFixedSizeTreeForWrite(indexTree, newVal, dynamicKeyIndexDef.IsGlobal);
+                var index = GetFixedSizeTreeForValue(indexTree, newVal, dynamicKeyIndexDef.IsGlobal);
                 index.Add(id);
             }
         }
@@ -1021,7 +1021,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var fst = GetFixedSizeTreeForWrite(tree, val, dynamicKeyIndexDef.IsGlobal);
+                var fst = GetFixedSizeTreeForValue(tree, val, dynamicKeyIndexDef.IsGlobal);
                 if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                 {
                     ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
@@ -1120,7 +1120,7 @@ namespace Voron.Data.Tables
                     using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                     {
                         var indexTree = GetTree(indexDef);
-                        var index = GetFixedSizeTreeForWrite(indexTree, val, indexDef.IsGlobal);
+                        var index = GetFixedSizeTreeForValue(indexTree, val, indexDef.IsGlobal);
                         index.Add(id);
                     }
                 }
@@ -1160,48 +1160,31 @@ namespace Voron.Data.Tables
             }
 
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
         }
 
-        internal FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
+        private FixedSizeTree GetFixedSizeTree(Tree tableTree, Slice name, ushort valSize)
         {
-            if (_fixedSizeTreeCache == null || _fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
-            {
-                cache = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
-                
-                _fixedSizeTreeCache ??= new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceStructComparer.Instance);
-                _fixedSizeTreeCache[parent.Name] = cache;
-            }
+            _fixedSizeTreeCache ??= new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
+            if (_fixedSizeTreeCache.TryGetValue(name, out var tree))
+                return tree;
 
-            if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
-            {
-                NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: allocator);
-                return cache[fixedSizeTree.Name] = fixedSizeTree;
-            }
-
-            return tree;
+            tree = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, name, valSize, isIndexTree: true, newPageAllocator: TablePageAllocator);
+            return _fixedSizeTreeCache[tree.Name] = tree;
         }
 
-        private FixedSizeTree GetFixedSizeTreeForWrite(Tree parent, Slice name, bool isGlobal)
+        internal FixedSizeTree GetFixedSizeTreeForValue(Tree indexTree, Slice value, bool isGlobal)
         {
-            // this ensures cached instances iterators see any changes (per value)
-            if (_fixedSizeTreeCache != null && 
-                _fixedSizeTreeCache.TryGetValue(parent.Name, out var cache) && 
-                cache.TryGetValue(name, out var cached))
-                return cached;
-
-            // not cached, so we can just reuse the fst instance per _parent_
-            _fixedSizeTreesForWrite ??= new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
-            if (_fixedSizeTreesForWrite.TryGetValue(parent.Name, out var fixedSizeTree))
+            _fixedSizeTreesForValues ??= new Dictionary<Tree, FixedSizeTree>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+            if (_fixedSizeTreesForValues.TryGetValue(indexTree, out var fixedSizeTree))
             {
-                fixedSizeTree.RepurposeInstance(name, clone: false);
+                fixedSizeTree.RepurposeInstance(value, clone: false);
                 return fixedSizeTree;
             }
 
             NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
-            fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, 0, clone: false, isIndexTree: parent.IsIndexTree, newPageAllocator: allocator);
-            _fixedSizeTreesForWrite[parent.Name] = fixedSizeTree;
+            fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, value, 0, clone: false, isIndexTree: indexTree.IsIndexTree, newPageAllocator: allocator);
+            _fixedSizeTreesForValues[indexTree] = fixedSizeTree;
             return fixedSizeTree;
         }
 
@@ -1360,7 +1343,7 @@ namespace Voron.Data.Tables
         // the first (or last) entry of an index value, without iterating the fixed size tree of the value
         private bool TryReadEdgeOfValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool last, out TableValueReader reader)
         {
-            var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
+            var fstIndex = GetFixedSizeTreeForValue(tree, value, index.IsGlobal);
             if ((last ? fstIndex.TryGetLastKey(out long id) : fstIndex.TryGetFirstKey(out id)) == false)
             {
                 reader = default;
@@ -1410,10 +1393,10 @@ namespace Voron.Data.Tables
         public long GetCountOfMatchesFor(TableSchema.AbstractTreeIndexDef index, Slice value)
         {
             var tree = GetTree(index);
+            if (tree == null)
+                return 0;
 
-            var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
-
-            return fstIndex.NumberOfEntries;
+            return GetFixedSizeTreeForValue(tree, value, index.IsGlobal).NumberOfEntries;
         }
 
         public long GetCountOfMatchesForPrefix(DynamicKeyIndexDef index, Slice prefix)
@@ -1433,7 +1416,7 @@ namespace Voron.Data.Tables
             long count = 0;
             do
             {
-                count += GetFixedSizeTree(tree, it.CurrentKey, 0, index.IsGlobal).NumberOfEntries;
+                count += GetFixedSizeTreeForValue(tree, it.CurrentKey, index.IsGlobal).NumberOfEntries;
             } while (it.MoveNext());
 
             return count;
@@ -1990,32 +1973,28 @@ namespace Voron.Data.Tables
                     if (it.Seek(value) == false)
                         return deleted;
 
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0, index.IsGlobal);
-                    using (var fstIt = fst.Iterate())
+                    if (GetFixedSizeTreeForValue(tree, it.CurrentKey, index.IsGlobal).TryGetFirstKey(out long id) == false)
+                        break;
+
+                    if (beforeDelete != null || shouldAbort != null)
                     {
-                        if (fstIt.Seek(long.MinValue) == false)
-                            break;
-
-                        if (beforeDelete != null || shouldAbort != null)
+                        var ptr = DirectRead(id, out int size, out bool compressed);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        if (shouldAbort?.Invoke(tableValueHolder) == true)
                         {
-                            var ptr = DirectRead(fstIt.CurrentKey, out int size, out bool compressed);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new TableValueHolder();
-                            tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                            if (shouldAbort?.Invoke(tableValueHolder) == true)
-                            {
-                                return deleted;
-                            }
-                            beforeDelete?.Invoke(tableValueHolder);
-                            Delete(fstIt.CurrentKey, ptr, size, compressed);
+                            return deleted;
                         }
-                        else
-                        {
-                            Delete(fstIt.CurrentKey);
-                        }
-
-                        deleted++;
+                        beforeDelete?.Invoke(tableValueHolder);
+                        Delete(id, ptr, size, compressed);
                     }
+                    else
+                    {
+                        Delete(id);
+                    }
+
+                    deleted++;
                 }
             }
             return deleted;

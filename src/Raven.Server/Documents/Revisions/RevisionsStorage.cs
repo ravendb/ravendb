@@ -3263,14 +3263,9 @@ namespace Raven.Server.Documents.Revisions
         public long GetNumberOfNonDeletedRevisions(DocumentsOperationContext context)
         {
             var table = context.Transaction.GetGlobalTable(RevisionsSchema);
-            var index = RevisionsSchema.Indexes[DeleteRevisionEtagSlice];
             using (GetEtagAsSlice(context, NotDeletedRevisionMarker, out var nonDeletedSlice))
             {
-                var tree = table.GetTree(index);
-                if (tree == null)
-                    return 0;
-                var fstIndex = table.GetFixedSizeTree(tree, nonDeletedSlice, 0, index.IsGlobal);
-                return fstIndex.NumberOfEntries;
+                return table.GetCountOfMatchesFor(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], nonDeletedSlice);
             }
         }
 
