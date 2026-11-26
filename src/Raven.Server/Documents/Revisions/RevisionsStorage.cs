@@ -1350,13 +1350,13 @@ namespace Raven.Server.Documents.Revisions
                     throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported revision type: {type}");
             }
 
-            TableValueHolder prevTvh = null;
+            long prevStorageId = -1;
             foreach (var tvh in revisions)
             {
-                if (prevTvh != null)
-                    context.Transaction.InnerTransaction.ForgetAbout(prevTvh.Reader.Id);
+                if (prevStorageId != -1)
+                    context.Transaction.InnerTransaction.ForgetAbout(prevStorageId);
 
-                prevTvh = tvh;
+                prevStorageId = tvh.Reader.Id;
 
                 if (type == RevisionType.Deleted)
                 {
@@ -1387,13 +1387,14 @@ namespace Raven.Server.Documents.Revisions
             if (table == null || take == 0)
                 yield break;
 
-            TableValueHolder prevTvh = null;
+            // the seek yields the same holder for every row, so keep the id of the previous row, not its holder
+            long prevStorageId = -1;
             foreach (var tvh in table.SeekBackwardFromLast(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], skip))
             {
-                if (prevTvh != null)
-                    context.Transaction.InnerTransaction.ForgetAbout(prevTvh.Reader.Id);
+                if (prevStorageId != -1)
+                    context.Transaction.InnerTransaction.ForgetAbout(prevStorageId);
 
-                prevTvh = tvh;
+                prevStorageId = tvh.Reader.Id;
 
                 var tvr = tvh.Reader;
                 var revision = TableValueToRevision(context, ref tvr, DocumentFields.Id | DocumentFields.ChangeVector);
