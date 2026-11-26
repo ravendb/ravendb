@@ -6,8 +6,12 @@ function getWrittenSchemaOrNull(jsonSchema: string): string | null {
     return getHasWrittenSchema(jsonSchema) ? jsonSchema : null;
 }
 
+function getHasSampleObject(sampleObject: string): boolean {
+    return !!sampleObject?.trim();
+}
+
 function getIsSchemaGeneratedByServer(sampleObject: string, jsonSchema: string): boolean {
-    return !!sampleObject?.trim() && !getHasWrittenSchema(jsonSchema);
+    return getHasSampleObject(sampleObject) && !getHasWrittenSchema(jsonSchema);
 }
 
 function getHasSampleObjectOrWrittenSchema(sampleObject: string, jsonSchema: string): boolean {
@@ -26,9 +30,10 @@ function getIsStrictToSave(jsonSchema: string, isStrict: boolean): boolean {
     return isSetOnlyForWrittenSchema && !!isStrict;
 }
 
-export const schemaStrictModeUtils = {
+export const schemaFieldUtils = {
     getHasWrittenSchema,
     getWrittenSchemaOrNull,
+    getHasSampleObject,
     getIsSchemaGeneratedByServer,
     getHasSampleObjectOrWrittenSchema,
     getIsStrictFromSaved,

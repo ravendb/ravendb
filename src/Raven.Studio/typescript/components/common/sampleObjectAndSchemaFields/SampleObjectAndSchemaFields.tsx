@@ -17,7 +17,7 @@ import classNames from "classnames";
 import messagePublisher from "common/messagePublisher";
 import { AceEditorSamplesPanelConfig } from "../ace/AceEditorSamplesPanel";
 import Badge from "react-bootstrap/Badge";
-import { schemaStrictModeUtils } from "./schemaStrictModeUtils";
+import { schemaFieldUtils } from "./schemaFieldUtils";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
@@ -25,14 +25,14 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     sampleObjectName: TName;
     sampleObjectLabel?: ReactNode;
     sampleObject: string;
-    sampleObjectSyntaxHelp?: React.ReactNode;
+    sampleObjectSyntaxHelp?: ReactNode;
     sampleObjectSamplesPanel?: AceEditorSamplesPanelConfig;
     sampleObjectTooltip?: ReactNode;
     sampleObjectPlaceholder?: string;
     jsonSchemaName: TName;
     jsonSchemaLabel?: ReactNode;
     jsonSchema: string;
-    jsonSchemaSyntaxHelp?: React.ReactNode;
+    jsonSchemaSyntaxHelp?: ReactNode;
     jsonSchemaSamplesPanel?: AceEditorSamplesPanelConfig;
     jsonSchemaTooltip?: ReactNode;
     schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
@@ -80,9 +80,9 @@ export default function SampleObjectAndSchemaFields<
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>(sampleObjectValue);
 
     const hasStrictMode = !!isStrictName;
-    const hasWrittenSchema = schemaStrictModeUtils.getHasWrittenSchema(jsonSchema);
-    const isSchemaGeneratedByServer = schemaStrictModeUtils.getIsSchemaGeneratedByServer(sampleObject, jsonSchema);
-    const isWrittenSchemaStrict = hasStrictMode && schemaStrictModeUtils.getIsStrictToSave(jsonSchema, isStrict);
+    const hasWrittenSchema = schemaFieldUtils.getHasWrittenSchema(jsonSchema);
+    const isSchemaGeneratedByServer = schemaFieldUtils.getIsSchemaGeneratedByServer(sampleObject, jsonSchema);
+    const isWrittenSchemaStrict = hasStrictMode && schemaFieldUtils.getIsStrictToSave(jsonSchema, isStrict);
 
     const turnStrictModeOn = () => {
         if (hasStrictMode) {
@@ -105,7 +105,10 @@ export default function SampleObjectAndSchemaFields<
         }
     });
 
-    const canRegenerateSchema = !!sampleObject && hasWrittenSchema && lastSampleObjectForGenerate !== sampleObject;
+    const canRegenerateSchema =
+        schemaFieldUtils.getHasSampleObject(sampleObject) &&
+        hasWrittenSchema &&
+        lastSampleObjectForGenerate !== sampleObject;
 
     useEffect(() => {
         if (_.get(formState.dirtyFields, sampleObjectName)) {

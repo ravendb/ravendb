@@ -1,6 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { schemaStrictModeUtils } from "components/common/sampleObjectAndSchemaFields/schemaStrictModeUtils";
+import { schemaFieldUtils } from "components/common/sampleObjectAndSchemaFields/schemaFieldUtils";
 import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
 type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
@@ -28,10 +28,7 @@ const editSchema = yup.object({
             "sampleObjectOrJsonSchema",
             "Either 'Sample response object' or 'JSON schema' must be provided",
             function (_, { parent }) {
-                return schemaStrictModeUtils.getHasSampleObjectOrWrittenSchema(
-                    parent.sampleObject,
-                    parent.outputSchema
-                );
+                return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(parent.sampleObject, parent.outputSchema);
             }
         )
         .test(
@@ -87,7 +84,7 @@ const editSchema = yup.object({
                     "sampleObjectOrJsonSchema",
                     "Either 'Sample response object' or 'JSON schema' must be provided",
                     function (_, { parent }) {
-                        return schemaStrictModeUtils.getHasSampleObjectOrWrittenSchema(
+                        return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(
                             parent.parametersSampleObject,
                             parent.parametersSchema
                         );
@@ -120,7 +117,7 @@ const editSchema = yup.object({
                     "sampleObjectOrJsonSchema",
                     "Either 'Sample response object' or 'JSON schema' must be provided",
                     function (_, { parent }) {
-                        return schemaStrictModeUtils.getHasSampleObjectOrWrittenSchema(
+                        return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(
                             parent.parametersSampleObject,
                             parent.parametersSchema
                         );

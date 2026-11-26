@@ -1,13 +1,19 @@
-import { schemaStrictModeUtils } from "./schemaStrictModeUtils";
+import { schemaFieldUtils } from "./schemaFieldUtils";
 
-const { getIsStrictFromSaved, getIsStrictToSave, getHasSampleObjectOrWrittenSchema, getWrittenSchemaOrNull } =
-    schemaStrictModeUtils;
+const {
+    getIsStrictFromSaved,
+    getIsStrictToSave,
+    getHasSampleObject,
+    getHasSampleObjectOrWrittenSchema,
+    getWrittenSchemaOrNull,
+} = schemaFieldUtils;
 
 const SAMPLE_OBJECT = '{ "orderId": "The ID of the order" }';
 const WRITTEN_SCHEMA = '{ "type": "object" }';
 const BLANK_SCHEMA = " \n";
+const BLANK_SAMPLE_OBJECT = " \n";
 
-describe("schemaStrictModeUtils", () => {
+describe("schemaFieldUtils", () => {
     it("loads a tool without a written schema as strict, because the server sends a generated schema in strict mode", () => {
         expect(getIsStrictFromSaved(null, false)).toBe(true);
         expect(getIsStrictFromSaved(null, undefined)).toBe(true);
@@ -34,6 +40,11 @@ describe("schemaStrictModeUtils", () => {
         expect(getHasSampleObjectOrWrittenSchema("", WRITTEN_SCHEMA)).toBe(true);
         expect(getWrittenSchemaOrNull(BLANK_SCHEMA)).toBeNull();
         expect(getWrittenSchemaOrNull(WRITTEN_SCHEMA)).toBe(WRITTEN_SCHEMA);
+    });
+
+    it("treats a sample object with only white space as missing, so the schema cannot be regenerated from it", () => {
+        expect(getHasSampleObject(BLANK_SAMPLE_OBJECT)).toBe(false);
+        expect(getHasSampleObject(SAMPLE_OBJECT)).toBe(true);
     });
 
     it("saves the chosen strict mode for a tool with a written schema", () => {
