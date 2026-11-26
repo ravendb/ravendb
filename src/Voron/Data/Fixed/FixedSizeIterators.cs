@@ -230,8 +230,8 @@ namespace Voron.Data.Fixed
             private int _changesAtStart;
             private bool _disposed;
 
-            // page instances by level in the tree: the page at level l (in _parent._cursor, or _currentPage) is always _pagesByLevel[l]
             private PagesByLevel _pagesByLevel;
+            private int _depth;
 
             public LargeIterator(FixedSizeTree<TVal> parent, bool prefetch = false)
             {
@@ -246,6 +246,7 @@ namespace Voron.Data.Fixed
                 _changesAtStart = _parent._changes;
                 _prefetch = prefetch;
                 _currentPage = null;
+                _depth = 0;
             }
 
             private void AssertNoChanges()
@@ -265,21 +266,21 @@ namespace Voron.Data.Fixed
             public bool Seek(TVal key)
             {
                 System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
-                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel);
+                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel, out _depth);
                 return _currentPage.LastMatch <= 0 || MoveNext();
             }
 
             public bool SeekBackward(TVal key)
             {
                 System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
-                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel);
+                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel, out _depth);
                 return _currentPage.LastMatch >= 0 || MovePrev();
             }
 
             public bool SeekToLast()
             {
                 System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
-                _currentPage = _parent.FindPageFor(TVal.MaxValue, ref _pagesByLevel);
+                _currentPage = _parent.FindPageFor(TVal.MaxValue, ref _pagesByLevel, out _depth);
                 return true;
             }
 
@@ -358,8 +359,6 @@ namespace Voron.Data.Fixed
                         // run out of entries, need to select the next page...
                         while (_currentPage.IsBranch)
                         {
-                            _parent._cursor.Push(_currentPage);
-
                             if (_prefetch)
                             {
                                 var pager = _parent._tx.DataPager;
@@ -367,15 +366,15 @@ namespace Voron.Data.Fixed
                             }
 
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
-                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, _parent._cursor.Count);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, ++_depth);
 
                             _currentPage.LastSearchPosition = 0;
                         }
                         return true;// there is another entry in this page
                     }
-                    if (_parent._cursor.Count == 0)
+                    if (_depth == 0)
                         break;
-                    _currentPage = _parent._cursor.Pop();
+                    _currentPage = _pagesByLevel[--_depth];
                 }
                 _currentPage = null;
 
@@ -404,7 +403,7 @@ namespace Voron.Data.Fixed
                         // 2. Update its LastSearchPosition to point to the correct entry
 
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
-                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, currentPageHeader.PageNumber, _depth);
 
                         _currentPage.LastSearchPosition = lastSearchPosition;
 
@@ -413,14 +412,15 @@ namespace Voron.Data.Fixed
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_depth == 0)
                             return false;
-                        
+
+                        var parent = _pagesByLevel[_depth - 1];
                         parent.LastSearchPosition--;
                         
                         if (parent.LastSearchPosition < 0)
                         {
-                            _parent._cursor.Pop();
+                            _depth--;
                             continue;
                         }
                         
@@ -428,13 +428,11 @@ namespace Voron.Data.Fixed
                         var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
                         if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
-                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+                            var childPage = _parent.PageAtLevel(ref _pagesByLevel, nextChildPageNumber, _depth++);
 
                             // we move one beyond the end of elements because in both cases
                             // (branch and leaf) we first decrement and then run it
                             childPage.LastSearchPosition = childPage.NumberOfEntries;
-
-                            _parent._cursor.Push(childPage);
                             continue;
                         }
 
@@ -472,7 +470,7 @@ namespace Voron.Data.Fixed
                         // 3. Check if we've reached the end of the current page, and if so, move to the next page
 
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
-                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, currentPageHeader.PageNumber, _depth);
 
                         _currentPage.LastSearchPosition = lastSearchPosition;
 
@@ -483,14 +481,15 @@ namespace Voron.Data.Fixed
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_depth == 0)
                             return false;
-                        
+
+                        var parent = _pagesByLevel[_depth - 1];
                         parent.LastSearchPosition++;
                         
                         if (parent.LastSearchPosition >= parent.NumberOfEntries)
                         {
-                            _parent._cursor.Pop();
+                            _depth--;
                             continue;
                         }
                         
@@ -498,12 +497,11 @@ namespace Voron.Data.Fixed
                         var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
                         if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
-                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+                            var childPage = _parent.PageAtLevel(ref _pagesByLevel, nextChildPageNumber, _depth++);
 
                             // we set it to negative one so the first
                             // call will increment that to zero
                             childPage.LastSearchPosition = -1;
-                            _parent._cursor.Push(childPage);
                             continue;
                         }
 
@@ -533,17 +531,16 @@ namespace Voron.Data.Fixed
                         // run out of entries, need to select the next page...
                         while (_currentPage.IsBranch)
                         {
-                            _parent._cursor.Push(_currentPage);
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
-                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, _parent._cursor.Count);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, ++_depth);
 
                             _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
                         }
                         return true;// there is another entry in this page
                     }
-                    if (_parent._cursor.Count == 0)
+                    if (_depth == 0)
                         break;
-                    _currentPage = _parent._cursor.Pop();
+                    _currentPage = _pagesByLevel[--_depth];
                 }
                 _currentPage = null;
 

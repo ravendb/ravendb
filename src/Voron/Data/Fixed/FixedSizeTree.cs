@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -40,14 +39,14 @@ namespace Voron.Data.Fixed
         private readonly int _maxEmbeddedEntries;
 
         private NewPageAllocator _newPageAllocator;
-        private FastStack<FixedSizeTreePage<TVal>> _cursor;
 
         private PagesByLevel _descentPages;
+        private int _descentDepth; // the path of the last write is _descentPages[0.._descentDepth), the leaf is at _descentDepth
 
-        // a branch page holds hundreds of entries, so real trees are far less deep than this
-        private const int MaxReusedLevels = 8;
+        // A branch page holds 512 entries and is rebalanced at 128 or fewer, 9th level means the tree is corrupted.
+        private const int MaxDepth = 8;
 
-        [InlineArray(MaxReusedLevels)]
+        [InlineArray(MaxDepth)]
         private struct PagesByLevel
         {
             private FixedSizeTreePage<TVal> _element;
@@ -314,7 +313,7 @@ namespace Voron.Data.Fixed
 
         private byte* AddLargeEntry(TVal key, long rootPageNumber, out bool isNew)
         {
-            var page = FindPageFor(key, rootPageNumber, ref _descentPages);
+            var page = FindPageFor(key, rootPageNumber, ref _descentPages, out _descentDepth);
 
             page = ModifyPage(page);
 
@@ -424,42 +423,40 @@ namespace Voron.Data.Fixed
             return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
         }
 
-        private FixedSizeTreePage<TVal> FindPageFor(TVal key, ref PagesByLevel pages)
+        private FixedSizeTreePage<TVal> FindPageFor(TVal key, ref PagesByLevel pages, out int depth)
         {
-            return FindPageFor(key, ReadRootPageNumber(), ref pages);
+            return FindPageFor(key, ReadRootPageNumber(), ref pages, out depth);
         }
 
-        // The pages, also the ones pushed to _cursor, are the instances in pages: valid until the next descent that uses them.
-        private FixedSizeTreePage<TVal> FindPageFor(TVal key, long rootPageNumber, ref PagesByLevel pages)
+        private FixedSizeTreePage<TVal> FindPageFor(TVal key, long rootPageNumber, ref PagesByLevel pages, out int depth)
         {
-            var level = 0;
-            var page = PageAtLevel(ref pages, rootPageNumber, level++);
-            if (_cursor == null)
-                _cursor = new FastStack<FixedSizeTreePage<TVal>>();
-            else
-                _cursor.WeakClear();
-
-            while (page.IsLeaf == false)
-            {
-                _cursor.Push(page);
-                BinarySearch(page, key);
-                if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                    page.LastSearchPosition--;
-                var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                page = PageAtLevel(ref pages, childPageNumber, level++);
-            }
-
+            var page = DescendToLeaf(rootPageNumber, key, ref pages, out depth);
             BinarySearch(page, key);
             return page;
         }
 
-        // Points the instance of the level at the page. A level deeper than MaxReusedLevels gets an instance that is not reused.
+        private FixedSizeTreePage<TVal> DescendToLeaf(long rootPageNumber, TVal key, ref PagesByLevel pages, out int depth)
+        {
+            depth = 0;
+            var page = PageAtLevel(ref pages, rootPageNumber, depth);
+            while (page.IsLeaf == false)
+            {
+                BinarySearch(page, key);
+                if (page.LastMatch < 0 && page.LastSearchPosition > 0)
+                    page.LastSearchPosition--;
+                var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
+                page = PageAtLevel(ref pages, childPageNumber, ++depth);
+            }
+
+            return page;
+        }
+
         private FixedSizeTreePage<TVal> PageAtLevel(ref PagesByLevel pages, long pageNumber, int level)
         {
-            var pointer = _tx.GetPage(pageNumber).Pointer;
-            if (level >= MaxReusedLevels) // should never happen, requires ~10^17 leaf pages, about 1M petabytes!
-                return new FixedSizeTreePage<TVal>(pointer, _entrySize, Constants.Storage.PageSize);
+            if (level >= MaxDepth)
+                ThrowTooDeep();
 
+            var pointer = _tx.GetPage(pageNumber).Pointer;
             ref var page = ref pages[level];
             if (page == null)
                 return page = new FixedSizeTreePage<TVal>(pointer, _entrySize, Constants.Storage.PageSize);
@@ -468,20 +465,10 @@ namespace Voron.Data.Fixed
             return page;
         }
 
-        private FixedSizeTreePage<TVal> DescendToLeafForRead(long rootPageNumber, TVal key)
+        [DoesNotReturn]
+        private void ThrowTooDeep()
         {
-            var level = 0;
-            var page = PageAtLevel(ref _descentPages, rootPageNumber, level++);
-            while (page.IsLeaf == false)
-            {
-                BinarySearch(page, key);
-                if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                    page.LastSearchPosition--;
-                var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                page = PageAtLevel(ref _descentPages, childPageNumber, level++);
-            }
-
-            return page;
+            throw new InvalidFixedSizeTree($"Fixed size tree {Name} is deeper than {MaxDepth} levels, so it is corrupted");
         }
 
         private FixedSizeTreePage<TVal> NewPage(FixedSizeTreePageFlags flags, long nearbyPage)
@@ -602,7 +589,7 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> PageSplit(FixedSizeTreePage<TVal>page, TVal key)
         {
-            FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
+            FixedSizeTreePage<TVal> parentPage = _descentDepth > 0 ? _descentPages[--_descentDepth] : null;
             if (parentPage == null) // root split
             {
                 parentPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
@@ -957,7 +944,7 @@ namespace Voron.Data.Fixed
                     BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     return _lastMatch == 0;
                 case RootObjectType.FixedSizeTree:
-                    var page = DescendToLeafForRead(((FixedSizeTreeHeader.Large*)headerPtr)->RootPageNumber, key);
+                    var page = DescendToLeaf(((FixedSizeTreeHeader.Large*)headerPtr)->RootPageNumber, key, ref _descentPages, out _);
                     dataStart = page.Pointer + page.StartPosition;
 
                     BinarySearch(dataStart, page.NumberOfEntries, key, _entrySize);
@@ -996,7 +983,7 @@ namespace Voron.Data.Fixed
 
         private DeletionResult RemoveLargeEntry(TVal key, long rootPageNumber)
         {
-            var page = FindPageFor(key, rootPageNumber, ref _descentPages);
+            var page = FindPageFor(key, rootPageNumber, ref _descentPages, out _descentDepth);
             if (page.LastMatch != 0)
                 return new DeletionResult();
 
@@ -1022,7 +1009,7 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> RebalancePage(FixedSizeTreePage<TVal> page)
         {
-            if (_cursor.Count == 0)
+            if (_descentDepth == 0)
             {
                 return RebalanceRootPage(page);
             }
@@ -1038,7 +1025,7 @@ namespace Voron.Data.Fixed
 
             // we determined that we require rebalancing...
 
-            var parentPage = _cursor.Pop();
+            var parentPage = _descentPages[--_descentDepth];
             parentPage = ModifyPage(parentPage);
 
             if (page.NumberOfEntries == 0)// empty page, delete it and fixup the parent
@@ -1360,10 +1347,9 @@ namespace Voron.Data.Fixed
                     break;
 
                 case RootObjectType.FixedSizeTree:
-                    var page = DescendToLeafForRead(((FixedSizeTreeHeader.Large*)ptr)->RootPageNumber, key);
+                    var page = FindPageFor(key, ((FixedSizeTreeHeader.Large*)ptr)->RootPageNumber, ref _descentPages, out _);
                     dataStart = page.Pointer + page.StartPosition;
 
-                    BinarySearch(page, key);
                     if (_lastMatch != 0)
                         goto case null;
 
@@ -1402,7 +1388,7 @@ namespace Voron.Data.Fixed
                     return true;
 
                 case RootObjectType.FixedSizeTree:
-                    var page = DescendToLeafForRead(((FixedSizeTreeHeader.Large*)header)->RootPageNumber, last ? TVal.MaxValue : TVal.MinValue);
+                    var page = DescendToLeaf(((FixedSizeTreeHeader.Large*)header)->RootPageNumber, last ? TVal.MaxValue : TVal.MinValue, ref _descentPages, out _);
                     System.Diagnostics.Debug.Assert(page.NumberOfEntries > 0, $"Leaf {page.PageNumber} of fixed size tree {Name} has no entries");
 
                     key = page.GetKey(last ? page.NumberOfEntries - 1 : 0);
@@ -1577,23 +1563,23 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            var page = FindPageFor(value, ref _descentPages);
+            var page = FindPageFor(value, ref _descentPages, out var depth);
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
             var state = new RemainingNumberOfEntriesState { Start = overallDuration, EstimationAccuracy = accuracy };
-            var maxDepth = _cursor.Count + 1;
+            var maxDepth = depth + 1;
             var count = GetRemainingNumberOfEntriesFor(page, maxDepth, maxDepth, ref state);
-            while (_cursor.TryPop(out page))
+            while (depth > 0)
             {
+                page = _descentPages[--depth];
                 System.Diagnostics.Debug.Assert(page.IsBranch);
                 page.LastSearchPosition++;
 
                 if (page.LastSearchPosition == page.NumberOfEntries)
                     continue;
 
-                var depth = _cursor.Count + 1;
-                long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
+                long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth + 1, maxDepth, ref state);
                 count += recursivePageCount;
             }
 
