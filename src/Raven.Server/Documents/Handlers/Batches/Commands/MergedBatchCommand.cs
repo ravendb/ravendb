@@ -549,12 +549,8 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
         if (cmd.ChangeVector != null || cmd.ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
             return false;
 
-        Document existing = Database.DocumentsStorage.Get(context, cmd.Id, throwOnConflict: false);
-        if (existing == null)
-            return false;
-
-        DocumentCompareResult compareResult = DocumentCompare.IsEqualTo(existing.Data, cmd.Document, DocumentCompare.DocumentCompareOptions.MergeMetadataCompareDataArchivalMetadata);
-        if (compareResult.HasFlag(DocumentCompareResult.Equal) == false)
+        if (DocumentCompare.TryGetUnchangedDocument(context, Database.DocumentsStorage, cmd.Id, cmd.Document, DocumentFields.All,
+                DocumentCompare.DocumentCompareOptions.MergeMetadataCompareDataArchivalMetadata, out Document existing) == false)
             return false;
 
         result = new DocumentsStorage.PutOperationResults
