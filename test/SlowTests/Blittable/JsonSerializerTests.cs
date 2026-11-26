@@ -6,6 +6,7 @@ using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -150,6 +151,35 @@ namespace SlowTests.Blittable
                 var actual = ReplayTxCommandHelper.Deserialize<Command>(readContext, toDeseialize);
 
                 Assert.Equal(expected, actual.BlittableObject);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void JsonDeserialize_WhenBlittableObjectPropertyHasHighPrecisionNumbers_ShouldKeepTheirText()
+        {
+            const string precise = "0.12345678901234567890123456789012345";
+            const string exponent = "1.5E+300";
+            const string whole = "1.0";
+            const string item = "-98765432109876543210987654321.000000000000000000001";
+
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext writeContext))
+            using (BlittableJsonReaderObject expected = readContext.Sync.ReadForMemory(
+                       $"{{\"Precise\":{precise},\"Exponent\":{exponent},\"Whole\":{whole},\"Integer\":42,\"Items\":[{item}]}}", "numbers"))
+            {
+                var toDeseialize = ReplayTxCommandHelper.Serialize(writeContext, new Command { BlittableObject = expected });
+                var actual = ReplayTxCommandHelper.Deserialize<Command>(readContext, toDeseialize);
+
+                Assert.True(actual.BlittableObject.TryGet("Precise", out LazyNumberValue actualPrecise));
+                Assert.Equal(precise, actualPrecise.Inner.ToString());
+                Assert.True(actual.BlittableObject.TryGet("Exponent", out LazyNumberValue actualExponent));
+                Assert.Equal(exponent, actualExponent.Inner.ToString());
+                Assert.True(actual.BlittableObject.TryGet("Whole", out LazyNumberValue actualWhole));
+                Assert.Equal(whole, actualWhole.Inner.ToString());
+                Assert.True(actual.BlittableObject.TryGet("Integer", out long actualInteger));
+                Assert.Equal(42, actualInteger);
+                Assert.True(actual.BlittableObject.TryGet("Items", out BlittableJsonReaderArray actualItems));
+                Assert.Equal(item, ((LazyNumberValue)actualItems[0]).Inner.ToString());
             }
         }
 

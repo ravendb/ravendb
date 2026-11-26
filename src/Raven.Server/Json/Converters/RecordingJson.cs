@@ -188,10 +188,8 @@ namespace Raven.Server.Json.Converters
                 case JsonTokenType.Number:
                     if (reader.TryGetInt64(out long integer))
                         writer.WriteValue(integer);
-                    else if (reader.ValueSpan.IndexOfAny((byte)'e', (byte)'E') < 0 && reader.TryGetDecimal(out decimal number))
-                        writer.WriteValue(number);
                     else
-                        writer.WriteValue(reader.GetDouble());
+                        writer.WriteNumber(reader.ValueSpan);
                     break;
                 case JsonTokenType.True:
                     writer.WriteValue(true);

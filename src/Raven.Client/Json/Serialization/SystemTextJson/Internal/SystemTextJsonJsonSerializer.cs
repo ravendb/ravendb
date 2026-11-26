@@ -287,14 +287,43 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                         break;
                     case JsonTokenType.Number:
                         if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
-                        else if (jsonReader.ValueSpan.IndexOfAny((byte)'e', (byte)'E') < 0 && jsonReader.TryGetDecimal(out decimal dec)) writer.WriteValue(dec);
-                        else writer.WriteValue(jsonReader.GetDouble());
+                        else WriteNonIntegerNumber(writer, ref jsonReader);
                         break;
                     case JsonTokenType.True: writer.WriteValue(true); break;
                     case JsonTokenType.False: writer.WriteValue(false); break;
                     case JsonTokenType.Null: writer.WriteNull(); break;
                 }
             }
+        }
+
+        private const int MaxExactDecimalDigits = 28;
+
+        private const int MaxExactDoubleDigits = 15;
+
+        private static void WriteNonIntegerNumber(SystemTextJsonBlittableWriter writer, ref Utf8JsonReader jsonReader)
+        {
+            ReadOnlySpan<byte> number = jsonReader.ValueSpan;
+            int exponent = number.IndexOfAny((byte)'e', (byte)'E');
+            int digits = CountDigits(exponent < 0 ? number : number.Slice(0, exponent));
+
+            if (exponent < 0 && digits <= MaxExactDecimalDigits && jsonReader.TryGetDecimal(out decimal dec))
+                writer.WriteValue(dec);
+            else if (exponent >= 0 && digits <= MaxExactDoubleDigits)
+                writer.WriteValue(jsonReader.GetDouble());
+            else
+                writer.WriteNumber(number);
+        }
+
+        private static int CountDigits(ReadOnlySpan<byte> number)
+        {
+            int digits = 0;
+            for (int i = 0; i < number.Length; i++)
+            {
+                if (number[i] >= (byte)'0' && number[i] <= (byte)'9')
+                    digits++;
+            }
+
+            return digits;
         }
     }
 }

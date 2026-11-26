@@ -95,6 +95,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             _manualBlittableJsonDocumentBuilder.WriteValue(utf8Value);
         }
 
+        internal void WriteNumber(ReadOnlySpan<byte> utf8Number)
+        {
+            string number = System.Text.Encoding.UTF8.GetString(utf8Number.ToArray());
+            _manualBlittableJsonDocumentBuilder.WriteValue(new LazyNumberValue(Context.GetLazyString(number)));
+        }
+
         public void WritePropertyName(string name, bool escape)
         {
             _manualBlittableJsonDocumentBuilder.WritePropertyName(name);
