@@ -308,7 +308,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Model: connection.ollamaSettings.model,
                       Uri: connection.ollamaSettings.uri,
                       Endpoint: connection.ollamaSettings.uri,
-                      ApiKey: connection.ollamaSettings.apiKey,
+                      ApiKey: connection.modelType === "Chat" ? connection.ollamaSettings.apiKey : null,
                       Think: connection.modelType === "Chat" ? connection.ollamaSettings.think : null,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       Temperature: mapTemperatureToDto(connection),

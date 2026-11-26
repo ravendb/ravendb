@@ -81,7 +81,7 @@ describe("ConnectionStrings", () => {
     );
 
     it.each(["OpenAi", "AzureOpenAi", "Ollama"] satisfies Raven.Client.Documents.Operations.AI.AiConnectorType[])(
-        "tests the %s connection with the chosen chat API and reasoning effort",
+        "tests the %s connection with the API key, chosen chat API and reasoning effort",
         async (connectorType) => {
             const { screen, fireClick } = await rtlRender_WithWaitForLoad(
                 <AiChatConnectionString connectorType={connectorType} />
@@ -97,7 +97,7 @@ describe("ConnectionStrings", () => {
                 expect.any(String),
                 connectorType,
                 "Chat",
-                expect.objectContaining({ ChatApi: "ChatCompletions", ReasoningEffort: "high" })
+                expect.objectContaining({ ApiKey: "api-key", ChatApi: "ChatCompletions", ReasoningEffort: "high" })
             );
         }
     );

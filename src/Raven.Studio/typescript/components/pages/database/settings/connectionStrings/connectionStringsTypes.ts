@@ -196,8 +196,8 @@ export interface AiConnection extends ConnectionBase {
         temperature?: number;
         reasoningEffort?: string;
         chatApi?: Raven.Client.Documents.Operations.AI.OpenAiChatApiType;
-        // No UI yet: kept from the loaded connection string so a save does not clear it
         apiKey?: string;
+        // No UI yet: kept from the loaded connection string so a save does not clear it
         enablePromptCache?: boolean;
     };
     embeddedSettings?: {
