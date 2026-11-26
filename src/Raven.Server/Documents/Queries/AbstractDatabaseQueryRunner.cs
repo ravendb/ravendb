@@ -123,7 +123,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     createIfMissing: null,
                     debugMode: false,
                     isTest: false,
-                    collectResultsNeeded: true,
+                    collectResultsNeeded: false, // only the scalar details of the results are used
                     returnDocument: false,
                     ignoreMaxStepsForScript: options.IgnoreMaxStepsForScript);
 

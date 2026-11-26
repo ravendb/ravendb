@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.QueueSink.Stats;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -14,33 +13,28 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
 {
     private readonly List<BlittableJsonReaderObject> _messages;
     private readonly string _script;
-    private readonly QueueSinkStatsScope _scriptProcessingScope;
-    private readonly QueueSinkProcessStatistics _statistics;
     private readonly Logger _logger;
+    private readonly List<Exception> _scriptErrors = new();
 
-    public BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages, QueueSinkStatsScope scriptProcessingScope,
-        QueueSinkProcessStatistics statistics, Logger logger)
+    public BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages, Logger logger)
     {
         _script = script ?? throw new ArgumentException("Script cannot be null", nameof(script));
         _messages = messages ?? throw new ArgumentException("Messages cannot be null", nameof(messages));
-        _scriptProcessingScope = scriptProcessingScope ?? throw new ArgumentException($"{nameof(QueueSinkStatsScope)} cannot be null", nameof(scriptProcessingScope));
-        _statistics = statistics ?? throw new ArgumentException($"{nameof(QueueSinkProcessStatistics)} cannot be null", nameof(statistics));
-        _logger = logger ?? throw new ArgumentException($"{nameof(Logger)} cannot be null", nameof(logger));
-    }
-
-    private BatchQueueSinkScriptCommand(string script, List<BlittableJsonReaderObject> messages)
-    {
-        _script = script ?? throw new ArgumentException("Script cannot be null", nameof(script));
-        _messages = messages ?? throw new ArgumentException("Messages cannot be null", nameof(messages));
-        _scriptProcessingScope = null;
-        _statistics = null;
-        _logger = null;
+        _logger = logger;
     }
 
     public int ProcessedSuccessfully { get; private set; }
 
+    /// <summary>
+    /// The errors thrown by the script while processing the messages (one per failed message)
+    /// </summary>
+    public IReadOnlyList<Exception> ScriptErrors => _scriptErrors;
+
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
+        ProcessedSuccessfully = 0;
+        _scriptErrors.Clear();
+
         var mainScript = new PatchRequest(_script, PatchRequestType.QueueSink);
 
         using (context.DocumentDatabase.Scripts.GetScriptRunner(mainScript, readOnly: false, out var documentScript))
@@ -53,12 +47,10 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
                 {
                     processed++;
 
-                    using (message)
                     using (documentScript.Run(context, context, "execute", new object[] {message}))
                     {
                     }
 
-                    _scriptProcessingScope?.RecordProcessedMessage();
                     ProcessedSuccessfully++;
                 }
                 catch (Exception e)
@@ -66,8 +58,7 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
                     if (_logger?.IsOperationsEnabled == true)
                         _logger.Operations("Failed to process consumed message by the script.", e);
 
-                    _scriptProcessingScope?.RecordScriptProcessingError();
-                    _statistics?.RecordScriptExecutionError(e);
+                    _scriptErrors.Add(e);
                 }
             }
 
@@ -94,7 +85,7 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
 
         public DocumentMergedTransactionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new BatchQueueSinkScriptCommand(Script, Messages);
+            return new BatchQueueSinkScriptCommand(Script, Messages, logger: null);
         }
     }
 }
