@@ -7,6 +7,7 @@ import EditCdcSinkTask = require("components/pages/database/tasks/ongoingTasks/e
 import EditGenAiTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/EditGenAiTask");
 import ImportDataOptions = require("components/pages/database/tasks/importData/ImportDataOptions");
 import ImportDatabaseFromFile = require("components/pages/database/tasks/importData/importFromFile/ImportDatabaseFromFile");
+import MigrateRavenDbDatabase = require("components/pages/database/tasks/importData/migrateRavenDb/MigrateRavenDbDatabase");
 import OngoingTasksPage = require("components/pages/database/tasks/ongoingTasks/OngoingTasksPage");
 import AddNewOngoingTask = require("components/pages/database/tasks/ongoingTasks/AddNewOngoingTask");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
@@ -113,6 +114,19 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             },
         }),
         new leafMenuItem({
+            route: 'databases/tasks/import/migrateRavenDB',
+            moduleId: reactUtils.bridgeToReact(MigrateRavenDbDatabase.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Import Data',
+            nav: false,
+            css: 'icon-import-database',
+            dynamicHash: appUrls.migrateRavenDbDatabaseUrl,
+            itemRouteToHighlight: 'databases/tasks/importOptions',
+            search: {
+                overrideTitle: "Import Database From RavenDB Server",
+            },
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/import*details',
             moduleId: require('viewmodels/database/tasks/importParent'),
             title: 'Import Data',
@@ -123,18 +137,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             requiredAccess: "DatabaseReadWrite",
             search: {
                 isExcluded: true,
-            },
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/import/migrateRavenDB',
-            moduleId: require('viewmodels/database/tasks/migrateRavenDbDatabase'),
-            title: 'Import Data',
-            nav: false,
-            css: 'icon-import-database',
-            dynamicHash: appUrls.migrateRavenDbDatabaseUrl,
-            itemRouteToHighlight: 'databases/tasks/importOptions',
-            search: {
-                overrideTitle: "Import Database From RavenDB Server",
             },
         }),
         new leafMenuItem({
