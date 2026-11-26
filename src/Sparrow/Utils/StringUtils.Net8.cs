@@ -37,6 +37,10 @@ public static partial class StringUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool HasControlCharacters(ReadOnlySpan<char> str) => str.IndexOfAny(ControlCharacters) != -1;
 
+    /// <returns>The index of the first byte that JSON escapes, or -1</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int IndexOfEscapeCharacter(ReadOnlySpan<byte> str) => str.IndexOfAny(EscapeCharactersAsBytes);
+
     // RavenDB-25738 Control characters are invalid for new databases
     // but use it for backward compatibility for document ID, collection name, attachment name, attachment content, and time series tag
     public static class Compatibility

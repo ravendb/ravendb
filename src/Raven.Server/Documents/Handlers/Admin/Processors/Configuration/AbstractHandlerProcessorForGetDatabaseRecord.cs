@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -61,10 +61,7 @@ internal abstract class AbstractHandlerProcessorForGetDatabaseRecord<TRequestHan
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
-                    {
-                        Data = dbDoc.Raw
-                    });
+                    writer.WriteProperties(dbDoc.Raw.GetView(), skipIndex: -1);
                     writer.WriteComma();
                     writer.WritePropertyName("Etag");
                     writer.WriteInteger(etag);

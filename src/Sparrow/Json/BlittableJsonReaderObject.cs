@@ -104,41 +104,13 @@ namespace Sparrow.Json
         {
             NoCache = NoCache;
 
-            var propOffsetStart = _size - 2;
-            var propsOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart, out byte offset);
-            if (propsOffset >= size)
-                ThrowInvalidPropertiesOffest();
-
-            // init document level properties
-            _propNames = (mem + propsOffset);
-
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-
-            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
-                _propNamesDataOffsetSize = sizeof(byte);
-            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
-                _propNamesDataOffsetSize = sizeof(short);
-            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
-                _propNamesDataOffsetSize = sizeof(int);
-            else
-                ThrowOutOfRangeException(propNamesOffsetFlag);
-
-            // get pointer to property names array on document level
-
-            // init root level object properties
-            var objStartOffset = ReadVariableSizeIntInReverse(_mem, propOffsetStart - offset, out offset);
-            // get offset of beginning of data of the main object
-            _propCount = ReadVariableSizeInt(objStartOffset, out var propCountOffset); // get main object properties count
-            _objStart = objStartOffset + mem;
-            _metadataPtr = objStartOffset + mem + propCountOffset;
-            // get pointer to current objects property tags metadata collection
-
-            var currentType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
-            // get current type byte flags
-
-            // analyze main object type and it's offset and propertyIds flags
-            _currentOffsetSize = ProcessTokenOffsetFlags(currentType);
-            _currentPropertyIdSize = ProcessTokenPropertyFlags(currentType);
+            var view = View.ForRoot(mem, size);
+            _propNames = view.PropNames;
+            _propNamesDataOffsetSize = view.PropNamesDataOffsetSize;
+            _objStart = view.ObjStart;
+            _metadataPtr = view.GetProperties(out _propCount);
+            _currentOffsetSize = view.OffsetSize;
+            _currentPropertyIdSize = view.PropertyIdSize;
         }
 
         private static void ThrowOnZeroSize(int size)
@@ -160,24 +132,12 @@ namespace Sparrow.Json
 
             NoCache = parent.NoCache;
 
-            var propNamesOffsetFlag = (BlittableJsonToken)(*_propNames);
-
-            if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
-                _propNamesDataOffsetSize = sizeof(byte);
-            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
-                _propNamesDataOffsetSize = sizeof(short);
-            else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
-                _propNamesDataOffsetSize = sizeof(int);
-            else
-                ThrowOutOfRangeException(propNamesOffsetFlag);
-
-            _objStart = _mem + pos;
-            _propCount = ReadVariableSizeInt(pos, out var propCountOffset);
-            _metadataPtr = _objStart + propCountOffset;
-
-            // analyze main object type and it's offset and propertyIds flags
-            _currentOffsetSize = ProcessTokenOffsetFlags(type);
-            _currentPropertyIdSize = ProcessTokenPropertyFlags(type);
+            var view = parent.GetView().Nested(pos, type);
+            _propNamesDataOffsetSize = view.PropNamesDataOffsetSize;
+            _objStart = view.ObjStart;
+            _metadataPtr = view.GetProperties(out _propCount);
+            _currentOffsetSize = view.OffsetSize;
+            _currentPropertyIdSize = view.PropertyIdSize;
         }
 
         private static void ThrowOutOfRangeException(BlittableJsonToken token)
@@ -753,10 +713,7 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void GetPropertyTypeAndPosition(int index, long metadataSize, out BlittableJsonToken token, out int position, out int propertyId)
         {
-            var propPos = _metadataPtr + index * metadataSize;
-            position = ReadNumber(propPos, _currentOffsetSize);
-            propertyId = ReadNumber(propPos + _currentOffsetSize, _currentPropertyIdSize);
-            token = (BlittableJsonToken)(*(propPos + _currentOffsetSize + _currentPropertyIdSize));
+            token = View.ReadPropertyEntry(_metadataPtr + index * metadataSize, (int)_currentOffsetSize, (int)_currentPropertyIdSize, out position, out propertyId);
         }
 
         public struct PropertyDetails
@@ -826,10 +783,8 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ReadOnlySpan<byte> GetPropertyNameBytes(int propertyId)
         {
-            var propertyNameOffset = ReadNumber(_propNames + 1 + propertyId * _propNamesDataOffsetSize, _propNamesDataOffsetSize);
-            var propertyName = _propNames - propertyNameOffset;
-            var size = VariableSizeEncoding.Read<int>(propertyName, out var lengthSize);
-            return new ReadOnlySpan<byte>(propertyName + lengthSize, size);
+            var name = View.ReadPropertyName(_propNames, _propNamesDataOffsetSize, propertyId, out var size);
+            return new ReadOnlySpan<byte>(name, size);
         }
 
         private static void ThrowOutOfRangeException(int indexValue)
@@ -914,27 +869,167 @@ namespace Sparrow.Json
 
         public InsertionOrderProperties GetPropertiesByInsertionOrder()
         {
+            var view = GetView();
+
+            var buffers = new InsertionOrderProperties(_context, _propCount);
+            if (_propCount > 0)
+                view.GetPropertiesByInsertionOrder(new Span<int>(buffers.Properties, buffers.Size), new Span<int>(buffers.Offsets, buffers.Size));
+
+            return buffers;
+        }
+
+        internal View GetView()
+        {
             AssertContextNotDisposed();
 
             if (_metadataPtr == null)
                 ThrowObjectDisposed();
 
-            var buffers = new InsertionOrderProperties(_context, _propCount);
-            if (_propCount == 0)
-                return buffers;
+            return new View(_mem, _size, _propNames, _propNamesDataOffsetSize, _objStart, (int)_currentOffsetSize, (int)_currentPropertyIdSize);
+        }
 
-            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
-            for (int i = 0; i < _propCount; i++)
+        /// <summary>
+        /// A struct read in place from the blittable buffer, so reading its values creates no reader objects.
+        /// </summary>
+        internal readonly struct View
+        {
+            public readonly byte* Mem;
+            public readonly int Size;
+            public readonly byte* PropNames;
+            public readonly int PropNamesDataOffsetSize;
+            public readonly byte* ObjStart;
+            public readonly int OffsetSize;
+            public readonly int PropertyIdSize;
+
+            public View(byte* mem, int size, byte* propNames, int propNamesDataOffsetSize, byte* objStart, int offsetSize, int propertyIdSize)
             {
-                var propertyIntPtr = _metadataPtr + i * metadataSize;
-                buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
-                buffers.Properties[i] = i;
+                Mem = mem;
+                Size = size;
+                PropNames = propNames;
+                PropNamesDataOffsetSize = propNamesDataOffsetSize;
+                ObjStart = objStart;
+                OffsetSize = offsetSize;
+                PropertyIdSize = propertyIdSize;
             }
 
-            Sorter<int, int, NumericDescendingComparer> sorter;
-            sorter.Sort(new Span<int>(buffers.Offsets, buffers.Size), new Span<int>(buffers.Properties, buffers.Size), 0, _propCount);
+            public bool IsNull => Mem == null;
 
-            return buffers;
+            public static View ForRoot(byte* mem, int size)
+            {
+                if (size == 0)
+                    ThrowOnZeroSize(size);
+
+                var propOffsetStart = size - 2;
+                var propsOffset = ReadVariableSizeIntInReverse(mem, propOffsetStart, out byte offset);
+                if (propsOffset >= size)
+                    ThrowInvalidPropertiesOffest();
+
+                var propNames = mem + propsOffset;
+                var propNamesOffsetFlag = (BlittableJsonToken)(*propNames);
+                int propNamesDataOffsetSize = 0;
+                if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeByte)
+                    propNamesDataOffsetSize = sizeof(byte);
+                else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeShort)
+                    propNamesDataOffsetSize = sizeof(short);
+                else if (propNamesOffsetFlag == BlittableJsonToken.OffsetSizeInt)
+                    propNamesDataOffsetSize = sizeof(int);
+                else
+                    ThrowOutOfRangeException(propNamesOffsetFlag);
+
+                var objStartOffset = ReadVariableSizeIntInReverse(mem, propOffsetStart - offset, out _);
+                var rootType = (BlittableJsonToken)(*(mem + size - sizeof(byte)));
+
+                return new View(mem, size, propNames, propNamesDataOffsetSize, mem + objStartOffset, ProcessTokenOffsetFlags(rootType), ProcessTokenPropertyFlags(rootType));
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public View Nested(int position, BlittableJsonToken type)
+            {
+                return new View(Mem, Size, PropNames, PropNamesDataOffsetSize, Mem + position, ProcessTokenOffsetFlags(type), ProcessTokenPropertyFlags(type));
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public byte* GetProperties(out int count)
+            {
+                count = VariableSizeEncoding.Read<int>(ObjStart, out var countSize);
+                return ObjStart + countSize;
+            }
+
+            public int PropertyEntrySize
+            {
+                [MethodImpl(MethodImplOptions.AggressiveInlining)]
+                get => OffsetSize + PropertyIdSize + sizeof(byte);
+            }
+
+            /// <summary>Reads the entry of a property, the position of its value is relative to <see cref="Mem"/>.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public BlittableJsonToken GetProperty(byte* entry, out int position, out int propertyId)
+            {
+                var type = ReadPropertyEntry(entry, OffsetSize, PropertyIdSize, out var offset, out propertyId);
+                position = (int)(ObjStart - Mem) - offset;
+                return type;
+            }
+
+            /// <summary>Reads the entry of a property: the offset of its value back from the object start, its id and its type.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static BlittableJsonToken ReadPropertyEntry(byte* entry, int offsetSize, int propertyIdSize, out int offset, out int propertyId)
+            {
+                offset = ReadNumber(entry, offsetSize);
+                propertyId = ReadNumber(entry + offsetSize, propertyIdSize);
+                return (BlittableJsonToken)entry[offsetSize + propertyIdSize];
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public byte* GetPropertyName(int propertyId, out int size) => ReadPropertyName(PropNames, PropNamesDataOffsetSize, propertyId, out size);
+
+            /// <summary>The stored bytes of a property name, without its size prefix.</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static byte* ReadPropertyName(byte* propNames, int propNamesDataOffsetSize, int propertyId, out int size)
+            {
+                var propertyNameOffset = ReadNumber(propNames + sizeof(byte) + propertyId * propNamesDataOffsetSize, propNamesDataOffsetSize);
+                var propertyName = propNames - propertyNameOffset;
+                size = VariableSizeEncoding.Read<int>(propertyName, out var sizeLength);
+                return propertyName + sizeLength;
+            }
+
+            /// <summary>
+            /// Fills properties with the property indexes in insertion order, which is the descending order of the value offsets,
+            /// and offsets with the offset of each one. Both need room for the property count.
+            /// </summary>
+            public void GetPropertiesByInsertionOrder(Span<int> properties, Span<int> offsets)
+            {
+                var entries = GetProperties(out var count);
+                for (int i = 0; i < count; i++)
+                {
+                    properties[i] = i;
+                    offsets[i] = ReadNumber(entries + i * PropertyEntrySize, OffsetSize);
+                }
+
+                Sorter<int, int, NumericDescendingComparer> sorter;
+                sorter.Sort(offsets, properties, 0, count);
+            }
+
+            /// <summary>The value of the property at index as an object, a null value gives a null view.</summary>
+            public View GetObject(int index)
+            {
+                var properties = GetProperties(out var count);
+                if (index < 0 || index >= count)
+                    ThrowOutOfRangeException(index);
+
+                var type = GetProperty(properties + index * PropertyEntrySize, out var position, out _);
+                switch (type & TypesMask)
+                {
+                    case BlittableJsonToken.Null:
+                        return default;
+                    case BlittableJsonToken.StartObject:
+                        return Nested(position, type);
+                    case BlittableJsonToken.EmbeddedBlittable:
+                        var size = VariableSizeEncoding.Read<int>(Mem + position, out var offset);
+                        return ForRoot(Mem + position + offset, size);
+                    default:
+                        throw new InvalidCastException($"Expected the property value to be an object, but got {type & TypesMask}");
+                }
+            }
         }
 
         public ulong GetHashOfPropertyNames()

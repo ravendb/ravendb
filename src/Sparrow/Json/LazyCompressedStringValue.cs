@@ -111,29 +111,34 @@ namespace Sparrow.Json
 
         private void DecompressToBuffer(byte* tempBuffer, int sizeOfEscapePositions, out int size)
         {
-            int uncompressedSize;
+            Decompress(Buffer, CompressedSize, tempBuffer, UncompressedSize);
 
-            if (UncompressedSize > 128)
+            Memory.Copy(tempBuffer + UncompressedSize, Buffer + CompressedSize, sizeOfEscapePositions);
+            size = UncompressedSize + sizeOfEscapePositions;
+        }
+
+        internal static void Decompress(byte* buffer, int compressedSize, byte* destination, int uncompressedSize)
+        {
+            int decompressedSize;
+
+            if (uncompressedSize > 128)
             {
-                uncompressedSize = LZ4.Decode64(Buffer,
-                    CompressedSize,
-                    tempBuffer,
-                    UncompressedSize,
+                decompressedSize = LZ4.Decode64(buffer,
+                    compressedSize,
+                    destination,
+                    uncompressedSize,
                     true);
             }
             else
             {
-                uncompressedSize = SmallStringCompression.Instance.Decompress(Buffer,
-                    CompressedSize,
-                    tempBuffer,
-                    UncompressedSize);
+                decompressedSize = SmallStringCompression.Instance.Decompress(buffer,
+                    compressedSize,
+                    destination,
+                    uncompressedSize);
             }
 
-            if (uncompressedSize != UncompressedSize)
+            if (decompressedSize != uncompressedSize)
                 throw new FormatException("Wrong size detected on decompression");
-
-            Memory.Copy(tempBuffer + uncompressedSize, Buffer + CompressedSize, sizeOfEscapePositions);
-            size = uncompressedSize + sizeOfEscapePositions;
         }
 
         private int GetSizeOfEscapePositions()

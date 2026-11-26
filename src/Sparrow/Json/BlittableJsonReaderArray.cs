@@ -48,6 +48,15 @@ namespace Sparrow.Json
         public byte* DataStart => _dataStart;
         public int Length => _count;
 
+        /// <returns>The view of the blittable that the positions of the items are relative to</returns>
+        internal BlittableJsonReaderObject.View GetView(out int offsetSize)
+        {
+            AssertContextNotDisposed();
+
+            offsetSize = (int)_currentOffsetSize;
+            return _parent.GetView();
+        }
+
         public override string ToString()
         {
             if (_parent._mem == null)

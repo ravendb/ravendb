@@ -28,7 +28,7 @@ namespace Sparrow.Json
         public bool NoCache { get; set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
+        protected internal static int ProcessTokenPropertyFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for property ids sizes
             const BlittableJsonToken mask =
@@ -53,7 +53,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected static int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
+        protected internal static int ProcessTokenOffsetFlags(BlittableJsonToken currentType)
         {
             // process part of byte flags that responsible for offset sizes
             const BlittableJsonToken mask =
@@ -109,7 +109,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected int ReadNumber(byte* value, long sizeOfValue)
+        protected internal static int ReadNumber(byte* value, long sizeOfValue)
         {
             int returnValue = *value;
             if (sizeOfValue == sizeof(byte))

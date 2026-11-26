@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
@@ -401,7 +401,7 @@ namespace Raven.Server.Json.Sync
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
-                writer.WriteString(document.Flags.ToString());
+                Raven.Server.Json.BlittableJsonTextWriterExtensions.WriteDocumentFlags(writer, document.Flags);
             }
             if (document.Id != null)
             {
