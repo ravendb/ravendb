@@ -88,8 +88,8 @@ namespace Raven.Client.Http
                 // Do the actual deallocation. 
                 if (Allocation != null)
                 {
+                    Interlocked.Add(ref Cache._totalSize, -Allocation.SizeInBytes);
                     Cache._unmanagedBuffersPool.Return(Allocation);
-                    Interlocked.Add(ref Cache._totalSize, -Size);
                 }
                 Allocation = null;
 
@@ -251,8 +251,8 @@ namespace Raven.Client.Http
                     // about.
 
                     numberOfClearedItems++;
+                    sizeCleared += value.Allocation?.SizeInBytes ?? 0;
                     value.ReleaseRefInternal();
-                    sizeCleared += value.Size;
                 }
 
                 if (Logger.IsInfoEnabled)
