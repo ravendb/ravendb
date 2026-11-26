@@ -9,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
@@ -175,10 +176,8 @@ namespace Raven.Server.Web.System
                     if (error != null)
                     {
                         JsonNode errorNode = null;
-                        if (responseString != null)
-                        {
-                            JsonNode.Parse(responseString).AsObject().TryGetPropertyValue("Error", out errorNode);
-                        }
+                        if (TryParseJsonObject(responseString, out JsonObject errorResponse))
+                            errorResponse.TryGetPropertyValue("Error", out errorNode);
 
                         await using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
@@ -878,6 +877,23 @@ namespace Raven.Server.Web.System
                 return;
 
             throw new AuthorizationException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
+        }
+
+        private static bool TryParseJsonObject(string json, out JsonObject result)
+        {
+            result = null;
+            if (string.IsNullOrWhiteSpace(json))
+                return false;
+
+            try
+            {
+                result = JsonNode.Parse(json) as JsonObject;
+            }
+            catch (JsonException)
+            {
+            }
+
+            return result != null;
         }
 
         private static string GeneralDomainRegistrationError = "Registration error.";
