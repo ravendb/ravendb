@@ -121,7 +121,7 @@ describe("toMigrateDto", () => {
         data.server.apiKey = "key";
         data.server.userName = "user";
 
-        const dto = toMigrateDto(data, version("V7", 71000), noRestrictions);
+        const dto = toMigrateDto(data, version("V35", 35000), noRestrictions);
 
         expect(dto.ApiKey).toBe("key");
         expect(dto.UserName).toBeNull();
@@ -162,7 +162,7 @@ describe("toMigrateDto defaults", () => {
         data.server.domain = "corp";
         data.server.apiKey = "key";
 
-        const dto = toMigrateDto(data, version("V7", 71000), noRestrictions);
+        const dto = toMigrateDto(data, version("V35", 35000), noRestrictions);
 
         expect([dto.UserName, dto.Password, dto.Domain, dto.ApiKey]).toEqual(["user", "pass", "corp", null]);
     });

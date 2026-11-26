@@ -5,6 +5,8 @@ import {
     transformScriptSchema,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
+export type AuthenticationMethod = "none" | "apiKey" | "windows";
+
 export const serverUrlSchema = yup.string().required().basicUrl();
 
 const serverSchema = yup.object({
@@ -12,16 +14,21 @@ const serverSchema = yup.object({
     isSkipServerCertificateValidation: yup.boolean(),
     databaseName: yup.string().required(),
     isImportRavenFs: yup.boolean(),
-    authenticationMethod: yup.mixed<"none" | "apiKey" | "windows">(),
-    userName: yup.string().when("authenticationMethod", { is: "windows", then: (schema) => schema.required() }),
-    password: yup.string().when("authenticationMethod", { is: "windows", then: (schema) => schema.required() }),
+    authenticationMethod: yup.mixed<AuthenticationMethod>(),
+    userName: yup
+        .string()
+        .when("$effectiveAuthenticationMethod", { is: "windows", then: (schema) => schema.required() }),
+    password: yup
+        .string()
+        .when("$effectiveAuthenticationMethod", { is: "windows", then: (schema) => schema.required() }),
     domain: yup.string(),
-    apiKey: yup.string().when("authenticationMethod", { is: "apiKey", then: (schema) => schema.required() }),
+    apiKey: yup.string().when("$effectiveAuthenticationMethod", { is: "apiKey", then: (schema) => schema.required() }),
     isEnableBasicAuthenticationOverUnsecuredHttp: yup.boolean(),
 });
 
 export interface MigrateRavenDbValidationContext {
     isRavenFsImport: boolean;
+    effectiveAuthenticationMethod: AuthenticationMethod;
 }
 
 const processingSchema = transformScriptSchema.when("$isRavenFsImport", {

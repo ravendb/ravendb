@@ -6,7 +6,7 @@ import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
 import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import { MigrateRavenDbFormData, serverUrlSchema } from "./migrateRavenDbValidation";
-import { SourceServerVersion } from "./migrateVersionSupport";
+import { SourceServerVersion, getEffectiveAuthenticationMethod } from "./migrateVersionSupport";
 
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 type RemoteServerBuildInfoArgs = ConstructorParameters<typeof getRemoteServerVersionWithDatabasesCommand>[0];
@@ -57,8 +57,25 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
     const [result, setResult] = useState<DetectionResult | null>(null);
     const latestRequestId = useRef(0);
 
-    const isWindows = authenticationMethod === "windows";
-    const isApiKey = authenticationMethod === "apiKey";
+    const isDetectable = canDetect && serverUrlSchema.isValidSync(serverUrl);
+    const current = isDetectable && result?.url === serverUrl ? result : null;
+    const info = current?.info && current.info.MajorVersion !== "Unknown" ? current.info : null;
+
+    const version = useMemo<SourceServerVersion | null>(
+        () =>
+            info && {
+                majorVersion: info.MajorVersion,
+                buildVersion: info.BuildVersion,
+                productVersion: info.ProductVersion,
+                fullVersion: info.FullVersion,
+            },
+        [info]
+    );
+
+    // credentials go only to a source already detected as legacy, the first detection works without them
+    const effectiveAuthenticationMethod = getEffectiveAuthenticationMethod(authenticationMethod, version);
+    const isWindows = effectiveAuthenticationMethod === "windows";
+    const isApiKey = effectiveAuthenticationMethod === "apiKey";
     const isHttps = serverUrl.toLowerCase().startsWith("https://");
 
     const requestArgs = useMemo<RemoteServerBuildInfoArgs>(
@@ -84,8 +101,6 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
             isSkipServerCertificateValidation,
         ]
     );
-
-    const isDetectable = canDetect && serverUrlSchema.isValidSync(serverUrl);
 
     const detect = useMemo(
         () =>
@@ -118,20 +133,6 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
         detect(requestArgs);
         return () => detect.cancel();
     }, [requestArgs, isDetectable, detect]);
-
-    const current = isDetectable && result?.url === serverUrl ? result : null;
-    const info = current?.info && current.info.MajorVersion !== "Unknown" ? current.info : null;
-
-    const version = useMemo<SourceServerVersion | null>(
-        () =>
-            info && {
-                majorVersion: info.MajorVersion,
-                buildVersion: info.BuildVersion,
-                productVersion: info.ProductVersion,
-                fullVersion: info.FullVersion,
-            },
-        [info]
-    );
 
     return {
         version,

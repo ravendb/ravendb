@@ -3,6 +3,7 @@ import {
     documentToggleKeys,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { ImportRestriction } from "components/pages/database/tasks/importData/shared/importRestrictions";
+import { AuthenticationMethod } from "./migrateRavenDbValidation";
 
 type MajorVersion = Raven.Server.Smuggler.Migration.MajorVersion;
 
@@ -112,4 +113,11 @@ export function getVersionToggleRestrictions(
     } satisfies ImportRestriction;
 
     return Object.fromEntries(getUnsupportedDocumentToggles(version).map((key) => [key, restriction]));
+}
+
+export function getEffectiveAuthenticationMethod(
+    authenticationMethod: AuthenticationMethod,
+    version: SourceServerVersion | null
+): AuthenticationMethod {
+    return version && isLegacyVersion(version) ? authenticationMethod : "none";
 }

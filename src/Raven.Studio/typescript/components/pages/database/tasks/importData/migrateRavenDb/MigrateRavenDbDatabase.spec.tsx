@@ -11,7 +11,7 @@ import * as stories from "./stories/MigrateRavenDbDatabase.stories";
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 type Rendered = ReturnType<typeof rtlRender>;
 
-const { Default, Sharded, NoDatabaseAdmin, NoOperator, LegacyServer, ServerError } = composeStories(stories);
+const { Default, Sharded, NoOperator, LegacyServer, ServerError } = composeStories(stories);
 
 const SERVER_URL = "http://raven-old-1:8080";
 const OTHER_SERVER_URL = "https://raven-old-2:8080";
@@ -217,26 +217,62 @@ describe("MigrateRavenDbDatabase", () => {
         expect(getSwitch(rendered, "Include Documents")).toBeDisabled();
     });
 
-    it("explains the missing database admin access on the Migrate button", async () => {
-        const { screen } = rtlRender(<NoDatabaseAdmin />);
-        const migrateButton = screen.getByRole("button", { name: /Migrate database/ });
-
-        expect(migrateButton).toBeDisabled();
-        fireEvent.mouseEnter(migrateButton.parentElement);
-        await act(() => jest.advanceTimersByTimeAsync(500));
-
-        expect(screen.getByText(/Database Admin access required/)).toBeInTheDocument();
-    });
-
-    it("skips version detection below Operator security clearance", async () => {
+    it("skips version detection and explains the missing access below Operator", async () => {
         const rendered = rtlRender(<NoOperator />);
+        const { screen } = rendered;
 
         await detectVersion(rendered);
 
         expect(
-            rendered.screen.getByText("Detecting the source server version requires Operator security clearance.")
+            screen.getByText("Detecting the source server version requires Operator security clearance.")
         ).toBeInTheDocument();
         expect(tasksMocks().getRemoteServerBuildInfo).not.toHaveBeenCalled();
+
+        const migrateButton = screen.getByRole("button", { name: /Migrate database/ });
+        expect(migrateButton).toBeDisabled();
+        fireEvent.mouseEnter(migrateButton.parentElement);
+        await act(() => jest.advanceTimersByTimeAsync(500));
+        expect(screen.getByText(/Database Admin access required/)).toBeInTheDocument();
+    });
+
+    it("sends no credentials to a new url until it is detected as a legacy source", async () => {
+        const rendered = rtlRender(<LegacyServer />);
+        const { screen, fillInput, fireClick } = rendered;
+        await detectVersion(rendered);
+        expect(await screen.findByDisplayValue("3.5 (build: 35286)")).toBeInTheDocument();
+        await fireClick(screen.getByRole("tab", { name: "API Key" }));
+        await fillInput(screen.getByLabelText("API Key"), "migration/s3cr3t-k3y");
+        await act(() => jest.advanceTimersByTimeAsync(700));
+
+        await detectVersion(rendered, OTHER_SERVER_URL);
+
+        expect(tasksMocks().getRemoteServerBuildInfo).toHaveBeenLastCalledWith(
+            expect.objectContaining({ serverUrl: OTHER_SERVER_URL, apiKey: "", userName: "", password: "" })
+        );
+    });
+
+    it("migrates RavenFS from a legacy source with only the server section", async () => {
+        const rendered = rtlRender(<LegacyServer />);
+        const { screen, fillInput, fireClick } = rendered;
+        await detectVersion(rendered);
+        expect(await screen.findByDisplayValue("3.5 (build: 35286)")).toBeInTheDocument();
+
+        await fireClick(screen.getByLabelText("RavenFS"));
+        await fillInput(screen.getByRole("combobox", { name: "File system name" }), "Files");
+
+        expect(screen.queryByText("Data to import")).not.toBeInTheDocument();
+        const migrateButton = screen.getByRole("button", { name: /Migrate database/ });
+        await waitFor(() => expect(migrateButton).toBeEnabled());
+        await fireClick(migrateButton);
+
+        const { migrateRavenDbDatabase } = tasksMocks();
+        await waitFor(() => expect(migrateRavenDbDatabase).toHaveBeenCalledTimes(1));
+        const [, dto] = migrateRavenDbDatabase.mock.calls[0];
+        expect(dto.MigrationSettings).toMatchObject({
+            DatabaseName: "Files",
+            ImportRavenFs: true,
+            OperateOnTypes: "None",
+        });
     });
 
     it("shows the feature as not available on a sharded database", () => {

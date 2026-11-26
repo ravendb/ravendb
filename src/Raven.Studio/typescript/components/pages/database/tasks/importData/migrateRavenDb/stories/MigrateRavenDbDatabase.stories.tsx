@@ -107,12 +107,8 @@ export const Sharded: Story = {
     args: { isSharded: true },
 };
 
-export const NoDatabaseAdmin: Story = {
-    args: { securityClearance: "ValidUser", databaseAccess: "DatabaseReadWrite" },
-};
-
 export const NoOperator: Story = {
-    args: { securityClearance: "ValidUser" },
+    args: { securityClearance: "ValidUser", databaseAccess: "DatabaseReadWrite" },
 };
 
 export const LegacyServer: Story = {

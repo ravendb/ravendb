@@ -9,7 +9,12 @@ import {
     getDefaultImportOptions,
 } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import { MigrateRavenDbFormData } from "./migrateRavenDbValidation";
-import { SourceServerVersion, getMigratableDocumentToggles, isLegacyVersion } from "./migrateVersionSupport";
+import {
+    SourceServerVersion,
+    getEffectiveAuthenticationMethod,
+    getMigratableDocumentToggles,
+    isLegacyVersion,
+} from "./migrateVersionSupport";
 
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
 type DatabaseRecordItemType = Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
@@ -117,8 +122,9 @@ export function toMigrateDto(
         operateOnTypes.push("None");
     }
 
-    const isApiKey = server.authenticationMethod === "apiKey";
-    const isWindows = server.authenticationMethod === "windows";
+    const authenticationMethod = getEffectiveAuthenticationMethod(server.authenticationMethod, version);
+    const isApiKey = authenticationMethod === "apiKey";
+    const isWindows = authenticationMethod === "windows";
     const isHttps = server.serverUrl.toLowerCase().startsWith("https://");
 
     return {

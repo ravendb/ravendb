@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FieldErrors, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -35,6 +35,7 @@ import {
 } from "./migrateRavenDbValidation";
 import { getDefaultMigrateFormData, hasAnyMigrateInclude } from "./migrateRavenDbUtils";
 import {
+    getEffectiveAuthenticationMethod,
     getUnsupportedVersionReason,
     getVersionToggleRestrictions,
     getVisibleDocumentToggles,
@@ -72,6 +73,7 @@ function MigrateRavenDbForm() {
     const restrictions = useImportRestrictions();
     const [validationContext, setValidationContext] = useState<MigrateRavenDbValidationContext>({
         isRavenFsImport: false,
+        effectiveAuthenticationMethod: "none",
     });
 
     const form = useForm<MigrateRavenDbFormData, MigrateRavenDbValidationContext>({
@@ -80,24 +82,24 @@ function MigrateRavenDbForm() {
         context: validationContext,
         defaultValues: withRestrictedDefaults(getDefaultMigrateFormData(isAdminAccessOrAbove), restrictions),
     });
-    const { control, setValue, trigger } = form;
+    const { control } = form;
 
     const serverInfo = useRemoteServerInfo(control, canDetect);
     const { version } = serverInfo;
     const isLegacy = !!version && isLegacyVersion(version);
-    const isImportRavenFs = useWatch({ control, name: "server.isImportRavenFs" });
+    const [isImportRavenFs, authenticationMethod] = useWatch({
+        control,
+        name: ["server.isImportRavenFs", "server.authenticationMethod"],
+    });
     const isRavenFsImport = isLegacy && isImportRavenFs;
-    if (validationContext.isRavenFsImport !== isRavenFsImport) {
-        setValidationContext({ isRavenFsImport });
+    const effectiveAuthenticationMethod = getEffectiveAuthenticationMethod(authenticationMethod, version);
+    // the context depends on the detected version, which needs the form's control, so it is stored after useForm
+    if (
+        validationContext.isRavenFsImport !== isRavenFsImport ||
+        validationContext.effectiveAuthenticationMethod !== effectiveAuthenticationMethod
+    ) {
+        setValidationContext({ isRavenFsImport, effectiveAuthenticationMethod });
     }
-
-    // a 4.x+ source has no legacy authentication, so a method picked for a 3.x source must not reach its request, validation or DTO
-    useEffect(() => {
-        if (version && !isLegacyVersion(version)) {
-            setValue("server.authenticationMethod", "none");
-            trigger(["server.userName", "server.password", "server.apiKey"]);
-        }
-    }, [version, setValue, trigger]);
 
     const versionRestrictions = useMemo(() => getVersionToggleRestrictions(version), [version]);
 
@@ -124,7 +126,6 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
     const { forCurrentDatabase } = useAppUrls();
     const form = useFormContext<MigrateRavenDbFormData>();
     const { control, handleSubmit, formState } = form;
-    const canMigrateByAccess = useAppSelector(accessManagerSelectors.getCanHandleOperation)("DatabaseAdmin");
     const restrictedKeys = useMigrateRestrictedKeys();
     const { migrate } = useMigrateOperation();
 
@@ -138,8 +139,7 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
 
     const hasInclude = !version || hasAnyMigrateInclude({ server, documents, configuration }, version, restrictedKeys);
     const isUnauthorizedLegacy = isLegacy && !isAuthorized;
-    const canMigrate =
-        !!version && !error && !isUnauthorizedLegacy && hasInclude && canMigrateByAccess && !formState.isSubmitting;
+    const canMigrate = !!version && !error && !isUnauthorizedLegacy && hasInclude && !formState.isSubmitting;
 
     const onInvalidSubmit = (errors: FieldErrors<MigrateRavenDbFormData>) => {
         const sectionId = getSectionIdForErrorPath(getFirstErrorPath(errors) ?? "", ERROR_FIELD_TARGETS);
