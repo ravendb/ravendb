@@ -73,7 +73,7 @@ namespace FastTests.Server.Documents
                 for (int i = warmup; i < ids.Length; i++)
                     database.DocumentsStorage.Put(context, ids[i], null, documents[i]);
 
-                AssertAtMost(2_600, "DocumentsStorage.Put, new document with revisions", (double)(GC.GetAllocatedBytesForCurrentThread() - before) / count);
+                AssertAtMost(2_100, "DocumentsStorage.Put, new document with revisions", (double)(GC.GetAllocatedBytesForCurrentThread() - before) / count);
             }
         }
 

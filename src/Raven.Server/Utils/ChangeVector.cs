@@ -307,6 +307,14 @@ public sealed class ChangeVector
 
         static bool TryRemoveIdsInternal(string changeVector, HashSet<string> ids, out string newChangeVector)
         {
+            // an entry's database id is a substring of the change vector, so without any of the ids in it there is
+            // nothing to remove, and nothing to parse
+            if (changeVector != null && ContainsAnyId(changeVector, ids) == false)
+            {
+                newChangeVector = changeVector;
+                return false;
+            }
+
             var entries = changeVector.ToChangeVectorList();
             if (entries.RemoveAll(x => ids.Contains(x.DbId)) > 0)
             {
@@ -324,10 +332,30 @@ public sealed class ChangeVector
         if (IsNullOrEmpty)
             return this;
 
+        // StripTags(string, ...) returns the same string when there is no such tag, then this change vector is the result
         if (string.IsNullOrEmpty(_changeVector) == false)
-            return context.GetChangeVector(StripTags(_changeVector, tag, exclude));
+        {
+            var stripped = StripTags(_changeVector, tag, exclude);
+            return ReferenceEquals(stripped, _changeVector) ? this : context.GetChangeVector(stripped);
+        }
 
-        return context.GetChangeVector(StripTags(Version._changeVector, tag, exclude), StripTags(Order._changeVector, tag, exclude));
+        var strippedVersion = StripTags(Version._changeVector, tag, exclude);
+        var strippedOrder = StripTags(Order._changeVector, tag, exclude);
+        if (ReferenceEquals(strippedVersion, Version._changeVector) && ReferenceEquals(strippedOrder, Order._changeVector))
+            return this;
+
+        return context.GetChangeVector(strippedVersion, strippedOrder);
+    }
+
+    private static bool ContainsAnyId(string changeVector, HashSet<string> ids)
+    {
+        foreach (var id in ids)
+        {
+            if (id != null && changeVector.Contains(id, StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
     public ChangeVector StripMoveTag(IChangeVectorOperationContext context) => StripTags(ChangeVectorParser.MoveTag, exclude: null, context);
