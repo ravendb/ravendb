@@ -23,8 +23,6 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using Raven.Server.Documents.Replication;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -48,6 +46,10 @@ namespace Raven.Server.Documents.Revisions
             _prefixedHashScope = prefixedHashScope;
         }
 
+        internal ByteStringContext.InternalScope BufferScope => _bufferScope;
+
+        internal ByteStringContext.ExternalScope PrefixedHashScope => _prefixedHashScope;
+
         public void Dispose()
         {
             _prefixedHashScope.Dispose();
@@ -62,21 +64,23 @@ namespace Raven.Server.Documents.Revisions
         internal const int EtagSumPrefixRawSize = 2;
         internal const int RevisionKeySize = EtagSumPrefixRawSize + RevisionKeyHashSize;
 
-        // Parse cv.Version into entries. strict=true throws on empty/malformed (write paths must fail loud); strict=false returns null and downstream short-circuits to a guaranteed-miss PK.
-        private static List<ChangeVectorEntry> ParseVersionEntries(ReadOnlySpan<byte> versionBytes, bool strict)
+        private const int MaxStackVersionEntries = 32;
+
+        // Hashes the entries ordered by (DbId, Etag) ordinal, the way the revision keys are stored: the etag as a long, then the
+        // characters of the DbId as UTF-16
+        private static unsafe long HashParsedVersionEntries(byte* state, Span<ParsedChangeVectorEntry> entries)
         {
-            string version = Encoding.UTF8.GetString(versionBytes);
-            try
+            entries.Sort();
+
+            long sum = 0;
+            foreach (ref readonly var entry in entries)
             {
-                List<ChangeVectorEntry> entries = version.ToChangeVectorList();
-                if (entries == null && strict)
-                    throw new ArgumentException("Cannot build a revision key from an empty change vector.");
-                return entries;
+                sum += entry.Etag;
+                ComputeHttpEtags.HashNumber(state, entry.Etag);
+                ComputeHttpEtags.HashChangeVector(state, entry.DbId);
             }
-            catch when (strict == false)
-            {
-                return null;
-            }
+
+            return sum;
         }
 
         // One External slice view over a 24B alloc: prefixedHashSlice [0..24) = base64([u16 BE etag-sum][Blake2b-128]).
@@ -87,15 +91,48 @@ namespace Raven.Server.Documents.Revisions
             out Slice prefixedHashSlice,
             bool strict = true)
         {
+            // strict=true throws on an empty or malformed version (write paths must fail loud), strict=false gives an empty slice,
+            // a guaranteed-miss PK
             ReadOnlySpan<byte> versionBytes = rawChangeVectorSlice.AsReadOnlySpan();
-
-            var entries = ParseVersionEntries(versionBytes, strict);
-            if (entries == null)
+            if (versionBytes.IsEmpty)
             {
+                if (strict)
+                    throw new ArgumentException("Cannot build a revision key from an empty change vector.");
+
                 prefixedHashSlice = Slices.Empty;
                 return default;
             }
 
+            var maxEntries = ChangeVectorParser.MaxUtf8Entries(versionBytes.Length);
+            ParsedChangeVectorEntry[] rented = null;
+            Span<ParsedChangeVectorEntry> entries = maxEntries <= MaxStackVersionEntries
+                ? stackalloc ParsedChangeVectorEntry[MaxStackVersionEntries]
+                : rented = ArrayPool<ParsedChangeVectorEntry>.Shared.Rent(maxEntries);
+            try
+            {
+                int count;
+                try
+                {
+                    count = ChangeVectorParser.ParseUtf8(versionBytes, entries);
+                }
+                catch when (strict == false)
+                {
+                    prefixedHashSlice = Slices.Empty;
+                    return default;
+                }
+
+                Debug.Assert(count >= 0, "The buffer holds the most entries a version of this size can have");
+                return ComputeRevisionKey(allocator, entries.Slice(0, count), out prefixedHashSlice);
+            }
+            finally
+            {
+                if (rented != null)
+                    ArrayPool<ParsedChangeVectorEntry>.Shared.Return(rented);
+            }
+        }
+
+        private static unsafe RevisionKeyHashScope ComputeRevisionKey(ByteStringContext allocator, Span<ParsedChangeVectorEntry> entries, out Slice prefixedHashSlice)
+        {
             ByteStringContext.InternalScope bufferScope = allocator.Allocate(RevisionKeySize, out ByteString buf);
             try
             {
@@ -106,13 +143,7 @@ namespace Raven.Server.Documents.Revisions
                 if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, Blake2bHashSize) != 0)
                     ComputeHttpEtags.ThrowFailToInitHash();
 
-                var sum = 0L;
-                foreach (var entry in entries.Order())
-                {
-                    sum += entry.Etag;
-                    ComputeHttpEtags.HashNumber(state, entry.Etag);
-                    ComputeHttpEtags.HashChangeVector(state, entry.DbId);
-                }
+                var sum = HashParsedVersionEntries(state, entries);
 
                 var hash = stackalloc byte[Blake2bHashSize + EtagSumPrefixRawSize];
                 Span<byte> hashSpan = new(hash, Blake2bHashSize + EtagSumPrefixRawSize);

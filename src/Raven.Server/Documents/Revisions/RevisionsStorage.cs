@@ -652,6 +652,10 @@ namespace Raven.Server.Documents.Revisions
                 revisionsToDelete = GetAllRevisions(context, table, lowerIdPrefix,
                     maxDeletesUponUpdate: null, shouldSkip: null, result);
             }
+            else if (KeepsAllRevisions(configuration, result.PreviousCount))
+            {
+                revisionsToDelete = Array.Empty<Document>();
+            }
             else
             {
                 revisionsToDelete = GetRevisionsForCollectionOrDefault(context, table, lowerIdPrefix,
@@ -773,6 +777,14 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
+        private static bool KeepsAllRevisions(RevisionsCollectionConfiguration configuration, long revisionsCount)
+        {
+            if (configuration.MinimumRevisionsToKeep.HasValue == false)
+                return configuration.MinimumRevisionAgeToKeep.HasValue == false;
+
+            return revisionsCount - configuration.MinimumRevisionsToKeep.Value <= 0;
+        }
+
         private IEnumerable<Document> GetRevisionsForCollectionOrDefault(
             DocumentsOperationContext context, Table table,
             Slice prefixSlice,
@@ -817,41 +829,11 @@ namespace Raven.Server.Documents.Revisions
             var position = new RevisionsScanPosition();
             try
             {
-                while (numberOfRevisionsToDelete > deleted) // checked before seeking again
+                while (numberOfRevisionsToDelete > deleted &&
+                       TryReadNextRevisionToDelete(context, table, prefixSlice, configuration, stopWhenReachingAge, ref position, out var revision))
                 {
-                    var ended = true;
-                    foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], position.SeekStart(prefixSlice), prefixSlice, skip: 0))
-                    {
-                        if (position.IsLast(read.Key))
-                            continue;
-
-                        var tvr = read.Result.Reader;
-                        var revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
-
-                        if (configuration.MinimumRevisionAgeToKeep.HasValue &&
-                            _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
-                        {
-                            revision.Dispose();
-
-                            if (stopWhenReachingAge)
-                                break;
-
-                            // we haven't deleted anything, so we can keep using the same iterator instead of starting over
-                            continue;
-                        }
-
-                        // the caller deletes revisions between passes, so the next pass seeks again, from here
-                        position.Remember(context.Allocator, read.Key);
-                        yield return revision;
-
-                        deleted++;
-
-                        ended = false;
-                        break;
-                    }
-
-                    if (ended)
-                        break;
+                    yield return revision;
+                    deleted++;
                 }
             }
             finally
@@ -864,13 +846,46 @@ namespace Raven.Server.Documents.Revisions
                                                                                        // (in the last delete we probably deletes the initialRevisionsCount%maxUponUpdate, which is probably less then maxUponUpdate).
         }
 
+        // a separate method, so the seek enumerator is not a field of the iterator above, which every put allocates
+        private bool TryReadNextRevisionToDelete(DocumentsOperationContext context, Table table, Slice prefixSlice, RevisionsCollectionConfiguration configuration,
+            bool stopWhenReachingAge, ref RevisionsScanPosition position, out Document revision)
+        {
+            foreach (var read in table.SeekForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], position.SeekStart(prefixSlice), prefixSlice, skip: 0))
+            {
+                if (position.IsLast(read.Key))
+                    continue;
+
+                var tvr = read.Result.Reader;
+                revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId);
+
+                if (configuration.MinimumRevisionAgeToKeep.HasValue &&
+                    _database.Time.GetUtcNow() - revision.LastModified <= configuration.MinimumRevisionAgeToKeep.Value)
+                {
+                    revision.Dispose();
+
+                    if (stopWhenReachingAge)
+                        break;
+
+                    // we haven't deleted anything, so we can keep using the same iterator instead of starting over
+                    continue;
+                }
+
+                // the caller deletes the revision before the next call, which seeks again from here
+                position.Remember(context.Allocator, read.Key);
+                return true;
+            }
+
+            revision = null;
+            return false;
+        }
+
         private long DeleteRevisionsInternal(DocumentsOperationContext context, Table table, Slice lowerIdPrefix, CollectionName collectionName,
             ChangeVector changeVector, long lastModifiedTicks,
             IEnumerable<Document> revisionsToRemove,
             DeleteOldRevisionsResult result,
             DocumentFlags tombstoneFlags)
         {
-            var writeTables = new Dictionary<string, Table>();
+            Dictionary<string, Table> writeTables = null;
             long maxEtagDeleted = 0;
             var deleted = 0L;
 
@@ -887,6 +902,7 @@ namespace Raven.Server.Documents.Revisions
                 }
 
                 maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevisionToDelete.Etag);
+                writeTables ??= [];
                 DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
 
                 deleted++;
@@ -906,6 +922,7 @@ namespace Raven.Server.Documents.Revisions
                 if (skipLast == false)
                 {
                     maxEtagDeleted = Math.Max(maxEtagDeleted, lastRevisionToDelete.Etag);
+                    writeTables ??= [];
                     DeleteRevisionFromTable(context, table, writeTables, lastRevisionToDelete, collectionName, changeVector, lastModifiedTicks, tombstoneFlags);
                     deleted++;
                     UpdateRevisionCountsByOne(context, lastRevisionToDelete.Flags, lowerIdPrefix, table, lastRevisionToDelete.Etag, increment: false);

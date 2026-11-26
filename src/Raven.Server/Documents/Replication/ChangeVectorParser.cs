@@ -1,7 +1,10 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -31,7 +34,9 @@ namespace Raven.Server.Documents.Replication
             return ParseNodeTag(nodeTag, 0, nodeTag.Length - 1);
         }
 
-        public static int ParseNodeTag(string changeVector, int start, int end)
+        public static int ParseNodeTag(string changeVector, int start, int end) => ParseNodeTag(changeVector.AsSpan(), start, end);
+
+        private static int ParseNodeTag(ReadOnlySpan<char> changeVector, int start, int end)
         {
             AssertValidNodeTagChar(changeVector[end]);
 
@@ -58,7 +63,9 @@ namespace Raven.Server.Documents.Replication
             throw new ArgumentException("Invalid node tag character: " + ch);
         }
 
-        private static long ParseEtag(string changeVector, int start, int end)
+        private static long ParseEtag(string changeVector, int start, int end) => ParseEtag(changeVector.AsSpan(), start, end);
+
+        private static long ParseEtag(ReadOnlySpan<char> changeVector, int start, int end)
         {
             long etag = changeVector[start] - '0';
 
@@ -76,6 +83,88 @@ namespace Raven.Server.Documents.Replication
                 return null;
 
             var list = new List<ChangeVectorEntry>();
+            var entries = new EntryListSink(list);
+            ParseEntries(changeVector.AsSpan(), ref entries);
+            return list;
+        }
+
+        // every entry has a '-' and the 22 characters of its database id
+        private const int MinEntrySize = 1 + ParsedChangeVectorEntry.DbIdSize;
+        private const int MaxStackChars = 1024;
+
+        // the most entries a change vector of utf8Length bytes can have, a buffer of that many holds all that ParseUtf8 reads
+        public static int MaxUtf8Entries(int utf8Length) => utf8Length / MinEntrySize + 1;
+
+        [SkipLocalsInit]
+        public static int ParseUtf8(ReadOnlySpan<byte> changeVector, Span<ParsedChangeVectorEntry> entries)
+        {
+            if (changeVector.IsEmpty)
+                return 0;
+
+            var maxChars = Encoding.UTF8.GetMaxCharCount(changeVector.Length);
+            char[] rented = null;
+            Span<char> chars = maxChars <= MaxStackChars
+                ? stackalloc char[MaxStackChars]
+                : rented = ArrayPool<char>.Shared.Rent(maxChars);
+            try
+            {
+                var length = Encoding.UTF8.GetChars(changeVector, chars);
+                var sink = new ParsedEntriesSink(entries);
+                ParseEntries(chars.Slice(0, length), ref sink);
+                return sink.Overflow ? -1 : sink.Count;
+            }
+            finally
+            {
+                if (rented != null)
+                    ArrayPool<char>.Shared.Return(rented);
+            }
+        }
+
+        private ref struct ParsedEntriesSink(Span<ParsedChangeVectorEntry> entries) : IEntrySink
+        {
+            private readonly Span<ParsedChangeVectorEntry> _entries = entries;
+            public int Count;
+            public bool Overflow;
+
+            public void Add(int tag, long etag, scoped ReadOnlySpan<char> dbId)
+            {
+                if (Count == _entries.Length)
+                {
+                    Overflow = true;
+                    return;
+                }
+
+                ref var entry = ref _entries[Count++];
+                entry.Etag = etag;
+                entry.NodeTag = tag;
+                dbId.CopyTo(entry.DbId);
+            }
+        }
+
+        private readonly struct EntryListSink(List<ChangeVectorEntry> list) : IEntrySink
+        {
+            public void Add(int tag, long etag, scoped ReadOnlySpan<char> dbId)
+            {
+                list.Add(new ChangeVectorEntry
+                {
+                    NodeTag = tag,
+                    Etag = etag,
+                    DbId = dbId.ToString()
+                });
+            }
+        }
+
+        /// <summary>
+        /// Receives the entries of <see cref="ParseEntries{TSink}"/>, the database id is valid only during the call.
+        /// </summary>
+        private interface IEntrySink
+        {
+            void Add(int tag, long etag, scoped ReadOnlySpan<char> dbId);
+        }
+
+        private static void ParseEntries<TSink>(scoped ReadOnlySpan<char> changeVector, ref TSink sink)
+            where TSink : struct, IEntrySink, allows ref struct
+        {
             var start = 0;
             var current = 0;
             var state = State.Tag;
@@ -100,12 +189,7 @@ namespace Raven.Server.Documents.Replication
                             var etag = ParseEtag(changeVector, start, current - 1);
                             if (current + DbBase64IdSize > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
-                            list.Add(new ChangeVectorEntry
-                            {
-                                NodeTag = tag,
-                                Etag = etag,
-                                DbId = changeVector.Substring(current + 1, 22)
-                            });
+                            sink.Add(tag, etag, changeVector.Slice(current + 1, 22));
                             start = current + DbBase64IdSize;
                             current = start;
                             state = State.Whitespace;
@@ -133,11 +217,8 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            if (state == State.Whitespace)
-                return list;
-
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
-            return null; // never hit
+            if (state != State.Whitespace)
+                ThrowInvalidEndOfString(state.ToString(), changeVector);
         }
 
         public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
@@ -342,5 +423,11 @@ namespace Raven.Server.Documents.Replication
         {
             throw new ArgumentOutOfRangeException(state + " in " + cv);
         }
+
+        [DoesNotReturn]
+        private static void ThrowInvalidEndOfString(string state, ReadOnlySpan<char> cv) => ThrowInvalidEndOfString(state, new string(cv));
+
+        [DoesNotReturn]
+        private static void ThrowInvalidState(State state, ReadOnlySpan<char> cv) => ThrowInvalidState(state, new string(cv));
     }
 }

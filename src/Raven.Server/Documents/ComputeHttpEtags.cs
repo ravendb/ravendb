@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -195,6 +195,11 @@ namespace Raven.Server.Documents
                 HashNumber(state, 0);
                 return;
             }
+            HashChangeVector(state, changeVector.AsSpan());
+        }
+
+        internal static unsafe void HashChangeVector(byte* state, ReadOnlySpan<char> changeVector)
+        {
             fixed (char* pCV = changeVector)
             {
                 if (Sodium.crypto_generichash_update(state, (byte*)pCV, (ulong)(sizeof(char) * changeVector.Length)) != 0)
