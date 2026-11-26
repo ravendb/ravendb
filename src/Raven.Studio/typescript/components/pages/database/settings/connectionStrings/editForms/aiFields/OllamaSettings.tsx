@@ -18,6 +18,9 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import TemperatureField from "./TemperatureField";
+import OptionalLabel from "components/common/OptionalLabel";
+import ChatApiField from "./ChatApiField";
+import ReasoningEffortField from "./ReasoningEffortField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -40,6 +43,9 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             Uri: formValues.ollamaSettings.uri,
             Think: formValues.ollamaSettings.think,
             Temperature: formValues.ollamaSettings.isSetTemperature ? formValues.ollamaSettings.temperature : null,
+            ApiKey: formValues.modelType === "Chat" ? formValues.ollamaSettings.apiKey : null,
+            ReasoningEffort: formValues.modelType === "Chat" ? formValues.ollamaSettings.reasoningEffort : null,
+            ChatApi: formValues.modelType === "Chat" ? formValues.ollamaSettings.chatApi : null,
         };
         return isServerWide
             ? tasksService.testServerWideAiConnectionString("Ollama", formValues.modelType, settings)
@@ -49,6 +55,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
     const asyncGetModelOptions = useAsyncDebounce(
         async () => {
             const uri = formValues.ollamaSettings.uri?.trim() ?? "";
+            const apiKey = formValues.modelType === "Chat" ? formValues.ollamaSettings.apiKey?.trim() : null;
 
             if (!uri) {
                 return [];
@@ -59,6 +66,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 OllamaSettings: {
                     Uri: uri,
                     Think: formValues.ollamaSettings.think,
+                    ApiKey: apiKey,
                 },
             };
 
@@ -69,7 +77,12 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 return [];
             }
         },
-        [formValues.ollamaSettings.uri, formValues.ollamaSettings.think],
+        [
+            formValues.ollamaSettings.uri,
+            formValues.ollamaSettings.think,
+            formValues.ollamaSettings.apiKey,
+            formValues.modelType,
+        ],
         300
     );
 
@@ -84,6 +97,17 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </FormLabel>
                 <FormInput control={control} name="ollamaSettings.uri" type="text" />
             </div>
+            {formValues.modelType === "Chat" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        API Key <OptionalLabel />
+                        <PopoverWithHoverWrapper message="The API key sent as a Bearer token with chat requests, for an Ollama server behind an authenticating proxy. A local Ollama server does not need one.">
+                            <Icon icon="info" color="info" id="apiKey" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput control={control} name="ollamaSettings.apiKey" type="password" passwordPreview />
+                </div>
+            )}
             <div className="mb-2">
                 <FormLabel>
                     Model
@@ -100,6 +124,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     isLoading={asyncGetModelOptions.loading}
                 />
             </div>
+            <ChatApiField baseName="ollamaSettings" defaultDescription="Chat Completions." />
 
             {formValues.modelType === "Chat" && (
                 <div className="mb-2">
@@ -145,6 +170,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     <FormSelect control={control} name="ollamaSettings.think" options={thinkOptions} />
                 </div>
             )}
+            <ReasoningEffortField baseName="ollamaSettings" />
             <TemperatureField baseName="ollamaSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}
             <div className="d-flex mb-2">

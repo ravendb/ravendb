@@ -2,10 +2,12 @@ import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./ConnectionStrings.stories";
 import { rtlRender_WithWaitForLoad, within } from "test/rtlTestUtils";
+import { mockServices } from "test/mocks/services/MockServices";
 
-const { DefaultConnectionStrings } = composeStories(stories);
+const { DefaultConnectionStrings, AiChatConnectionString } = composeStories(stories);
 
 const selectors = {
+    testConnection: /test connection/i,
     edit: /edit connection string/i,
     delete: /delete connection string/i,
     addNew: /add new/i,
@@ -74,6 +76,28 @@ describe("ConnectionStrings", () => {
 
             expect(within(currentAiCell).getByText(/\d/, { selector: "sup" })).toHaveAccessibleDescription(
                 availableConnectors
+            );
+        }
+    );
+
+    it.each(["OpenAi", "AzureOpenAi", "Ollama"] satisfies Raven.Client.Documents.Operations.AI.AiConnectorType[])(
+        "tests the %s connection with the API key, chosen chat API and reasoning effort",
+        async (connectorType) => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(
+                <AiChatConnectionString connectorType={connectorType} />
+            );
+
+            await fireClick(screen.getByRole("button", { name: selectors.edit }));
+
+            expect(await screen.findByText("Chat Completions")).toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: selectors.testConnection }));
+
+            expect(mockServices.tasksService.mock.testAiConnectionString).toHaveBeenCalledWith(
+                expect.any(String),
+                connectorType,
+                "Chat",
+                expect.objectContaining({ ApiKey: "api-key", ChatApi: "ChatCompletions", ReasoningEffort: "high" })
             );
         }
     );
