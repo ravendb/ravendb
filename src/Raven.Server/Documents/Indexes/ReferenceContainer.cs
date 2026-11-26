@@ -1,102 +1,137 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Sparrow;
+using System;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes;
 
 public sealed class ReferenceContainer
 {
+    private static readonly Comparison<Slice> CompareSlices = SliceComparer.Compare;
+
     private ReferenceContainer _inverted;
-    private readonly Dictionary<Slice, int> _posById;
-    private readonly List<List<Slice>> _values;
-    private readonly List<Slice> _keys;
+    private Slice[] _keys;
+    private Slice[] _values;
+    private int _count;
 
-    public ReferenceContainer()
+    public ReferenceContainer() : this(16)
     {
-        _posById = new Dictionary<Slice, int>(SliceComparer.Instance);
-        _values = new List<List<Slice>>(1);
-        _keys = new List<Slice>(1);
     }
-    
-    public List<Slice> GetOrCreateValuesContainer(Slice key)
-    {
-        ref var valuesIdx = ref CollectionsMarshal.GetValueRefOrAddDefault(_posById, key, out var exists);
-        if (exists) 
-            return _values[valuesIdx];
-        
-        valuesIdx = _values.Count;
-        var container = new List<Slice>(1); 
-        _values.Add(container);
-        _keys.Add(key);
-        return container;
 
+    private ReferenceContainer(int capacity)
+    {
+        _keys = capacity == 0 ? [] : new Slice[capacity];
+        _values = capacity == 0 ? [] : new Slice[capacity];
+    }
+
+    public void Add(Slice key, Slice value)
+    {
+        if (_count == _keys.Length)
+            EnsureCapacity(Math.Max(_count + 1, _keys.Length * 2));
+
+        _keys[_count] = key;
+        _values[_count] = value;
+        _count++;
+    }
+
+    private void EnsureCapacity(int capacity)
+    {
+        if (_keys.Length >= capacity)
+            return;
+
+        Array.Resize(ref _keys, capacity);
+        Array.Resize(ref _values, capacity);
     }
 
     public void Clear()
     {
-        _posById.Clear();
-        _values.Clear();
-        _keys.Clear();
+        _count = 0;
         _inverted?.Clear();
     }
 
     public void PrepareForIndexing(out ReferenceContainer inverted)
     {
-        _inverted ??= new ReferenceContainer();
-        _inverted.Clear();
-        inverted = _inverted;
-        foreach (var (key, valuesIdx) in _posById)
-        {
-            var values = _values[valuesIdx];
-            foreach (var value in values)
-            {
-                _inverted.GetOrCreateValuesContainer(value).Add(key);
-            }
-        }
-        
         SortKeysAndValuesWithDeduplication();
+
+        _inverted ??= new ReferenceContainer(0);
+        _inverted.Clear();
+        _inverted.EnsureCapacity(_count);
+
+        for (int i = 0; i < _count; i++)
+            _inverted.Add(_values[i], _keys[i]);
+
         _inverted.SortKeysAndValuesWithDeduplication();
+        inverted = _inverted;
     }
 
     private void SortKeysAndValuesWithDeduplication()
     {
-        CollectionsMarshal.AsSpan(_keys).Sort(CollectionsMarshal.AsSpan(_values),SliceComparer.Instance);
-        foreach (var values in _values)
+        if (_count == 0)
+            return;
+
+        var keys = _keys.AsSpan(0, _count);
+        var values = _values.AsSpan(0, _count);
+        keys.Sort(values, SliceComparer.Instance);
+
+        // every key's values are sorted and deduplicated in place, the output never overtakes the input
+        int outputIdx = 0;
+        int start = 0;
+        while (start < keys.Length)
         {
-            if (values.Count <= 1)
-                continue;
-            
-            var valuesAsSpan = CollectionsMarshal.AsSpan(values);
-            valuesAsSpan.Sort(SliceComparer.Instance);
-            
-            int outputIdx = 0;
-                    
-            for (int i = 1; i < valuesAsSpan.Length; i++)
+            var key = keys[start];
+            int end = start + 1;
+            while (end < keys.Length && SliceComparer.Equals(keys[end], key))
+                end++;
+
+            var keyValues = values[start..end];
+            if (keyValues.Length > 1)
+                keyValues.Sort(CompareSlices);
+
+            int firstOutputOfKey = outputIdx;
+            for (int i = start; i < end; i++)
             {
-                if (SliceComparer.Equals(valuesAsSpan[i], valuesAsSpan[outputIdx]) is false)
-                {
-                    valuesAsSpan[++outputIdx] = valuesAsSpan[i];
-                }
+                if (outputIdx > firstOutputOfKey && SliceComparer.Equals(values[i], values[outputIdx - 1]))
+                    continue;
+
+                keys[outputIdx] = key;
+                values[outputIdx] = values[i];
+                outputIdx++;
             }
-            
-            CollectionsMarshal.SetCount(values, outputIdx + 1);
+
+            start = end;
         }
+
+        _count = outputIdx;
     }
 
+    // Valid after PrepareForIndexing, which groups the values of each key together
     public Enumerator GetEnumerator() => new Enumerator(this);
-        
+
     public ref struct Enumerator(ReferenceContainer container)
     {
         private readonly ReferenceContainer _container = container;
-        private int _current = -1;
+        private int _start;
+        private int _end;
 
-        public bool MoveNext() => ++_current < _container._values.Count;
-        public Slice CurrentKey => _container._keys[_current];
-        public Span<Slice> CurrentValues => CollectionsMarshal.AsSpan(_container._values[_current]);
-        public List<Slice> CurrentValuesAsList => _container._values[_current];
-        public void Reset() => _current = -1;
+        public bool MoveNext()
+        {
+            _start = _end;
+            if (_start >= _container._count)
+                return false;
+
+            var key = _container._keys[_start];
+            _end = _start + 1;
+            while (_end < _container._count && SliceComparer.Equals(_container._keys[_end], key))
+                _end++;
+
+            return true;
+        }
+
+        public Slice CurrentKey => _container._keys[_start];
+        public Span<Slice> CurrentValues => _container._values.AsSpan(_start, _end - _start);
+
+        public void Reset()
+        {
+            _start = 0;
+            _end = 0;
+        }
     }
-    
 }

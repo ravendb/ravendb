@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Static;
@@ -58,7 +58,7 @@ public class HandleNotNormalizedDocumentReferences : HandleDocumentReferences
         {
             foreach (var keyToRemove in CurrentIndexingScope.Current.ReferencesToDelete)
             {
-                referencesStorage.RemoveReferences(keyToRemove, collection, null, indexContext.Transaction);
+                referencesStorage.RemoveReferences(keyToRemove, collection, indexContext.Transaction);
                 keyToRemove.Release(databaseContext.Allocator);
             }
         }

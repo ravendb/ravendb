@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -619,7 +620,7 @@ namespace Raven.Server.Documents.Indexes
         public sealed class DocumentReferences : ReferencesBase
         {
             public DocumentReferences()
-                : base(IndexSchema.References, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix, ReferencesType.Documents)
+                : base(IndexSchema.ReferencesSlice, Constants.DocumentReferencePrefix, Constants.DocumentReferenceTombstonePrefix, Constants.DocumentReferenceCollectionPrefix, ReferencesType.Documents)
             {
             }
         }
@@ -629,18 +630,23 @@ namespace Raven.Server.Documents.Indexes
             public static CollectionName CompareExchange = new CollectionName(nameof(CompareExchange));
 
             public CompareExchangeReferences()
-                : base(IndexSchema.ReferencesForCompareExchange, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix, ReferencesType.CompareExchange)
+                : base(IndexSchema.ReferencesForCompareExchangeSlice, Constants.CompareExchangeReferencePrefix, Constants.CompareExchangeReferenceTombstonePrefix, Constants.CompareExchangeReferenceCollectionPrefix, ReferencesType.CompareExchange)
             {
             }
         }
 
         public abstract class ReferencesBase
         {
-            private readonly string _referenceTreeName;
+            private readonly Slice _referenceTreeName;
             private readonly string _referencePrefix;
             private readonly string _referenceTombstonePrefix;
             private readonly string _referenceCollectionPrefix;
             private readonly ReferencesType _type;
+            private readonly ConcurrentDictionary<string, string> _collectionTreeNames = new();
+
+            // used only under the write transaction of the index, which is exclusive
+            private List<Slice> _referenceKeysToRemove = new();
+            private const int MaxRetainedReferenceKeys = 1024;
 
             public enum ReferencesType
             {
@@ -648,9 +654,9 @@ namespace Raven.Server.Documents.Indexes
                 CompareExchange
             }
 
-            protected ReferencesBase(string referencesTreeName, string referencePrefix, string referenceTombstonePrefix, string referenceCollectionPrefix, ReferencesType type)
+            protected ReferencesBase(Slice referencesTreeName, string referencePrefix, string referenceTombstonePrefix, string referenceCollectionPrefix, ReferencesType type)
             {
-                _referenceTreeName = referencesTreeName ?? throw new ArgumentNullException(nameof(referencesTreeName));
+                _referenceTreeName = referencesTreeName;
                 _referencePrefix = referencePrefix ?? throw new ArgumentNullException(nameof(referencePrefix));
                 _referenceTombstonePrefix = referenceTombstonePrefix ?? throw new ArgumentNullException(nameof(referenceTombstonePrefix));
                 _referenceCollectionPrefix = referenceCollectionPrefix ?? throw new ArgumentNullException(nameof(referenceCollectionPrefix));
@@ -743,9 +749,14 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
+            private string GetCollectionTreeName(string collection)
+            {
+                return _collectionTreeNames.GetOrAdd(collection, static (name, prefix) => prefix + name, _referenceCollectionPrefix);
+            }
+
             public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx, string lastItemId = null)
             {
-                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
+                var collectionTree = tx.InnerTransaction.ReadTree(GetCollectionTreeName(collection));
                 if (collectionTree == null)
                     yield break;
 
@@ -773,39 +784,62 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public void RemoveReferences(Slice key, string collection, List<Slice> referenceKeysToSkip, RavenTransaction tx)
+            public void RemoveReferences(Slice key, string collection, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
-                List<Slice> referenceKeys;
+                if (CollectReferencesToRemove(referencesTree, key, referenceKeysToKeep: ReadOnlySpan<Slice>.Empty, tx) == false)
+                    return;
+
+                var collectionTree = tx.InnerTransaction.ReadTree(GetCollectionTreeName(collection));
+                RemoveCollectedReferences(referencesTree, collectionTree, key, tx);
+            }
+
+            // referenceKeysToKeep must be sorted by SliceComparer, the order in which MultiRead returns the references of the key
+            private bool CollectReferencesToRemove(Tree referencesTree, Slice key, ReadOnlySpan<Slice> referenceKeysToKeep, RavenTransaction tx)
+            {
+                _referenceKeysToRemove.Clear();
+
                 using (var it = referencesTree.MultiRead(key))
                 {
                     if (it.Seek(Slices.BeforeAllKeys) == false)
-                        return;
+                        return false;
 
-                    referenceKeys = new List<Slice>();
-
+                    int keepIdx = 0;
                     do
                     {
-                        if (referenceKeysToSkip == null || referenceKeysToSkip.Contains(it.CurrentKey, SliceComparer.Instance) == false)
-                            referenceKeys.Add(it.CurrentKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
+                        var referenceKey = it.CurrentKey;
+
+                        while (keepIdx < referenceKeysToKeep.Length && SliceComparer.CompareInline(referenceKeysToKeep[keepIdx], referenceKey) < 0)
+                            keepIdx++;
+
+                        if (keepIdx < referenceKeysToKeep.Length && SliceComparer.CompareInline(referenceKeysToKeep[keepIdx], referenceKey) == 0)
+                            continue;
+
+                        _referenceKeysToRemove.Add(referenceKey.Clone(tx.InnerTransaction.Allocator, ByteStringType.Immutable));
                     } while (it.MoveNext());
                 }
 
-                if (referenceKeys.Count == 0)
-                    return;
+                return _referenceKeysToRemove.Count > 0;
+            }
 
-                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
-
-                foreach (var referenceKey in referenceKeys)
+            private void RemoveCollectedReferences(Tree referencesTree, Tree collectionTree, Slice key, RavenTransaction tx)
+            {
+                foreach (var referenceKey in _referenceKeysToRemove)
                 {
                     referencesTree.MultiDelete(key, referenceKey);
                     collectionTree?.MultiDelete(referenceKey, key);
                     referenceKey.Release(tx.InnerTransaction.Allocator);
                 }
+
+                // a document with very many references must not hold a large array for the life of the index
+                if (_referenceKeysToRemove.Count > MaxRetainedReferenceKeys)
+                    _referenceKeysToRemove = [];
+                else
+                    _referenceKeysToRemove.Clear();
             }
 
-            public void RemoveReferencesByPrefix(Slice prefixKey, string collection, List<Slice> referenceKeysToSkip, RavenTransaction tx)
+            public void RemoveReferencesByPrefix(Slice prefixKey, string collection, RavenTransaction tx)
             {
                 var referencesTree = tx.InnerTransaction.ReadTree(_referenceTreeName);
 
@@ -822,7 +856,7 @@ namespace Raven.Server.Documents.Indexes
 
                         try
                         {
-                            RemoveReferences(key, collection, referenceKeysToSkip, tx);
+                            RemoveReferences(key, collection, tx);
                         }
                         finally
                         {
@@ -844,21 +878,31 @@ namespace Raven.Server.Documents.Indexes
 
             private void WriteReferencesForSingleCollectionInternal(Tree referencesTree, string collection, ReferenceContainer references, RavenTransaction tx)
             {
-                var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collection); // #collection
+                var collectionTree = tx.InnerTransaction.CreateTree(GetCollectionTreeName(collection)); // #collection
                 references.PrepareForIndexing(out var inverted);
 
-                var referencesIterator =  references.GetEnumerator();
+                var referencesIterator = references.GetEnumerator();
                 while (referencesIterator.MoveNext())
                     referencesTree.MultiBulkAdd(referencesIterator.CurrentKey, referencesIterator.CurrentValues);
 
                 var collectionIterator = inverted.GetEnumerator();
                 while (collectionIterator.MoveNext())
                     collectionTree.MultiBulkAdd(collectionIterator.CurrentKey, collectionIterator.CurrentValues);
-                
+
                 referencesIterator.Reset();
                 while (referencesIterator.MoveNext())
-                    RemoveReferences(referencesIterator.CurrentKey, collection, referencesIterator.CurrentValuesAsList, tx);
+                {
+                    var key = referencesIterator.CurrentKey;
+                    var values = referencesIterator.CurrentValues;
+
+                    // all the values were just added, so when the count matches there is nothing else stored for the key
+                    if (referencesTree.MultiCount(key) == values.Length)
+                        continue;
+
+                    if (CollectReferencesToRemove(referencesTree, key, values, tx))
+                        RemoveCollectedReferences(referencesTree, collectionTree, key, tx);
                 }
+            }
 
             public void WriteReferencesForSingleCollection(string collection, ReferenceContainer references, RavenTransaction tx)
             {
@@ -872,7 +916,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var referencesCount = referencesTree.State.Header.NumberOfEntries;
 
-                var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
+                var collectionTree = tx.InnerTransaction.ReadTree(GetCollectionTreeName(collection));
 
                 if (collectionTree != null)
                     return (referencesCount, collectionTree.State.Header.NumberOfEntries);
@@ -1429,10 +1473,16 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice CoraxComplexFieldIndexingBehavior;
 
+            public static readonly Slice ReferencesSlice;
+
+            public static readonly Slice ReferencesForCompareExchangeSlice;
+
             static IndexSchema()
             {
                 using (StorageEnvironment.GetStaticContext(out var ctx))
                 {
+                    Slice.From(ctx, References, ByteStringType.Immutable, out ReferencesSlice);
+                    Slice.From(ctx, ReferencesForCompareExchange, ByteStringType.Immutable, out ReferencesForCompareExchangeSlice);
                     Slice.From(ctx, "Type", ByteStringType.Immutable, out TypeSlice);
                     Slice.From(ctx, "DatabaseId", ByteStringType.Immutable, out DatabaseIdSlice);
                     Slice.From(ctx, "SourceType", ByteStringType.Immutable, out SourceTypeSlice);

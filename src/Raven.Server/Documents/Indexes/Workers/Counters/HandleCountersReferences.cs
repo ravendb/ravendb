@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence;
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         {
             using (DocumentIdWorker.GetLoweredIdSliceFromId(indexContext, tombstone.LowerId, out Slice documentIdPrefixWithTsKeySeparator, SpecialChars.RecordSeparator))
             using (stats.For(IndexingOperation.Storage.UpdateReferences))
-                _referencesStorage.RemoveReferencesByPrefix(documentIdPrefixWithTsKeySeparator, collection, null, indexContext.Transaction);
+                _referencesStorage.RemoveReferencesByPrefix(documentIdPrefixWithTsKeySeparator, collection, indexContext.Transaction);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             using (Slice.External(tx.Allocator, tombstone.LowerId, out Slice tombstoneKeySlice))
             using (stats.For(IndexingOperation.Storage.UpdateReferences))
-                _referencesStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
+                _referencesStorage.RemoveReferences(tombstoneKeySlice, collection, indexContext.Transaction);
         }
     }
 
