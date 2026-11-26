@@ -188,7 +188,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
                         [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                         [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(rawDatabaseRecord.DeletionInProgress),
                         [nameof(DatabaseInfo.Environment)] = studioEnvironment,
-                        [nameof(DatabaseInfo.BackupInfo)] = GetBackupInfo(databaseName, rawDatabaseRecord, database: null, ServerStore, context)
+                        [nameof(DatabaseInfo.BackupInfo)] = ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName, rawDatabaseRecord)
                     };
 
                     context.Write(writer, databaseInfoJson);
@@ -214,7 +214,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
                 IsAdmin = true,
                 IsEncrypted = rawDatabaseRecord.IsEncrypted,
                 UpTime = GetUpTime(db),
-                BackupInfo = GetBackupInfo(databaseName, rawDatabaseRecord, db, ServerStore, context),
+                BackupInfo = ServerStore.ServerBackupRunner.GetBackupInfo(context, databaseName, rawDatabaseRecord),
 
                 Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
                 PerformanceHints = db?.NotificationCenter.GetPerformanceHintCount() ?? 0,

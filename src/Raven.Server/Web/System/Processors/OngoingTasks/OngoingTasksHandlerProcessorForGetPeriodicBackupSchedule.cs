@@ -9,9 +9,9 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System.Processors.OngoingTasks;
 
-internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupTimers<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupSchedule : AbstractOngoingTasksHandlerProcessorForGetPeriodicBackupSchedule<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public OngoingTasksHandlerProcessorForGetPeriodicBackupTimers([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public OngoingTasksHandlerProcessorForGetPeriodicBackupSchedule([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -23,8 +23,8 @@ internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : A
         using (context.OpenReadTransaction())
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
-            var backups = RequestHandler.Database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
-            var result = new GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse
+            var backups = ServerStore.ServerBackupRunner.GetPeriodicBackupsInformationFor(RequestHandler.DatabaseName);
+            var result = new GetPeriodicBackupScheduleCommand.PeriodicBackupScheduleResponse
             {
                 Count = backups.Count,
                 Timers = backups
@@ -36,7 +36,7 @@ internal sealed class OngoingTasksHandlerProcessorForGetPeriodicBackupTimers : A
         }
     }
 
-    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse> command, OperationCancelToken token)
+    protected override Task HandleRemoteNodeAsync(ProxyCommand<GetPeriodicBackupScheduleCommand.PeriodicBackupScheduleResponse> command, OperationCancelToken token)
     {
         return RequestHandler.ExecuteRemoteAsync(command, token.Token);
     }

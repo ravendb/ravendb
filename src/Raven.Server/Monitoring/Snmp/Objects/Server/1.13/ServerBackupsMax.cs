@@ -14,7 +14,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             _serverStore = serverStore;
         }
 
-        private int Value => _serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups;
+        private int Value => _serverStore.ServerBackupRunner.ConcurrentBackups.MaxNumberOfConcurrentBackups;
         
         protected override Integer32 GetData()
         {

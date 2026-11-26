@@ -26,6 +26,27 @@ public partial class RavenTestBase
             _parent = parent ?? throw new ArgumentNullException(nameof(parent));
         }
 
+        public async Task<EncryptServerResult> EncryptedServerAsync(RavenServer server, TestCertificatesHolder certificates)
+        {
+            var databaseName = _parent.GetDatabaseName();
+            _parent.Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: server);
+
+            var base64Key = CreateMasterKey(out var buffer);
+            EnsureServerMasterKeyIsSetup(server);
+
+            await server.ServerStore.EnsureNotPassiveAsync().WaitAsync(TimeSpan.FromSeconds(30));
+            await server.ServerStore.LicenseManager.TryActivateLicenseAsync(server.ThrowOnLicenseActivationFailure).WaitAsync(TimeSpan.FromSeconds(30));
+
+            server.ServerStore.PutSecretKey(base64Key, databaseName, overwrite: true);
+
+            return new EncryptServerResult
+            {
+                Certificates = certificates,
+                DatabaseName = databaseName,
+                Key = Convert.ToBase64String(buffer)
+            };
+        }
+
         public async Task<EncryptServerResult> EncryptedServerAsync()
         {
             var certificates = _parent.Certificates.SetupServerAuthentication();

@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Sparrow.Logging;
+using Raven.Server.Documents.PeriodicBackup;
 using Sparrow.Server.Logging;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
-namespace Raven.Server.Documents.PeriodicBackup
+namespace Raven.Server.ServerWide.Backups
 {
     public sealed class ConcurrentBackupsCounter
     {
@@ -16,12 +14,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private readonly LicenseManager _licenseManager;
         private readonly Dictionary<string, int> _runningBackupsPerDatabase = new();
-        private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
-        private SemaphoreSlim _concurrentDatabaseWakeup;
-        private SemaphoreSlim _concurrentIdleBackupStatusUpdates;
 
         public int MaxNumberOfConcurrentBackups { get; private set; }
+
+        internal event Action<bool> RunningBackupsChanged;
 
         public int CurrentNumberOfRunningBackups
         {
@@ -51,60 +48,61 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             MaxNumberOfConcurrentBackups = numberOfCoresToUse;
-            _concurrentDatabaseWakeup = new SemaphoreSlim(numberOfCoresToUse);
-            _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(numberOfCoresToUse);
-            _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
         }
 
-        public bool CanRunBackup(string databaseName)
+        public void TakePlace(string databaseName, string backupName, RavenLogger logger)
         {
-            lock (_locker)
-            {
-                if (_runningBackupsPerDatabase.TryGetValue(databaseName, out _))
-                {
-                    //  allow to backup all shards of the same database concurrently
-                    return true;
-                }
+            if (TryTakePlace(databaseName, backupName, logger, canTakeNewPlace: true))
+                return;
 
-                return MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count >= 1;
-            }
+            throw new BackupDelayException(
+                $"Failed to start Backup Task: '{backupName}'. " +
+                $"The task exceeds the maximum number of concurrent backup tasks configured. " +
+                $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}");
         }
 
-        public void StartBackup(string databaseName, string backupName, RavenLogger logger)
+        internal bool TryTakePlace(string databaseName, string backupName, RavenLogger logger, bool canTakeNewPlace)
         {
             lock (_locker)
             {
+                // Counts databases that are backing up, not backups: all shards and tasks of one database share one place.
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups))
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups + 1;
-                    return;
+                    return true;
                 }
 
+                if (canTakeNewPlace == false)
+                    return false;
+
                 if (MaxNumberOfConcurrentBackups - _runningBackupsPerDatabase.Count <= 0)
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{backupName}'. " +
-                        $"The task exceeds the maximum number of concurrent backup tasks configured. " +
-                        $"Current maximum number of concurrent backups is: {MaxNumberOfConcurrentBackups:#,#;;0}")
-                    {
-                        DelayPeriod = _concurrentBackupsDelay
-                    };
-                }
+                    return false;
 
                 _runningBackupsPerDatabase[databaseName] = 1;
             }
 
+            RunningBackupsChanged?.Invoke(false);
+
             if (logger.IsInfoEnabled)
-                logger.Info($"Starting backup task '{backupName}'");
+                logger.Info($"Starting backup task '{backupName}' of database '{databaseName}'");
+
+            return true;
         }
 
-        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
+        internal void GiveBackPlace(string databaseName)
+        {
+            RunningBackupsChanged?.Invoke(RemoveRunningBackup(databaseName));
+        }
+
+        private bool RemoveRunningBackup(string databaseName)
         {
             lock (_locker)
             {
                 if (_runningBackupsPerDatabase.TryGetValue(databaseName, out var runningBackups) == false)
                     throw new InvalidOperationException("Tried to finish a backup which wasn't even started!");
+
+                var wasFull = _runningBackupsPerDatabase.Count >= MaxNumberOfConcurrentBackups;
 
                 if (runningBackups - 1 == 0)
                 {
@@ -114,7 +112,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     _runningBackupsPerDatabase[databaseName] = runningBackups - 1;
                 }
+
+                return wasFull && _runningBackupsPerDatabase.Count < MaxNumberOfConcurrentBackups;
             }
+        }
+
+        public void FinishBackup(string databaseName, string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, RavenLogger logger)
+        {
+            var fullLimitFreed = RemoveRunningBackup(databaseName);
+
+            RunningBackupsChanged?.Invoke(fullLimitFreed);
 
             if (logger.IsInfoEnabled)
             {
@@ -158,27 +165,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public IDisposable TryStartDatabaseForBackup()
-        {
-            return TryEnter(_concurrentDatabaseWakeup);
-        }
-
-        public IDisposable TryStartIdleBackupStatusUpdate()
-        {
-            return TryEnter(_concurrentIdleBackupStatusUpdates);
-        }
-
-        private static IDisposable TryEnter(SemaphoreSlim sm)
-        {
-            if (sm.Wait(TimeSpan.Zero) == false)
-                return null;
-
-            return new DisposableAction(() =>
-            {
-                sm.Release();
-            });
-        }
-
         public void ModifyMaxConcurrentBackups()
         {
             if (_skipModifications)
@@ -193,8 +179,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             lock (_locker)
             {
                 MaxNumberOfConcurrentBackups = newMaxConcurrentBackups;
-                _concurrentDatabaseWakeup = new SemaphoreSlim(newMaxConcurrentBackups);
-                _concurrentIdleBackupStatusUpdates = new SemaphoreSlim(newMaxConcurrentBackups);
             }
         }
 

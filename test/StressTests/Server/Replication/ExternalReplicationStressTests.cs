@@ -264,7 +264,6 @@ namespace StressTests.Server.Replication
                 foreach (var server in _nodes)
                 {
                     wakeUpReasons.Add(server.ServerStore.NodeTag, new List<string>());
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseCreation = tuple =>
                     {
                         var list = wakeUpReasons[tuple.Database.ServerStore.NodeTag];
@@ -338,7 +337,6 @@ namespace StressTests.Server.Replication
             {
                 foreach (var server in _nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                     server.ServerStore.DatabasesLandlord.ForTestingPurposes = null;
                 }
             }

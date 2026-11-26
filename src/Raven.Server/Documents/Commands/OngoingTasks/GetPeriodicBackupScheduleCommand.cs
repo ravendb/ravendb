@@ -9,9 +9,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Commands.OngoingTasks;
 
-internal sealed class GetPeriodicBackupTimersCommand : RavenCommand<GetPeriodicBackupTimersCommand.PeriodicBackupTimersResponse>
+internal sealed class GetPeriodicBackupScheduleCommand : RavenCommand<GetPeriodicBackupScheduleCommand.PeriodicBackupScheduleResponse>
 {
-    public sealed class PeriodicBackupTimersResponse
+    public sealed class PeriodicBackupScheduleResponse
     {
         public List<PeriodicBackupInfo> Timers { get; set; } = new();
 
@@ -27,7 +27,7 @@ internal sealed class GetPeriodicBackupTimersCommand : RavenCommand<GetPeriodicB
         }
     }
 
-    public GetPeriodicBackupTimersCommand(string nodeTag)
+    public GetPeriodicBackupScheduleCommand(string nodeTag)
     {
         SelectedNodeTag = nodeTag;
     }
@@ -49,6 +49,6 @@ internal sealed class GetPeriodicBackupTimersCommand : RavenCommand<GetPeriodicB
         if (response == null)
             ThrowInvalidResponse();
 
-        Result = JsonDeserializationServer.GetPeriodicBackupTimersCommandResponse(response);
+        Result = JsonDeserializationServer.GetPeriodicBackupScheduleCommandResponse(response);
     }
 }

@@ -88,8 +88,8 @@ public sealed class MetricsProvider
     private BackupMetrics GetBackupMetrics()
     {
         var result = new BackupMetrics();
-        result.MaxNumberOfConcurrentBackups = _serverStore.ConcurrentBackupsCounter.MaxNumberOfConcurrentBackups;
-        result.CurrentNumberOfRunningBackups = _serverStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups;
+        result.MaxNumberOfConcurrentBackups = _serverStore.ServerBackupRunner.ConcurrentBackups.MaxNumberOfConcurrentBackups;
+        result.CurrentNumberOfRunningBackups = _serverStore.ServerBackupRunner.ConcurrentBackups.CurrentNumberOfRunningBackups;
 
         return result;
     }
@@ -424,7 +424,7 @@ public sealed class MetricsProvider
 
         result.DatabaseId = database.DocumentsStorage.Environment.DbId.ToString();
         result.UptimeInSec = (int)(SystemTime.UtcNow - database.StartTime).TotalSeconds;
-        var lastBackup = database.PeriodicBackupRunner?.GetBackupInfo()?.LastBackup;
+        var lastBackup = database.ServerStore.ServerBackupRunner.GetBackupInfo(database.Name)?.LastBackup;
         result.TimeSinceLastBackupInSec = lastBackup.HasValue
             ? (SystemTime.UtcNow - lastBackup.Value).TotalSeconds
             : (double?)null;

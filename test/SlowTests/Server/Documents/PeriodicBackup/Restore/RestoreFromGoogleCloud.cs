@@ -29,8 +29,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public void restore_google_cloud_settings_tests()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 ModifyDatabaseName = s => $"{s}_2"
             }))
             {
@@ -60,8 +63,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (CleanupAsync())
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -72,7 +77,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(googleCloudSettings: googleCloudSettings);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
                 var id = await Backup.GetBackupOperationIdAsync(store, backupTaskId);
                 var backupResult = (await store.Maintenance.SendAsync(new GetOperationStateOperation(id))).Result as BackupResult;
                 Assert.NotNull(backupResult);
@@ -88,7 +93,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -116,8 +121,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                         Assert.Equal(200, val);
                     }
 
-                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -132,8 +137,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [GoogleCloudRetryFact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (CleanupAsync())
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -159,7 +166,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
                 var googleCloudSettings = GetGoogleCloudSettings();
                 var config = Backup.CreateBackupConfiguration(backupType: BackupType.Snapshot, googleCloudSettings: googleCloudSettings);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -172,7 +179,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 }
 
                 var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
+                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: lastEtag);
                 // restore the database with a different name
                 string databaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
 
@@ -203,8 +210,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(2, stats.CountOfIndexes);
 
-                    var originalDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    var restoredDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    var originalDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    var restoredDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                     using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {

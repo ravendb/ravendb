@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -27,13 +28,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
     {
         public ServerWideBackup(ITestOutputHelper output) : base(output)
         {
-            DoNotReuseServer();
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanAddServerWideBackupToNewDatabase()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
                 {
@@ -52,7 +54,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanStoreServerWideBackup()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -128,7 +132,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task UpdateServerWideBackupThroughUpdatePeriodicBackupFails()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -164,7 +170,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ToggleDisableServerWideBackupFails()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -190,7 +198,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ServerWideBackup_WhenToggleState_ShouldWork()
         {
-            using var store = GetDocumentStore();
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
             var disabled = true;
             var putConfiguration = new ServerWideBackupConfiguration
             {
@@ -225,7 +235,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -335,7 +347,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanCreateMoreThanOneServerWideBackup()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -388,7 +402,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task DeleteServerWideBackup_WhenDoesntExit_ShouldBeHandledProperly()
         {
-            var server = GetNewServer();
+            DoNotReuseServer();
+            using var server = GetNewServer();
             using var store = GetDocumentStore(new Options{Server = server});
 
             const string nonExistentTaskName = "NonExistentTask";
@@ -415,7 +430,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanDeleteServerWideBackup()
         {
-            using (var store = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var putConfiguration = new ServerWideBackupConfiguration
                 {
@@ -468,9 +485,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideBackup1()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration1 = new ServerWideBackupConfiguration
                 {
@@ -490,8 +509,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "0 2 * * 1"
                 };
 
-                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration1, store);
-                await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration2, store);
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(server, serverWideBackupConfiguration1, store);
+                await Backup.UpdateServerWideConfigAsync(server, serverWideBackupConfiguration2, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -523,15 +542,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
                 // new server should have only 0 backups
-                var server = GetNewServer();
-                await server.ServerStore.EnsureNotPassiveAsync();
+                var server2 = GetNewServer();
+                await server2.ServerStore.EnsureNotPassiveAsync();
 
                 using (Databases.EnsureDatabaseDeletion(databaseName, store))
                 using (var store2 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName,
-                    Server = server
+                    Server = server2
                 }))
                 {
                     await (await store2.Maintenance.Server.SendAsync(restoreOperation))
@@ -549,11 +568,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(EncryptionMode.UseDatabaseKey)]
         public async Task ServerWideBackupShouldBeEncryptedForEncryptedDatabase(EncryptionMode encryptionMode)
         {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
+            var result = await Encryption.EncryptedServerAsync(server, certificates);
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -597,7 +620,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         throw new ArgumentOutOfRangeException(nameof(encryptionMode), encryptionMode, null);
                 }
 
-                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(server, serverWideBackupConfiguration, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -643,9 +666,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideBackup2()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
                 {
@@ -667,7 +692,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // save another backup task in the database record
                 var backupConfiguration = Backup.CreateBackupConfiguration(fullBackupFrequency: "0 2 * * 0", incrementalBackupFrequency: "0 2 * * 1", disabled: true);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(backupConfiguration));
-                var status = await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: true);
+                var status = await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: true);
 
                 string backupDirectory = status.LocalBackup.BackupDirectory;
 
@@ -700,13 +725,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // new server should have only one backup
-                var server = GetNewServer();
-                await server.ServerStore.EnsureNotPassiveAsync();
+                var server2 = GetNewServer();
+                await server2.ServerStore.EnsureNotPassiveAsync();
                 using (var store3 = GetDocumentStore(new Options
                 {
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName,
-                    Server = server
+                    Server = server2
                 }))
                 {
                     await (await store3.Maintenance.Server.SendAsync(restoreOperation))
@@ -721,10 +746,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CantCreateServerWideBackupWithExistingNameButCanEdit()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupName = "TestServerWideBackup";
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            
-            using (var store = GetDocumentStore())
+
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
                 {
@@ -771,9 +798,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExcludeDatabase()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
                 {
@@ -811,9 +840,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExcludeForNewDatabase()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var newDbName = store.Database + "-testDatabase";
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
@@ -858,10 +889,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 serverWideBackupConfiguration.ExcludedDatabases = null;
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var tasks = Server.ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, serverWideBackupConfiguration.Name).ToList();
+                    var tasks = server.ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, serverWideBackupConfiguration.Name).ToList();
                     Assert.Equal(1, tasks.Count);
 
                     tasks[0].TryGet(nameof(ServerWideBackupConfiguration.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases);
@@ -883,9 +914,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FailToAddNullOrEmptyDatabaseNames()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
                 {
@@ -930,9 +963,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanCreateSnapshotBackupForNonEncryptedDatabase()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var serverWideBackupConfiguration = new ServerWideBackupConfiguration
                 {
@@ -951,7 +986,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 };
 
-                var backupTaskId = await Backup.UpdateServerWideConfigAsync(Server, serverWideBackupConfiguration, store);
+                var backupTaskId = await Backup.UpdateServerWideConfigAsync(server, serverWideBackupConfiguration, store);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
 
@@ -1003,11 +1038,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(10)]
         public async Task ServerWideBackup_WhenEditingName_ShouldNotCreateNewOne(int additionalBackupCount)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             const string firstName = "FirstName";
             const string changedName = "changedName";
-            
-            using var store = GetDocumentStore();
-            
+
+            using var store = GetDocumentStore(new Options { Server = server });
+
             var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
             {
                 FullBackupFrequency = "0 2 * * 0",
@@ -1057,11 +1094,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ServerWideBackup_WhenEditingNameWithOldTaskId_ShouldThrow()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             const string firstName = "FirstName";
             const string changedName = "changedName";
-            
-            using var store = GetDocumentStore();
-            
+
+            using var store = GetDocumentStore(new Options { Server = server });
+
             var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
             {
                 FullBackupFrequency = "0 2 * * 0",

@@ -31,7 +31,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.OngoingTasks
 
             var _ = t.ContinueWith(_ =>
             {
-                token.Dispose();
+                try
+                {
+                    ServerStore.ServerBackupRunner.ConcurrentBackups.FinishBackup(OriginalDatabaseName, backupName, backupStatus: null, sw.Elapsed, Logger);
+                }
+                finally
+                {
+                    token.Dispose();
+                }
             });
         }
 

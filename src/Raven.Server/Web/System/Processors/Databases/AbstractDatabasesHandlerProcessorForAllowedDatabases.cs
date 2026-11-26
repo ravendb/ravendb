@@ -10,7 +10,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -37,32 +36,6 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
     protected override Task HandleRemoteNodeAsync(ProxyCommand<TResult> command, JsonOperationContext context, OperationCancelToken token)
     {
         return RequestHandler.ServerStore.ClusterRequestExecutor.ExecuteAsync(command, context, token: token.Token);
-    }
-
-    protected static BackupInfo GetBackupInfo(string databaseName, RawDatabaseRecord record, DocumentDatabase database, ServerStore serverStore, ClusterOperationContext context)
-    {
-        if (database == null)
-        {
-            var periodicBackups = new List<PeriodicBackup>();
-
-            foreach (var periodicBackupConfiguration in record.PeriodicBackups)
-            {
-                periodicBackups.Add(new PeriodicBackup
-                {
-                    Configuration = periodicBackupConfiguration,
-                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)
-                });
-            }
-
-            return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
-            {
-                PeriodicBackups = periodicBackups,
-                DatabaseName = databaseName,
-                Context = context
-            });
-        }
-
-        return database.PeriodicBackupRunner.GetBackupInfo(context);
     }
 
     protected static TimeSpan? GetUpTime(DocumentDatabase database)
