@@ -110,6 +110,15 @@ public class JsonStringHelperTests(ITestOutputHelper output) : NoDisposalNeeded(
     }
 
     [RavenFact(RavenTestCategory.Certificates)]
+    public void ReadsNumbersAndBooleansIntoStringsLikeNewtonsoft()
+    {
+        const string json = "{\"Id\":12345,\"Ratio\":1.5,\"Enabled\":true,\"Disabled\":false,\"Missing\":null,\"Text\":\"a\"}";
+
+        Assert.Equal(JsonConvert.DeserializeObject<Dictionary<string, string>>(json), JsonStringHelper.Deserialize<Dictionary<string, string>>(json));
+        Assert.Equal("12345", JsonStringHelper.Deserialize<RegistrationResult>("{\"Status\":12345}").Status);
+    }
+
+    [RavenFact(RavenTestCategory.Certificates)]
     public void LetsEncryptAccountCacheWrittenByNewtonsoftIsReadBack()
     {
         Type cacheType = typeof(LetsEncryptClient).GetNestedType("RegistrationCache", BindingFlags.NonPublic);
