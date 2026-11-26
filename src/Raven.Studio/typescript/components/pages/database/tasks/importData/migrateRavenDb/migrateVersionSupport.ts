@@ -3,7 +3,7 @@ import {
     documentToggleKeys,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { ImportRestriction } from "components/pages/database/tasks/importData/shared/importRestrictions";
-import { AuthenticationMethod } from "./migrateRavenDbValidation";
+import { AuthenticationMethod } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
 
 type MajorVersion = Raven.Server.Smuggler.Migration.MajorVersion;
 
@@ -14,15 +14,17 @@ export interface SourceServerVersion {
     fullVersion: string;
 }
 
-const NEVER_MIGRATED_TOGGLES: readonly DocumentToggleKey[] = [
+const NEVER_MIGRATED_TOGGLES = [
     "isIncludeArtificialDocuments",
     "isIncludeArchivedDocuments",
     "isIncludeExpiredDocuments",
     "isIncludeDocumentsTombstones",
     "isIncludeCompareExchangeTombstones",
-];
+] as const satisfies readonly DocumentToggleKey[];
 
-const LEGACY_UNSUPPORTED_TOGGLES: readonly DocumentToggleKey[] = [
+export type MigrateDocumentToggleKey = Exclude<DocumentToggleKey, (typeof NEVER_MIGRATED_TOGGLES)[number]>;
+
+const LEGACY_UNSUPPORTED_TOGGLES: readonly MigrateDocumentToggleKey[] = [
     "isIncludeAttachments",
     "isIncludeCounters",
     "isIncludeTimeSeries",
@@ -32,15 +34,17 @@ const LEGACY_UNSUPPORTED_TOGGLES: readonly DocumentToggleKey[] = [
     "isIncludeSubscriptions",
 ];
 
-export const MIGRATE_DOCUMENT_TOGGLES: readonly DocumentToggleKey[] = documentToggleKeys.filter(
-    (key) => !NEVER_MIGRATED_TOGGLES.includes(key)
+const NEVER_MIGRATED_TOGGLE_SET = new Set<DocumentToggleKey>(NEVER_MIGRATED_TOGGLES);
+
+const MIGRATE_DOCUMENT_TOGGLES = documentToggleKeys.filter(
+    (key): key is MigrateDocumentToggleKey => !NEVER_MIGRATED_TOGGLE_SET.has(key)
 );
 
 export function isLegacyVersion(version: SourceServerVersion): boolean {
     return version.majorVersion === "V30" || version.majorVersion === "V35";
 }
 
-export function isBuildAtLeast(version: SourceServerVersion, major: number, minor: number): boolean {
+function isBuildAtLeast(version: SourceServerVersion, major: number, minor: number): boolean {
     if (isLegacyVersion(version)) {
         return false;
     }
@@ -48,25 +52,34 @@ export function isBuildAtLeast(version: SourceServerVersion, major: number, mino
     return buildVersion >= major * 10000 + minor * 1000 || (buildVersion >= major * 10 + minor && buildVersion <= 99);
 }
 
-export function getUnsupportedDocumentToggles(version: SourceServerVersion): DocumentToggleKey[] {
+// mirrors the Importer on the server: deleted ranges came with 5.4.201 and 6.0.105
+function hasTimeSeriesDeletedRanges(buildVersion: number): boolean {
+    const isUnsupported =
+        (buildVersion >= 40_000 && buildVersion <= 54_133) ||
+        (buildVersion >= 60_000 && buildVersion <= 60_035) ||
+        (buildVersion >= 40 && buildVersion < 54);
+    return !isUnsupported;
+}
+
+export function getUnsupportedDocumentToggles(version: SourceServerVersion): MigrateDocumentToggleKey[] {
     if (isLegacyVersion(version)) {
         return [...LEGACY_UNSUPPORTED_TOGGLES];
     }
 
-    const unsupported: DocumentToggleKey[] = [];
+    const unsupported: MigrateDocumentToggleKey[] = [];
     if (!isBuildAtLeast(version, 4, 2)) {
         unsupported.push("isIncludeCounters");
     }
     if (!isBuildAtLeast(version, 5, 0)) {
         unsupported.push("isIncludeTimeSeries");
     }
-    if (!isBuildAtLeast(version, 6, 0)) {
+    if (!hasTimeSeriesDeletedRanges(version.buildVersion)) {
         unsupported.push("isIncludeTimeSeriesDeletedRanges");
     }
     return unsupported;
 }
 
-export function getMigratableDocumentToggles(version: SourceServerVersion): DocumentToggleKey[] {
+export function getMigratableDocumentToggles(version: SourceServerVersion): MigrateDocumentToggleKey[] {
     const unsupported = getUnsupportedDocumentToggles(version);
     return MIGRATE_DOCUMENT_TOGGLES.filter(
         (key) => !unsupported.includes(key) && (key !== "isIncludeLegacyAttachments" || isLegacyVersion(version))
@@ -94,7 +107,7 @@ export function getUnsupportedVersionReason(version: SourceServerVersion): strin
     return `Not supported by source server version ${formatServerVersion(version)}`;
 }
 
-export function getVisibleDocumentToggles(version: SourceServerVersion | null): DocumentToggleKey[] {
+export function getVisibleDocumentToggles(version: SourceServerVersion | null): MigrateDocumentToggleKey[] {
     const isLegacy = !!version && isLegacyVersion(version);
     return MIGRATE_DOCUMENT_TOGGLES.filter((key) => key !== "isIncludeLegacyAttachments" || isLegacy);
 }

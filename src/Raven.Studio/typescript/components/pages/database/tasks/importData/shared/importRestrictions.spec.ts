@@ -3,8 +3,8 @@ import {
     databaseSettingRules,
     ongoingTaskRules,
     resolveRestriction,
-} from "./importRestrictions";
-import { ongoingTaskKeys } from "./importOptionsValidation";
+} from "components/pages/database/tasks/importData/shared/importRestrictions";
+import { ongoingTaskKeys } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 const fullLicense = LicenseStubs.getStatus();

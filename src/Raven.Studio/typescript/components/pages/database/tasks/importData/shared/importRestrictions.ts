@@ -6,7 +6,7 @@ import {
     DocumentToggleKey,
     OngoingTaskKey,
     ongoingTaskKeys,
-} from "./importOptionsValidation";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import {
     connectionStringIcons,
     connectionStringLabels,
@@ -14,8 +14,8 @@ import {
     databaseSettingLabels,
     ongoingTaskIcons,
     ongoingTaskLabels,
-} from "./importLabels";
-import IconName from "../../../../../../../typings/server/icons";
+} from "components/pages/database/tasks/importData/shared/importLabels";
+import IconName from "typings/server/icons";
 import { mergeCapabilities, OngoingTaskTarget } from "components/pages/database/tasks/shared/ongoingTaskCapabilities";
 
 type LicenseStatusKey = keyof LicenseStatus;

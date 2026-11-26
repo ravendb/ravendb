@@ -6,10 +6,14 @@ import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
-import RestrictedSwitch from "./RestrictedSwitch";
-import { getLicenseLimitWarning } from "./importLicenseLimits";
-import { DocumentToggleKey, documentToggleKeys, ImportOptionsFormData } from "./importOptionsValidation";
-import { useImportRestrictions } from "./useImportRestrictions";
+import RestrictedSwitch from "components/pages/database/tasks/importData/shared/RestrictedSwitch";
+import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
+import {
+    DocumentToggleKey,
+    documentToggleKeys,
+    ImportOptionsFormData,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 
 interface DocumentsToImportCardProps {
     visibleToggles?: readonly DocumentToggleKey[];

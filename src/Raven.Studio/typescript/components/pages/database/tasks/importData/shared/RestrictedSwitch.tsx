@@ -6,8 +6,11 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import { FormSwitch } from "components/common/Form";
-import { ImportOptionsFormData, ImportOptionsFormPath } from "./importOptionsValidation";
-import { ImportRestriction } from "./importRestrictions";
+import {
+    ImportOptionsFormData,
+    ImportOptionsFormPath,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportRestriction } from "components/pages/database/tasks/importData/shared/importRestrictions";
 
 interface RestrictedSwitchProps {
     control: Control<ImportOptionsFormData>;

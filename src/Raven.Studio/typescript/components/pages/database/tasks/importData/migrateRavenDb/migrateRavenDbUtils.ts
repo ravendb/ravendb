@@ -1,20 +1,20 @@
 import {
     ConnectionStringKey,
     DatabaseSettingKey,
-    DocumentToggleKey,
     OngoingTaskKey,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import {
     getDatabaseRecordTypes,
     getDefaultImportOptions,
 } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
-import { MigrateRavenDbFormData } from "./migrateRavenDbValidation";
+import { MigrateRavenDbFormData } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
 import {
+    MigrateDocumentToggleKey,
     SourceServerVersion,
     getEffectiveAuthenticationMethod,
     getMigratableDocumentToggles,
     isLegacyVersion,
-} from "./migrateVersionSupport";
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
 
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;
 type DatabaseRecordItemType = Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
@@ -26,7 +26,7 @@ export interface RestrictedKeys {
     connectionStrings: ConnectionStringKey[];
 }
 
-const DOCUMENT_TOGGLE_ITEM_TYPES: Partial<Record<DocumentToggleKey, DatabaseItemType>> = {
+const DOCUMENT_TOGGLE_ITEM_TYPES: Record<MigrateDocumentToggleKey, DatabaseItemType> = {
     isIncludeDocuments: "Documents",
     isIncludeConflicts: "Conflicts",
     isIncludeRevisions: "RevisionDocuments",
@@ -38,8 +38,6 @@ const DOCUMENT_TOGGLE_ITEM_TYPES: Partial<Record<DocumentToggleKey, DatabaseItem
     isIncludeTimeSeriesDeletedRanges: "TimeSeriesDeletedRanges",
     isIncludeSubscriptions: "Subscriptions",
 };
-
-const NO_RESTRICTIONS: RestrictedKeys = { settings: [], tasks: [], connectionStrings: [] };
 
 function getMigrateRecordTypes(
     data: Pick<MigrateRavenDbFormData, "configuration">,
@@ -75,7 +73,7 @@ export function getDefaultMigrateFormData(isAdminAccessOrAbove: boolean): Migrat
 export function hasAnyMigrateInclude(
     data: Pick<MigrateRavenDbFormData, "server" | "documents" | "configuration">,
     version: SourceServerVersion,
-    restricted: RestrictedKeys = NO_RESTRICTIONS
+    restricted: RestrictedKeys
 ): boolean {
     const isLegacy = isLegacyVersion(version);
     if (isLegacy && data.server.isImportRavenFs) {
@@ -103,7 +101,7 @@ export function toMigrateDto(
 
     const databaseRecordTypes = getMigrateRecordTypes(data, version, restricted);
 
-    const operateOnTypes: string[] = [];
+    const operateOnTypes: DatabaseItemType[] = [];
     if (!isImportRavenFs) {
         if (databaseRecordTypes.length) {
             operateOnTypes.push("DatabaseRecord");

@@ -21,12 +21,16 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
-import { MigrateRavenDbFormData } from "./migrateRavenDbValidation";
-import { formatServerVersion, isLegacyVersion } from "./migrateVersionSupport";
-import { RemoteServerInfo } from "./useRemoteServerInfo";
-import { SELECT_SERVER_SECTION } from "./migrateRavenDbNav";
-
-type AuthenticationMethod = MigrateRavenDbFormData["server"]["authenticationMethod"];
+import {
+    AuthenticationMethod,
+    MigrateRavenDbFormData,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
+import {
+    formatServerVersion,
+    isLegacyVersion,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
+import { RemoteServerInfo } from "components/pages/database/tasks/importData/migrateRavenDb/useRemoteServerInfo";
+import { SELECT_SERVER_SECTION } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbNav";
 
 interface SelectServerSectionProps {
     serverInfo: RemoteServerInfo;
@@ -60,7 +64,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
             <Card className="p-4 mb-4">
                 {!canDetect && (
                     <RichAlert variant="info" className="mb-3">
-                        Detecting the source server version requires Operator security clearance.
+                        Migrating requires Operator security clearance (needed to detect the source server version).
                     </RichAlert>
                 )}
                 <FormGroup>
@@ -128,7 +132,12 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                                 </FormGroup>
                                 <FormGroup>
                                     <FormLabel>Password</FormLabel>
-                                    <FormInput control={control} name="server.password" type="password" />
+                                    <FormInput
+                                        control={control}
+                                        name="server.password"
+                                        type="password"
+                                        autoComplete="off"
+                                    />
                                 </FormGroup>
                                 <FormGroup>
                                     <FormLabel>Domain</FormLabel>
@@ -145,7 +154,12 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                             <>
                                 <FormGroup>
                                     <FormLabel>API Key</FormLabel>
-                                    <FormInput control={control} name="server.apiKey" type="password" />
+                                    <FormInput
+                                        control={control}
+                                        name="server.apiKey"
+                                        type="password"
+                                        autoComplete="off"
+                                    />
                                 </FormGroup>
                                 {hasUnsecuredBasicAuthOption && lowerCaseUrl.startsWith("http://") && (
                                     <FormGroup>
@@ -167,7 +181,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         control={control}
                         name="server.databaseName"
                         aria-label={resourceLabel}
-                        placeholder="e.g. Northwind"
+                        placeholder={isRavenFsImport ? "e.g. FileSystem1" : "e.g. Northwind"}
                         options={toOptions(isRavenFsImport ? fileSystemNames : databaseNames)}
                     />
                     {isLegacy && !isAuthorized && (

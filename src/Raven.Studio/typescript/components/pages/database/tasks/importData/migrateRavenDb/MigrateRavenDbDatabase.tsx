@@ -14,6 +14,7 @@ import ImportPageLayout from "components/pages/database/tasks/importData/shared/
 import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
 import DocumentsToImportCard from "components/pages/database/tasks/importData/shared/DocumentsToImportCard";
 import ConfigurationToImportSection from "components/pages/database/tasks/importData/shared/ConfigurationToImportSection";
+import { getItemsToWarnAbout } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import TransformScriptCard from "components/pages/database/tasks/importData/shared/TransformScriptCard";
 import { useImportPageScroll } from "components/pages/database/tasks/importData/shared/useImportPageScroll";
 import {
@@ -32,19 +33,32 @@ import {
     MigrateRavenDbFormData,
     MigrateRavenDbValidationContext,
     migrateRavenDbYupResolver,
-} from "./migrateRavenDbValidation";
-import { getDefaultMigrateFormData, hasAnyMigrateInclude } from "./migrateRavenDbUtils";
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
+import {
+    getDefaultMigrateFormData,
+    hasAnyMigrateInclude,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbUtils";
 import {
     getEffectiveAuthenticationMethod,
     getUnsupportedVersionReason,
     getVersionToggleRestrictions,
     getVisibleDocumentToggles,
     isLegacyVersion,
-} from "./migrateVersionSupport";
-import { RemoteServerInfo, useRemoteServerInfo } from "./useRemoteServerInfo";
-import { useMigrateOperation, useMigrateRestrictedKeys } from "./useMigrateOperation";
-import { ERROR_FIELD_TARGETS, SECTION_NAV, SELECT_SERVER_SECTION } from "./migrateRavenDbNav";
-import SelectServerSection from "./SelectServerSection";
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
+import {
+    RemoteServerInfo,
+    useRemoteServerInfo,
+} from "components/pages/database/tasks/importData/migrateRavenDb/useRemoteServerInfo";
+import {
+    useMigrateOperation,
+    useMigrateRestrictedKeys,
+} from "components/pages/database/tasks/importData/migrateRavenDb/useMigrateOperation";
+import {
+    ERROR_FIELD_TARGETS,
+    SECTION_NAV,
+    SELECT_SERVER_SECTION,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbNav";
+import SelectServerSection from "components/pages/database/tasks/importData/migrateRavenDb/SelectServerSection";
 
 export default function MigrateRavenDbDatabase() {
     const isSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded;
@@ -138,6 +152,7 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
     const scroll = useImportPageScroll(navItems);
 
     const hasInclude = !version || hasAnyMigrateInclude({ server, documents, configuration }, version, restrictedKeys);
+    const itemsToWarnAbout = getItemsToWarnAbout({ documents });
     const isUnauthorizedLegacy = isLegacy && !isAuthorized;
     const canMigrate = !!version && !error && !isUnauthorizedLegacy && hasInclude && !formState.isSubmitting;
 
@@ -185,6 +200,12 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
                 <fieldset disabled={!version} className={classNames({ "item-disabled": !version })}>
                     <ImportSection<MigrateRavenDbFormData> id="data-to-import" title="Data to import">
                         <DocumentsToImportCard visibleToggles={getVisibleDocumentToggles(version)} />
+                        {itemsToWarnAbout.length > 0 && (
+                            <Alert variant="warning" className="mt-3 mb-0">
+                                <Icon icon="warning" color="warning" /> You are migrating {itemsToWarnAbout.join(", ")}{" "}
+                                data without including the Documents.
+                            </Alert>
+                        )}
                     </ImportSection>
                     <ConfigurationToImportSection
                         unsupportedReason={isLegacy ? getUnsupportedVersionReason(version) : undefined}

@@ -1,5 +1,9 @@
-import IconName from "../../../../../../../typings/server/icons";
-import { ConnectionStringKey, DatabaseSettingKey, OngoingTaskKey } from "./importOptionsValidation";
+import IconName from "typings/server/icons";
+import {
+    ConnectionStringKey,
+    DatabaseSettingKey,
+    OngoingTaskKey,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
 export const databaseSettingLabels: Record<DatabaseSettingKey, string> = {
     settings: "Settings",

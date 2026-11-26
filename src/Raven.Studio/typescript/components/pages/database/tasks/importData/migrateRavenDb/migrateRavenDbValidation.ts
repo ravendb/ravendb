@@ -36,7 +36,7 @@ const processingSchema = transformScriptSchema.when("$isRavenFsImport", {
     then: (schema) => schema.shape({ transformScript: yup.string() }),
 });
 
-export const migrateRavenDbSchema = importOptionsSchema.shape({ server: serverSchema, processing: processingSchema });
+const migrateRavenDbSchema = importOptionsSchema.shape({ server: serverSchema, processing: processingSchema });
 
 export type MigrateRavenDbFormData = yup.InferType<typeof migrateRavenDbSchema>;
 

@@ -5,7 +5,7 @@ import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { FormAceEditor, FormSwitch } from "components/common/Form";
 import Code from "components/common/Code";
-import { ImportOptionsFormData } from "./importOptionsValidation";
+import { ImportOptionsFormData } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
 export default function TransformScriptCard() {
     const { control } = useFormContext<ImportOptionsFormData>();

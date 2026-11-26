@@ -1,12 +1,11 @@
 import React from "react";
 import { composeStories } from "@storybook/react-webpack5";
 import { act, rtlRender, waitFor } from "test/rtlTestUtils";
-import { fireEvent } from "@testing-library/react";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 import { mockJQueryError } from "test/mocks/utils";
 import notificationCenter from "common/notifications/notificationCenter";
-import * as stories from "./stories/MigrateRavenDbDatabase.stories";
+import * as stories from "components/pages/database/tasks/importData/migrateRavenDb/stories/MigrateRavenDbDatabase.stories";
 
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 type Rendered = ReturnType<typeof rtlRender>;
@@ -90,6 +89,20 @@ describe("MigrateRavenDbDatabase", () => {
         expect(await rendered.screen.findByDisplayValue("5.4.121")).toBeInTheDocument();
         expect(getSwitch(rendered, "Include Time Series")).toBeEnabled();
         expect(getSwitch(rendered, "Include Time Series Deleted Ranges")).toBeDisabled();
+    });
+
+    it("warns when document extensions are migrated without the documents", async () => {
+        const rendered = rtlRender(<Default />);
+        await detectVersion(rendered);
+        expect(await rendered.screen.findByDisplayValue("7.1.3")).toBeInTheDocument();
+
+        await rendered.fireClick(getSwitch(rendered, "Include Documents"));
+
+        expect(
+            rendered.screen.getByText(
+                /You are migrating Counters, Time Series, Revisions data without including the Documents/
+            )
+        ).toBeInTheDocument();
     });
 
     it("locks the sections again as soon as the server url changes", async () => {
@@ -219,20 +232,22 @@ describe("MigrateRavenDbDatabase", () => {
 
     it("skips version detection and explains the missing access below Operator", async () => {
         const rendered = rtlRender(<NoOperator />);
-        const { screen } = rendered;
+        const { screen, user } = rendered;
 
         await detectVersion(rendered);
 
         expect(
-            screen.getByText("Detecting the source server version requires Operator security clearance.")
+            screen.getByText(
+                "Migrating requires Operator security clearance (needed to detect the source server version)."
+            )
         ).toBeInTheDocument();
         expect(tasksMocks().getRemoteServerBuildInfo).not.toHaveBeenCalled();
 
         const migrateButton = screen.getByRole("button", { name: /Migrate database/ });
         expect(migrateButton).toBeDisabled();
-        fireEvent.mouseEnter(migrateButton.parentElement);
-        await act(() => jest.advanceTimersByTimeAsync(500));
-        expect(screen.getByText(/Database Admin access required/)).toBeInTheDocument();
+        jest.useRealTimers();
+        await user.hover(migrateButton);
+        expect(await screen.findByText(/Database Admin access required/)).toBeInTheDocument();
     });
 
     it("sends no credentials to a new url until it is detected as a legacy source", async () => {

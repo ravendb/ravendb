@@ -5,8 +5,14 @@ import { useServices } from "components/hooks/useServices";
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
 import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
-import { MigrateRavenDbFormData, serverUrlSchema } from "./migrateRavenDbValidation";
-import { SourceServerVersion, getEffectiveAuthenticationMethod } from "./migrateVersionSupport";
+import {
+    MigrateRavenDbFormData,
+    serverUrlSchema,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
+import {
+    SourceServerVersion,
+    getEffectiveAuthenticationMethod,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
 
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 type RemoteServerBuildInfoArgs = ConstructorParameters<typeof getRemoteServerVersionWithDatabasesCommand>[0];

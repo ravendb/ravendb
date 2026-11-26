@@ -3,9 +3,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import notificationCenter from "common/notifications/notificationCenter";
-import { MigrateRavenDbFormData } from "./migrateRavenDbValidation";
-import { SourceServerVersion } from "./migrateVersionSupport";
-import { RestrictedKeys, toMigrateDto } from "./migrateRavenDbUtils";
+import { MigrateRavenDbFormData } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
+import { SourceServerVersion } from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
+import {
+    RestrictedKeys,
+    toMigrateDto,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbUtils";
 import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 
 export function useMigrateOperation() {

@@ -9,7 +9,7 @@ import {
     DocumentToggleKey,
     documentToggleKeys,
     ongoingTaskKeys,
-} from "./importOptionsValidation";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import {
     connectionStringRules,
     databaseSettingRules,
@@ -17,7 +17,7 @@ import {
     ImportRestriction,
     ongoingTaskRules,
     resolveRestriction,
-} from "./importRestrictions";
+} from "components/pages/database/tasks/importData/shared/importRestrictions";
 
 export interface RestrictedImportItem extends ImportRestriction {
     key: string;

@@ -1,6 +1,15 @@
-import { RestrictedKeys, getDefaultMigrateFormData, hasAnyMigrateInclude, toMigrateDto } from "./migrateRavenDbUtils";
-import { SourceServerVersion, formatServerVersion, getUnsupportedDocumentToggles } from "./migrateVersionSupport";
-import { MigrateRavenDbFormData } from "./migrateRavenDbValidation";
+import {
+    RestrictedKeys,
+    getDefaultMigrateFormData,
+    hasAnyMigrateInclude,
+    toMigrateDto,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbUtils";
+import {
+    SourceServerVersion,
+    formatServerVersion,
+    getUnsupportedDocumentToggles,
+} from "components/pages/database/tasks/importData/migrateRavenDb/migrateVersionSupport";
+import { MigrateRavenDbFormData } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
 import {
     databaseSettingKeys,
     documentToggleKeys,
@@ -59,8 +68,14 @@ describe("getUnsupportedDocumentToggles", () => {
         ]);
     });
 
-    it("flags deleted ranges for 5.4", () => {
-        expect(getUnsupportedDocumentToggles(version("V5", 54000))).toEqual(["isIncludeTimeSeriesDeletedRanges"]);
+    it("flags deleted ranges for 5.4 up to build 54133 and 6.0 up to build 60035", () => {
+        expect(getUnsupportedDocumentToggles(version("V5", 54133))).toEqual(["isIncludeTimeSeriesDeletedRanges"]);
+        expect(getUnsupportedDocumentToggles(version("V6", 60035))).toEqual(["isIncludeTimeSeriesDeletedRanges"]);
+    });
+
+    it("supports deleted ranges from 5.4.201 and 6.0.105", () => {
+        expect(getUnsupportedDocumentToggles(version("V5", 54201))).toEqual([]);
+        expect(getUnsupportedDocumentToggles(version("V6", 60105))).toEqual([]);
     });
 
     it("flags nothing for 7.1", () => {
@@ -170,14 +185,14 @@ describe("toMigrateDto defaults", () => {
 
 describe("hasAnyMigrateInclude", () => {
     it("is false when everything is off", () => {
-        expect(hasAnyMigrateInclude(createAllOffFormData(), version("V7", 71000))).toBe(false);
+        expect(hasAnyMigrateInclude(createAllOffFormData(), version("V7", 71000), noRestrictions)).toBe(false);
     });
 
     it("is true when a supported toggle is on", () => {
         const data = createAllOffFormData();
         data.documents.isIncludeDocuments = true;
 
-        expect(hasAnyMigrateInclude(data, version("V7", 71000))).toBe(true);
+        expect(hasAnyMigrateInclude(data, version("V7", 71000), noRestrictions)).toBe(true);
     });
 
     it("is true when only the default database record is on", () => {
@@ -188,13 +203,13 @@ describe("hasAnyMigrateInclude", () => {
         data.configuration.isIncludeIndexes = false;
         data.configuration.isIncludeIdentities = false;
 
-        expect(hasAnyMigrateInclude(data, version("V7", 71000))).toBe(true);
+        expect(hasAnyMigrateInclude(data, version("V7", 71000), noRestrictions)).toBe(true);
     });
 
     it("ignores unsupported toggles", () => {
         const data = createAllOffFormData();
         data.documents.isIncludeTimeSeries = true;
 
-        expect(hasAnyMigrateInclude(data, version("V4", 41000))).toBe(false);
+        expect(hasAnyMigrateInclude(data, version("V4", 41000), noRestrictions)).toBe(false);
     });
 });

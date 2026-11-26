@@ -1,7 +1,7 @@
 import React from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import { SectionNavItem } from "./importNav";
+import { SectionNavItem } from "components/pages/database/tasks/importData/shared/importNav";
 
 interface ImportSideNavProps {
     items: SectionNavItem[];
