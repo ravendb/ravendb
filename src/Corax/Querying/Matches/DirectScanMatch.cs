@@ -229,7 +229,8 @@ public sealed class DirectScanFilteredMatch(
                 Token.ThrowIfCancellationRequested();
 
                 long t0 = Stopwatch.GetTimestamp();
-                int read = DrivingMatch.Fill(batch[..batchSize]);
+                // a passing entry read past the take is not needed, one that does not fit into matches would be lost
+                int read = DrivingMatch.Fill(batch[..Math.Min(batchSize, matches.Length - count)]);
                 TreeScanTicks += Stopwatch.GetTimestamp() - t0;
 
                 if (read == 0)

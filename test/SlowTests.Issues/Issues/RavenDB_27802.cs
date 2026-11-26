@@ -825,6 +825,44 @@ public class RavenDB_27802 : RavenTestBase
         }
     }
 
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
+    public void FilteredScanMustKeepTheEntriesThatDoNotFitIntoTheReadBuffer(Options options)
+    {
+        const int count = 90_000;
+        using var store = GetDocumentStore(options);
+        store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+        {
+            Name = "Products/ByPriceGrp",
+            Maps = { "from p in docs.Products select new { p.Price, p.Grp }" }
+        }));
+        using (var bulk = store.BulkInsert())
+        {
+            // six of every seven entries pass the residual, so the 65,536th of them is in the middle of a batch the scan reads from the walk
+            for (int i = 0; i < count; i++)
+                bulk.Store(new Product { Price = i, Grp = i % 7 == 0 ? "y" : "x" }, $"products/{i}");
+        }
+        Indexes.WaitForIndexing(store);
+
+        // offset + limit is more than the 64K ids of one read buffer, so the scan hands the page out over two Fill calls
+        const string query = "from index 'Products/ByPriceGrp' where Price >= 0 and Grp = 'x' order by Price as long limit 10 offset 70000";
+        var passing = Enumerable.Range(0, count).Where(i => i % 7 != 0).Select(i => $"products/{i}").ToArray();
+        var walk = RunRql(store, query, "FieldSortedScan");
+
+        // with statistics the scan has no take, so the buffer bounds every Fill
+        using var session = store.OpenSession();
+        session.Advanced.RawQuery<Product>(query)
+            .NoCaching()
+            .AddParameter("rvn_corax_strategy", "FieldSortedScan")
+            .Statistics(out var stats)
+            .ToList();
+
+        RavenTestHelper.AssertAll(() => query,
+            () => Assert.Equal("FieldSortedScan", walk.Hint),
+            () => Assert.Equal(passing.Skip(70_000).Take(10), walk.Ids),
+            () => Assert.Equal((long)passing.Length, stats.TotalResults));
+    }
+
     private class Product
     {
         public string Id { get; set; }
