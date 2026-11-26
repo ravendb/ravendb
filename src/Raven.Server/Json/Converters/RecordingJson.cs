@@ -71,6 +71,12 @@ namespace Raven.Server.Json.Converters
                     else
                         NamedFloatingPointLiterals.Write(writer, number);
                     return;
+                case BlittableJsonReaderVector vector:
+                    Write(writer, vector);
+                    return;
+                case BlittableJsonReaderObject.RawBlob blob:
+                    Write(writer, blob);
+                    return;
                 default:
                     throw new SerializationException($"Cannot record a blittable value of type {value.GetType()}");
             }
@@ -91,6 +97,22 @@ namespace Raven.Server.Json.Converters
 
                 writer.WriteRawValue(stream.GetBuffer().AsSpan(0, (int)stream.Length), skipInputValidation: true);
             }
+        }
+
+        private static void Write(Utf8JsonWriter writer, BlittableJsonReaderVector vector)
+        {
+            using (var stream = new MemoryStream())
+            {
+                using (var textWriter = new BlittableJsonTextWriter(_context ?? vector._context, stream) { EscapeNamedFloatingPointLiterals = true })
+                    textWriter.WriteValue(BlittableJsonToken.Vector, vector);
+
+                writer.WriteRawValue(stream.GetBuffer().AsSpan(0, (int)stream.Length), skipInputValidation: true);
+            }
+        }
+
+        private static unsafe void Write(Utf8JsonWriter writer, BlittableJsonReaderObject.RawBlob blob)
+        {
+            writer.WriteRawValue(new ReadOnlySpan<byte>(blob.Address, blob.Length), skipInputValidation: true);
         }
 
         public static BlittableJsonReaderObject ReadObject(ref Utf8JsonReader reader)
