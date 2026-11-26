@@ -561,9 +561,9 @@ namespace Sparrow.Json
                 int index;
                 while ((index = StringUtils.IndexOfEscapeCharacter(remaining)) != -1)
                 {
-                    WriteRawString(remaining[..index]);
+                    WriteRawString(remaining.Slice(0, index));
                     WriteEscapeCharacter(_buffer, remaining[index]);
-                    remaining = remaining[(index + 1)..];
+                    remaining = remaining.Slice(index + 1);
                 }
             }
 

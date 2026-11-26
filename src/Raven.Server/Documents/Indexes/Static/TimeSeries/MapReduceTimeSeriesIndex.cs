@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -198,7 +198,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                     continue;
 
-                foreach (var mapEntry in GetMapEntries(MapReduceWorkContext.DocumentMapEntries))
+                GetMapEntries(MapReduceWorkContext.DocumentMapEntries, MapReduceWorkContext.MapEntries);
+                foreach (var mapEntry in MapReduceWorkContext.MapEntries)
                 {
                     var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
 

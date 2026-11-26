@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Server.Logging;
 using Sparrow;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
@@ -35,7 +36,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public Dictionary<string, long> ProcessedTimeSeriesDeletedRangeEtags = new();
         public readonly HashSet<long> FreedPages = new();
 
+        public List<MapEntry> MapEntries = new();
+
         public long NextMapResultId;
+
+        private const int MaxRetainedMapEntries = 1024;
+
+        private ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _mapResultBuilder;
 
         static MapReduceIndexingContext()
         {
@@ -50,8 +57,21 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _index = index ?? throw new ArgumentNullException(nameof(index));
         }
 
+        public ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> GetMapResultBuilder(JsonOperationContext indexContext)
+        {
+            return _mapResultBuilder ??= new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(indexContext);
+        }
+
+        public void DisposeMapResultBuilder()
+        {
+            _mapResultBuilder?.Dispose();
+            _mapResultBuilder = null;
+        }
+
         public void Dispose()
         {
+            DisposeMapResultBuilder();
+
             DocumentMapEntries = null;
             MapPhaseTree = null;
             ReducePhaseTree = null;
@@ -61,6 +81,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             ProcessedTimeSeriesDeletedRangeEtags.Clear();
             StoreByReduceKeyHash.Clear();
             FreedPages.Clear();
+
+            // a document with a large fan-out does not keep its array for the life of the index
+            if (MapEntries.Capacity > MaxRetainedMapEntries)
+                MapEntries = [];
+            else
+                MapEntries.Clear();
         }
 
         public unsafe void StoreNextMapResultId()

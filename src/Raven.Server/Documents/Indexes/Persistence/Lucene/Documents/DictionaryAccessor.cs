@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
     {
         private readonly Dictionary<string, DictionaryValueAccessor> _properties = new();
 
-        private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder = new();
+        private readonly List<KeyValuePair<string, PropertyAccessor.Accessor>> _propertiesInOrder = new();
 
         private DictionaryAccessor(Dictionary<string, object> instance, Dictionary<string, CompiledIndexField> groupByFields = null)
         {
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 _properties.Add(key, getMethod);
-                _propertiesInOrder.Add(new KeyValuePair<string, DictionaryValueAccessor>(key, getMethod));
+                _propertiesInOrder.Add(new KeyValuePair<string, PropertyAccessor.Accessor>(key, getMethod));
             }
         }
 
@@ -42,48 +42,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             return new DictionaryAccessor(instance, groupByFields);
         }
 
-        internal struct DictionaryPropertiesEnumerator : IEnumerator<PropertyItem>
+        public PropertiesEnumerator GetProperties(object target)
         {
-            private readonly List<KeyValuePair<string, DictionaryValueAccessor>> _propertiesInOrder;
-            private readonly object _target;
-            private int _currentIdx;
-
-            internal DictionaryPropertiesEnumerator(List<KeyValuePair<string, DictionaryValueAccessor>> properties, object target)
-            {
-                _propertiesInOrder = properties;
-                _target = target;
-                _currentIdx = -1;
-            }
-
-            public bool MoveNext()
-            {
-                _currentIdx++;
-                return _currentIdx < _propertiesInOrder.Count;
-            }
-
-            public void Reset()
-            {
-                _currentIdx = -1;
-            }
-
-            object IEnumerator.Current => Current;
-
-            public PropertyItem Current
-            {
-                get
-                {
-                    var (key, value) = _propertiesInOrder[_currentIdx];
-                    return new PropertyItem(key, value.GetValue(_target), value.GroupByField, value.IsGroupByField);
-                }
-            }
-
-            public void Dispose() { }
-        }
-
-
-        public IEnumerator<PropertyItem> GetProperties(object target)
-        {
-            return new DictionaryPropertiesEnumerator(_propertiesInOrder, target);
+            return new PropertiesEnumerator(_propertiesInOrder, target);
         }
 
         public object GetValue(string name, object target)

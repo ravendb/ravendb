@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,6 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -436,6 +435,15 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return PutMapResults(indexItem.LowerId, indexItem.Id, wrapper, indexContext, stats);
         }
 
+        protected override void DisposeIndex()
+        {
+            base.DisposeIndex();
+
+            // a wrapper keeps its reduce key buffer between documents
+            foreach (var wrapper in _enumerationWrappers.Values)
+                wrapper.ReleaseReduceKeyBuffer();
+        }
+
         internal override bool IsStale(QueryOperationContext queryContext, TransactionOperationContext indexContext, long? cutoff = null, long? referenceCutoff = null, long? compareExchangeReferenceCutoff = null, List<string> stalenessReasons = null)
         {
             var isStale = base.IsStale(queryContext, indexContext, cutoff, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons);
@@ -523,6 +531,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             private readonly bool _isMultiMap;
             private IPropertyAccessor _propertyAccessor;
             private readonly AbstractStaticIndexBase _compiledIndex;
+            private readonly MapReduceIndexingContext _mapReduceContext;
+            private readonly Enumerator _enumerator;
 
             public AnonymousObjectToBlittableMapResultsEnumerableWrapper(MapReduceIndex index, TransactionOperationContext indexContext)
             {
@@ -560,6 +570,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _isMultiMap = index.IsMultiMap;
                 _reduceKeyProcessor = new ReduceKeyProcessor(index.Definition.GroupByFields.Count, index._unmanagedBuffersPool, index.Definition.Version);
                 _compiledIndex = index._compiled;
+                _mapReduceContext = index.MapReduceWorkContext;
+                _enumerator = new Enumerator(this);
             }
 
             public void InitializeForEnumeration(IEnumerable items, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -574,6 +586,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 _createBlittableResultStats = _stats.For(IndexingOperation.Reduce.CreateBlittableJson, start: false);
             }
 
+            public void ReleaseReduceKeyBuffer()
+            {
+                _reduceKeyProcessor.ReleaseBuffer();
+            }
+
             IEnumerator<MapResult> IEnumerable<MapResult>.GetEnumerator()
             {
                 return GetEnumerator();
@@ -586,34 +603,40 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             private Enumerator GetEnumerator()
             {
-                return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
+                _enumerator.Initialize(_items.GetEnumerator(), _createBlittableResultStats);
+                return _enumerator;
             }
 
             private sealed class Enumerator : IEnumerator<MapResult>
             {
-                private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
-                private readonly IndexingStatsScope _createBlittableResult;
                 private readonly Dictionary<string, CompiledIndexField> _groupByFields;
                 private readonly Dictionary<string, int> _orderedMultipleGroupByFieldPositions;
                 private readonly object[] _orderedMultipleGroupByValues;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
-                private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
+                private IEnumerator _enumerator;
+                private IndexingStatsScope _createBlittableResult;
 
-                public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
+                public Enumerator(AnonymousObjectToBlittableMapResultsEnumerableWrapper parent)
                 {
-                    _enumerator = enumerator;
                     _parent = parent;
-                    _createBlittableResult = createBlittableResult;
                     _groupByFields = _parent._groupByFields;
                     _orderedMultipleGroupByFieldPositions = _parent._orderedMultipleGroupByFieldPositions;
                     _reduceKeyProcessor = _parent._reduceKeyProcessor;
 
                     if (_orderedMultipleGroupByFieldPositions is {Count: > 0})
                         _orderedMultipleGroupByValues = new object[_orderedMultipleGroupByFieldPositions.Count];
+                }
 
-                    _metadataFields = CurrentIndexingScope.Current.MetadataFields;
+                public void Initialize(IEnumerator enumerator, IndexingStatsScope createBlittableResult)
+                {
+                    _enumerator = enumerator;
+                    _createBlittableResult = createBlittableResult;
+
+                    // a document does not see the group by values of the previous document
+                    if (_orderedMultipleGroupByValues is not null)
+                        Array.Clear(_orderedMultipleGroupByValues);
                 }
 
                 public bool MoveNext()
@@ -672,12 +695,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _parent._indexContext.CachedProperties.NewDocument();
 
-                        using (var writer = new BlittableJsonWriter(_parent._indexContext,
-                            idField: _metadataFields.Id,
-                            keyField: _metadataFields.Key,
-                            collectionField: _metadataFields.Collection))
+                        var writer = _parent._mapReduceContext.GetMapResultBuilder(_parent._indexContext);
+
+                        try
                         {
-                            writer.WriteStartObject();
+                            writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                            writer.StartWriteObjectDocument();
+                            writer.StartWriteObject();
 
                             while (_propertyQueue.TryDequeue(out var x))
                             {
@@ -685,7 +709,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                 WriteValue(writer, x.PropertyValue);
                             }
 
-                            writer.WriteEndObject();
+                            writer.WriteObjectEnd();
 
                             if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
                                 ThrowMissingGroupByFieldsInMapOutput(output, _groupByFields, _parent._compiledIndex);
@@ -697,11 +721,17 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             Current.Data = writer.CreateReader();
                             Current.ReduceKeyHash = reduceHashKey;
                         }
+                        catch
+                        {
+                            // the writer can be left in the middle of a document
+                            _parent._mapReduceContext.DisposeMapResultBuilder();
+                            throw;
+                        }
                     }
 
                     return true;
 
-                    static void WriteValue(BlittableJsonWriter writer, object value)
+                    static void WriteValue(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, object value)
                     {
                         switch (value)
                         {
@@ -784,7 +814,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             case BlittableJsonReaderObject val:
                                 var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-                                writer.WriteStartObject();
+                                writer.StartWriteObject();
                                 for (int i = 0; i < val.Count; i++)
                                 {
                                     val.GetPropertyByIndex(i, ref propertyDetails);
@@ -792,36 +822,36 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                     WriteValue(writer, propertyDetails.Value);
                                 }
 
-                                writer.WriteEndObject();
+                                writer.WriteObjectEnd();
 
                                 break;
 
                             case BlittableJsonReaderArray val:
-                                writer.WriteStartArray();
+                                writer.StartWriteArray();
                                 foreach (var property in val)
                                     WriteValue(writer, property);
-                                writer.WriteEndArray();
+                                writer.WriteArrayEnd();
                                 break;
 
                             case null:
-                                writer.WriteNull();
+                                writer.WriteValueNull();
                                 break;
 
                             case DynamicJsonValue val:
-                                writer.WriteStartObject();
+                                writer.StartWriteObject();
                                 foreach (var property in val.Properties)
                                 {
                                     writer.WritePropertyName(property.Name);
                                     WriteValue(writer, property.Value);
                                 }
-                                writer.WriteEndObject();
+                                writer.WriteObjectEnd();
                                 break;
 
                             case DynamicJsonArray val:
-                                writer.WriteStartArray();
+                                writer.StartWriteArray();
                                 foreach (var item in val)
                                     WriteValue(writer, item);
-                                writer.WriteEndArray();
+                                writer.WriteArrayEnd();
                                 break;
 
                             default:
@@ -841,7 +871,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Dispose()
                 {
-                    _reduceKeyProcessor.ReleaseBuffer();
+                    _enumerator = null;
+                    _propertyQueue.Clear();
                 }
 
                 [DoesNotReturn]

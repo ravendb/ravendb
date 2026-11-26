@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -69,7 +69,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                     return;
 
-                foreach (var mapEntry in GetMapEntries(MapReduceWorkContext.DocumentMapEntries))
+                GetMapEntries(MapReduceWorkContext.DocumentMapEntries, MapReduceWorkContext.MapEntries);
+                foreach (var mapEntry in MapReduceWorkContext.MapEntries)
                 {
                     var store = GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
 
@@ -111,7 +112,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             using (Slice.External(indexContext.Allocator, lowerId, out Slice docIdAsSlice))
             {
-                Queue<MapEntry> existingEntries = null;
+                List<MapEntry> existingEntries = null;
+                int nextExistingEntry = 0;
 
                 using (_stats.GetMapEntriesTree.Start())
                     MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docIdAsSlice, clone: false);
@@ -119,7 +121,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 if (MapReduceWorkContext.DocumentMapEntries.NumberOfEntries > 0)
                 {
                     using (_stats.GetMapEntries.Start())
-                        existingEntries = GetMapEntries(MapReduceWorkContext.DocumentMapEntries);
+                    {
+                        existingEntries = MapReduceWorkContext.MapEntries;
+                        GetMapEntries(MapReduceWorkContext.DocumentMapEntries, existingEntries);
+                    }
                 }
 
                 int resultsCount = 0;
@@ -134,9 +139,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                         long mapEntryId = -1;
 
-                        if (existingEntries?.Count > 0)
+                        if (nextExistingEntry < existingEntries?.Count)
                         {
-                            var existing = existingEntries.Dequeue();
+                            var existing = existingEntries[nextExistingEntry++];
                             var storeOfExisting = GetResultsStore(existing.ReduceKeyHash, indexContext, false);
 
                             if (reduceKeyHash == existing.ReduceKeyHash)
@@ -182,11 +187,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                 DocumentDatabase.Metrics.MapReduceIndexes.MappedPerSec.Mark(resultsCount);
 
-                while (existingEntries?.Count > 0)
+                while (nextExistingEntry < existingEntries?.Count)
                 {
                     // need to remove remaining old entries
 
-                    var oldResult = existingEntries.Dequeue();
+                    var oldResult = existingEntries[nextExistingEntry++];
 
                     var oldState = GetResultsStore(oldResult.ReduceKeyHash, indexContext, create: false);
 
@@ -207,12 +212,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                    Memory.CompareInline(newResult.BasePointer, existingData.Ptr, existingData.Size) == 0;
         }
 
-        internal static unsafe Queue<MapEntry> GetMapEntries(FixedSizeTree documentMapEntries)
+        internal static unsafe void GetMapEntries(FixedSizeTree documentMapEntries, List<MapEntry> entries)
         {
-            var entries = new Queue<MapEntry>((int)documentMapEntries.NumberOfEntries);
+            entries.Clear();
 
             if (documentMapEntries.NumberOfEntries == 0)
-                return entries;
+                return;
 
             using (var it = documentMapEntries.Iterate())
             {
@@ -226,15 +231,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
                     it.CreateReaderForCurrent().Read((byte*)&reduceKeyHash, sizeof(ulong));
 
-                    entries.Enqueue(new MapEntry
+                    entries.Add(new MapEntry
                     {
                         Id = currentKey,
                         ReduceKeyHash = reduceKeyHash
                     });
                 } while (it.MoveNext());
             }
-
-            return entries;
         }
 
         [DoesNotReturn]

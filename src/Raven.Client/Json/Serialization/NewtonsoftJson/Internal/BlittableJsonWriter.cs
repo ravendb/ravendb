@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -430,33 +430,29 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public override void WriteValue(DateTime dt)
         {
-            var value = dt.GetDefaultRavenFormat();
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(dt);
         }
 
         public override void WriteValue(DateTimeOffset dto)
         {
-            var value = dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(dto);
         }
 
 #if FEATURE_DATEONLY_TIMEONLY_SUPPORT
         public void WriteValue(TimeOnly to)
         {
-            var value = to.ToString(DefaultFormat.TimeOnlyFormatToWrite);
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(to);
         }
         
         public void WriteValue(DateOnly @do)
         {
-            var value = @do.ToString(DefaultFormat.DateOnlyFormatToWrite);
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(@do);
         }
         
         public void WriteValue(TimeOnly? to)
         {
             if (to != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(to.Value.ToString(DefaultFormat.TimeOnlyFormatToWrite));
+                _manualBlittableJsonDocumentBuilder.WriteValue(to.Value);
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
@@ -464,7 +460,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         public void WriteValue(DateOnly? @do)
         {
             if (@do != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(@do.Value.ToString(DefaultFormat.DateOnlyFormatToWrite));
+                _manualBlittableJsonDocumentBuilder.WriteValue(@do.Value);
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
@@ -543,7 +539,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         public override void WriteValue(DateTime? value)
         {
             if (value != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.GetDefaultRavenFormat());
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
@@ -551,7 +547,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         public override void WriteValue(DateTimeOffset? value)
         {
             if (value != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             else
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
         }
