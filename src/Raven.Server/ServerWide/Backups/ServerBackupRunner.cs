@@ -319,7 +319,7 @@ public class ServerBackupRunner : IDisposable
                 Name = backupState.Configuration.Name
             };
 
-            var backupTask = BackupUtils.GetBackupTask(database, backupParameters, backupState.Configuration, token: null, _logger, _forTestingPurposes);
+            var backupTask = BackupUtils.GetBackupTask(database, backupParameters, backupState.Configuration, token: null, backupState.Logger, _forTestingPurposes);
 
             if (TryPublishRunningBackup(backupState, operationId, backupTask.TaskCancelToken, isBackupNow) == false)
             {
@@ -375,7 +375,7 @@ public class ServerBackupRunner : IDisposable
             else
                 backupState.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
 
-            BackupUtils.SaveBackupStatus(backupState.BackupStatus, backupState.DatabaseName, _serverStore, _logger);
+            BackupUtils.SaveBackupStatus(backupState.BackupStatus, backupState.DatabaseName, _serverStore, backupState.Logger);
 
             AddDatabaseAlert(backupState.DatabaseName, AlertRaised.Create(
                 backupState.DatabaseName,
@@ -429,7 +429,7 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            ConcurrentBackups.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, elapsed, _logger);
+            ConcurrentBackups.FinishBackup(backupState.OriginalDatabaseName, backupState.Configuration.Name, runningBackupStatus, elapsed, backupState.Logger);
         }
         catch (Exception e)
         {
@@ -461,6 +461,10 @@ public class ServerBackupRunner : IDisposable
             {
                 var exception = CreateBackupAlreadyRunningException(backupState);
                 backupState.AddToDecisionLog(category, BackupRunningPolicy.Instance.Name, reason ?? exception.Message, now);
+
+                if (backupState.Logger.IsWarnEnabled)
+                    backupState.Logger.Warn(exception.Message);
+
                 throw exception;
             }
         }
@@ -477,7 +481,7 @@ public class ServerBackupRunner : IDisposable
 
         try
         {
-            ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger);
+            ConcurrentBackups.TakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, backupState.Logger);
         }
         catch (Exception e)
         {
@@ -1089,7 +1093,7 @@ public class ServerBackupRunner : IDisposable
     private bool TryTakeConcurrentBackupsPlace(DatabaseBackupState backupState, DateTime now, bool afterRefusal)
     {
         // canTakeNewPlace is false after a refusal in this pass, so a free place is kept for the refused task (fairness).
-        if (ConcurrentBackups.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, _logger, canTakeNewPlace: afterRefusal == false))
+        if (ConcurrentBackups.TryTakePlace(backupState.OriginalDatabaseName, backupState.Configuration.Name, backupState.Logger, canTakeNewPlace: afterRefusal == false))
             return true;
 
         var reason = $"The maximum number of concurrent backups ({ConcurrentBackups.MaxNumberOfConcurrentBackups}) is reached.";

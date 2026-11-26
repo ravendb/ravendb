@@ -82,18 +82,30 @@ public sealed class BackupDecisionTracker
 
     internal BackupDecision AddServerDecision(BackupDecisionCategory category, string detail, string reason, DateTime now, DateTime? heldUntil)
     {
+        BackupDecision decision;
+        bool isNewDecision;
+
         lock (_decisionEtagLock)
         {
             _serverHeldUntil = heldUntil;
-            return _serverDecisionLog.Add(category, detail, reason, now, NextDecisionId, NextDecisionEtag);
+            decision = _serverDecisionLog.Add(category, detail, reason, now, NextDecisionId, NextDecisionEtag);
+            isNewDecision = decision.Count == 1;
         }
+
+        if (isNewDecision && _logger.IsInfoEnabled)
+            _logger.Info($"Server backup decision: {category}, detail: '{detail}', reason: '{reason}'.");
+
+        return decision;
     }
 
     internal void AddDecision(DatabaseBackupState backupState, BackupDecisionLog decisionLog, BackupDecisionCategory category, string detail, string reason, DateTime now)
     {
+        bool isNewDecision;
+
         lock (_decisionEtagLock)
         {
             var decision = decisionLog.Add(category, detail, reason, now, NextDecisionId, NextDecisionEtag);
+            isNewDecision = decision.Count == 1;
 
             if (category is BackupDecisionCategory.Completed or BackupDecisionCategory.Failed)
             {
@@ -102,6 +114,9 @@ public sealed class BackupDecisionTracker
                 TaskExecutor.CompleteAndReplace(ref _changed);
             }
         }
+
+        if (isNewDecision && backupState.Logger.IsInfoEnabled)
+            backupState.Logger.Info($"Backup decision for {backupState}: {category}, detail: '{detail}', reason: '{reason}'.");
     }
 
     private long NextDecisionId()

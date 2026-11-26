@@ -8,11 +8,14 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Util;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
+using Sparrow.Logging;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 
@@ -58,6 +61,8 @@ namespace Raven.Server.ServerWide.Backups
 
         internal ServerStore _serverStore;
 
+        internal readonly RavenLogger Logger;
+
         public DatabaseBackupState([NotNull] string databaseName, [NotNull] PeriodicBackupConfiguration configuration, bool isSharded, ServerStore serverStore)
         {
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
@@ -72,6 +77,7 @@ namespace Raven.Server.ServerWide.Backups
             CreatedAt = DateTime.UtcNow;
             OriginalDatabaseName = isSharded ? ShardHelper.ToDatabaseName(databaseName) : databaseName;
             _serverStore = serverStore;
+            Logger = RavenLogManager.Instance.GetLoggerForDatabase<ServerBackupRunner>(databaseName);
         }
 
         public NextBackup GetNextBackupIfActive(PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
@@ -106,6 +112,9 @@ namespace Raven.Server.ServerWide.Backups
                 message += $", backup name: {parameters.Configuration.Name}";
 
             message += $", error: {parameters.Exception.Message}";
+
+            if (Logger.IsErrorEnabled)
+                Logger.Error(message);
 
             _serverStore.ServerBackupRunner.AddDatabaseAlert(DatabaseName, AlertRaised.Create(
                 DatabaseName,
