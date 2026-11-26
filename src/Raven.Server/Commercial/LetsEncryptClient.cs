@@ -202,6 +202,8 @@ namespace Raven.Server.Commercial
             }
 
             var responseContent = JsonStringHelper.Deserialize<TResult>(responseText);
+            if (responseContent == null)
+                throw new LetsEncryptException($"Got an empty response from '{uri}' with status {response.StatusCode}");
 
             if (responseContent is IHasLocation ihl)
             {
