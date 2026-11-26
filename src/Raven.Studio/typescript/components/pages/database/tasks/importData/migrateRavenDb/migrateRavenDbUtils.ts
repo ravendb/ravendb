@@ -37,7 +37,7 @@ const DOCUMENT_TOGGLE_ITEM_TYPES: Partial<Record<DocumentToggleKey, DatabaseItem
 const NO_RESTRICTIONS: RestrictedKeys = { settings: [], tasks: [], connectionStrings: [] };
 
 function getMigrateRecordTypes(
-    data: MigrateRavenDbFormData,
+    data: Pick<MigrateRavenDbFormData, "configuration">,
     version: SourceServerVersion,
     restricted: RestrictedKeys
 ): DatabaseRecordItemType[] {
@@ -68,7 +68,7 @@ export function getDefaultMigrateFormData(isAdminAccessOrAbove: boolean): Migrat
 }
 
 export function hasAnyMigrateInclude(
-    data: MigrateRavenDbFormData,
+    data: Pick<MigrateRavenDbFormData, "server" | "documents" | "configuration">,
     version: SourceServerVersion,
     restricted: RestrictedKeys = NO_RESTRICTIONS
 ): boolean {

@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { FieldErrors, FormProvider, useForm, useFormContext } from "react-hook-form";
+import React, { useEffect, useMemo, useState } from "react";
+import { FieldErrors, FormProvider, useForm, useFormContext, useWatch } from "react-hook-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import classNames from "classnames";
@@ -28,7 +28,11 @@ import {
     useImportOptionsFormSync,
     withRestrictedDefaults,
 } from "components/pages/database/tasks/importData/shared/useImportOptionsFormSync";
-import { MigrateRavenDbFormData, migrateRavenDbYupResolver } from "./migrateRavenDbValidation";
+import {
+    MigrateRavenDbFormData,
+    MigrateRavenDbValidationContext,
+    migrateRavenDbYupResolver,
+} from "./migrateRavenDbValidation";
 import { getDefaultMigrateFormData, hasAnyMigrateInclude } from "./migrateRavenDbUtils";
 import {
     getUnsupportedVersionReason,
@@ -66,20 +70,45 @@ function MigrateRavenDbForm() {
     const isAdminAccessOrAbove = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const canDetect = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const restrictions = useImportRestrictions();
-
-    const form = useForm<MigrateRavenDbFormData>({
-        resolver: migrateRavenDbYupResolver,
-        mode: "onChange",
-        defaultValues: withRestrictedDefaults(getDefaultMigrateFormData(isAdminAccessOrAbove), restrictions),
+    const [validationContext, setValidationContext] = useState<MigrateRavenDbValidationContext>({
+        isRavenFsImport: false,
     });
 
-    const serverInfo = useRemoteServerInfo(form.control, canDetect);
-    const versionRestrictions = useMemo(() => getVersionToggleRestrictions(serverInfo.version), [serverInfo.version]);
+    const form = useForm<MigrateRavenDbFormData, MigrateRavenDbValidationContext>({
+        resolver: migrateRavenDbYupResolver,
+        mode: "onChange",
+        context: validationContext,
+        defaultValues: withRestrictedDefaults(getDefaultMigrateFormData(isAdminAccessOrAbove), restrictions),
+    });
+    const { control, setValue, trigger } = form;
+
+    const serverInfo = useRemoteServerInfo(control, canDetect);
+    const { version } = serverInfo;
+    const isLegacy = !!version && isLegacyVersion(version);
+    const isImportRavenFs = useWatch({ control, name: "server.isImportRavenFs" });
+    const isRavenFsImport = isLegacy && isImportRavenFs;
+    if (validationContext.isRavenFsImport !== isRavenFsImport) {
+        setValidationContext({ isRavenFsImport });
+    }
+
+    // a 4.x+ source has no legacy authentication, so a method picked for a 3.x source must not reach its request, validation or DTO
+    useEffect(() => {
+        if (version && !isLegacyVersion(version)) {
+            setValue("server.authenticationMethod", "none");
+            trigger(["server.userName", "server.password", "server.apiKey"]);
+        }
+    }, [version, setValue, trigger]);
+
+    const versionRestrictions = useMemo(() => getVersionToggleRestrictions(version), [version]);
 
     return (
         <FormProvider {...form}>
             <ImportRestrictionsProvider documentToggleOverrides={versionRestrictions}>
-                <MigrateRavenDbContent serverInfo={serverInfo} canDetect={canDetect} />
+                <MigrateRavenDbContent
+                    serverInfo={serverInfo}
+                    canDetect={canDetect}
+                    isRavenFsImport={isRavenFsImport}
+                />
             </ImportRestrictionsProvider>
         </FormProvider>
     );
@@ -88,27 +117,29 @@ function MigrateRavenDbForm() {
 interface MigrateRavenDbContentProps {
     serverInfo: RemoteServerInfo;
     canDetect: boolean;
+    isRavenFsImport: boolean;
 }
 
-function MigrateRavenDbContent({ serverInfo, canDetect }: MigrateRavenDbContentProps) {
+function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: MigrateRavenDbContentProps) {
     const { forCurrentDatabase } = useAppUrls();
     const form = useFormContext<MigrateRavenDbFormData>();
-    const { handleSubmit, formState, watch } = form;
+    const { control, handleSubmit, formState } = form;
     const canMigrateByAccess = useAppSelector(accessManagerSelectors.getCanHandleOperation)("DatabaseAdmin");
     const restrictedKeys = useMigrateRestrictedKeys();
     const { migrate } = useMigrateOperation();
 
     useImportOptionsFormSync(form, getDefaultMigrateFormData);
 
-    const { version } = serverInfo;
-    const formData = watch();
+    const { version, error, isAuthorized } = serverInfo;
+    const [server, documents, configuration] = useWatch({ control, name: ["server", "documents", "configuration"] });
     const isLegacy = !!version && isLegacyVersion(version);
-    const isRavenFsImport = isLegacy && formData.server.isImportRavenFs;
     const navItems = isRavenFsImport ? [SELECT_SERVER_SECTION] : SECTION_NAV;
     const scroll = useImportPageScroll(navItems);
 
-    const hasInclude = !version || hasAnyMigrateInclude(formData, version, restrictedKeys);
-    const canMigrate = !!version && hasInclude && canMigrateByAccess && !formState.isSubmitting;
+    const hasInclude = !version || hasAnyMigrateInclude({ server, documents, configuration }, version, restrictedKeys);
+    const isUnauthorizedLegacy = isLegacy && !isAuthorized;
+    const canMigrate =
+        !!version && !error && !isUnauthorizedLegacy && hasInclude && canMigrateByAccess && !formState.isSubmitting;
 
     const onInvalidSubmit = (errors: FieldErrors<MigrateRavenDbFormData>) => {
         const sectionId = getSectionIdForErrorPath(getFirstErrorPath(errors) ?? "", ERROR_FIELD_TARGETS);

@@ -1,6 +1,9 @@
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { importOptionsSchema } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import {
+    importOptionsSchema,
+    transformScriptSchema,
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 
 export const serverUrlSchema = yup.string().required().basicUrl();
 
@@ -17,7 +20,16 @@ const serverSchema = yup.object({
     isEnableBasicAuthenticationOverUnsecuredHttp: yup.boolean(),
 });
 
-export const migrateRavenDbSchema = importOptionsSchema.shape({ server: serverSchema });
+export interface MigrateRavenDbValidationContext {
+    isRavenFsImport: boolean;
+}
+
+const processingSchema = transformScriptSchema.when("$isRavenFsImport", {
+    is: true,
+    then: (schema) => schema.shape({ transformScript: yup.string() }),
+});
+
+export const migrateRavenDbSchema = importOptionsSchema.shape({ server: serverSchema, processing: processingSchema });
 
 export type MigrateRavenDbFormData = yup.InferType<typeof migrateRavenDbSchema>;
 

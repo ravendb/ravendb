@@ -91,16 +91,20 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
         () =>
             debounce(async (args: RemoteServerBuildInfoArgs) => {
                 const requestId = ++latestRequestId.current;
-                let next: DetectionResult;
+                const url = args.serverUrl;
+                const isLatest = () => requestId === latestRequestId.current;
                 try {
                     const info = await tasksService.getRemoteServerBuildInfo(args);
-                    next = { url: args.serverUrl, info, error: null };
+                    if (isLatest()) {
+                        setResult({ url, info, error: null });
+                    }
                 } catch (e) {
-                    const { message } = recentError.tryExtractMessageAndException(e.responseText);
-                    next = { url: args.serverUrl, info: null, error: generalUtils.trimMessage(message, 1024) };
-                }
-                if (requestId === latestRequestId.current) {
-                    setResult(next);
+                    if (isLatest()) {
+                        const { message } = recentError.tryExtractMessageAndException(e.responseText);
+                        const error = generalUtils.trimMessage(message, 1024);
+                        // a failed credential refetch keeps the detected version, so the credential inputs stay
+                        setResult((prev) => ({ url, info: prev?.url === url ? prev.info : null, error }));
+                    }
                 }
             }, DETECTION_DELAY_MS),
         [tasksService]
