@@ -1025,7 +1025,7 @@ namespace Voron.Impl.Journal
                 }
             }
             private long _totalWrittenButUnsyncedBytes;
-            private readonly byte[] _unsyncedPages; // bloom filter of the data file pages flushed since the last sync started, under _flushingLock
+            private readonly BloomFilter _unsyncedPages; // bloom filter of the data file pages flushed since the last sync started, under _flushingLock
             private bool _ignoreLockAlreadyTaken;
             private Func<LowLevelTransaction, bool> _updateJournalStateAfterFlush;
             private bool _updateJournalStateApplied;// only ever touched under the write tx lock
@@ -1093,7 +1093,7 @@ namespace Voron.Impl.Journal
             public JournalApplicator(WriteAheadJournal waj)
             {
                 _waj = waj;
-                _unsyncedPages = new byte[Math.Max(64 * Constants.Size.Kilobyte, waj._env.Options.MaxUnsyncedBytesBeforeMandatorySync / (Constants.Storage.PageSize * 3 / 2))];
+                _unsyncedPages = new BloomFilter(64 * Constants.Size.Kilobyte);
                 _flushLockTaskResponsible = new LockTaskResponsible(_flushingLock, waj._env.Token)
                 {
 #if DEBUG
@@ -1832,7 +1832,7 @@ namespace Voron.Impl.Journal
 
                     _lastFlushed.DoneFlag.Raise();
 
-                    Array.Clear(parent._unsyncedPages);
+                    parent._unsyncedPages.Clear();
 
                     parent._waj._env.Options.SetLastReusedJournalCountOnSync(_lastFlushed.JournalsToDelete.Count);
 
@@ -1964,30 +1964,12 @@ namespace Voron.Impl.Journal
             // a sync writes each page once. The count is a threshold, so a bloom filter sized for the mandatory threshold is exact enough.
             private long MarkUnsyncedPages(ReadOnlySpan<Pal.page_to_write> pages)
             {
-                const ulong K = 4;
-                ulong numberOfBits = (ulong)_unsyncedPages.Length * BitVector.BitsPerByte;
-
                 long unsyncedPages = 0;
                 foreach (ref readonly var page in pages)
                 {
                     for (long pageNumber = page.page_num; pageNumber < page.page_num + page.count_of_pages; pageNumber++)
                     {
-                        ulong primaryHash = Hashing.XXHash64.CalculateInline((byte*)&pageNumber, sizeof(long), seed: 1);
-                        ulong secondaryHash = Hashing.XXHash64.CalculateInline((byte*)&pageNumber, sizeof(long), seed: 1337);
-
-                        bool newPage = false;
-                        for (ulong i = 0; i < K; i++)
-                        {
-                            // Dillinger and Manolios double hashing
-                            ulong finalHash = (primaryHash + i * secondaryHash) % numberOfBits;
-                            ref byte ptr = ref _unsyncedPages[finalHash / BitVector.BitsPerByte];
-                            int bit = 1 << (int)(finalHash % BitVector.BitsPerByte);
-                            newPage |= (ptr & bit) == 0;
-                            ptr |= (byte)bit;
-                        }
-
-                        if (newPage)
-                            unsyncedPages++;
+                        unsyncedPages += _unsyncedPages.Add(pageNumber).ToInt32();
                     }
                 }
 
