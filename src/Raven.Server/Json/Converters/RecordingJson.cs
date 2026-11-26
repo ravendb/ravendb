@@ -78,16 +78,16 @@ namespace Raven.Server.Json.Converters
 
         private static void Write(Utf8JsonWriter writer, BlittableJsonReaderObject blittable)
         {
+            JsonOperationContext context = _context ?? blittable._context;
             BlittableJsonReaderObject materialized = blittable.Modifications != null
-                ? blittable._context.ReadObject(blittable, "recording/modifications")
+                ? context.ReadObject(blittable, "recording/modifications")
                 : null;
 
             using (materialized)
             using (var stream = new MemoryStream())
             {
-                BlittableJsonReaderObject source = materialized ?? blittable;
-                using (var textWriter = new BlittableJsonTextWriter(source._context, stream) { EscapeNamedFloatingPointLiterals = true })
-                    source.WriteJsonTo(textWriter);
+                using (var textWriter = new BlittableJsonTextWriter(context, stream) { EscapeNamedFloatingPointLiterals = true })
+                    (materialized ?? blittable).WriteJsonTo(textWriter);
 
                 writer.WriteRawValue(stream.GetBuffer().AsSpan(0, (int)stream.Length), skipInputValidation: true);
             }

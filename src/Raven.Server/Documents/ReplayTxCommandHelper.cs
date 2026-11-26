@@ -294,6 +294,7 @@ namespace Raven.Server.Documents
 
         internal static BlittableJsonReaderObject Serialize(JsonOperationContext context, object value)
         {
+            using (RecordingJson.EnterContext(context))
             using (IJsonWriter writer = RecordingSerialization.CreateWriter(context))
             {
                 RecordingSerialization.CreateSerializer().Serialize(writer, value);
