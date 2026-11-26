@@ -46,4 +46,15 @@ describe("External Replication", function () {
         expect(container.queryByTitle(selectors.deleteTaskTitle)).not.toBeInTheDocument();
         expect(container.queryByTitle(selectors.editTaskTitle)).not.toBeInTheDocument();
     });
+
+    it("shows the replication error without expanding the card", async () => {
+        const Story = composeStory(externalReplicationStories.RuntimeError, externalReplicationStories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId("replications"));
+
+        await fireClick(await container.findByRole("button", { name: "Error" }));
+
+        expect(await screen.findByRole("dialog")).toHaveTextContent("This is some error");
+    });
 });

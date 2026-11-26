@@ -27,6 +27,9 @@ namespace Raven.Server.Config.Categories
             // On Windows a hole punch (FSCTL_SET_ZERO_DATA) makes NTFS walk the whole mapped section - seconds on a large file 
             // while holding a kernel level lock. On Posix the equivalent call is cheap, so we keep punching inline there.
             PunchSparseRegionsOnIdleOnly = PlatformDetails.RunningOnWindows;
+
+            // kernel 6.16+ keeps file data in large page-cache folios capped by read_ahead_kb; one dirty page writes back the whole folio
+            ReadAheadKbAlertThreshold = PlatformDetails.RunningOnLinux && Environment.OSVersion.Version >= new Version(6, 16) ? 32 : 128;
         }
 
         // CVE-2026-74674: on arm64 Linux, kernels [7.0, 7.1.9)
@@ -288,7 +291,7 @@ namespace Raven.Server.Config.Categories
         public int PrefetchRingQueueSize { get; set; }
 
         [Description("Threshold (in KB) for the block device read_ahead_kb alert raised on server startup on Linux. If any block device's read_ahead_kb exceeds this value, a warning alert is raised. Set to null to disable the check.")]
-        [DefaultValue(128)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [MinValue(0)]
         [ConfigurationEntry("Storage.ReadAheadKbAlertThresholdInKb", ConfigurationEntryScope.ServerWideOnly)]
         public int? ReadAheadKbAlertThreshold { get; set; }

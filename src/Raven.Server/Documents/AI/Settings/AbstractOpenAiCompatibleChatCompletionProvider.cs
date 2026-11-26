@@ -21,8 +21,6 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
     {
     }
 
-    public virtual bool SupportStrictTools => true;
-
     public virtual bool SupportsToolChoiceNone => true;
 
     public override void AddHeaders(HttpRequestMessage request)
@@ -47,12 +45,6 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
             public const string ToolTypeFunction = "function";
             public const string Parameters = "parameters";
             public const string ToolChoiceNone = "none";
-        }
-
-        public static class Headers
-        {
-            public const string OpenAiOrganization = "OpenAI-Organization";
-            public const string OpenAiProject = "OpenAI-Project";
         }
     }
 
@@ -79,7 +71,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         if (string.Equals(GetFinishReason(choice0), ChatCompletionClient.Constants.ResponseFields.FinishReasonContentFilter, StringComparison.OrdinalIgnoreCase))
         {
             isCompleteMessage = true;
-            return "Response blocked due to content policy";
+            return OpenAiShared.ContentFilterRefusal;
         }
 
         return null;
@@ -124,30 +116,26 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         };
     }
 
-    public override void AddAuthentication(HttpRequestMessage request)
-    {
-        request.Headers.Authorization = string.IsNullOrEmpty(ApiKey)
-            ? null
-            : new AuthenticationHeaderValue(ChatCompletionClient.Constants.RequestFields.AuthorizationApiKeyProperty, ApiKey);
-    }
+    public override void AddAuthentication(HttpRequestMessage request) => OpenAiShared.AddBearerAuthentication(request, ApiKey);
 
-    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema)
+    public override DynamicJsonValue BuildTool(JsonOperationContext ctx, string name, string description, string parametersSchema, bool strict)
     {
-        var tool = new DynamicJsonValue
+        var function = new DynamicJsonValue
         {
-            [ChatCompletionClient.Constants.JsonSchemaFields.Type] = Wire.RequestFields.ToolTypeFunction,
-            [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.ResponseFields.Name] = name,
-                [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
-                [Wire.RequestFields.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
-            }
+            [ChatCompletionClient.Constants.ResponseFields.Name] = name,
+            [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description,
+            [Wire.RequestFields.Parameters] = ctx.Sync.ReadForMemory(parametersSchema, "params/schema")
         };
 
-        if (SupportStrictTools)
-            tool[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
+        // Chat Completions reads strict inside "function" (FunctionObject), a tool-level strict is ignored
+        if (strict)
+            function[ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true;
 
-        return tool;
+        return new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.JsonSchemaFields.Type] = Wire.RequestFields.ToolTypeFunction,
+            [ChatCompletionClient.Constants.ResponseFields.Function] = function
+        };
     }
 
     protected override void WritePayloadCore(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, AiChatRequest request, bool streaming)
@@ -386,50 +374,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         return false;
     }
 
-    public override TimeSpan? GetRetryAfter(HttpResponseMessage response, AiError error)
-    {
-        var headers = response.Headers;
+    public override TimeSpan? GetRetryAfter(HttpResponseMessage response, AiError error) => OpenAiShared.GetRetryAfter(response, error);
 
-        if (headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfterMs) == false &&
-            headers.Contains(ChatCompletionClient.Constants.Headers.RetryAfter) == false &&
-            error.RetryAfter == null)
-            return null;
-
-        var retryAfter = error.RetryAfter
-                         ?? (ChatCompletionClient.TryGetRetryAfter(response, out var retryAfterFromHeaders) ? retryAfterFromHeaders : TimeSpan.Zero);
-
-        if (headers.TryGetValues(ChatCompletionClient.Constants.Headers.XRateLimitResetTokens, out var resetTokensValues))
-        {
-            // TPM
-            var retryAfterAsString = resetTokensValues.FirstOrDefault();
-            if (ChatCompletionClient.TryParseResetTime(retryAfterAsString, out var retryAfterForTokens) == false)
-                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-
-            retryAfter = retryAfterForTokens > retryAfter ? retryAfterForTokens : retryAfter;
-        }
-
-        if (headers.TryGetValues(ChatCompletionClient.Constants.Headers.XRateLimitResetRequests, out var resetRequestsValues))
-        {
-            // RPM
-            var retryAfterAsString = resetRequestsValues.FirstOrDefault();
-            if (ChatCompletionClient.TryParseResetTime(retryAfterAsString, out var retryAfterForReqs) == false)
-                throw new FormatException($"Unrecognized rate-limit format: '{retryAfterAsString}'");
-
-            retryAfter = retryAfterForReqs > retryAfter ? retryAfterForReqs : retryAfter;
-        }
-
-        return retryAfter;
-    }
-
-    public override string GetRequestId(HttpResponseHeaders headers)
-    {
-        if (headers.TryGetValues(ChatCompletionClient.Constants.Headers.XRequestId, out IEnumerable<string> values))
-            return values.FirstOrDefault() ?? string.Empty;
-
-        // Azure API Management uses a different header name
-        if (headers.TryGetValues("apim-request-id", out values))
-            return values.FirstOrDefault() ?? string.Empty;
-
-        return string.Empty;
-    }
+    public override string GetRequestId(HttpResponseHeaders headers) => OpenAiShared.GetRequestId(headers);
 }

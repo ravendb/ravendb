@@ -9,7 +9,7 @@ import { Checkbox } from "components/common/Checkbox";
 import { NodeSet, NodeSetItem, NodeSetLabel, NodeSetList } from "components/common/NodeSet";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 
 // TODO Add Auto fill button

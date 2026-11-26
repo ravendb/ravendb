@@ -144,6 +144,9 @@ export interface OngoingTaskReplicationSinkSharedInfo extends OngoingTaskSharedI
 export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     url: string;
+    queues: string[];
+    scriptsCount: number;
+    enabledScriptsCount: number;
 }
 
 export interface OngoingTaskCdcSinkSharedInfo extends OngoingTaskSharedInfo {

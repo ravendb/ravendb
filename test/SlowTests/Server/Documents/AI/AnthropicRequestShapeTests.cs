@@ -65,19 +65,20 @@ namespace SlowTests.Server.Documents.AI
             return ((JArray)JObject.Parse(payload)["messages"]).Cast<JObject>().ToList();
         }
 
+        // the schema goes out as written, strict or not, same as on OpenAI
         [RavenTheory(RavenTestCategory.Ai)]
-        [InlineData(@"{""type"":""object"",""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}")]           // root missing additionalProperties
-        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""city"":{""type"":""string""}}}")] // already closed
-        public async Task AnthropicTool_ValidObjectRoot_IsClosedAndStrict(string parametersSchema)
+        [InlineData(@"{""type"":""object"",""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}", true)]           // root missing additionalProperties
+        [InlineData(@"{""type"":""object"",""additionalProperties"":false,""properties"":{""city"":{""type"":""string""}}}", true)] // already closed
+        [InlineData(@"{""type"":""object"",""properties"":{""city"":{""type"":""string""}},""required"":[""city""]}", false)]
+        public async Task AnthropicTool_SchemaGoesOutAsWritten_AndStrictAsRequested(string parametersSchema, bool strict)
         {
-            var tool = await AnthropicTool(parametersSchema);
+            var tool = await AnthropicTool(parametersSchema, strict);
 
-            Assert.True((bool)tool["strict"]);
-            Assert.False((bool)tool["input_schema"]["additionalProperties"]);
-            Assert.True(JToken.DeepEquals(JObject.Parse(parametersSchema)["properties"], tool["input_schema"]["properties"]));
+            Assert.Equal(strict, (bool)tool["strict"]);
+            Assert.True(JToken.DeepEquals(JObject.Parse(parametersSchema), tool["input_schema"]));
         }
 
-        private static async Task<JObject> AnthropicTool(string parametersSchema)
+        private static async Task<JObject> AnthropicTool(string parametersSchema, bool strict = true)
         {
             using var pool = NewContextPool();
             using var client = NewClient(Anthropic(), contextPool: pool);
@@ -86,7 +87,7 @@ namespace SlowTests.Server.Documents.AI
             using (pool.AllocateOperationContext(out JsonOperationContext ctx))
             using (var stream = new MemoryStream())
             {
-                var tools = client.PrepareTools(ctx, [new AiToolDescriptor("get_weather", "weather by city", parametersSchema)]);
+                var tools = client.PrepareTools(ctx, [new AiToolDescriptor("get_weather", "weather by city", parametersSchema, strict)]);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                 {

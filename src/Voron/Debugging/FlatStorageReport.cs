@@ -8,11 +8,13 @@ namespace Voron.Debugging
         public DataFileReport DataFile { get; set; }
         public List<FlatTreeReport> Trees { get; set; }
         public List<FlatTableReport> Tables { get; set; }
+        public long? UnaccountedSpaceInBytes { get; set; }
 
         public static FlatStorageReport From(DetailedStorageReport report) =>
             new()
             {
                 DataFile = report.DataFile,
+                UnaccountedSpaceInBytes = report.UnaccountedSpaceInBytes,
                 Trees = report.Trees?.Select(tree => new FlatTreeReport
                 {
                     Name = tree.Name,

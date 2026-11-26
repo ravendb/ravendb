@@ -7,6 +7,7 @@ import etlProgressCommand from "commands/database/tasks/etlProgressCommand";
 import { OngoingTaskSharedInfo } from "../models/tasks";
 import TaskUtils from "../utils/TaskUtils";
 import getManualBackupCommand from "commands/database/tasks/getManualBackupCommand";
+import getPeriodicBackupStatusCommand from "commands/database/tasks/getPeriodicBackupStatusCommand";
 import getOngoingTaskInfoCommand from "commands/database/tasks/getOngoingTaskInfoCommand";
 import getSubscriptionConnectionDetailsCommand from "commands/database/tasks/getSubscriptionConnectionDetailsCommand";
 import dropSubscriptionConnectionCommand from "commands/database/tasks/dropSubscriptionConnectionCommand";
@@ -114,6 +115,10 @@ export default class TasksService {
 
     async getManualBackup(databaseName: string) {
         return new getManualBackupCommand(databaseName).execute();
+    }
+
+    async getPeriodicBackupStatus(...args: ConstructorParameters<typeof getPeriodicBackupStatusCommand>) {
+        return new getPeriodicBackupStatusCommand(...args).execute();
     }
 
     async getCdcSinkTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forCdcSink>) {

@@ -99,6 +99,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return Convert.ToInt64(_searcher.IndexReader.NumDocs());
         }
 
+        protected override Func<string, bool> FieldHoldsArrays => name =>
+            _searcher.IndexReader.DocFreq(new Term(name + LuceneDocumentConverterBase.IsArrayFieldSuffix, LuceneDocumentConverterBase.TrueString), _state) > 0;
+
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<long> totalResults, Reference<long> skippedResults,
             Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
         {
@@ -582,7 +585,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return gatherAllCollector.ToTopDocs();
                 }
 
-                var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
+                var numberOfDocsToCollect = Math.Abs(pageSize + start);
+
+                if (StatisticsBackedNonSortingCollector.TryExecute(_searcher, documentQuery, numberOfDocsToCollect, _state, out var topDocs))
+                    return topDocs;
+
+                var noSortingCollector = new NonSortingCollector(numberOfDocsToCollect);
                 _searcher.Search(documentQuery, noSortingCollector, _state);
                 return noSortingCollector.ToTopDocs();
             }

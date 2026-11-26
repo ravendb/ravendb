@@ -631,7 +631,11 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(context, lowerDocId, out Slice lowerId, out Slice idSlice))
             {
                 AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Content.Length, AttachmentType.Document, default, out var key);
-                table.DeleteByPrimaryKeyPrefix(key);
+                table.DeleteByPrimaryKeyPrefix(key, beforeDelete: (in TableValueReader before) =>
+                {
+                    using (TableValueToSlice(context, (int)AttachmentsTable.Hash, before, out Slice hash))
+                        context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
+                });
             }
         }
 

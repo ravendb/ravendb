@@ -391,8 +391,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskKafkaSinkSharedInfo = {
                         ...commonProps,
-                        connectionStringName: incoming.ConnectionStringName,
-                        url: incoming.Url,
+                        ...mapQueueSinkProps(incoming),
                     };
                     return result;
                 }
@@ -400,8 +399,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskRabbitMqSinkSharedInfo = {
                         ...commonProps,
-                        connectionStringName: incoming.ConnectionStringName,
-                        url: incoming.Url,
+                        ...mapQueueSinkProps(incoming),
                     };
                     return result;
                 }
@@ -409,8 +407,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                     // noinspection UnnecessaryLocalVariableJS
                     const result: OngoingTaskAzureServiceBusSinkSharedInfo = {
                         ...commonProps,
-                        connectionStringName: incoming.ConnectionStringName,
-                        url: incoming.Url,
+                        ...mapQueueSinkProps(incoming),
                     };
                     return result;
                 }
@@ -530,6 +527,19 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
     }
 
     return commonProps;
+}
+
+function mapQueueSinkProps(incoming: OngoingTaskQueueSinkListView) {
+    const scripts = incoming.Configuration?.Scripts ?? [];
+    const enabledScripts = scripts.filter((x) => !x.Disabled);
+
+    return {
+        connectionStringName: incoming.ConnectionStringName,
+        url: incoming.Url,
+        queues: Array.from(new Set(enabledScripts.flatMap((x) => x.Queues ?? []))),
+        scriptsCount: scripts.length,
+        enabledScriptsCount: enabledScripts.length,
+    };
 }
 
 function mapNodeInfo(task: OngoingTask): OngoingTaskNodeInfoDetails {

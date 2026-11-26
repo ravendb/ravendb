@@ -19,6 +19,7 @@
 @chart-configuration-color: @color-5-3;
 @chart-sharedjournals-color: @color-4-3;
 @chart-free-color: @gray-darker;
+@chart-other-color: @color-4;
 @chart-database-color: @chart-documents-color;
 @chart-shard-color: darken(@chart-documents-color, 10%);
 @chart-system-color: @color-4;
@@ -56,6 +57,10 @@
         .name {
             word-wrap: break-word;
             line-height: 18px;
+        }
+
+        .tooltip-li.description {
+            line-height: @line-height-base !important;
         }
     }
 
@@ -194,6 +199,14 @@
                 &.grouped {
                     fill: darken(@chart-reserved-color, 10%);
                 }
+            }
+        }
+
+        &.other {
+            fill: @chart-other-color;
+
+            &:hover {
+                fill: lighten(@chart-other-color, 5%);
             }
         }
 

@@ -25,7 +25,12 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
 import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
-import { TaskPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import {
+    TaskPanelErrors,
+    EtlPanelHealthBadge,
+    EtlPanelProgressItem,
+    TaskPanelToggleButton,
+} from "./EtlPanelComponents";
 import copyToClipboard from "common/copyToClipboard";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
@@ -70,6 +75,10 @@ export function GenAiPanel(props: GenAiPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="genai" />
+                        GenAI
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -82,19 +91,12 @@ export function GenAiPanel(props: GenAiPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
-                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
             <RichPanelDetails>
-                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
-                <RichPanelDetailItem label="Type">
-                    <Icon icon="genai" />
-                    GenAI
-                </RichPanelDetailItem>
+                <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
                 {identifier && (
                     <RichPanelDetailItem label="Identifier">
                         {identifier}
@@ -103,15 +105,13 @@ export function GenAiPanel(props: GenAiPanelProps) {
                             onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
                             size="xs"
                         >
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy" />
                         </Button>
                     </RichPanelDetailItem>
                 )}
                 {nextBatchStartingPoint && (
                     <RichPanelDetailItem label="Next Batch Starting Point" contentClassName="d-flex align-items-center">
-                        <div className="text-truncate" style={{ maxWidth: "200px" }}>
-                            {nextBatchStartingPoint}
-                        </div>
+                        <div className="detail-item-value-truncate">{nextBatchStartingPoint}</div>
                         <PopoverWithHoverWrapper
                             wrapperClassName="ms-1"
                             message={nextBatchStartingPoint
@@ -128,7 +128,7 @@ export function GenAiPanel(props: GenAiPanelProps) {
                             }
                             size="xs"
                         >
-                            <Icon icon="copy-to-clipboard" />
+                            <Icon icon="copy" />
                         </Button>
                     </RichPanelDetailItem>
                 )}

@@ -17,7 +17,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
 
 public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOpenAiConnectorForTesting>
 {
-    private const string Model = "gpt-5.6-luna";
+    private const string Model = "gpt-6-luna";
 
     public GenAiOpenAiConnectorForTesting()
     {
@@ -33,14 +33,12 @@ internal static class OpenAiConnectorHelper
 {
     public const string Endpoint = "https://api.openai.com/";
 
-    private const string MinimalReasoningEffort = "minimal";
-
     public static AiConnectionString CreateAiConnectionString(string model, AiModelType modelType)
     {
         return new AiConnectionString
         {
             ModelType = modelType,
-            OpenAiSettings = new OpenAiSettings(RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey, Endpoint, model, reasoningEffort: MinimalReasoningEffort, seed: 48)
+            OpenAiSettings = new OpenAiSettings(RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey, Endpoint, model, reasoningEffort: "low", seed: 48)
         };
     }
 }

@@ -7,6 +7,7 @@ import { useLazyTableSelection } from "components/common/virtualTable/hooks/useL
 import LazyVirtualTable from "components/common/virtualTable/LazyVirtualTable";
 import { lazyTableOptions } from "components/common/virtualTable/utils/lazyTableUtils";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import useBoolean from "components/hooks/useBoolean";
 import { useResizeObserver } from "components/hooks/useResizeObserver";
 import { useServices } from "components/hooks/useServices";
 import { useCollectionRemovalRedirect } from "components/pages/database/documents/documentsList/hooks/useCollectionRemovalRedirect";
@@ -15,6 +16,7 @@ import { useDocumentsDataChanged } from "components/pages/database/documents/doc
 import { useFullDocumentProvider } from "components/pages/database/documents/documentsList/hooks/useFullDocumentProvider";
 import DocumentsListToolbar from "components/pages/database/documents/documentsList/partials/DocumentsListToolbar";
 import DocumentsSelectionActions from "components/pages/database/documents/documentsList/partials/DocumentsSelectionActions";
+import { documentPreviewStorage } from "components/pages/database/documents/documentsList/utils/documentPreviewStorage";
 import { useAppSelector } from "components/store";
 import document from "models/database/documents/document";
 import { useRef, useState } from "react";
@@ -44,7 +46,14 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         fetchCurrentEtag: async () =>
             (await databasesService.getDocumentsPreview(databaseName, 0, 0, collectionName ?? undefined)).resultEtag,
     });
-    const { getPropertyPreviewResolver, clearCache: clearFullDocumentCache } = useFullDocumentProvider(databaseName);
+    const {
+        getPropertyPreviewResolver,
+        getDocumentPreviewSource,
+        clearCache: clearFullDocumentCache,
+    } = useFullDocumentProvider(databaseName);
+    const { value: isDocumentPreviewEnabled, setValue: setIsDocumentPreviewEnabled } = useBoolean(() =>
+        documentPreviewStorage.isEnabled()
+    );
     const collectionDeletionCallbacks = useCollectionRemovalRedirect(databaseName, collectionName);
 
     const bodyRef = useRef<HTMLDivElement>(null);
@@ -55,6 +64,7 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         collectionName,
         tableBodyWidthInPx: virtualTableUtils.getTableBodyWidth(bodyWidthInPx),
         getPropertyPreviewResolver,
+        getDocumentPreviewSource: isDocumentPreviewEnabled ? getDocumentPreviewSource : undefined,
     });
 
     const lazyRows = useLazyRows<document, pagedResultWithAvailableColumns<document>>({
@@ -106,12 +116,19 @@ export default function DocumentsPageBody({ collectionName }: DocumentsPageBodyP
         lazyRows.reload();
     };
 
+    const handleDocumentPreviewChange = (isEnabled: boolean) => {
+        documentPreviewStorage.save(isEnabled);
+        setIsDocumentPreviewEnabled(isEnabled);
+    };
+
     return (
         <div ref={bodyRef} className="vstack min-height-0">
             <DocumentsListToolbar
                 collectionName={collectionName}
                 isPaginated={isPaginated}
                 onIsPaginatedChange={setIsPaginated}
+                isDocumentPreviewEnabled={isDocumentPreviewEnabled}
+                onIsDocumentPreviewEnabledChange={handleDocumentPreviewChange}
                 isCustomLayout={columns.isCustomLayout}
                 onOpenColumnSettings={openColumnSettings}
                 getVisibleColumnFields={() => columns.getExportFields(table)}

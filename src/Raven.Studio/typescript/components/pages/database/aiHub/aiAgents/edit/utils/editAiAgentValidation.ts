@@ -76,6 +76,7 @@ const editSchema = yup.object({
             isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
+            strict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(
@@ -105,6 +106,7 @@ const editSchema = yup.object({
                 .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
             parametersSampleObject: yup.string(),
+            strict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(

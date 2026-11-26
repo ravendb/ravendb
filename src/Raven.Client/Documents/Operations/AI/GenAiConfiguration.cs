@@ -289,6 +289,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
                 query.Query != other.Query ||
                 query.ParametersSampleObject != other.ParametersSampleObject ||
                 query.ParametersSchema != other.ParametersSchema ||
+                query.Strict != other.Strict ||
                 query.Options?.AllowModelQueries != other.Options?.AllowModelQueries ||
                 query.Options?.AddToInitialContext != other.Options?.AddToInitialContext)
                 return true;

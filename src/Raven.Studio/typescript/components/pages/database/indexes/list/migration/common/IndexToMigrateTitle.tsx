@@ -4,7 +4,7 @@ import useUniqueId from "components/hooks/useUniqueId";
 import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
 import { FlexGrow } from "components/common/FlexGrow";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import OverlayTrigger from "components/common/OverlayTriggerWithMotion";
 import Tooltip from "react-bootstrap/Tooltip";
 
 interface IndexToMigrateTitleProps {

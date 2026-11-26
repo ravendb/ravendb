@@ -1,5 +1,4 @@
-import useUniqueId from "components/hooks/useUniqueId";
-import { PropsWithChildren, useCallback, useEffect } from "react";
+import { KeyboardEvent, PropsWithChildren } from "react";
 
 // To submit button use onClick={handleSubmit}
 
@@ -10,27 +9,17 @@ interface InnerFormProps {
 }
 
 export default function InnerForm({ children, onSubmit, className }: PropsWithChildren<InnerFormProps>) {
-    const id = useUniqueId("inner-form-");
+    const submitOnEnter = async (e: KeyboardEvent<HTMLDivElement>) => {
+        const isOwnInput = e.target instanceof HTMLInputElement && e.currentTarget.contains(e.target);
 
-    const handleKeyPress = useCallback(async (e: KeyboardEvent) => {
-        const isChildOfInnerForm =
-            e.target instanceof HTMLInputElement && document.getElementById(id)?.contains(e.target);
-
-        if (e.key === "Enter" && !e.shiftKey && isChildOfInnerForm) {
+        if (e.key === "Enter" && !e.shiftKey && isOwnInput) {
             e.preventDefault();
             await onSubmit();
         }
-    }, []);
-
-    useEffect(() => {
-        document.addEventListener("keydown", handleKeyPress);
-        return () => {
-            document.removeEventListener("keydown", handleKeyPress);
-        };
-    }, [handleKeyPress]);
+    };
 
     return (
-        <div id={id} className={className}>
+        <div className={className} onKeyDown={submitOnEnter}>
             {children}
         </div>
     );

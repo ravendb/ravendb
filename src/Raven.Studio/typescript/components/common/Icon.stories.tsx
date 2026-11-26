@@ -19,7 +19,7 @@ export const IconStory: StoryObj = {
                     <Icon icon={name} />
                     {name}
                     <Button variant="link" onClick={() => copyToClipboard.copy(name, "Copied to clipboard")}>
-                        <Icon icon="copy-to-clipboard" />
+                        <Icon icon="copy" />
                     </Button>
                 </div>
             ))}
@@ -120,7 +120,6 @@ const allIconNames: IconName[] = [
     "connected",
     "connection-lost",
     "console",
-    "copy-to-clipboard",
     "copy",
     "corax-all-entries-match",
     "corax-backward",

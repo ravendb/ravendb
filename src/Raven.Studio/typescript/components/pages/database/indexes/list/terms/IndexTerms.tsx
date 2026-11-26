@@ -182,7 +182,7 @@ function IndexTermItem({ index, term, indexName, field, fieldTerms }: IndexTermI
                         className="p-0"
                         title="Copy to clipboard"
                     >
-                        <Icon icon="copy-to-clipboard" margin="m-0" />
+                        <Icon icon="copy" margin="m-0" />
                     </Button>
                 </div>
             </div>

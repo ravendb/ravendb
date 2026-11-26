@@ -839,16 +839,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 // If we are going to just return count() then we don't care about anything else than memoize the results.
                 if (query.IsCountQuery || query.SkipStatistics == false)
                 {
-                    int read;
-                    do
+                    if (typeof(TDistinct) != typeof(HasDistinct) && TryGetExactMatchCount(queryMatch, out var exactCount))
                     {
-                        // Instead of memoizing, we just continue filling the buffer. First, because we don't need to keep the 
-                        // value or deduplicate at this stage; just to know how many potential matches we have left. Also memoizing
-                        // is not supported for SortingMatch. 
-                        read = queryMatch.Fill(ids);
-                        totalResults.Value += read;
+                        totalResults.Value = exactCount;
                     }
-                    while (read != 0);
+                    else
+                    {
+                        int read;
+                        do
+                        {
+                            // Instead of memoizing, we just continue filling the buffer. First, because we don't need to keep the
+                            // value or deduplicate at this stage; just to know how many potential matches we have left. Also memoizing
+                            // is not supported for SortingMatch.
+                            read = queryMatch.Fill(ids);
+                            totalResults.Value += read;
+                        }
+                        while (read != 0);
+                    }
                 }
 
 
@@ -1486,6 +1493,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private static void ThrowExplanationsIsNotImplementedInCorax()
         {
             throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support {nameof(Explanations)} yet.");
+        }
+
+        internal static bool TryGetExactMatchCount(IQueryMatch queryMatch, out long count)
+        {
+            switch (queryMatch)
+            {
+                case TermMatch termMatch:
+                    count = termMatch.Count;
+                    return true;
+
+                case MemoizationMatch memoizationMatch:
+                    memoizationMatch.InnerRetriever(out var inner);
+                    if (inner is AllEntriesMatch allEntriesMatch)
+                    {
+                        count = allEntriesMatch.Count;
+                        return true;
+                    }
+                    break;
+            }
+
+            count = 0;
+            return false;
         }
     }
 }
