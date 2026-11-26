@@ -1,6 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import * as yup from "yup";
+import { schemaFieldUtils } from "components/common/sampleObjectAndSchemaFields/schemaFieldUtils";
 
 export type GenAiStartingPoint = "Beginning of Time" | "Latest Document" | "Change Vector";
 
@@ -56,7 +57,7 @@ const editGenAiTaskSchema = yup.object({
             "sampleObjectOrJsonSchema",
             "Either 'Sample response object' or 'JSON schema' must be provided",
             function (_, { parent }) {
-                return !!parent.sampleObject || !!parent.jsonSchema;
+                return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(parent.sampleObject, parent.jsonSchema);
             }
         )
         .test(
@@ -88,14 +89,17 @@ const editGenAiTaskSchema = yup.object({
             isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
-            strict: yup.boolean(),
+            isStrict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(
                     "sampleObjectOrJsonSchema",
                     "Either 'Sample response object' or 'JSON schema' must be provided",
                     function (_, { parent }) {
-                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                        return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(
+                            parent.parametersSampleObject,
+                            parent.parametersSchema
+                        );
                     }
                 )
                 .test(

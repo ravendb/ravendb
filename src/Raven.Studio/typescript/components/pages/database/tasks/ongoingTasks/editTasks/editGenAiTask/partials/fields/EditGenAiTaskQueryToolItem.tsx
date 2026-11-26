@@ -184,6 +184,8 @@ export default function EditGenAiTaskQueryToolItem({ index, remove, save, edit }
                 jsonSchemaSamplesPanel={{ tabs: queryToolParametersSchemaSamplesTabs }}
                 schemaType="ToolParameters"
                 canRegenerateSchemaName={`queries.${index}.canRegenerateSchema`}
+                isStrictName={`queries.${index}.isStrict`}
+                isStrict={queryItem.isStrict}
             />
 
             <Accordion defaultActiveKey={isAdvancedOpenByDefault ? "advanced-settings" : null} className="mt-2">

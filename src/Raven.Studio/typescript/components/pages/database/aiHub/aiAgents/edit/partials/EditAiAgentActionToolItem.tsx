@@ -99,6 +99,8 @@ export default function EditAiAgentActionToolItem({ index, remove, save, edit }:
                 schemaType="ToolParameters"
                 helpActionTooltipTitle="Syntax example"
                 canRegenerateSchemaName={`actions.${index}.canRegenerateSchema`}
+                isStrictName={`actions.${index}.isStrict`}
+                isStrict={actionItem.isStrict}
             />
         </div>
     );

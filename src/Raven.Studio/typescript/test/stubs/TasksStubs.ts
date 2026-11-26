@@ -1151,6 +1151,22 @@ namespace Orders
         };
     }
 
+    static getJsonSchemaFromSampleObject(): string {
+        return JSON.stringify(
+            {
+                type: "object",
+                properties: {
+                    orderId: { type: "string", description: "The ID of the order the customer complains about" },
+                    problem: { type: "string", description: "Describe the problem" },
+                },
+                required: ["orderId", "problem"],
+                additionalProperties: false,
+            },
+            null,
+            4
+        );
+    }
+
     static testGenAiResults_context(): Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult {
         return {
             DebugActions: null,

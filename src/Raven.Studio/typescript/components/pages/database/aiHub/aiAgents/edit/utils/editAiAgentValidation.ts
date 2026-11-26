@@ -1,5 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { schemaFieldUtils } from "components/common/sampleObjectAndSchemaFields/schemaFieldUtils";
 import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
 type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
@@ -27,7 +28,7 @@ const editSchema = yup.object({
             "sampleObjectOrJsonSchema",
             "Either 'Sample response object' or 'JSON schema' must be provided",
             function (_, { parent }) {
-                return !!parent.sampleObject || !!parent.outputSchema;
+                return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(parent.sampleObject, parent.outputSchema);
             }
         )
         .test(
@@ -76,14 +77,17 @@ const editSchema = yup.object({
             isAddToInitialContext: yup.boolean().nullable(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
-            strict: yup.boolean(),
+            isStrict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(
                     "sampleObjectOrJsonSchema",
                     "Either 'Sample response object' or 'JSON schema' must be provided",
                     function (_, { parent }) {
-                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                        return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(
+                            parent.parametersSampleObject,
+                            parent.parametersSchema
+                        );
                     }
                 )
                 .test(
@@ -106,14 +110,17 @@ const editSchema = yup.object({
                 .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
             parametersSampleObject: yup.string(),
-            strict: yup.boolean(),
+            isStrict: yup.boolean(),
             parametersSchema: yup
                 .string()
                 .test(
                     "sampleObjectOrJsonSchema",
                     "Either 'Sample response object' or 'JSON schema' must be provided",
                     function (_, { parent }) {
-                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                        return schemaFieldUtils.getHasSampleObjectOrWrittenSchema(
+                            parent.parametersSampleObject,
+                            parent.parametersSchema
+                        );
                     }
                 )
                 .test(

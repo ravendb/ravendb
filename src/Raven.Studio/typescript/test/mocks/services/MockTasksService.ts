@@ -291,6 +291,12 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         );
     }
 
+    withJsonSchemaFromSampleObject(dto?: MockedValue<{ Result: string }>) {
+        return this.mockResolvedValue(this.mocks.getJsonSchemaFromSampleObject, dto, {
+            Result: TasksStubs.getJsonSchemaFromSampleObject(),
+        });
+    }
+
     withTestGenAi() {
         return this.mocks.testGenAi.mockImplementation(async (_, dto) => {
             if (dto.TestStage === "CreateContextObjects") {

@@ -167,6 +167,8 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                 schemaType="ToolParameters"
                 helpActionTooltipTitle="Syntax example"
                 canRegenerateSchemaName={`queries.${index}.canRegenerateSchema`}
+                isStrictName={`queries.${index}.isStrict`}
+                isStrict={queryItem.isStrict}
             />
 
             <Accordion defaultActiveKey={isAdvancedOpenByDefault ? "advanced-settings" : null} className="mt-2">
