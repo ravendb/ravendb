@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -715,7 +715,7 @@ namespace Raven.Server.Documents
 
         public long GetNumberOfConflicts(DocumentsOperationContext context)
         {
-            var table = new Table(ConflictsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(ConflictsSchema);
             return table.GetNumberOfEntriesFor(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
         }
 

@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema ShardingDocsSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.Documents,
             TableType = (byte)TableType.Documents
         };
 
@@ -25,6 +26,7 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema DocsSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.Documents,
             TableType = (byte)TableType.Documents
         };
 
@@ -103,6 +105,19 @@ namespace Raven.Server.Documents.Schemas
                 });
             }
         }
+    }
+
+    public enum GlobalTable
+    {
+        Documents,
+        Tombstones,
+        Conflicts,
+        Revisions,
+        Counters,
+        CounterTombstones,
+        TimeSeries,
+        DeleteRanges,
+        TimeSeriesStats
     }
 
     public enum TableType : byte

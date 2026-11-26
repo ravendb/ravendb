@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public IEnumerable<TimeSeriesReplicationItem> GetSegmentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, bool includeDocumentChangeVector = true)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, TimeSeriesSchema.DynamicKeyIndexes[TimeSeriesBucketAndEtagSlice], bucket, etag))
             {
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, DeleteRangesSchema.DynamicKeyIndexes[DeletedRangesBucketAndEtagSlice], bucket, etag))
             {

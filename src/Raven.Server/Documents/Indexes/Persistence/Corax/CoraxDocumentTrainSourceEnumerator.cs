@@ -43,7 +43,7 @@ public class CoraxDocumentTrainSourceEnumerator
 
     public IEnumerable<Document> GetDocumentsForDictionaryTraining(DocumentsOperationContext context, CoraxDocumentTrainSourceState state, DocumentFields fields = DocumentFields.All)
     {
-        var table = new Table(_documentsStorage.DocsSchema, context.Transaction.InnerTransaction);
+        var table = context.Transaction.GetGlobalTable(_documentsStorage.DocsSchema);
 
         var numberOfEntries = table.GetNumberOfEntriesFor(_documentsStorage.DocsSchema.FixedSizeIndexes[Schemas.Documents.AllDocsEtagsSlice]);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Changes;
@@ -79,7 +79,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     public IEnumerable<Document> GetDocumentsByBucketFrom(DocumentsOperationContext context, int bucket, long etag, long skip = 0, long take = long.MaxValue, DocumentFields fields = DocumentFields.All)
     {
-        var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+        var table = context.Transaction.GetGlobalTable(DocsSchema);
 
         foreach (var result in GetItemsByBucket(context.Allocator, table, DocsSchema.DynamicKeyIndexes[AllDocsBucketAndEtagSlice], bucket, etag, skip, take))
         {
@@ -313,7 +313,7 @@ public sealed unsafe class ShardedDocumentsStorage : DocumentsStorage
 
     public IEnumerable<Tombstone> RetrieveTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
     {
-        var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+        var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
         foreach (var result in GetItemsByBucket(context.Allocator, table, TombstonesSchema.DynamicKeyIndexes[TombstonesBucketAndEtagSlice], bucket, etag))
         {

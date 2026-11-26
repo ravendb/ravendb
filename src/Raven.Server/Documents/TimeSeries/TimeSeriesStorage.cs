@@ -2440,7 +2440,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag, bool includeDocumentChangeVector = true)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
@@ -2503,7 +2503,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
@@ -2530,7 +2530,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
             using var dispose = DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
@@ -2570,7 +2570,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, Slice key, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
 
             if (table.ReadByKey(key, out var reader) == false)
                 return null;
@@ -2580,7 +2580,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesSegmentEntry GetTimeSeries(DocumentsOperationContext context, long etag, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
             var index = TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice];
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
@@ -2591,7 +2591,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesDeletedRangeEntry GetTimeSeriesDeletedRange(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
             var index = DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice];
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
@@ -2621,7 +2621,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue, TimeSeriesSegmentEntryFields fields = TimeSeriesSegmentEntryFields.All)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
 
             foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], fromEtag, 0))
             {
@@ -2641,7 +2641,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private IEnumerable<TombstoneIndexItem> GetTimeSeriesDeletedRangeIndexItems(DocumentsOperationContext context, long fromEtag, long toEtag, long take = long.MaxValue)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
 
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], fromEtag, 0))
             {
@@ -2944,7 +2944,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TimeSeriesSchema);
 
             var result = table.ReadLast(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice]);
             if (result == null)
@@ -2974,7 +2974,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetLastTimeSeriesDeletedRangesEtag(DocumentsOperationContext context)
         {
-            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DeleteRangesSchema);
 
             var result = table.ReadLast(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice]);
             if (result == null)

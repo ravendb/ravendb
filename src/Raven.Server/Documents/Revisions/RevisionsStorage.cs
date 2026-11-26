@@ -745,7 +745,7 @@ namespace Raven.Server.Documents.Revisions
 
         private unsafe CollectionName GetCollectionFor(DocumentsOperationContext context, Slice prefixSlice)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             if (table.SeekOneForwardFromPrefix(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, out var reader) == false)
                 return null;
 
@@ -1247,7 +1247,7 @@ namespace Raven.Server.Documents.Revisions
         {
             // the etags are listed under the document's key, but the index they are looked up in is global,
             // so a revision whose collection has changed is reached here as well
-            var allRevisionsTable = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var allRevisionsTable = context.Transaction.GetGlobalTable(RevisionsSchema);
             var etagsIndex = RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice];
             var tree = context.Transaction.InnerTransaction.ReadTree(ConflictRevisionsSlice);
 
@@ -1328,7 +1328,7 @@ namespace Raven.Server.Documents.Revisions
             if (take == 0)
                 yield break;
 
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
 
             IEnumerable<TableValueHolder> revisions;
@@ -1427,7 +1427,7 @@ namespace Raven.Server.Documents.Revisions
             if (pageSize <= 0)
                 yield break;
 
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, prefix, out var lowerPrefix))
             {
                 string startId = prefix;
@@ -1513,7 +1513,7 @@ namespace Raven.Server.Documents.Revisions
 
         public string GetLastRevisionChangeVector(DocumentsOperationContext context)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             var tvr = table.ReadLast(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
             if (tvr == null)
                 return null;
@@ -1912,7 +1912,7 @@ namespace Raven.Server.Documents.Revisions
                 // This is because we want to handle out of order revisions from multiple nodes so the local etag
                 // order is different than the last modified order
                 Document result = null;
-                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                var table = context.Transaction.GetGlobalTable(RevisionsSchema);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
                     var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
@@ -1947,7 +1947,7 @@ namespace Raven.Server.Documents.Revisions
                 Document prev = null;
                 string collection = null;
 
-                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                var table = context.Transaction.GetGlobalTable(RevisionsSchema);
                 foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
                 {
                     if (collection == null)
@@ -2233,7 +2233,7 @@ namespace Raven.Server.Documents.Revisions
 
             if (collection == null)
             {
-                var allRevisionsTable = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                var allRevisionsTable = context.Transaction.GetGlobalTable(RevisionsSchema);
                 revisions = allRevisionsTable.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], lastScannedEtag);
                 return true;
             }
@@ -2590,7 +2590,7 @@ namespace Raven.Server.Documents.Revisions
                 }
                 else
                 {
-                    var revisions = new Table(RevisionsSchema, readCtx.Transaction.InnerTransaction);
+                    var revisions = readCtx.Transaction.GetGlobalTable(RevisionsSchema);
                     tvrs = revisions.SeekBackwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], endEtag);
                 }
 
@@ -2763,7 +2763,7 @@ namespace Raven.Server.Documents.Revisions
                     throw new ArgumentException($"Change Vector is null or empty");
 
                 RevisionsStorage revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
-                var table = new Table(revisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
+                var table = context.Transaction.GetGlobalTable(revisionsStorage.RevisionsSchema);
                 using (BuildRevisionKey(context, cv, out RevisionKey revisionKey, strict: false))
                 {
                     if (revisionsStorage.TryReadRevision(table, in revisionKey, out TableValueReader tvr) == false)
@@ -2862,7 +2862,7 @@ namespace Raven.Server.Documents.Revisions
 
         private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, long start, long take)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, start))
             {
                 if (take-- <= 0)
@@ -2884,7 +2884,7 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetRevisionsBinEntries(DocumentsOperationContext context, long skip, long take)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
             foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], null, Slices.AfterAllKeys, skip))
             {
@@ -2910,7 +2910,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var ids = new List<(string Id, long Etag)>();
             var count = 0L;
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             using var _ = GetEtagAsSlice(context, lastEtag, out var startSlice);
 
             foreach (var result in table.SeekForwardFrom(RevisionsSchema.Indexes[DeleteRevisionEtagSlice], startSlice, 0))
@@ -2977,7 +2977,7 @@ namespace Raven.Server.Documents.Revisions
 
         public Document GetRevision(DocumentsOperationContext context, string changeVector)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
             using (BuildRevisionKey(context, changeVector, out RevisionKey revisionKey, strict: false))
             {
@@ -2989,7 +2989,7 @@ namespace Raven.Server.Documents.Revisions
 
         public (int ActualSize, int AllocatedSize, bool IsCompressed)? GetRevisionMetrics(DocumentsOperationContext context, string changeVector)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
             using (BuildRevisionKey(context, changeVector, out RevisionKey revisionKey, strict: false))
             {
@@ -3069,7 +3069,7 @@ namespace Raven.Server.Documents.Revisions
             long start,
             long take)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
 
             var iterator = table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, start);
 
@@ -3186,7 +3186,7 @@ namespace Raven.Server.Documents.Revisions
 
         public IEnumerable<Document> GetResolvedDocumentsSince(DocumentsOperationContext context, DateTime since, long take = 1024)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             using (GetResolvedSlice(context, since, out var slice))
             {
                 foreach (var item in table.SeekForwardFrom(RevisionsSchema.Indexes[ResolvedFlagByEtagSlice], slice, 0))
@@ -3203,7 +3203,7 @@ namespace Raven.Server.Documents.Revisions
 
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice]);
         }
 
@@ -3244,7 +3244,7 @@ namespace Raven.Server.Documents.Revisions
 
         public long GetNumberOfNonDeletedRevisions(DocumentsOperationContext context)
         {
-            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(RevisionsSchema);
             var index = RevisionsSchema.Indexes[DeleteRevisionEtagSlice];
             using (GetEtagAsSlice(context, NotDeletedRevisionMarker, out var nonDeletedSlice))
             {

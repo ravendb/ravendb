@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -955,7 +955,7 @@ namespace Raven.Server.Documents
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
             long start, long take, Reference<long> skip = null, DocumentFields fields = DocumentFields.All, CancellationToken token = default)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             var isStartAfter = string.IsNullOrWhiteSpace(startAfterId) == false;
             var needsWildcardMatch = string.IsNullOrEmpty(matches) == false || string.IsNullOrEmpty(exclude) == false;
@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrder(DocumentsOperationContext context, long start, long take, DocumentFields fields = DocumentFields.All)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], start))
@@ -1025,7 +1025,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocumentsInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long take, long skip, DocumentFields fields = DocumentFields.All)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, skip))
@@ -1083,7 +1083,7 @@ namespace Raven.Server.Documents
 
             public bool? IsDocumentCompressed(DocumentsOperationContext context, Slice lowerDocumentId, out bool? isLargeValue)
             {
-                var table = new Table(_docsSchema, context.Transaction.InnerTransaction);
+                var table = context.Transaction.GetGlobalTable(_docsSchema);
                 return table.ForTestingPurposesOnly().IsTableValueCompressed(lowerDocumentId, out isLargeValue);
             }
         }
@@ -1106,7 +1106,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<DocumentReplicationItem> GetDocumentsFrom(DocumentsOperationContext context, long etag, DocumentFields fields = DocumentFields.All)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], etag, 0))
@@ -1117,7 +1117,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<Slice> ids, long start, long take, DocumentFields fields = DocumentFields.All)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             foreach (var id in ids)
             {
@@ -1140,7 +1140,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, IEnumerable<string> ids, long start, long take, DocumentFields fields = DocumentFields.All, bool returnNonExists = false)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
             foreach (var id in ids)
             {
                 using (Slice.From(context.Allocator, id.ToLowerInvariant(), out Slice lowerId))
@@ -1287,7 +1287,7 @@ namespace Raven.Server.Documents
                 return new DocumentOrTombstone();
             }
 
-            var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var tombstoneTable = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             Tombstone mostRecent = null;
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(lowerId, Slices.Empty, 0))
@@ -1367,7 +1367,7 @@ namespace Raven.Server.Documents
 
         public Document GetByEtag(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
             var index = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
@@ -1378,7 +1378,7 @@ namespace Raven.Server.Documents
 
         public Tombstone GetTombstoneByEtag(DocumentsOperationContext context, long etag)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
             var index = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
 
             if (table.Read(context.Allocator, index, etag, out var tvr) == false)
@@ -1396,7 +1396,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetAllIds(DocumentsOperationContext context)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], 0, 0))
@@ -1409,7 +1409,7 @@ namespace Raven.Server.Documents
         {
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             {
-                var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+                var table = context.Transaction.GetGlobalTable(DocsSchema);
 
                 if (table.ReadByKey(lowerId, out var tvr) == false)
                 {
@@ -1428,7 +1428,7 @@ namespace Raven.Server.Documents
 
         public bool GetTableValueReaderForDocument(DocumentsOperationContext context, Slice lowerId, bool throwOnConflict, out TableValueReader tvr)
         {
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             if (table.ReadByKey(lowerId, out tvr) == false)
             {
@@ -1445,7 +1445,7 @@ namespace Raven.Server.Documents
             long etag,
             int maxAllowed)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var _ in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
@@ -1458,7 +1458,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, long etag, long start, long take)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
@@ -1472,7 +1472,7 @@ namespace Raven.Server.Documents
 
         public GetTombstonesPreviewResult GetTombstonesPreviewResult(DocumentsOperationContext context, long etag, long start, long take)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             var tombstones = new List<Tombstone>();
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
@@ -1492,7 +1492,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<Tombstone> GetTombstonesInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long start, long take)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
@@ -1511,7 +1511,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<ReplicationBatchItem> GetTombstonesFrom(DocumentsOperationContext context, long etag, bool revisionTombstonesWithId = true)
         {
-            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(TombstonesSchema);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
@@ -2187,7 +2187,7 @@ namespace Raven.Server.Documents
         {
             var deleteResults = new List<DeleteOperationResult>();
 
-            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(DocsSchema);
 
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, prefix, out Slice prefixSlice))
             {
@@ -2302,7 +2302,7 @@ namespace Raven.Server.Documents
             }
             catch (VoronConcurrencyErrorException e)
             {
-                var tombstoneTable = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+                var tombstoneTable = context.Transaction.GetGlobalTable(TombstonesSchema);
                 if (tombstoneTable.ReadByKey(lowerId, out var tvr))
                 {
                     var tombstoneCollection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
@@ -2564,12 +2564,12 @@ namespace Raven.Server.Documents
             TableSchema.FixedSizeKeyIndexDef indexDef;
             if (tombstones)
             {
-                table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+                table = context.Transaction.GetGlobalTable(TombstonesSchema);
                 indexDef = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
             }
             else
             {
-                table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+                table = context.Transaction.GetGlobalTable(DocsSchema);
                 indexDef = DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
             }
 

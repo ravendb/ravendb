@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Changes;
@@ -8,6 +9,7 @@ using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using Voron.Data.Tables;
 using Voron.Impl;
 
 namespace Raven.Server.Documents
@@ -32,6 +34,14 @@ namespace Raven.Server.Documents
 
         private Dictionary<string, CollectionName> _collectionCache;
 
+        [InlineArray(10)]
+        private struct GlobalTables
+        {
+            private Table _element;
+        }
+
+        private GlobalTables _globalTables;
+
         public DocumentsTransaction(DocumentsOperationContext context, Transaction transaction, DocumentsChanges changes)
             : base(transaction)
         {
@@ -47,6 +57,12 @@ namespace Raven.Server.Documents
                 transaction.OnBeforeCommit += sharded.ShardedDocumentsStorage.OnBeforeCommit;
                 transaction.LowLevelTransaction.OnRollBack += sharded.ShardedDocumentsStorage.OnFailure;
             }
+        }
+
+        internal Table GetGlobalTable(TableSchema schema)
+        {
+            ref var table = ref _globalTables[schema.GlobalTableIndex];
+            return table ??= new Table(schema, InnerTransaction);
         }
 
         public override void BeforeCommit()

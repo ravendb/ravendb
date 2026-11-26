@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Schemas
     public static class DeletedRanges
     {
 
-        internal static readonly TableSchema DeleteRangesSchemaBase = new TableSchema();
-        internal static readonly TableSchema ShardingDeleteRangesSchemaBase = new TableSchema();
+        internal static readonly TableSchema DeleteRangesSchemaBase = new TableSchema { GlobalTableIndex = (int)GlobalTable.DeleteRanges };
+        internal static readonly TableSchema ShardingDeleteRangesSchemaBase = new TableSchema { GlobalTableIndex = (int)GlobalTable.DeleteRanges };
 
         internal static readonly Slice PendingDeletionSegments;
         internal static readonly Slice DeletedRangesKey;

@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Revisions
                 using (var tx = context.OpenWriteTransaction())
                 {
                     var index = _storage.RevisionsSchema.FixedSizeIndexes[Schemas.Revisions.AllRevisionsEtagsSlice];
-                    var table = new Table(_storage.RevisionsSchema, context.Transaction.InnerTransaction);
+                    var table = context.Transaction.GetGlobalTable(_storage.RevisionsSchema);
                     if (table.FindByIndex(index, etag, out var tvr) == false)
                         return false;
                         
