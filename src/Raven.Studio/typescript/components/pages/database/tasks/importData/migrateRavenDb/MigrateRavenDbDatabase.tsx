@@ -103,7 +103,7 @@ function MigrateRavenDbContent({ serverInfo, canDetect }: MigrateRavenDbContentP
     const { version } = serverInfo;
     const formData = watch();
     const isLegacy = !!version && isLegacyVersion(version);
-    const isRavenFsImport = isLegacy && serverInfo.fileSystemNames.length > 0 && formData.server.isImportRavenFs;
+    const isRavenFsImport = isLegacy && formData.server.isImportRavenFs;
     const navItems = isRavenFsImport ? [SELECT_SERVER_SECTION] : SECTION_NAV;
     const scroll = useImportPageScroll(navItems);
 

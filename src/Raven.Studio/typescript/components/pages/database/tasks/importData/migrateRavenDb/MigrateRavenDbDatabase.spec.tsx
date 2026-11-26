@@ -9,7 +9,7 @@ import * as stories from "./stories/MigrateRavenDbDatabase.stories";
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 type Rendered = ReturnType<typeof rtlRender>;
 
-const { Default, Sharded, NoDatabaseAdmin, NoOperator, ServerError } = composeStories(stories);
+const { Default, Sharded, NoDatabaseAdmin, NoOperator, LegacyServer, ServerError } = composeStories(stories);
 
 const SERVER_URL = "http://raven-old-1:8080";
 const OTHER_SERVER_URL = "https://raven-old-2:8080";
@@ -113,6 +113,27 @@ describe("MigrateRavenDbDatabase", () => {
 
         expect(rendered.screen.getByDisplayValue("7.1.3")).toBeInTheDocument();
         expect(rendered.screen.queryByDisplayValue("5.4.121")).not.toBeInTheDocument();
+    });
+
+    it("shows the legacy options and refetches silently when credentials change", async () => {
+        const rendered = rtlRender(<LegacyServer />);
+        const { screen, fillInput, fireClick } = rendered;
+
+        await detectVersion(rendered);
+
+        expect(await screen.findByDisplayValue("3.5 (build: 35286)")).toBeInTheDocument();
+        expect(getSwitch(rendered, "Include Legacy Attachments")).toBeEnabled();
+        expect(getSwitch(rendered, "Include Attachments")).toBeDisabled();
+
+        await fireClick(screen.getByRole("tab", { name: "API Key" }));
+        await fillInput(screen.getByLabelText("API Key"), "secret");
+
+        expect(getSwitch(rendered, "Include Documents")).toBeEnabled();
+        await act(() => jest.advanceTimersByTimeAsync(700));
+
+        const { getRemoteServerBuildInfo } = tasksMocks();
+        expect(getRemoteServerBuildInfo).toHaveBeenLastCalledWith(expect.objectContaining({ apiKey: "secret" }));
+        expect(getSwitch(rendered, "Include Documents")).toBeEnabled();
     });
 
     it("shows the error returned for the source server", async () => {

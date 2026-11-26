@@ -47,8 +47,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
     const { version, databaseNames, fileSystemNames, isAuthorized, hasUnsecuredBasicAuthOption, error, isLoading } =
         serverInfo;
     const isLegacy = !!version && isLegacyVersion(version);
-    const hasRavenFs = isLegacy && fileSystemNames.length > 0;
-    const isRavenFsImport = hasRavenFs && isImportRavenFs;
+    const isRavenFsImport = isLegacy && isImportRavenFs;
     const lowerCaseUrl = serverUrl.toLowerCase();
     const resourceLabel = isRavenFsImport ? "File system name" : "Database name";
 
@@ -93,7 +92,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                     </InputGroup>
                     {error && <div className="text-danger mt-1 text-break">{error}</div>}
                 </FormGroup>
-                {hasRavenFs && (
+                {isLegacy && (
                     <FormGroup>
                         <FormLabel>Resource type</FormLabel>
                         <FormRadioToggleWithIcon

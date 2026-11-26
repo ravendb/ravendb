@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-export interface RemoteServerBuildInfoArgs {
+interface RemoteServerBuildInfoArgs {
     serverUrl: string;
     userName: string;
     password: string;

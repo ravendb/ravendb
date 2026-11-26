@@ -4,11 +4,12 @@ import { debounce } from "lodash";
 import { useServices } from "components/hooks/useServices";
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
-import { RemoteServerBuildInfoArgs } from "commands/database/studio/getRemoteServerVersionWithDatabasesCommand";
+import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import { MigrateRavenDbFormData, serverUrlSchema } from "./migrateRavenDbValidation";
 import { SourceServerVersion } from "./migrateVersionSupport";
 
 type BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
+type RemoteServerBuildInfoArgs = ConstructorParameters<typeof getRemoteServerVersionWithDatabasesCommand>[0];
 
 export interface RemoteServerInfo {
     version: SourceServerVersion | null;
