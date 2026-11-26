@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -5,9 +6,11 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using Size = Sparrow.Size;
 
 namespace SlowTests.Bugs.Caching
 {
@@ -189,6 +192,80 @@ namespace SlowTests.Bugs.Caching
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
             }
+        }
+
+        // RavenDB-28147: HttpCache.Set adds the pooled allocation size to the tracked total, and releasing an item used to
+        // subtract only the response size. Once the leftover passed MaxHttpCacheSize, every new cache entry started a FreeSpace
+        // run whose target (half the inflated total) was larger than everything the cache really held, so it evicted every item.
+        // Two queries that alternate against an unchanged database then kept evicting each other and never got a 304.
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void Unchanged_Queries_Should_Be_Served_From_Cache_After_One_Document_Was_Updated_And_Reloaded_Many_Times()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s => s.Conventions.MaxHttpCacheSize = new Size(1, SizeUnit.Megabytes)
+            });
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Item { Payload = RandomString(40_000) }, "items/large");
+                session.Store(new Item { Payload = "a" }, "items/a");
+                session.Store(new Item { Payload = "b" }, "items/b");
+                session.SaveChanges();
+            }
+
+            // Update one ~40 KB document and read it back 100 times. Each read replaces the same cache entry,
+            // so the cache never holds more than one copy of it: far below the 1 MB limit.
+            for (var i = 0; i < 100; i++)
+            {
+                using (var session = store.OpenSession())
+                {
+                    var item = session.Load<Item>("items/large");
+                    item.Version = i + 1;
+                    session.SaveChanges();
+                }
+            }
+
+            // No writes from here on. After the first round, every query should be answered from the cache (304).
+            const int rounds = 20;
+            var servedFromCache = 0;
+            for (var round = 0; round < rounds; round++)
+            {
+                foreach (var id in new[] { "items/a", "items/b" })
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        var results = session.Query<Item>()
+                            .Statistics(out var stats)
+                            .Where(x => x.Id == id)
+                            .ToList();
+
+                        Assert.Single(results);
+
+                        if (stats.DurationInMs == -1)
+                            servedFromCache++;
+                    }
+                }
+            }
+
+            Assert.Equal(2 * (rounds - 1), servedFromCache);
+        }
+
+        private static string RandomString(int length)
+        {
+            var random = new Random(12345);
+            return string.Create(length, random, (chars, r) =>
+            {
+                for (var i = 0; i < chars.Length; i++)
+                    chars[i] = (char)('a' + r.Next(26));
+            });
+        }
+
+        private class Item
+        {
+            public string Id { get; set; }
+            public string Payload { get; set; }
+            public int Version { get; set; }
         }
     }
 }
