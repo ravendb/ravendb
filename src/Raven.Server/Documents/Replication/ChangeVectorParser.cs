@@ -63,8 +63,6 @@ namespace Raven.Server.Documents.Replication
             throw new ArgumentException("Invalid node tag character: " + ch);
         }
 
-        private static long ParseEtag(string changeVector, int start, int end) => ParseEtag(changeVector.AsSpan(), start, end);
-
         private static long ParseEtag(ReadOnlySpan<char> changeVector, int start, int end)
         {
             long etag = changeVector[start] - '0';
@@ -236,173 +234,76 @@ namespace Raven.Server.Documents.Replication
 
             AssertChangeVector(changeVector);
 
-            var start = 0;
-            var current = 0;
-            var state = State.Tag;
-            int tag = -1;
-
-            while (current < changeVector.Length)
-            {
-                switch (state)
-                {
-                    case State.Tag:
-                        if (changeVector[current] == ':')
-                        {
-                            tag = ParseNodeTag(changeVector, start, current - 1);
-                            state = State.Etag;
-                            start = current + 1;
-                        }
-                        current++;
-                        break;
-                    case State.Etag:
-                        if (changeVector[current] == '-')
-                        {
-                            var etag = ParseEtag(changeVector, start, current - 1);
-
-                            if (current + DbBase64IdSize > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId", changeVector);
-                            bool found = false;
-                            var dbId = changeVector.Substring(current + 1, 22);
-                            for (int i = 0; i < entries.Count; i++)
-                            {
-                                if (entries[i].DbId == dbId)
-                                {
-                                    if (entries[i].Etag < etag)
-                                    {
-                                        entries[i] = new ChangeVectorEntry
-                                        {
-                                            NodeTag = tag,
-                                            Etag = etag,
-                                            DbId = dbId
-                                        };
-                                    }
-                                    found = true;
-                                    break;
-                                }
-                            }
-                            if (found == false)
-                            {
-                                entries.Add(new ChangeVectorEntry
-                                {
-                                    NodeTag = tag,
-                                    Etag = etag,
-                                    DbId = dbId
-                                });
-                            }
-                          
-                            start = current + DbBase64IdSize;
-                            current = start;
-                            state = State.Whitespace;
-                        }
-                        current++;
-                        break;
-                    case State.Whitespace:
-                        if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == ',')
-                        {
-                            start++;
-                            current++;
-                        }
-                        else
-                        {
-                            start = current;
-                            current++;
-                            state = State.Tag;
-                        }
-                        break;
-
-                    default:
-                        ThrowInvalidState(state, changeVector);
-                        break;
-                }
-            }
-
-            if (state == State.Whitespace)
-                return;
-
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
+            var sink = new MergeUpSink(entries);
+            ParseEntries(changeVector.AsSpan(), ref sink);
         }
 
         public static bool MergeChangeVectorDown(string changeVector, List<ChangeVectorEntry> entries)
         {
-            var start = 0;
-            var current = 0;
-            var state = State.Tag;
-            int tag = -1;
-            bool found = false;
+            var sink = new MergeDownSink(entries);
+            ParseEntries(changeVector.AsSpan(), ref sink);
+            return sink.Found;
+        }
 
-            while (current < changeVector.Length)
+        // raises the etag of an entry that is already there, adds an entry that is not
+        private readonly struct MergeUpSink(List<ChangeVectorEntry> entries) : IEntrySink
+        {
+            public void Add(int tag, long etag, scoped ReadOnlySpan<char> dbId)
             {
-                switch (state)
+                var index = IndexOf(entries, dbId);
+                if (index < 0)
                 {
-                    case State.Tag:
-                        if (changeVector[current] == ':')
-                        {
-                            tag = ParseNodeTag(changeVector, start, current - 1);
-                            state = State.Etag;
-                            start = current + 1;
-                        }
-                        current++;
-                        break;
-                    case State.Etag:
-                        if (changeVector[current] == '-')
-                        {
-                            var etag = ParseEtag(changeVector, start, current - 1);
+                    entries.Add(new ChangeVectorEntry
+                    {
+                        NodeTag = tag,
+                        Etag = etag,
+                        DbId = dbId.ToString()
+                    });
+                    return;
+                }
 
-                            if (current + DbBase64IdSize > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId", changeVector);
-                 
-                            var dbId = changeVector.Substring(current + 1, 22);
-                            for (int i = 0; i < entries.Count; i++)
-                            {
-                                if (entries[i].DbId == dbId)
-                                {
-                                    found = true;
-                                    if (entries[i].Etag > etag)
-                                    {
-                                        entries[i] = new ChangeVectorEntry
-                                        {
-                                            NodeTag = tag,
-                                            Etag = etag,
-                                            DbId = dbId
-                                        };
-                                    }
-                                    break;
-                                }
-                            }
-                          
-                            start = current + DbBase64IdSize;
-                            current = start;
-                            state = State.Whitespace;
-                        }
-                        current++;
-                        break;
-                    case State.Whitespace:
-                        if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == ',')
-                        {
-                            start++;
-                            current++;
-                        }
-                        else
-                        {
-                            start = current;
-                            current++;
-                            state = State.Tag;
-                        }
-                        break;
-
-                    default:
-                        ThrowInvalidState(state, changeVector);
-                        break;
+                var entry = entries[index];
+                if (entry.Etag < etag)
+                {
+                    entry.NodeTag = tag;
+                    entry.Etag = etag;
+                    entries[index] = entry;
                 }
             }
+        }
 
-            if (state == State.Whitespace)
-                return found;
+        // lowers the etag of an entry that is already there, ignores an entry that is not
+        private struct MergeDownSink(List<ChangeVectorEntry> entries) : IEntrySink
+        {
+            public bool Found;
 
-            ThrowInvalidEndOfString(state.ToString(), changeVector);
-            return false;
+            public void Add(int tag, long etag, scoped ReadOnlySpan<char> dbId)
+            {
+                var index = IndexOf(entries, dbId);
+                if (index < 0)
+                    return;
+
+                Found = true;
+
+                var entry = entries[index];
+                if (entry.Etag > etag)
+                {
+                    entry.NodeTag = tag;
+                    entry.Etag = etag;
+                    entries[index] = entry;
+                }
+            }
+        }
+
+        private static int IndexOf(List<ChangeVectorEntry> entries, ReadOnlySpan<char> dbId)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (dbId.SequenceEqual(entries[i].DbId))
+                    return i;
+            }
+
+            return -1;
         }
 
         [Conditional("DEBUG")]
