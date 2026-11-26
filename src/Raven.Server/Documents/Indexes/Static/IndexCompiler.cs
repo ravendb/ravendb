@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Indexes.Static
         internal const string AdditionalSourceExtension = ".source";
 
         internal const string IndexNamePrefix = "Index_";
+
+        private const string HelperAlias = "ravenServer";
 
         private static readonly Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>> AdditionalAssemblies = new Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>>(DiscoverAdditionalAssemblies);
 
@@ -160,12 +162,14 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Raven.Server.Documents.Indexes.Static.Extensions"))
         };
 
+        private static readonly MetadataReference ServerReference = CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly);
+
         public static readonly MetadataReference[] References =
         {
             CreateMetadataReferenceFromAssembly(typeof(object).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(ExpressionType).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(Enumerable).Assembly),
-            CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly),
+            ServerReference,
             CreateMetadataReferenceFromAssembly(typeof(BoostedValue).Assembly),
             CreateMetadataReferenceFromAssembly(LuceneAssembly),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Runtime"))),
@@ -190,10 +194,12 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
+            var helperAlias = GetHelperAlias(definition);
+            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
 
-            var @class = CreateClass(cSharpSafeName, definition, indexVersion);
+            var @class = CreateClass(cSharpSafeName, definition, indexVersion, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias), res.UsesLinqEnumerable, res.UsesLinqStringOrdering);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition, helperAlias, res);
             var type = compilationResult.Type;
 
             var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
@@ -202,16 +208,24 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition, string helperAlias,
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable, bool UsesLinqStringOrdering) res)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition, cSharpSafeName);
+            // The index code uses the reference without an alias; the aliased reference serves the generated helper calls only.
+            var externs = new SyntaxList<ExternAliasDirectiveSyntax>();
+            if (@class.DescendantNodes().OfType<AliasQualifiedNameSyntax>().Any(x => x.Alias.Identifier.ValueText == helperAlias))
+            {
+                externs = externs.Add(SyntaxFactory.ExternAliasDirective(helperAlias));
+                res.References = res.References.Append(ServerReference.WithAliases(new[] { helperAlias })).ToArray();
+            }
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
+                .WithExterns(externs)
                 .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
@@ -220,6 +234,9 @@ namespace Raven.Server.Documents.Indexes.Static
             using (var workspace = new AdhocWorkspace())
             {
                 formattedCompilationUnit = Formatter.Format(compilationUnit, workspace);
+
+                if (GeneratedSourceSelector.TrySelect(formattedCompilationUnit, res.SyntaxTrees, res.References, GeneratedSourceSelector.QualifyDynamicEnumerable(helperAlias), out var selected))
+                    formattedCompilationUnit = Formatter.Format(selected, workspace);
             }
 
             string sourceFile = null;
@@ -289,14 +306,14 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable, bool UsesLinqStringOrdering) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition, string cSharpSafeName)
         {
             if (definition.AdditionalSources == null && definition.AdditionalAssemblies == null)
             {
-                return (Usings, new List<SyntaxTree>(), References);
+                return (Usings, new List<SyntaxTree>(), References, UsesLinqEnumerable: true, UsesLinqStringOrdering: true);
             }
 
-            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) result;
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References, bool UsesLinqEnumerable, bool UsesLinqStringOrdering) result;
             var syntaxTrees = new Dictionary<string, SyntaxTree>();
             var usings = new HashSet<string>();
 
@@ -352,6 +369,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
             );
 
+            (result.UsesLinqEnumerable, result.UsesLinqStringOrdering) = GetLinqBindings(tempCompilation, result.UsingDirectiveSyntaxes, OrdersOnlyByLambdas(definition));
+
             var rewriter = new MethodDynamicParametersRewriter();
             var recursionGuard = new RecursionGuardRewriter();
             result.SyntaxTrees = new List<SyntaxTree>();
@@ -391,6 +410,54 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string AddUsingIndexStatic(string ext)
         {
             return $"using {IndexesStaticNamespace};{Environment.NewLine}{ext}";
+        }
+
+        private static readonly AssemblyIdentity LinqAssembly = AssemblyIdentity.FromAssemblyDefinition(typeof(Enumerable).Assembly);
+
+        // A positional lambda first argument stays a lambda or a delegate after rewriting; only such calls are checked against competing methods.
+        private static bool OrdersOnlyByLambdas(IndexDefinition definition) =>
+            definition.Maps.Append(definition.Reduce).Where(function => function != null)
+                .SelectMany(function => SyntaxFactory.ParseExpression(function).DescendantNodes().OfType<InvocationExpressionSyntax>())
+                .All(call => call.Expression is not MemberAccessExpressionSyntax
+                             {
+                                 Expression: not IdentifierNameSyntax { Identifier.ValueText: "Enumerable" },
+                                 Name.Identifier.ValueText: "OrderBy" or "OrderByDescending" or "ThenBy" or "ThenByDescending"
+                             } ||
+                             call.ArgumentList.Arguments is [{ NameColon: null, Expression: LambdaExpressionSyntax }, ..]);
+
+        private static (bool Enumerable, bool StringOrdering) GetLinqBindings(CSharpCompilation compilation, UsingDirectiveSyntax[] usings, bool ordersOnlyByLambdas)
+        {
+            var probe = SyntaxFactory.CompilationUnit()
+                .WithUsings(RoslynHelper.CreateUsings(usings))
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(RoslynHelper.CreateNamespace(IndexNamespace)))
+                .NormalizeWhitespace();
+
+            var tree = SyntaxFactory.ParseSyntaxTree(probe.ToFullString());
+            var semanticModel = compilation.AddSyntaxTrees(tree).GetSemanticModel(tree);
+            var @namespace = tree.GetRoot().DescendantNodes().OfType<NamespaceDeclarationSyntax>().First();
+            var symbolInfo = semanticModel.GetSpeculativeSymbolInfo(@namespace.OpenBraceToken.Span.End, SyntaxFactory.IdentifierName("Enumerable"), SpeculativeBindingOption.BindAsTypeOrNamespace);
+
+            bool usesEnumerable = symbolInfo.Symbol is INamedTypeSymbol type &&
+                                  type.ContainingAssembly != null &&
+                                  type.ContainingAssembly.Identity.Equals(LinqAssembly) &&
+                                  type.ToDisplayString() == typeof(Enumerable).FullName;
+            var defaultAssemblies = References.Select(reference => compilation.GetAssemblyOrModuleSymbol(reference)).ToHashSet(SymbolEqualityComparer.Default);
+            var stringType = compilation.GetSpecialType(SpecialType.System_String);
+            var stringArray = compilation.CreateArrayTypeSymbol(stringType);
+            var orderedString = compilation.SourceModule.ReferencedAssemblySymbols.First(assembly => assembly.Identity.Equals(LinqAssembly))
+                .GetTypeByMetadataName("System.Linq.IOrderedEnumerable`1")!.Construct(stringType);
+
+            // A delegate converts to no predefined numeric, bool, char or string type, so a method taking one first cannot bind these calls.
+            bool UsesDefaultOrdering(ITypeSymbol receiver, params string[] names) => names.All(name =>
+                semanticModel.LookupSymbols(@namespace.OpenBraceToken.Span.End, receiver, name, includeReducedExtensionMethods: true)
+                    .OfType<IMethodSymbol>().All(method => method.ReducedFrom == null || defaultAssemblies.Contains(method.ContainingAssembly) ||
+                        ordersOnlyByLambdas && method.Parameters is [] or [{ Type.SpecialType: SpecialType.System_Boolean or SpecialType.System_Char or
+                            SpecialType.System_SByte or SpecialType.System_Byte or SpecialType.System_Int16 or SpecialType.System_UInt16 or SpecialType.System_Int32 or
+                            SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or SpecialType.System_Single or SpecialType.System_Double or
+                            SpecialType.System_Decimal or SpecialType.System_String }, ..]));
+
+            return (usesEnumerable, UsesDefaultOrdering(stringArray, "OrderBy", "OrderByDescending") &&
+                                    UsesDefaultOrdering(orderedString, "ThenBy", "ThenByDescending"));
         }
 
         private static MetadataReference[] GetReferences(IndexDefinition definition)
@@ -555,7 +622,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
         
-        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion)
+        private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition, long indexVersion, string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering)
         {
             var statements = new List<StatementSyntax>();
             var maps = definition.Maps.ToList();
@@ -568,7 +635,7 @@ namespace Raven.Server.Documents.Indexes.Static
             for (var i = 0; i < maps.Count; i++)
             {
                 var map = maps[i];
-                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, ref members));
+                statements.AddRange(HandleMap(definition.SourceType, map, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering, ref members));
                 
                 maxDepthInRecursiveLinqQuery = Math.Max(maxDepthInRecursiveLinqQuery, stackDepthRetriever.LetAndSelectDepth);
                 stackDepthRetriever.Clear();
@@ -576,7 +643,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, out CompiledIndexField[] groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, stackDepthRetriever, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering, out CompiledIndexField[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression<CompiledIndexField>(
                     groupByFields,
@@ -659,8 +726,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return fields;
         }
 
+        // A local declaration can hide the Enumerable type; keep released rewriting for that map or reduce.
+        private static bool DeclaresEnumerable(SyntaxNode function) => function.DescendantTokens().Any(token =>
+            token.IsKind(SyntaxKind.IdentifierToken) && token.ValueText == "Enumerable" &&
+            token.Parent is FromClauseSyntax or LetClauseSyntax or JoinClauseSyntax or JoinIntoClauseSyntax or QueryContinuationSyntax
+                or ParameterSyntax or VariableDeclaratorSyntax or SingleVariableDesignationSyntax or ForEachStatementSyntax);
+
         private static List<StatementSyntax> HandleMap(IndexSourceType type, string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever,
-            ref SyntaxList<MemberDeclarationSyntax> members)
+            string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering, ref SyntaxList<MemberDeclarationSyntax> members)
         {
             try
             {
@@ -673,6 +746,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 ThrowIfSyntaxTreeIsTooDeep(parsedExpression, "map");
 
                 var expression = parsedExpression.NormalizeWhitespace();
+
+                usesLinqEnumerable &= DeclaresEnumerable(expression) == false;
 
                 fieldNamesValidator.Validate(map, expression);
                 methodsDetector.Visit(expression);
@@ -687,13 +762,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), queryExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), queryExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), queryExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -706,13 +781,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     switch (type)
                     {
                         case IndexSourceType.Documents:
-                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), invocationExpression, ref members);
 
                         case IndexSourceType.TimeSeries:
-                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), invocationExpression, ref members);
 
                         case IndexSourceType.Counters:
-                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+                            return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax, dynamicEnumerable, usesLinqEnumerable, usesLinqStringOrdering), invocationExpression, ref members);
 
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
@@ -817,7 +892,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 "Split the expression into shorter parts.");
         }
 
-        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, out CompiledIndexField[] groupByFields)
+        private static StatementSyntax HandleReduce(string reduce, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector, StackDepthRetriever stackDepthRetriever, string dynamicEnumerable, bool usesLinqEnumerable, bool usesLinqStringOrdering, out CompiledIndexField[] groupByFields)
         {
             try
             {
@@ -829,6 +904,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 ThrowIfSyntaxTreeIsTooDeep(parsedExpression, "reduce");
 
                 var expression = parsedExpression.NormalizeWhitespace();
+                usesLinqEnumerable &= DeclaresEnumerable(expression) == false;
                 fieldNamesValidator?.Validate(reduce, expression);
                 methodsDetector.Visit(expression);
                 
@@ -844,7 +920,10 @@ namespace Raven.Server.Documents.Indexes.Static
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.QuerySyntax,
                                 GroupByFieldsRetriever.QuerySyntax,
-                                SelectManyRewriter.QuerySyntax),
+                                SelectManyRewriter.QuerySyntax,
+                                dynamicEnumerable,
+                                usesLinqEnumerable,
+                                usesLinqStringOrdering),
                             MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
                         break;
@@ -854,7 +933,10 @@ namespace Raven.Server.Documents.Indexes.Static
                             new ReduceFunctionProcessor(
                                 ResultsVariableNameRewriter.MethodSyntax,
                                 GroupByFieldsRetriever.MethodSyntax,
-                                SelectManyRewriter.MethodSyntax),
+                                SelectManyRewriter.MethodSyntax,
+                                dynamicEnumerable,
+                                usesLinqEnumerable,
+                                usesLinqStringOrdering),
                             MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                         break;
@@ -1104,6 +1186,50 @@ namespace Raven.Server.Documents.Indexes.Static
         private static string GetCSharpSafeName(string name)
         {
             return $"{IndexNamePrefix}{Regex.Replace(name, @"[^\w\d]", "_")}";
+        }
+
+        // An extern alias hides the types and namespaces of the same name, so it must not be an identifier written in the index.
+        private static string GetHelperAlias(IndexDefinition definition)
+        {
+            var names = new HashSet<string>();
+            foreach (var map in definition.Maps)
+                AddNames(SyntaxFactory.ParseExpression(map ?? string.Empty));
+
+            if (definition.Reduce != null)
+                AddNames(SyntaxFactory.ParseExpression(definition.Reduce));
+
+            if (definition.AdditionalSources != null)
+            {
+                foreach (var source in definition.AdditionalSources.Values)
+                    AddNames(SyntaxFactory.ParseCompilationUnit(source ?? string.Empty));
+            }
+
+            if (definition.AdditionalAssemblies != null)
+            {
+                foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                {
+                    if (additionalAssembly?.Usings == null)
+                        continue;
+
+                    foreach (var @using in additionalAssembly.Usings)
+                        AddNames(SyntaxFactory.ParseName(@using ?? string.Empty));
+                }
+            }
+
+            var alias = HelperAlias;
+            for (var suffix = 1; names.Contains(alias); suffix++)
+                alias = HelperAlias + "_" + suffix;
+
+            return alias;
+
+            void AddNames(SyntaxNode node)
+            {
+                foreach (var token in node.DescendantTokens())
+                {
+                    if (token.IsKind(SyntaxKind.IdentifierToken))
+                        names.Add(token.ValueText);
+                }
+            }
         }
 
         private static string NormalizeFunction(string function)
