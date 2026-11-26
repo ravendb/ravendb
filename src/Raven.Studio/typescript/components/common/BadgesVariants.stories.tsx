@@ -64,7 +64,7 @@ function AllBadgeColors(props: AllBadgeColorsProps) {
     return (
         <div className="hstack flex-wrap gap-1">
             {colors.map((color) => (
-                <Badge bg={color}>
+                <Badge key={color} bg={color}>
                     {icon && <Icon icon={icon} />}
                     {color}
                 </Badge>
@@ -82,7 +82,7 @@ function AllBadgeFadedColors(props: AllBadgeFadedColorsProps) {
     return (
         <div className="hstack flex-wrap gap-1">
             {fadedColors.map((color) => (
-                <Badge bg={color}>
+                <Badge key={color} bg={color}>
                     {icon && <Icon icon={icon} />}
                     {color}
                 </Badge>

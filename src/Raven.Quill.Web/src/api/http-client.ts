@@ -29,6 +29,12 @@ export function isApiError<TDetails = unknown>(error: unknown): error is ApiErro
     return error instanceof ApiError;
 }
 
+/** True for Quill's own authentication challenge: an expired operator session answers with a bare
+ * 401 and no body at all, while the AI service's relayed refusals carry a body. */
+export function isQuillSessionExpired(error: unknown) {
+    return isApiError(error) && error.status === 401 && error.details === undefined;
+}
+
 export function createApiClient({ baseUrl = "/api", transport = fetch }: ApiClientOptions = {}) {
     const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
 

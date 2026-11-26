@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import useTimeout from "components/hooks/useTimeout";
 import { useResizeObserver } from "components/hooks/useResizeObserver";
 import { LazyRows } from "components/common/virtualTable/hooks/useLazyRows";
-import { LazyVirtualTablePagination } from "components/common/virtualTable/partials/LazyVirtualTablePaginationBar";
+import { PaginationBarState } from "components/common/PaginationBar";
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { isSameRange, RowRange } from "components/common/virtualTable/utils/lazyTableUtils";
@@ -136,25 +136,29 @@ export function useLazyTableViewport<T>({
         containerRef.current.scrollTop = 0;
     };
 
-    const pagination: LazyVirtualTablePagination = isPaginated
+    const pagination: PaginationBarState = isPaginated
         ? {
               page,
               totalPages: totalCount ? Math.ceil(totalCount / pageSize) : page + (rows.length === pageSize ? 1 : 0),
-              firstRowNumber: pageRowCount > 0 ? pageStart + 1 : 0,
-              lastRowNumber: pageStart + pageRowCount,
+              firstItemNumber: pageRowCount > 0 ? pageStart + 1 : 0,
+              lastItemNumber: pageStart + pageRowCount,
               totalCount,
-              pageSize,
-              pageSizeOptions: [
-                  defaultPageSize,
-                  ...PAGE_SIZE_OPTIONS.filter((x) => x > defaultPageSize && (totalCount === null || x < totalCount)),
-              ],
               onPageChange: (nextPage) => {
                   scrollToTop();
                   setPageFirstRowIndex((nextPage - 1) * pageSize);
               },
-              onPageSizeChange: (nextPageSize) => {
-                  scrollToTop();
-                  setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
+              pageSizeSelector: {
+                  pageSize,
+                  options: [
+                      defaultPageSize,
+                      ...PAGE_SIZE_OPTIONS.filter(
+                          (x) => x > defaultPageSize && (totalCount === null || x < totalCount)
+                      ),
+                  ],
+                  onChange: (nextPageSize) => {
+                      scrollToTop();
+                      setSelectedPageSize(nextPageSize === defaultPageSize ? null : nextPageSize);
+                  },
               },
           }
         : null;

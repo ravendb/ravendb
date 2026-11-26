@@ -16,11 +16,18 @@ class ioStats extends shardViewModelBase {
 
         const detailedDatabaseName = DatabaseUtils.default.formatNameForFile(db.name, location);
 
+        // the storage of a shard is reported under the shard name
+        const storageDatabaseName = location?.shardNumber != null ? `${db.name}$${location.shardNumber}` : db.name;
+
         this.graph = new ioStatsGraph(
             () => `database-${detailedDatabaseName}`,
             ["Documents", "Index", "Configuration", "SharedJournals"],
             true,
-            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, this.location, onUpdate, cutOff));
+            (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, this.location, onUpdate, cutOff),
+            {
+                environmentFilter: env => DatabaseUtils.default.namesEqualIgnoreCase(env.Database, storageDatabaseName),
+                nodeTag: location?.nodeTag
+            });
     }
 
     compositionComplete() {

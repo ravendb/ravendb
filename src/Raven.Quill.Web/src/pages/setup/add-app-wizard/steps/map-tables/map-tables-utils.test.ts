@@ -8,6 +8,9 @@ import {
     collectMappedSourceTables,
     createEmptyEmbeddedTable,
     createEmptyRootTable,
+    addUnmappedSelectedTables,
+    formatTableScripts,
+    haveSameTables,
     makeUniquePropertyName,
     propertyNameFromJoinColumn,
     scaffoldRootTable,
@@ -218,11 +221,51 @@ describe("collectMappedSourceTables", () => {
     });
 });
 
+describe("addUnmappedSelectedTables", () => {
+    const selected = (...names: string[]) =>
+        names.map((name) => ({ sourceTableSchema: "public", sourceTableName: name }));
+
+    it("keeps the whole mapping, also outside the selection, and scaffolds what nothing maps yet", () => {
+        const tables = [
+            rootTable("Customer", { collectionName: "Clients", embeddedTables: [embeddedTable("Address")] }),
+            rootTable("Order", { collectionName: "Orders" }),
+            rootTable("", { collectionName: "Draft" }),
+        ];
+
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Invoice"), null, "public");
+
+        expect(completed.map((table) => [table.sourceTableName, table.collectionName])).toEqual([
+            ["Customer", "Clients"],
+            ["Order", "Orders"],
+            ["", "Draft"],
+            ["Invoice", "Invoice"],
+        ]);
+    });
+
+    it("takes a mapped table without a schema for the one in the default schema", () => {
+        const tables = [
+            rootTable("Customer", {
+                sourceTableSchema: null,
+                embeddedTables: [embeddedTable("Address", { sourceTableSchema: "" })],
+            }),
+            rootTable("Order", { sourceTableSchema: "sales" }),
+        ];
+
+        const completed = addUnmappedSelectedTables(tables, selected("Customer", "Address", "Order"), null, "public");
+
+        expect(completed.map((table) => [table.sourceTableSchema, table.sourceTableName])).toEqual([
+            [null, "Customer"],
+            ["sales", "Order"],
+            ["public", "Order"],
+        ]);
+    });
+});
+
 describe("collectMappedSourceTableKeys", () => {
     it("keeps disabled roots, so the unmapped alert does not offer to map them again", () => {
         const tables = [rootTable("Customer", { disabled: true, embeddedTables: [embeddedTable("Address")] })];
 
-        expect([...collectMappedSourceTableKeys(tables)]).toEqual(["public::customer", "public::address"]);
+        expect([...collectMappedSourceTableKeys(tables, "public")]).toEqual(["public::customer", "public::address"]);
     });
 });
 
@@ -231,5 +274,72 @@ describe("toTakenPropertyNames", () => {
         expect(toTakenPropertyNames(["Language", " Currency ", "", null, undefined])).toEqual(
             new Set(["language", "currency"]),
         );
+    });
+});
+
+describe("haveSameTables", () => {
+    it("ignores order", () => {
+        expect(
+            haveSameTables(
+                [
+                    { sourceTableSchema: "public", sourceTableName: "Orders" },
+                    { sourceTableSchema: "public", sourceTableName: "lines" },
+                ],
+                [
+                    { sourceTableSchema: "public", sourceTableName: "lines" },
+                    { sourceTableSchema: "public", sourceTableName: "Orders" },
+                ],
+            ),
+        ).toBe(true);
+    });
+
+    it("tells apart tables whose names differ only in case", () => {
+        expect(
+            haveSameTables(
+                [{ sourceTableSchema: "public", sourceTableName: "Orders" }],
+                [{ sourceTableSchema: "public", sourceTableName: "orders" }],
+            ),
+        ).toBe(false);
+    });
+
+    it("tells a different length or a swapped table apart", () => {
+        const orders = { sourceTableSchema: "public", sourceTableName: "orders" };
+
+        expect(haveSameTables([orders], [orders, { sourceTableSchema: "public", sourceTableName: "lines" }])).toBe(
+            false,
+        );
+        expect(haveSameTables([orders], [{ sourceTableSchema: "sales", sourceTableName: "orders" }])).toBe(false);
+    });
+});
+
+describe("formatTableScripts", () => {
+    const COMPACT_SCRIPT = "if (this.Status === 'D') { this.IsDeleted = true; }";
+    const FORMATTED_SCRIPT = "if (this.Status === 'D') {\n    this.IsDeleted = true;\n}";
+
+    it("formats the patch and on-delete scripts of the table and its nested embedded tables", () => {
+        const lines = embeddedTable("lines", {
+            patch: COMPACT_SCRIPT,
+            onDelete: { ignoreDeletes: false, patch: COMPACT_SCRIPT },
+        });
+        const orders = rootTable("orders", {
+            patch: COMPACT_SCRIPT,
+            onDelete: { ignoreDeletes: true, patch: COMPACT_SCRIPT },
+            embeddedTables: [embeddedTable("details", { embeddedTables: [lines] })],
+        });
+
+        const result = formatTableScripts(orders);
+        const formattedLines = result.embeddedTables[0].embeddedTables[0];
+
+        expect(result.patch).toBe(FORMATTED_SCRIPT);
+        expect(result.onDelete).toEqual({ ignoreDeletes: true, patch: FORMATTED_SCRIPT });
+        expect(formattedLines.patch).toBe(FORMATTED_SCRIPT);
+        expect(formattedLines.onDelete?.patch).toBe(FORMATTED_SCRIPT);
+    });
+
+    it("leaves a formatted script, a missing script and a missing on-delete as they are", () => {
+        const orders = rootTable("orders", { patch: FORMATTED_SCRIPT, onDelete: null });
+
+        expect(formatTableScripts(orders)).toEqual(orders);
+        expect(formatTableScripts(rootTable("orders"))).toEqual(rootTable("orders"));
     });
 });

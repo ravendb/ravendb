@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
@@ -38,13 +39,14 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             Tools = _preparedTools,
             UseTools = document.RemainingToolIterations-- > 0,
             Schema = schema,
-            PromptCacheKey = document.Id,
+            // The provider rejects a prompt_cache_key longer than 64 characters; a conversation id has no such bound.
+            PromptCacheKey = AttachmentsStorageHelper.CalculateHash(Encoding.UTF8.GetBytes(document.Id)),
             MayRepeatPrompt = handler.MayRepeatPrompt(_preparedTools),
             ParsedJson = _parsedJson
         };
     }
 
-    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, AiChatRequest request, AiDebugTrace trace, CancellationToken token)
+    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, AiChatRequest request, AiDebugTraceCollector traces, CancellationToken token)
     {
         if (streaming is null)
         {
@@ -52,7 +54,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
                 context,
                 request,
                 AiUsage,
-                trace,
+                traces,
                 token
             );
         }
@@ -64,7 +66,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             request,
             streaming,
             AiUsage,
-            trace,
+            traces,
             token
         );
     }

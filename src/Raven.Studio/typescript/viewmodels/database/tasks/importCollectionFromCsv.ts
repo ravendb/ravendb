@@ -56,7 +56,7 @@ class csvConfiguration {
         }
     }
 
-    getTrimOption(): CsvHelper.Configuration.TrimOptions {
+    getTrimOption(): Raven.Server.Smuggler.Documents.CsvTrimOptions {
         switch (this.trimOption()) {
             case "No trimming": 
                 return "None";

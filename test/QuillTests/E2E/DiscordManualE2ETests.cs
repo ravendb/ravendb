@@ -1,8 +1,11 @@
+using IMessageChannel = Discord.IMessageChannel;
+using TokenType = Discord.TokenType;
 using Microsoft.Extensions.DependencyInjection;
 using QuillTests.E2E.Fixtures;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Quill.Channels;
 using Raven.Quill.Contracts;
+using Raven.Quill.Discord;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -41,15 +44,13 @@ public class DiscordManualE2ETests(ITestOutputHelper output) : QuillTestBase(out
         Assert.NotEmpty(summary.Discord!.ApplicationId);
         Assert.NotEmpty(summary.Discord.BotUserId);
 
-        var client = host.Services.GetRequiredService<Raven.Quill.Discord.IDiscordClient>();
+        var sdk = host.Services.GetRequiredService<DiscordSdk>();
+        await using var rest = sdk.NewRestClient();
+        await rest.LoginAsync(TokenType.Bot, botToken, validateToken: false);
+        var dm = (IMessageChannel)await rest.GetChannelAsync(DiscordMessages.ParseSnowflake(channel, "channel id"));
 
-        var gatewayUrl = await client.GetGatewayUrlAsync(botToken, CancellationToken.None);
-        Assert.StartsWith("wss://", gatewayUrl);
-
-        var messageId = await client.CreateMessageAsync(botToken, channel,
-            "Quill Discord E2E: outbound post works.", CancellationToken.None);
-        await client.EditMessageAsync(botToken, channel, messageId,
-            "Quill Discord E2E: outbound post and edit work.", CancellationToken.None);
+        var messageId = await dm.CreateAsync(sdk, "Quill Discord E2E: outbound post works.", suppressEmbeds: false, CancellationToken.None);
+        await dm.EditAsync(sdk, messageId, "Quill Discord E2E: outbound post and edit work.", suppressEmbeds: false, CancellationToken.None);
 
         await app.DeleteChannelAsync(created.ChannelId);
     }

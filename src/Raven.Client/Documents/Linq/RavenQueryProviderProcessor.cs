@@ -2209,7 +2209,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         if (expression.Arguments.Count == 2)
                         {
                             if (_chainedWhere)
-                                DocumentQuery.AndAlso();
+                                ((IAbstractDocumentQueryAccessor)DocumentQuery).AndAlsoWrappingPreviousOrIfNeeded();
                             VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
                             
                             if (_subClauseDepth > 0)
@@ -4136,7 +4136,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             if (_chainedWhere)
             {
-                DocumentQuery.AndAlso();
+                ((IAbstractDocumentQueryAccessor)DocumentQuery).AndAlsoWrappingPreviousOrIfNeeded();
                 _subClauseDepth++;
             }
 

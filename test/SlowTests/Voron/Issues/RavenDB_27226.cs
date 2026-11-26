@@ -61,7 +61,7 @@ namespace SlowTests.Voron.Issues
 
                 // wait for the disposal to actually arrive at the compression pager instead of guessing at it with a
                 // sleep - it first has to get through the flushing lock, WaitForSyncToCompleteOnDispose and the
-                // _envDispose drain, which on a busy machine can take longer than any sleep we would pick. if it is
+                // transactions drain, which on a busy machine can take longer than any sleep we would pick. if it is
                 // not here yet we publish the new pager first, and then even the unfixed teardown disposes it - the
                 // test would go green with the bug still in place
                 Assert.True(disposeReachedTheWriteLock.Wait(TimeSpan.FromSeconds(30)),
@@ -93,7 +93,7 @@ namespace SlowTests.Voron.Issues
         [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public void DisposeMustNotWaitForeverOnAWriteLockHeldByAStuckSwapAndMustStillNotLeaveTheNewPagerBehind()
         {
-            // the teardown runs from StorageEnvironment.Dispose's finally, also after the _envDispose drain gave up on a
+            // the teardown runs from StorageEnvironment.Dispose's finally, also after the transactions drain gave up on a
             // transaction that is still alive - possibly one stuck inside WriteToJournal, holding _writeLock. waiting for
             // that lock without a bound hangs the dispose and leaves everything after the journal undisposed, so it
             // has to give up and carry on - and the pager published after it gave up must still be disposed by somebody

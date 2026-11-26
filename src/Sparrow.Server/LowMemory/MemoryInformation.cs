@@ -22,13 +22,6 @@ namespace Sparrow.Server.LowMemory
     {
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForSparrowServer(typeof(MemoryInformation));
 
-        private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
-        private static readonly byte[] VmSwap = Encoding.UTF8.GetBytes("VmSwap:");
-        private static readonly byte[] MemAvailable = Encoding.UTF8.GetBytes("MemAvailable:");
-        private static readonly byte[] MemFree = Encoding.UTF8.GetBytes("MemFree:");
-        private static readonly byte[] MemTotal = Encoding.UTF8.GetBytes("MemTotal:");
-        private static readonly byte[] SwapTotal = Encoding.UTF8.GetBytes("SwapTotal:");
-        private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
 
         private static readonly int ProcessId;
         private static readonly bool WindowsSupportsMemoryCountersEx2;
@@ -228,8 +221,8 @@ namespace Sparrow.Server.LowMemory
                 using (var bufferedReader = new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmRss);
-                    var vmswap = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmSwap);
+                    var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("VmRSS:"u8);
+                    var vmswap = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("VmSwap:"u8);
                     
                     // value is in KB, we need to return bytes
                     return (vmrss * 1024, vmswap * 1024); 
@@ -282,11 +275,11 @@ namespace Sparrow.Server.LowMemory
                 using (var bufferedReader = new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var memAvailableInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable);
-                    var memFreeInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
-                    var totalMemInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemTotal);
-                    var swapTotalInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
-                    var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
+                    var totalMemInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("MemTotal:"u8);
+                    var memFreeInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("MemFree:"u8);
+                    var memAvailableInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("MemAvailable:"u8);
+                    var swapTotalInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("SwapTotal:"u8);
+                    var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile("Committed_AS:"u8);
 
                     var totalClean = new Size(0, SizeUnit.Kilobytes);
                     var totalDirty = new Size(0, SizeUnit.Bytes);

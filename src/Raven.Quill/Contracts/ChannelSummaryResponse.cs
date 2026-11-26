@@ -13,7 +13,8 @@ public sealed record ChannelSummaryResponse(
     string[] AllowedOrigins,
     TelegramSummaryResponse? Telegram = null,
     SlackSummaryResponse? Slack = null,
-    DiscordSummaryResponse? Discord = null)
+    DiscordSummaryResponse? Discord = null,
+    string? SetupError = null)
 {
     internal static ChannelSummaryResponse From(Channel channel) => new(
         channel.ShortId,
@@ -42,7 +43,8 @@ public sealed record ChannelSummaryResponse(
                 channel.Discord.ApplicationId,
                 channel.Discord.BotUserId,
                 channel.Discord.BotUsername,
-                channel.Discord.ParameterBindings));
+                channel.Discord.ParameterBindings),
+        channel.Type == ChannelType.Slack ? SlackSettings.SetupErrorOf(channel.Slack) : null);
 }
 
 public sealed record TelegramSummaryResponse(

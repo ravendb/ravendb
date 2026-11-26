@@ -16,6 +16,7 @@ using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Sparrow.Server.Utils;
+using Sparrow.Server.Threading;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
@@ -47,7 +48,6 @@ namespace Voron.Impl
         private readonly ByteStringContext _allocator;
         internal PageLocator _pageLocator;
         private readonly bool _disposeAllocator;
-        private readonly bool _isValidationEnabled;
         private ScratchPagesTable _scratchPagesInUse;
         private readonly ScratchPagesSnapshot _scratchPagesForReads;
         private HashSet<long> _sparsePageRanges;
@@ -59,6 +59,7 @@ namespace Voron.Impl
         internal TestingStuff _forTestingPurposes;
         private bool _updateLastWorkTime = true;
         public Pager.State DataPagerState;
+        private SequentialReadAhead _sequentialReadAhead;
 
         private enum GetPageMethod
         {
@@ -175,7 +176,7 @@ namespace Voron.Impl
 
             PersistentContext = transactionPersistentContext;
 
-            TxStartTime = previous.TxStartTime;
+            _txStartNanoseconds = previous._txStartNanoseconds;
             DataPager = previous.DataPager;
             DataPagerState = previous.DataPagerState;
 
@@ -188,7 +189,6 @@ namespace Voron.Impl
             _allocator = allocator ?? new ByteStringContext(SharedMultipleUseFlag.None);
             _allocator.RegisterListener(this);
             _disposeAllocator = allocator == null;
-            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesForReads = previous._scratchPagesForReads;
             ScratchSnapshotSeq = previous.ScratchSnapshotSeq;
             _getPageMethod = previous._getPageMethod;
@@ -249,7 +249,7 @@ namespace Voron.Impl
                 VoronUnrecoverableErrorException.Raise(env, $"Async commit isn't supported in 32bits environments. We don't carry 32 bits state from previous tx");
 
             CurrentTransactionIdHolder = previous.CurrentTransactionIdHolder;
-            TxStartTime = DateTime.UtcNow;
+            _txStartNanoseconds = Clock.Nanoseconds;
             DataPager = previous.DataPager;
             DataPagerState = previous.DataPagerState;
             _id = txId;
@@ -273,7 +273,6 @@ namespace Voron.Impl
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
             _disposeAllocator = true;
             _allocator.RegisterListener(this);
-            _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
             _scratchPagesInUse = previous._scratchPagesInUse;
             ScratchSnapshotSeq = env.CurrentStateRecord.ScratchPagesTable.VisibleAsOfSeq;
             _scratchPagesInUse.BeginWriteTransaction(ScratchSnapshotSeq);
@@ -296,7 +295,7 @@ namespace Voron.Impl
 
         public LowLevelTransaction(StorageEnvironment env, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
-            TxStartTime = DateTime.UtcNow;
+            _txStartNanoseconds = Clock.Nanoseconds;
 
             if (flags == TransactionFlags.ReadWrite)
             {
@@ -328,8 +327,6 @@ namespace Voron.Impl
                 _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.None);
                 _allocator.RegisterListener(this);
                 _disposeAllocator = context == null;
-
-                _isValidationEnabled = _env.Options.Encryption.IsEnabled == false;
 
                 _pageLocator = transactionPersistentContext.AllocatePageLocator();
 
@@ -675,8 +672,14 @@ namespace Voron.Impl
             switch (_getPageMethod)
             {
                 case GetPageMethod.WriteScratchFirst:
-                    if (_scratchPagesInUse.TryGetValue(pageNumber, out var pageInUse))
-                        return *(T*)pageInUse.ReadWritableRawPagePointer(ref PagerTransactionState);
+                    if (_scratchPagesInUse.TryGetValue(pageNumber, out PageFromScratchBuffer pageInUse))
+                    {
+                        // encrypted pages changed in this tx live in the encryption buffer until commit
+                        byte* header = _env.Options.Encryption.IsEnabled && _dirtyPages.Contains(pageNumber)
+                            ? pageInUse.ReadWritable(ref PagerTransactionState)
+                            : pageInUse.ReadWritableRawPagePointer(ref PagerTransactionState);
+                        return *(T*)header;
+                    }
 
                     return GetPageHeaderFromDataFile<T>(pageNumber);
 
@@ -715,9 +718,18 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Page GetPageInternalFromDataFile(long pageNumber)
         {
+            Pager.HintPage(DataPagerState, pageNumber);
             var page = new Page(DataPager.AcquirePagePointerWithOverflowHandling(DataPagerState, ref PagerTransactionState, pageNumber));
-            if (_isValidationEnabled)// When encryption is off, we do validation by checksum
-                _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
+            var numberOfPages = 1;
+            if (page.IsOverflow)
+            {
+                numberOfPages = Paging.Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                // an encrypted value was read whole for its decryption copy
+                if (_env.Options.Encryption.IsEnabled == false)
+                    Pager.HintOverflowPages(DataPagerState, pageNumber, numberOfPages);
+            }
+            _sequentialReadAhead.OnRead(DataPagerState, pageNumber, numberOfPages);
+            _env.ValidatePageChecksum(pageNumber, (PageHeader*)page.Pointer);
             return page;
         }
 
@@ -733,17 +745,21 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T GetPageHeaderFromDataFile<T>(long pageNumber) where T : unmanaged
         {
+            Pager.HintPage(DataPagerState, pageNumber);
             return *(T*)DataPager.AcquireRawPagePointer(DataPagerState, ref PagerTransactionState, pageNumber);
         }
 
+        /// <summary>True when this transaction reads the page from a scratch buffer, not from the data file.</summary>
+        internal bool IsInScratch(long pageNumber) => Flags switch
+        {
+            TransactionFlags.Read => _scratchPagesForReads.ContainsKey(pageNumber),
+            TransactionFlags.ReadWrite => _scratchPagesInUse.ContainsKey(pageNumber),
+            _ => throw new ArgumentOutOfRangeException(nameof(Flags))
+        };
+
         public void TryReleasePage(long pageNumber)
         {
-            var inScratches = Flags switch
-            {
-                TransactionFlags.Read => _scratchPagesForReads.ContainsKey(pageNumber),
-                TransactionFlags.ReadWrite => _scratchPagesInUse.ContainsKey(pageNumber),
-                _ => throw new ArgumentOutOfRangeException(nameof(Flags))
-            };
+            var inScratches = IsInScratch(pageNumber);
 
             if (inScratches) // we don't release pages from the scratch buffers
                 return;
@@ -989,6 +1005,8 @@ namespace Voron.Impl
                 // After the transaction is completed, we will move on into disposing all resources used by this
                 // transaction. First the pagers and internal resources, then registered ones by external parties.
                 _env.TransactionCompleted(this);
+
+                PersistentContext.FreeRecentlyFoundPages(this);
 
                 _disposableScope.Dispose();
 
@@ -1264,14 +1282,14 @@ namespace Voron.Impl
                   ? Task.Run(() => { CommitStage2_WriteToJournal(waitForDurability: false); return true; })
                   : NoWriteToJournalRequiredTask;
 
-            var usageIncremented = false;
+            InFlightGuard<PerCoreSlots>.Scope usage = default;
 
             try
             {
                 _forTestingPurposes?.ActionToCallDuringBeginAsyncCommitAndStartNewTransaction?.Invoke();
 
-                _env.IncrementUsageOnNewTransaction();
-                usageIncremented = true;
+                usage = _env.IncrementUsageOnNewTransaction();
+                nextTx.EnvironmentUsage = usage;
 
                 _env.ActiveTransactions.Add(nextTx);
                 _env.WriteTransactionStarted();
@@ -1287,8 +1305,7 @@ namespace Voron.Impl
 
                 try
                 {
-                    if (usageIncremented)
-                        _env.DecrementUsageOnTransactionCreationFailure();
+                    usage.Dispose();
 
                     EndAsyncCommit();
                 }
@@ -1416,6 +1433,9 @@ namespace Voron.Impl
         }
 
         internal bool IsAsyncCommit => _asyncCommitNextTransaction != null;
+
+        // number of merged operations this transaction carries, set by the transaction merger (0 = not merged), io-metrics only
+        public int BatchOperations { get; set; }
 
         internal long CommitDurabilityGateTransactionId =>
             WrittenToJournalNumber == -1 ? CurrentStateRecord.TransactionId - 1 : CurrentStateRecord.TransactionId;
@@ -1606,10 +1626,16 @@ namespace Voron.Impl
 
         private EnvironmentStateRecord _envRecord;
         private long _localTxNextPageNumber;
-        public DateTime TxStartTime;
+        // PERF: only diagnostics read the start time, so we keep the cheap tick count and compute the date when asked
+        private long _txStartNanoseconds;
+
+        public DateTime TxStartTime => DateTime.UtcNow.AddTicks((_txStartNanoseconds - Clock.Nanoseconds) / 100);
         public bool IsCloned;
         internal long? LocalPossibleOldestReadTransaction;
         internal RacyConcurrentBag.Node ActiveTransactionNode;
+
+        internal InFlightGuard<PerCoreSlots>.Scope EnvironmentUsage;
+
         public Transaction Transaction;
 
         /// <summary>

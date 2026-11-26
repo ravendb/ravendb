@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected override bool ItemsAndReferencesAreUsingSameEtagPool => false;
 
+        protected override bool ReferencedItemExistedOnIndexCreation(long referencedItemEtag) => _indexStorage.LowerThanLastCompareExchangeIndexOnIndexCreation(referencedItemEtag);
+
         protected override IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage.DocumentDatabase.CompareExchangeStorage.GetCompareExchangeFromPrefix(queryContext.Server, lastEtag + 1, pageSize)

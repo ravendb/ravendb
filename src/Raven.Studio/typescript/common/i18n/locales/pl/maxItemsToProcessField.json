@@ -1,0 +1,6 @@
+{
+    "label": "Maksymalna liczba dokumentów przetwarzanych w jednym przebiegu",
+    "unlimited": "bez limitu",
+    "itemsAddon": "dokumentów",
+    "optimalHint": "Przetwarzaj maksymalnie {{items}} dokumentów w jednym przebiegu, aby każdy przebieg był krótki."
+}

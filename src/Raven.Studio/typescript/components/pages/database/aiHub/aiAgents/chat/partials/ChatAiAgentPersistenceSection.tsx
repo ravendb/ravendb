@@ -76,8 +76,7 @@ export default function ChatAiAgentPersistenceSection() {
                             <FormDurationPicker
                                 control={control}
                                 name="persistenceExpiresInSeconds"
-                                showDays
-                                isFlexGrow
+                                aria-label="Conversation documents expiration"
                             />
                         )}
                     </FormGroup>

@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-            var agentConfig = new AiAgentConfiguration("alert-tester", config.ConnectionStringName, "You are a test agent. Your only purpose is to call the 'get_long_text' tool, no matter what the user says.")
+            var agentConfig = new AiAgentConfiguration("alert-tester", config.ConnectionStringName, "You are a test agent. Call the 'get_long_text' tool once, then answer briefly without repeating its result.")
             {
                 Actions =
                 [

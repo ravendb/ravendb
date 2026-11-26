@@ -136,6 +136,7 @@ function AllCheckboxVariants(props: AllChecksVariantsProps) {
         <div className="hstack gap-3">
             {colors.map((color) => (
                 <Checkbox
+                    key={color}
                     color={color}
                     size={size}
                     selected={selected}
@@ -158,6 +159,7 @@ function AllRadioVariants(props: AllChecksVariantsProps) {
         <div className="hstack gap-3">
             {colors.map((color) => (
                 <Radio
+                    key={color}
                     color={color}
                     size={size}
                     selected={selected}
@@ -180,6 +182,7 @@ function ALlSwitchVariants(props: AllChecksVariantsProps) {
         <div className="hstack gap-3">
             {colors.map((color) => (
                 <Switch
+                    key={color}
                     color={color}
                     size={size}
                     selected={selected}

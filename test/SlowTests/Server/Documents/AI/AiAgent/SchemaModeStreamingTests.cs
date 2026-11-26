@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var response = await client.StreamingCompleteAsync(ctx, client.Pool, AnswerPath,
                     new AiChatRequest { Messages = [Msg(ctx, "user", "weather?")], Schema = null },
                     m => { streamed.Write(m.Span); return Task.CompletedTask; },
-                    new AiUsage(), trace: null, CancellationToken.None);
+                    new AiUsage(), traces: null, CancellationToken.None);
 
                 Assert.Equal(AiResponseType.Tool, response.Type);
                 Assert.Single(response.ToolCalls);
@@ -68,7 +68,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     var response = await client.StreamingCompleteAsync(ctx, client.Pool, AnswerPath,
                         new AiChatRequest { Messages = [Msg(ctx, "user", "hi")], Schema = schema },
                         m => { streamed.Write(m.Span); return Task.CompletedTask; },
-                        new AiUsage(), trace: null, CancellationToken.None);
+                        new AiUsage(), traces: null, CancellationToken.None);
 
                     var streamedText = Encoding.UTF8.GetString(streamed.ToArray());
                     Assert.DoesNotContain("secret reasoning", streamedText);

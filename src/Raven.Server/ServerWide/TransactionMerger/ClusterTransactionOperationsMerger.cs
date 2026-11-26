@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
@@ -34,7 +34,7 @@ public sealed class ClusterTransactionOperationsMerger : AbstractTransactionOper
     {
     }
 
-    protected override void UpdateLastAccessTime(DateTime time)
+    protected override void UpdateLastAccessTime()
     {
     }
 

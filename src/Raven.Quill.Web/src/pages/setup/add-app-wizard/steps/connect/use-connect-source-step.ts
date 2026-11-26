@@ -6,6 +6,8 @@ import { useSetupWizardStore, type ConnectionAttempt } from "@/pages/setup/add-a
 import { resolveConnectionString } from "@/pages/setup/add-app-wizard/connection-string";
 import { getTableKey, isTableSupported } from "@/pages/setup/add-app-wizard/discover-utils";
 import { discoverTables } from "@/pages/setup/add-app-wizard/steps/verify/use-discover-tables";
+import { selectHasSession } from "@/pages/setup/add-app-wizard/steps/map/session/planner-state";
+import { useSaveDraft } from "@/pages/setup/add-app-wizard/use-save-draft";
 import { useFormContext } from "react-hook-form";
 
 export type ConnectSourceInput = Pick<
@@ -69,14 +71,23 @@ export async function testConnection(connection: ConnectSourceInput): Promise<vo
 export function useConnectSourceStep() {
     const { getValues, setValue } = useFormContext<AppFormData>();
     const setDiscoverResult = useSetupWizardStore((state) => state.setDiscoverResult);
+    const saveDraft = useSaveDraft();
 
     return async (progress: WizardProgress) => {
         const store = useSetupWizardStore.getState();
         const formValues = getValues("externalConnection");
         const connectKey = computeConnectKey(formValues);
 
+        // Saved even when nothing else runs: the app name is not part of the connect key.
         if (connectKey === store.connectKey) {
+            await saveDraft("verifySchema");
             return;
+        }
+
+        // A plan is tied to its source and slug. Running turns are stopped so they do not hold their locks
+        // and spend tokens on a plan nobody can reach. An edited app's plan comes in before its first connect.
+        if (selectHasSession(store) && store.plannerConnectKey !== connectKey) {
+            store.resetPlannerState();
         }
 
         if (!isConnectionVerified(store.connectionAttempt, connectKey)) {
@@ -103,5 +114,6 @@ export function useConnectSourceStep() {
         );
 
         store.setConnectKey(connectKey);
+        await saveDraft("verifySchema");
     };
 }

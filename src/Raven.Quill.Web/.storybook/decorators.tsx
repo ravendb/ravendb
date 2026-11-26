@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Decorator } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryRouter, RouterProvider } from "react-router";
+import { createMemoryRouter, isRouteErrorResponse, RouterProvider, useLocation, useRouteError } from "react-router";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { UnsavedChangesProvider } from "@/components/form/unsaved-changes/unsaved-changes-provider";
+import { AppShellMain } from "@/components/layout/app-shell-main";
 import { ThemeProvider, type Theme } from "@/components/shadcn/theme-provider";
 import { Toaster } from "@/components/shadcn/ui/sonner";
-import { cn } from "@/lib/utils";
+import { Text } from "@/components/typography";
 
 // Mounts a route-aware page at a path so it can read `useParams`/`useSearchParams`,
 // e.g. an app-scoped page that needs a `:slug`. Stories that don't set this render
@@ -18,19 +19,22 @@ type RouterParameter = {
     path?: string;
 };
 
-// Renders the story inside the app shell's main content area (the same padding,
-// rounded card, and full-height grid `App` gives a routed page). Omit it for
-// standalone full-screen pages like login, which manage their own layout.
-type PageParameter = {
-    // Route title shown above the page, mirroring the app header. Omit to hide it.
-    title?: string;
-    // Bare layout used by full-screen flows like the setup wizards: the content
-    // fills the available height with no padding or title.
-    bare?: boolean;
-};
+// Renders the story inside the app shell's main content area, the same `AppShellMain` that `App` gives a
+// routed page. Omit it for standalone full-screen pages like login, which manage their own layout.
+type PageParameter =
+    | {
+          // The route's title, which the app shows above the page. Omit it when the route sets `isPageTitleHidden`.
+          title?: string;
+          bare?: false;
+      }
+    | {
+          // Bare layout used by full-screen flows like the setup wizards: the content
+          // fills the available height with no padding or title.
+          bare: true;
+          title?: never;
+      };
 
-// Type the `router` and `page` story parameters so their keys autocomplete and are
-// checked, the same way `msw` is typed in `default-mocks.ts`.
+// Type the `router` and `page` story parameters so their keys autocomplete and are checked.
 declare module "storybook/internal/csf" {
     interface Parameters {
         router?: RouterParameter;
@@ -53,23 +57,12 @@ function createStoryQueryClient() {
     });
 }
 
-// Mirrors the `<main>` in `app.tsx`: a full-height grid card with the route title in
-// an `auto` row and the page content in the remaining space.
 function StoryPageLayout({ children, page }: { children: ReactNode; page: PageParameter }) {
-    const showTitle = !page.bare && Boolean(page.title);
-
     return (
         <div className="h-svh bg-surface2 p-2 dark:bg-surface1">
-            <main
-                className={cn(
-                    "app-shell__main h-full rounded-lg border bg-surface1 dark:bg-surface2",
-                    page.bare ? "gap-0 p-0" : "gap-3 px-4 py-5 lg:px-5",
-                    !showTitle && "grid-rows-[minmax(0,1fr)]",
-                )}
-            >
-                {showTitle && <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>}
-                <div className="min-h-0 overflow-auto">{children}</div>
-            </main>
+            <AppShellMain title={page.title} isBareLayout={page.bare} className="h-full">
+                {children}
+            </AppShellMain>
         </div>
     );
 }
@@ -79,6 +72,24 @@ const StoryContentContext = createContext<ReactNode>(null);
 
 function StoryContent() {
     return useContext(StoryContentContext);
+}
+
+// React Router's default error page would catch a story that throws, so the story and its test would pass.
+// Rethrowing hands the error to Storybook, which shows it and fails the test. A route error response is not a
+// crash: the story navigated to a route it does not mount, e.g. back to the list after a delete.
+function StoryRouteError() {
+    const error = useRouteError();
+    const { pathname } = useLocation();
+
+    if (!isRouteErrorResponse(error)) {
+        throw error;
+    }
+
+    return (
+        <Text className="p-4">
+            The story navigated to {pathname}, which it does not mount ({error.status} {error.statusText}).
+        </Text>
+    );
 }
 
 function StoryProviders({ children, theme, router }: { children: ReactNode; theme: Theme; router?: RouterParameter }) {
@@ -94,6 +105,7 @@ function StoryProviders({ children, theme, router }: { children: ReactNode; them
                             <StoryContent />
                         </UnsavedChangesProvider>
                     ),
+                    errorElement: <StoryRouteError />,
                 },
             ],
             { initialEntries: [router?.initialPath ?? "/"] },

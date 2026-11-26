@@ -777,15 +777,20 @@ namespace Voron.Data.BTrees
                 throw new InvalidOperationException("Could not ensure that we have enough space, this is probably a bug");
         }
 
+        /// <summary>The pages referenced by the entries from <paramref name="first"/>, at most <paramref name="count"/> entries.</summary>
         public struct PagesReferencedEnumerator : IEnumerator<long>
         {
             private readonly TreePage _page;
+            private readonly int _first;
+            private readonly int _end;
             private int _index;
 
-            public PagesReferencedEnumerator(TreePage treePage)
+            public PagesReferencedEnumerator(TreePage treePage, int first, int count)
             {
                 this._page = treePage;
-                this._index = 0;
+                this._first = Math.Max(first, 0);
+                this._end = Math.Min(first + count, treePage.NumberOfEntries);
+                this._index = _first;
                 this.Current = -1;
             }
 
@@ -793,7 +798,7 @@ namespace Voron.Data.BTrees
             public bool MoveNext()
             {
                 // If the index is out of bounds, we are done. 
-                while (this._index < _page.NumberOfEntries)
+                while (this._index < _end)
                 {
                     var nodeOffset = _page.KeysOffsets[this._index];
                     var nodeHeader = (TreeNodeHeader*)(_page.Base + nodeOffset);
@@ -814,7 +819,7 @@ namespace Voron.Data.BTrees
 
             public void Reset()
             {
-                this._index = 0;
+                this._index = _first;
             }
 
             public long Current

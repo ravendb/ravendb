@@ -56,6 +56,14 @@ namespace Raven.Server.Documents.Queries.Sorting.Custom
 
         public override IComparable this[int slot] => _comparator[slot];
 
+        public override void Dispose()
+        {
+            Executing(nameof(Dispose), string.Empty);
+            _comparator.Dispose();
+            Executed(nameof(Dispose), string.Empty);
+        }
+
+
         private void Executed(string method, string args)
         {
             _diagnostics.Add($"Executed '{method}' with '{args}' arguments.");

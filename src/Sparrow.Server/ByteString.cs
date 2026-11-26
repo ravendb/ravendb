@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -477,13 +477,25 @@ namespace Sparrow.Server
 
         public readonly int Size;
 
-        private readonly NativeMemory.ThreadStats _thread;
+        private NativeMemory.ThreadStats _thread;
 
         public UnmanagedGlobalSegment(int size)
         {
             Size = size;
             _segment = NativeMemory.AllocateMemory(size, out _thread);
             InUse.Raise();
+        }
+
+        // Per-thread stats feed the indexing memory budget, so a pooled segment counts against the thread using it.
+        internal void ChargeToCurrentThread()
+        {
+            var current = NativeMemory.CurrentThreadStats;
+            if (current == _thread)
+                return;
+
+            NativeMemory.UpdateMemoryStatsForThread(_thread, Size);
+            current.Allocations += Size;
+            _thread = current;
         }
 
         ~UnmanagedGlobalSegment()
@@ -585,9 +597,19 @@ namespace Sparrow.Server
 
             if (segment.Size >= size)
             {
+                // Reset keeps the last segment, so a much bigger one would stay with a small context for good
+                if (segment.Size / 2 >= size)
+                {
+                    if (pool.TryEnqueue(segment) == false)
+                        segment.Dispose();
+
+                    goto ALLOCATE;
+                }
+
                 if (segment.InUse.Raise() == false)
                     goto ALLOCATE;
 
+                segment.ChargeToCurrentThread();
                 return segment;
             }
             
@@ -622,7 +644,7 @@ namespace Sparrow.Server
             if (memory.InUse.Lower() == false)
                 ThrowSegmentStillInUse();
 
-            memory.InPoolSince = DateTime.UtcNow;
+            memory.InPoolSinceMilliseconds = Clock.Milliseconds;
 
             var pool = SegmentsPool;
 

@@ -1,4 +1,5 @@
 import { useFormContext } from "react-hook-form";
+import { InfoHint } from "@/components/data/info-hint";
 import { FormAutocomplete } from "@/components/form/form-autocomplete";
 import { FormInput } from "@/components/form/form-input";
 import { FormSelect, type FormSelectOption } from "@/components/form/form-select";
@@ -44,7 +45,7 @@ export function EmbeddedTableEditor({ path }: { path: EmbeddedTablePath }) {
                     control={control}
                     name={`${path}.propertyName`}
                     label="Target property"
-                    description="The parent document field where the embedded data is stored."
+                    labelAddon={<InfoHint content="The parent document field where the embedded data is stored." />}
                 />
                 <FormSelect
                     control={control}
@@ -60,7 +61,7 @@ export function EmbeddedTableEditor({ path }: { path: EmbeddedTablePath }) {
                 defaultValue={{ value: "" }}
                 label="Primary key columns"
                 addButtonLabel="Add primary key column"
-                description="Columns that uniquely identify rows in this related table."
+                labelAddon={<InfoHint content="Columns that uniquely identify rows in this related table." />}
             />
             <FormStringList
                 control={control}
@@ -69,7 +70,9 @@ export function EmbeddedTableEditor({ path }: { path: EmbeddedTablePath }) {
                 defaultValue={{ value: "" }}
                 label="Join columns"
                 addButtonLabel="Add join column"
-                description="Columns used to match rows in this related table with rows from the parent table."
+                labelAddon={
+                    <InfoHint content="Columns used to match rows in this related table with rows from the parent table." />
+                }
             />
             <AddNestedTableButtons path={path} />
             <FieldMappingEditor path={path} />

@@ -59,7 +59,7 @@ export const useCapabilitySteps = (): WizardSteps<AgentStepId, AgentFormData> =>
             validate: "create",
             beforeNext: createAgentBeforeNext,
             isNextDisabled: createAgentNextBlock.isNextDisabled,
-            nextDisabledReason: createAgentNextBlock.nextDisabledReason,
+            nextNote: createAgentNextBlock.note,
         },
         review: {
             title: "Review & edit your agent",

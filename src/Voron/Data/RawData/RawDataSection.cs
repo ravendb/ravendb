@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -256,6 +256,18 @@ namespace Voron.Data.RawData
                     $"Asked to load a value that runs past the end of the page: {id} from page {pageHeader->PageNumber}");
 
             return sizes;
+        }
+
+        /// <summary>The owner hash that a table named <paramref name="tableName"/> writes in the headers of its data pages.</summary>
+        public static ulong GetOwnerHash(Slice tableName) => Hashing.XXHash64.Calculate(tableName.Content.Ptr, (ulong)tableName.Content.Length);
+
+        /// <summary>The owner hash of the table that holds the value <paramref name="id"/>, from the header of the value's page.</summary>
+        public static ulong GetOwnerHash(LowLevelTransaction tx, long id)
+        {
+            var page = tx.GetPage(id / Constants.Storage.PageSize);
+            return id % Constants.Storage.PageSize == 0
+                ? ((RawDataOverflowPageHeader*)page.Pointer)->SectionOwnerHash // a large value starts its own overflow pages
+                : ((RawDataSmallPageHeader*)page.Pointer)->SectionOwnerHash;
         }
 
         public static long GetSectionPageNumber(LowLevelTransaction tx, long id)

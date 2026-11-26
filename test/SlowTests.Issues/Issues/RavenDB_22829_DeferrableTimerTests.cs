@@ -1,9 +1,9 @@
-﻿using System;
+using System;
+using Sparrow.Server;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Nito.AsyncEx;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
         private class State
         {
             public int Count;
-            public AsyncManualResetEvent WaitUntilScheduled = new AsyncManualResetEvent(false);
+            public AsyncManualResetEvent WaitUntilScheduled = new AsyncManualResetEvent();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
@@ -22,15 +23,14 @@ namespace Sparrow.Utils
         private Memory<byte> _decompressionInput = Memory<byte>.Empty;
         private long _compressedBytesCount;
         private long _uncompressedBytesCount;
-        private readonly DisposeLock _disposerLock = new(nameof(ZstdStream));
-        private bool _disposed;
+        private readonly InFlightGuard<SingleSlot> _inFlight = new();
 
         internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
-        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen, int workers)
+        private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen, int workers, int srcSizeHint = 0)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _compressContext = new ZstdLib.CompressContext(level, workers, pooled: true);
+            _compressContext = new ZstdLib.CompressContext(level, workers, pooled: true, srcSizeHint);
             _compression = compression;
             _leaveOpen = leaveOpen;
 
@@ -42,6 +42,10 @@ namespace Sparrow.Utils
         /// <param name="workers">Threads compressing in parallel with the writer. Uses more CPU and memory, worth it for long streams only.
         /// Falls back to compressing on the calling thread when the native library is single threaded.</param>
         public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel, bool leaveOpen, int workers) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen, workers);
+
+        /// <param name="srcSizeHint">Expected size of everything that will be written, doesn't have to be exact.</param>
+        public static ZstdStream CompressWithSizeHint(Stream stream, CompressionLevel compressionLevel, long srcSizeHint) =>
+            new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen: false, workers: 0, (int)Math.Min(srcSizeHint, int.MaxValue));
 
         public static ZstdStream Decompress(Stream stream, bool leaveOpen = false) => new(stream, compression: false, 0, leaveOpen, workers: 0);
 
@@ -122,7 +126,7 @@ namespace Sparrow.Utils
 
         public override int Read(Span<byte> buffer)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 while (true)
                 {
@@ -148,7 +152,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 while (true)
                 {
@@ -171,7 +175,7 @@ namespace Sparrow.Utils
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 while (buffer.Length > 0)
                 {
@@ -198,7 +202,7 @@ namespace Sparrow.Utils
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 while (buffer.Length > 0)
                 {
@@ -215,7 +219,7 @@ namespace Sparrow.Utils
 
         public override void Flush()
         {
-            using (_disposerLock.EnsureNotDisposed())
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 FlushInternal();
             }
@@ -240,7 +244,7 @@ namespace Sparrow.Utils
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
+            using (_inFlight.Enter(nameof(ZstdStream)))
             {
                 await FlushInternalAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
             }
@@ -263,25 +267,19 @@ namespace Sparrow.Utils
 
         public override async ValueTask DisposeAsync()
         {
-            if (_disposed)
+            if (_inFlight.TryClose() == false)
                 return;
 
-            using (_disposerLock.StartDisposing())
-            {
-                if (_disposed)
-                    return;
+            _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan);
 
-                _disposed = true;
+            // closing the frame flushes everything that is still buffered
+            if (_compressContext != null && _compression)
+                await FlushInternalAsync(ZstdLib.ZSTD_EndDirective.ZSTD_e_end).ConfigureAwait(_continueOnCapturedContext);
 
-                // closing the frame flushes everything that is still buffered
-                if (_compressContext != null && _compression)
-                    await FlushInternalAsync(ZstdLib.ZSTD_EndDirective.ZSTD_e_end).ConfigureAwait(_continueOnCapturedContext);
+            if (_leaveOpen == false)
+                await _inner.DisposeAsync().ConfigureAwait(_continueOnCapturedContext);
 
-                if (_leaveOpen == false)
-                    await _inner.DisposeAsync().ConfigureAwait(_continueOnCapturedContext);
-
-                ReleaseResources();
-            }
+            ReleaseResources();
         }
 
         protected override void Dispose(bool disposing)
@@ -300,25 +298,19 @@ namespace Sparrow.Utils
 
         private void DisposeInternal(bool flush)
         {
-            if (_disposed)
+            if (_inFlight.TryClose() == false)
                 return;
 
-            using (_disposerLock.StartDisposing())
-            {
-                if (_disposed)
-                    return;
+            _inFlight.WaitForDrain(Timeout.InfiniteTimeSpan);
 
-                _disposed = true;
+            // closing the frame flushes everything that is still buffered
+            if (flush && _compressContext != null && _compression)
+                FlushInternal(ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
-                // closing the frame flushes everything that is still buffered
-                if (flush && _compressContext != null && _compression)
-                    FlushInternal(ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
+            if (_leaveOpen == false)
+                _inner.Dispose();
 
-                if (_leaveOpen == false)
-                    _inner.Dispose();
-
-                ReleaseResources();
-            }
+            ReleaseResources();
         }
 
         private void ReleaseResources()

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using Sparrow.Collections;
@@ -256,6 +255,7 @@ namespace Sparrow.Server.Platform.Posix
             private readonly string _path;
             private byte[] _buffer;
             private int _bytesRead;
+            private int _position;
 
             public BufferedPosixKeyValueOutputValueReader(string path)
             {
@@ -263,94 +263,74 @@ namespace Sparrow.Server.Platform.Posix
                 _buffer = ArrayPool<byte>.Shared.Rent(8 * 1024);
             }
             
+            // a /proc file reports a size of 0 and its length changes from read to read: a read that fills the buffer may have
+            // been cut, so the file is read again into a buffer twice as large
             public void ReadFileIntoBuffer()
             {
-
-                using (var fileStream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                while (true)
                 {
-                    if (fileStream.Length > _buffer.Length)
-                        ThrowStreamBiggerThenBufferException();
-
                     _bytesRead = 0;
-                    
-
-                    while (true)
+                    _position = 0;
+                    using (var fileStream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        var read = fileStream.Read(_buffer, _bytesRead, _buffer.Length - _bytesRead);
-                        if (read == 0)
-                            break;
-                        _bytesRead += read;
-                    }    
-                }
-            }
-
-            private (int Start, int End) SearchInBuffer(byte[] filter)
-            {
-                var maxValidSize = _bytesRead - filter.Length;
-                for (int j = 0; j < maxValidSize; j++)
-                {
-                    if (filter[0] == _buffer[j])
-                    {
-                        bool success = true;
-                        for (int k = 1; k < filter.Length; k++)
-                        {
-                            if (filter[k] != _buffer[j + k])
-                            {
-                                success = false;
-                                break;
-                            }
-                        }
-
-                        if (success == false)
-                        {
-                            while (++j < _bytesRead)
-                            {
-                                if (_buffer[j] == '\n')
-                                    break;
-                            }
-                            continue;
-                        }
-
-                        var start = j + filter.Length;
-                        while (
-                            start < _bytesRead && 
-                            (_buffer[start] == ' ' || _buffer[start] == '\t'))
-                        {
-                            start++;
-                        }
-
-                        var end = start;
-                        while (end < _bytesRead && _buffer[end] != '\n')
-                        {
-                            end++;
-                        }
-
-                        return (start, end);
+                        int read;
+                        while (_bytesRead < _buffer.Length && (read = fileStream.Read(_buffer, _bytesRead, _buffer.Length - _bytesRead)) > 0)
+                            _bytesRead += read;
                     }
-                }
 
-                return (0, 0);
+                    if (_bytesRead < _buffer.Length)
+                        return;
+
+                    var larger = ArrayPool<byte>.Shared.Rent(_buffer.Length * 2);
+                    ArrayPool<byte>.Shared.Return(_buffer);
+                    _buffer = larger;
+                }
             }
-            
-            public long ExtractNumericValueFromKeyValuePairsFormattedFile(byte[] filter)
+
+            // the value after the key at the start of a line, without the spaces and tabs before it; the search starts after the
+            // previous key and then wraps around, so keys asked in the order of the file take one pass
+            private ReadOnlySpan<byte> FindValue(ReadOnlySpan<byte> key)
             {
-                var (start, end) = SearchInBuffer(filter);
-                long value = 0;
-                for (int i = start; i < end; i++)
+                if (TryFind(key, _position, _bytesRead, out var value) || TryFind(key, 0, _position, out value))
+                    return value;
+                return ReadOnlySpan<byte>.Empty;
+            }
+
+            // a key that starts at or after from and before to, at the start of a line
+            private bool TryFind(ReadOnlySpan<byte> key, int from, int to, out ReadOnlySpan<byte> value)
+            {
+                var position = from;
+                while (position < to)
                 {
-                    if (_buffer[i] < (byte)'0' || _buffer[i] > (byte)'9')
-                        return value;
-                    
-                    value *= 10;
-                    value += _buffer[i] - (byte)'0';
+                    var found = new ReadOnlySpan<byte>(_buffer, position, _bytesRead - position).IndexOf(key);
+                    if (found < 0 || position + found >= to)
+                        break;
+                    var start = position + found;
+                    position = start + key.Length;
+                    if (start > 0 && _buffer[start - 1] != (byte)'\n')
+                        continue; // inside another line
+
+                    var rest = new ReadOnlySpan<byte>(_buffer, position, _bytesRead - position);
+                    var end = rest.IndexOf((byte)'\n');
+                    value = (end < 0 ? rest : rest[..end]).TrimStart(" \t"u8);
+                    _position = end < 0 ? _bytesRead : position + end + 1;
+                    return true;
+                }
+                value = default;
+                return false;
+            }
+
+            /// <summary>The number after the key (0 when the key is missing), up to its first non-digit, such as " kB".</summary>
+            public long ExtractNumericValueFromKeyValuePairsFormattedFile(ReadOnlySpan<byte> key)
+            {
+                long value = 0;
+                foreach (var b in FindValue(key))
+                {
+                    if (b < (byte)'0' || b > (byte)'9')
+                        break;
+                    value = value * 10 + (b - (byte)'0');
                 }
                 return value;
-            }
-
-            [DoesNotReturn]
-            private void ThrowStreamBiggerThenBufferException()
-            {
-                throw new InvalidOperationException($"The stream for {_path} is bigger then the buffer");
             }
 
             public void Dispose()

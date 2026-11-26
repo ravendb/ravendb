@@ -1,5 +1,6 @@
 ﻿import { createEntityAdapter, createSlice, EntityState, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
+import genUtils from "common/generalUtils";
 
 export interface ClusterNode {
     nodeTag: string;
@@ -71,5 +72,6 @@ export const clusterSelectors = {
     localNodeTag: selectLocalNodeTag,
     clientVersion: (store: RootState) => store.cluster.clientVersion,
     serverVersion: (store: RootState) => store.cluster.serverVersion,
+    isDevBuild: (store: RootState) => genUtils.isDevBuildNumber(store.cluster.serverVersion?.BuildVersion),
     isPassive: (store: RootState) => store.cluster.passive,
 };

@@ -353,11 +353,7 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
             return;
         }
 
-        TotalUsage.TotalTokens += usage.TotalTokens;
-        TotalUsage.PromptTokens += usage.PromptTokens;
-        TotalUsage.CompletionTokens += usage.CompletionTokens;
-        TotalUsage.CachedTokens += usage.CachedTokens;
-        TotalUsage.ReasoningTokens += usage.ReasoningTokens;
+        TotalUsage.Add(usage);
     }
 
     public bool TryGetDetailsOfRecentToolCall(AiAgentConfiguration configuration, out List<ExceededTokenThresholdDetails.ToolCallDetails> toolCalls)

@@ -28,6 +28,14 @@ class fileDownloader {
         fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
     }
 
+    static downloadAsCsv(csv: string, filename: string, domCacheElementName = "link") {
+        domCacheElementName = _.snakeCase(domCacheElementName);
+        fileDownloader.cleanup(domCacheElementName);
+        const byteOrderMark = "\uFEFF";
+        const blob = new Blob([byteOrderMark + csv], { type: "text/csv;charset=utf-8" });
+        fileDownloader.createLinkAndStartDownload(blob, filename, domCacheElementName);
+    }
+
     static downloadAsJson(object: any, filename: string, domCacheElementName = "link", replacer: (key: string, value: any) => any = null) {
         domCacheElementName = _.snakeCase(domCacheElementName);
         fileDownloader.cleanup(domCacheElementName);

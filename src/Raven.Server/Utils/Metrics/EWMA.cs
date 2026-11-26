@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Threading;
+using Sparrow.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server.Utils.Metrics

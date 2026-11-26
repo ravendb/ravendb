@@ -5,54 +5,21 @@ import ClientConfigurationUtils from "./ClientConfigurationUtils";
 const schema = yup
     .object({
         overrideConfig: yup.boolean().optional(),
-        identityPartsSeparatorEnabled: yup.boolean().optional(),
         identityPartsSeparatorValue: yup
             .string()
             .nullable()
             .length(1)
-            .matches(/[^|]/, { message: "Identity parts separator cannot be set to '|'" })
-            .when("identityPartsSeparatorEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        maximumNumberOfRequestsEnabled: yup.boolean().optional(),
-        maximumNumberOfRequestsValue: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("maximumNumberOfRequestsEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        loadBalancerEnabled: yup.boolean().optional(),
+            .matches(/[^|]/, { message: "Identity parts separator cannot be set to '|'" }),
+        maximumNumberOfRequestsValue: yup.number().nullable().positive().integer(),
         loadBalancerValue: yup
             .mixed<Raven.Client.Http.LoadBalanceBehavior>()
             .oneOf(ClientConfigurationUtils.allLoadBalanceBehaviors)
-            .nullable()
-            .when("loadBalancerEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        loadBalancerSeedEnabled: yup.boolean().optional(),
-        loadBalancerSeedValue: yup
-            .number()
-            .nullable()
-            .positive()
-            .integer()
-            .when("seedEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
-        readBalanceBehaviorEnabled: yup.boolean().optional(),
+            .nullable(),
+        loadBalancerSeedValue: yup.number().nullable().positive().integer(),
         readBalanceBehaviorValue: yup
             .mixed<Raven.Client.Http.ReadBalanceBehavior>()
             .oneOf(ClientConfigurationUtils.allReadBalanceBehaviors)
-            .nullable()
-            .when("readBalanceBehaviorEnabled", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
+            .nullable(),
     })
     .required();
 

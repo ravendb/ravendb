@@ -1,7 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,10 +15,10 @@ using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
-using Sparrow.Server.Platform.Posix;
 using Sparrow.Server.Utils;
 using Voron.Exceptions;
 using Voron.Global;
+using Voron.Impl.Journal;
 using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging;
@@ -41,7 +40,11 @@ public unsafe partial class Pager : IDisposable
     private readonly ConcurrentSet<WeakReference<State>> _states = [];
     private readonly EncryptionBuffersPool _encryptionBuffersPool;
     private readonly byte[] _masterKey;
-    private PrefetchTableHint _prefetchState;
+    private SegmentPrefetchTable _prefetchTable = null!;
+    internal DeviceWriteBudget? DeviceBudget { get; private set; }
+    private long _prefetchRequestSize;
+    private PrefetchRing? _prefetchRing;
+    private long _prefetchTicket;
     private DateTime _lastIncrease;
     private long _increaseSize;
 
@@ -54,8 +57,13 @@ public unsafe partial class Pager : IDisposable
             throw new InvalidOperationException($"Expected the PAL to have page size matching Voron but was: {Pal.PalVoronPageSize}");
         
         var pager = new Pager(options, filename, flags, GetFunctions(options, flags));
-        var result = Pal.rvn_init_pager(filename, initialFileSize, flags, 
+        var ring = flags.HasFlag(Pal.OpenFileFlags.Prefetch) ? options.PrefetchRing ?? PrefetchRing.Default : null;
+        var result = Pal.rvn_init_pager(filename, initialFileSize, flags, ring != null ? ring.Handle : null,
             out var handle, out var readOnlyMemory, out var writeMemory, out var memorySize, out var error);
+        if (result == PalFlags.FailCodes.FailPrefetchFilesExhausted)
+            throw new InvalidOperationException(
+                $"Cannot open '{filename}': {ring!.MaxFiles} data files are already open with the prefetch I/O ring, which is its limit. " +
+                "Raise the 'Storage.PrefetchRingMaxFiles' configuration option (a server restart is needed) to open more databases and indexes.");
         if (result != PalFlags.FailCodes.Success)
             RaiseError(filename, error, result, initialFileSize);
 
@@ -63,7 +71,16 @@ public unsafe partial class Pager : IDisposable
         var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle, pageSize ?? options.PageSize);
         (state.TotalAllocatedSize, state.TotalPhysicalSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
+        if (Pal.rvn_pager_get_device_id(handle, out var deviceId, out _) == PalFlags.FailCodes.Success)
+            pager.DeviceBudget = DeviceWriteBudget.GetForDevice(deviceId, filename, options.SyncWritebackBarrierCostThresholdTicks,
+                options.SyncWritebackDrainQueueDepthThreshold, options.PipelineJournalWritesAboveLatencyInTicks);
         pager.Initialize(memorySize);
+        pager._prefetchRing = ring is { IsAvailable: true } ? ring : null;
+        Pal.rvn_pager_get_prefetch_info(handle, out var prefetchInfo);
+        pager._prefetchRequestSize = prefetchInfo.RequestSize;
+        pager._prefetchTicket = prefetchInfo.Ticket;
+        if (PlatformDetails.RunningOnLinux && prefetchInfo.Ticket == -1)
+            pager._canPrefetch = false; // segment read-ahead needs the ring: files outside it (scratch, journal) get none
         return (pager, state);
     }
 
@@ -86,8 +103,28 @@ public unsafe partial class Pager : IDisposable
         return funcs;
     }
 
+    private static string IoRingFilesExhaustedMessage(string filename)
+    {
+        var max = PalConfiguration.IoRingFileTableSize;
+        var suggested = max * 2;
+        var withoutRing = PlatformDetails.RunningOnWindows ? Pal.RvnWriteMode.FileIo : Pal.RvnWriteMode.VectoredFileIo;
+        var message =
+            $"Cannot open the data file '{filename}': the I/O ring that writes data files is full. 'Storage.IoRingMaxFiles' sets its size to {max} files" +
+            (PalConfiguration.IoRingMaxFiles == null ? " (the default: the process's limit on open files). " : ". ") +
+            $"Each database, each index, and some internal stores (such as the cluster state) have their own data file, and each open data file uses one place in the I/O ring until it is closed.{Environment.NewLine}" +
+            $"To open more databases and indexes, raise 'Storage.IoRingMaxFiles' (for example to {suggested}) and restart the server. Set it in settings.json (\"Storage.IoRingMaxFiles\": {suggested}), " +
+            $"with the environment variable RAVEN_Storage_IoRingMaxFiles={suggested}, or with the command line argument --Storage.IoRingMaxFiles={suggested}.{Environment.NewLine}";
+        if (PlatformDetails.RunningOnLinux)
+            message += "On Linux, the I/O ring holds at most the limit on open files of the RavenDB process ('ulimit -n'; raise it with LimitNOFILE in the systemd unit), " +
+                       $"and older kernels (such as 5.10) at most 32768 files, whatever the value.{Environment.NewLine}";
+        return message + $"To stop using the I/O ring, set 'Storage.WriteMode' to '{withoutRing}'.";
+    }
+
     public static void RaiseError(string filename, int errorCode, PalFlags.FailCodes rc, long initialFileSize, [CallerMemberName] string? caller = null)
     {
+        if (rc == PalFlags.FailCodes.FailIoRingFilesExhausted)
+            throw new InvalidOperationException(IoRingFilesExhaustedMessage(filename));
+
         if (rc == PalFlags.FailCodes.FailCreateIoRing)
         {
             if (Pal.rvn_get_error_meaning(errorCode) is PalFlags.ErrnoSpecialCodes.NoMem)
@@ -133,7 +170,6 @@ public unsafe partial class Pager : IDisposable
         _masterKey = options.Encryption.MasterKey;
         _functions = functions;
         _increaseSize = MinIncreaseSize;
-        _prefetchState = PrefetchTableHint.Empty;
         if (options.RunningOn32Bits)
         {
             _32BitsState = new StateFor32Bits();
@@ -142,7 +178,13 @@ public unsafe partial class Pager : IDisposable
 
     private void Initialize(long initialSize)
     {
-        _prefetchState = new PrefetchTableHint(Options.PrefetchSegmentSize, Options.PrefetchResetThreshold, initialSize);
+        var policy = Options.PrefetchPolicy ?? PrefetchPolicy.Global;
+        _prefetchTable = new SegmentPrefetchTable(policy, DeviceBudget, Options.PrefetchSegmentSize, initialSize);
+        if (_flags.HasFlag(Pal.OpenFileFlags.Prefetch))
+        {
+            _pageHints = new PageHints(policy, initialSize / Constants.Storage.PageSize);
+            _hintsReads = CanReadPagesAhead(Options);
+        }
     }
 
     public void DiscardWholeFile(State state)
@@ -161,33 +203,6 @@ public unsafe partial class Pager : IDisposable
         _ = Pal.rvn_discard_virtual_memory(baseAddress + offset, numberOfPages * Constants.Storage.PageSize, out _);
     }
 
-    public void TryPrefetchingWholeFile(State state)
-    {
-        MaybePrefetchMemory(state, 0, state.NumberOfAllocatedPages);
-    }
-
-    public void TrySetSequentialReadAheadHint(State state)
-    {
-        // posix_fadvise(POSIX_FADV_SEQUENTIAL) is Linux-only (absent on macOS). On Windows the read-ahead is
-        // handled at file-open time, so the hint is a no-op there - the caller gates this on RunningOnLinux too.
-        if (PlatformDetails.RunningOnLinux == false)
-            return;
-
-        // PAL hands back a dup of the pager's fd, so disposing the handle below does not close the pager's file.
-        if (Pal.rvn_pager_get_file_handle(state.Handle, out var fileHandle, out _) != PalFlags.FailCodes.Success)
-            return;
-
-        using (fileHandle)
-        {
-            var fd = fileHandle.DangerousGetHandle().ToInt32();
-            if (fd < 0)
-                return;
-
-            // best-effort kernel read-ahead hint for the upcoming sequential scan; failures are ignored
-            Syscall.posix_fadvise(fd, 0, 0, Syscall.POSIX_FADV_SEQUENTIAL);
-        }
-    }
-
     public bool EnsureMapped(State state, ref PagerTransactionState txState, long page, int numberOfPages)
     {
         if (_functions.EnsureMapped == null)
@@ -196,78 +211,69 @@ public unsafe partial class Pager : IDisposable
         return _functions.EnsureMapped(this, state, ref txState, page, numberOfPages);
     }
 
-    public struct PageIterator : IEnumerator<long>
+    /// <summary>
+    /// Reads ahead the pages the caller is about to read, also while memory is full or the device is busy: one request for
+    /// adjacent pages costs less than the faults it replaces. Pages hinted or requested within the stale time are skipped.
+    /// Returns the pages requested.
+    /// </summary>
+    public int MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
     {
-        private readonly long _startPage;
-        private readonly long _endPage;
-        private long _currentPage;
+        var hints = _pageHints;
+        if (_canPrefetch == false || hints == null)
+            return 0;
 
-        public PageIterator(long pageNumber, long pagesToPrefetch)
+        long runStart = 0, runPages = 0, requested = 0, skipped = 0;
+        while (pagesToPrefetch.MoveNext())
         {
-            this._startPage = pageNumber;
-            this._endPage = pageNumber + pagesToPrefetch;
-            this._currentPage = pageNumber;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool MoveNext()
-        {
-            this._currentPage++;
-            return _currentPage < _endPage;
-        }
-
-        public void Reset()
-        {
-            this._currentPage = this._startPage;
-        }
-
-        object IEnumerator.Current => Current;
-
-        public long Current
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _currentPage;
-        }
-
-        public void Dispose() { }
-    }
-
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void MaybePrefetchMemory(State state, long pageNumber, long pagesToPrefetch)
-    {
-        MaybePrefetchMemory(state, new PageIterator(pageNumber, pagesToPrefetch));
-    }
-
-    public void MaybePrefetchMemory<T>(State state, T pagesToPrefetch) where T : struct, IEnumerator<long>
-    {
-        if (!_canPrefetch)
-            return;
-
-        if (pagesToPrefetch.MoveNext() == false)
-            return;
-
-        var prefetcher = GlobalPrefetchingBehavior.GlobalPrefetcher.Value;
-
-        do
-        {
-            long pageNumber = pagesToPrefetch.Current;
-            if (_prefetchState.ShouldPrefetchSegment(pageNumber, out var offset, out long bytes) == false)
+            var pageNumber = pagesToPrefetch.Current;
+            if ((ulong)pageNumber >= (ulong)state.NumberOfAllocatedPages)
+                continue; // a hint can carry -1 or a stale page number
+            if (hints.TryMark(pageNumber) == false)
+            {
+                skipped++;
                 continue;
+            }
 
-            prefetcher.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges { VirtualAddress = state.ReadAddress + offset, NumberOfBytes = (nint)bytes }, 0);
-        } while (pagesToPrefetch.MoveNext());
+            if (runPages != 0 && pageNumber == runStart + runPages)
+            {
+                runPages++;
+                continue;
+            }
+            ReadRunAhead(state, runStart, runPages);
+            requested += runPages;
+            runStart = pageNumber;
+            runPages = 1;
+        }
+        ReadRunAhead(state, runStart, runPages);
+        requested += runPages;
+        if (skipped != 0)
+            ReadAheadPagesSkippedCount.Apply(skipped);
+        return (int)requested;
+    }
 
-        _prefetchState.CheckResetPrefetchTable();
+    private void ReadRunAhead(State state, long firstPage, long pages)
+    {
+        if (pages == 0)
+            return;
+        PrefetchRange(state, firstPage * Constants.Storage.PageSize, pages * Constants.Storage.PageSize);
+    }
+
+    private void PrefetchRange(State state, long offset, long bytes)
+    {
+        if (PlatformDetails.RunningOnLinux)
+            Pal.rvn_pager_prefetch(state.Handle, offset, bytes);
+        else
+            GlobalPrefetchingBehavior.GlobalPrefetcher.Value.CommandQueue.TryAdd(new PalDefinitions.PrefetchRanges(state.ReadAddress + offset, bytes, _prefetchRequestSize), 0);
     }
 
 
-    public void Sync(State state, long totalUnsynced)
+    public void Sync(State state, long totalUnsynced, DateTime? startedAt = null, IoMetrics.SyncDetails syncDetails = default)
     {
         if (state.Disposed || _flags.HasFlag(Pal.OpenFileFlags.Temporary))
             return; // nothing to do here
 
         using var metric = Options.IoMetrics.MeterIoRate(FileName, IoMetrics.MeterType.DataSync, 0);
+        metric.SetSync(startedAt ?? metric.Start, syncDetails);
         metric.IncrementFileSize(state.TotalAllocatedSize);
         var rc = Pal.rvn_sync_pager(state.Handle, out var errorCode);
         if (rc != PalFlags.FailCodes.Success)
@@ -457,7 +463,7 @@ public unsafe partial class Pager : IDisposable
     }
 
     private static readonly long IncreaseByPowerOf2Threshold = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-    private readonly bool _canPrefetch;
+    private bool _canPrefetch;
 
     private static long GetNearestFileSize(long neededSize)
     {
@@ -476,139 +482,6 @@ public unsafe partial class Pager : IDisposable
     private void InstallState(State state)
     {
         _states.Add(state.WeakSelf);
-    }
-
-    private class PrefetchTableHint
-    {
-        public static PrefetchTableHint Empty = new(1024, 1024, 0);
-        
-        private const byte EvenPrefetchCountMask = 0x70;
-        private const byte EvenPrefetchMaskShift = 4;
-        private const byte OddPrefetchCountMask = 0x07;
-        private const byte AlreadyPrefetch = 7;
-
-        private readonly int _prefetchSegmentSize;
-        private readonly int _prefetchResetThreshold;
-        private readonly int _segmentShift;
-
-        // this state is accessed by multiple threads
-        // concurrently in an unsafe manner, we do so
-        // explicitly with the intention of dealing with
-        // dirty reads and writes. The only impact that this
-        // can have is a spurious call to the OS's 
-        // madvice() / PrefetchVirtualMemory
-        // Thread safety is based on the OS's own thread safety
-        // for concurrent calls to these methods. 
-        private int _refreshCounter;
-        private readonly byte[] _prefetchTable;
-
-        public PrefetchTableHint(long prefetchSegmentSize, long prefetchResetThreshold, long initialFileSize)
-        {
-            _segmentShift = Bits.MostSignificantBit(prefetchSegmentSize);
-
-            _prefetchSegmentSize = 1 << _segmentShift;
-            _prefetchResetThreshold = (int)((float)prefetchResetThreshold / _prefetchSegmentSize);
-
-            Debug.Assert((_prefetchSegmentSize - 1) >> _segmentShift == 0);
-            Debug.Assert(_prefetchSegmentSize >> _segmentShift == 1);
-
-            long numberOfAllocatedSegments = (initialFileSize / _prefetchSegmentSize) + 1;
-            _prefetchTable = new byte[(numberOfAllocatedSegments / 2) + 1];
-        }
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetSegmentState(long segment)
-        {
-            var index = segment / 2;
-            if (segment < 0 || index >= _prefetchTable.Length)
-                return AlreadyPrefetch;
-
-            byte value = _prefetchTable[index];
-            if (segment % 2 == 0)
-            {
-                // The actual value is in the high byte.
-                value = (byte)(value >> EvenPrefetchMaskShift);
-            }
-            else
-            {
-                value = (byte)(value & OddPrefetchCountMask);
-            }
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void SetSegmentState(long segment, int state)
-        {
-            var index = segment / 2;
-            ref byte value = ref _prefetchTable[index];
-            if (segment % 2 == 0)
-            {
-                // The actual value is in the high byte.
-                value = (byte)((value & OddPrefetchCountMask) | (state << EvenPrefetchMaskShift));
-            }
-            else
-            {
-                value = (byte)((value & EvenPrefetchCountMask) | state);
-            }
-        }
-
-        public bool ShouldPrefetchSegment(long pageNumber, out long offsetFromFileBase, out long sizeInBytes)
-        {
-            long segmentNumber = (pageNumber * Constants.Storage.PageSize) >> this._segmentShift;
-
-            int segmentState = GetSegmentState(segmentNumber);
-            if (segmentState < AlreadyPrefetch)
-            {
-                // We update the current segment counter
-                segmentState++;
-
-                // if the previous or next segments were loaded, eagerly
-                // load this one, probably a sequential scan of one type or
-                // another
-                int previousSegmentState = GetSegmentState(segmentNumber - 1);
-                if (previousSegmentState == AlreadyPrefetch)
-                {
-                    segmentState = AlreadyPrefetch;
-                }
-                else
-                {
-                    int nextSegmentState = GetSegmentState(segmentNumber + 1);
-                    if (nextSegmentState == AlreadyPrefetch)
-                    {
-                        segmentState = AlreadyPrefetch;
-                    }
-                }
-
-                SetSegmentState(segmentNumber, segmentState);
-
-                if (segmentState == AlreadyPrefetch)
-                {
-                    _refreshCounter++;
-
-                    // Prepare the segment information. 
-                    sizeInBytes = _prefetchSegmentSize;
-                    offsetFromFileBase = segmentNumber * _prefetchSegmentSize;
-                    return true;
-                }
-            }
-
-            sizeInBytes = 0;
-            offsetFromFileBase = 0;
-            return false;
-        }
-
-        public void CheckResetPrefetchTable()
-        {
-            if (_refreshCounter > _prefetchResetThreshold)
-            {
-                _refreshCounter = 0;
-
-                // We will zero out the whole table to reset the prefetching behavior. 
-                Array.Clear(_prefetchTable, 0, this._prefetchTable.Length);
-            }
-        }
     }
 
     public void Dispose()

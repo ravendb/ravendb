@@ -54,6 +54,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 var clusterObserverAnalyzer = new ClusterObserverInfoAnalyzer(errors, issues);
 
                 var txInfoAnalyzer = new TransactionInfoAnalyzer(errors, issues);
+                var storageIoAnalyzer = new StorageIoAnalyzer(packageContent, errors, issues);
                 
                 var serverWideAnalyzers = new AbstractDebugPackageAnalyzer[]
                 {
@@ -71,6 +72,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     clusterObserverAnalyzer,
                     
                     txInfoAnalyzer,
+                    storageIoAnalyzer,
                 };
 
                 foreach (var analyzer in serverWideAnalyzers)
@@ -92,6 +94,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     CpuUsageInfo = cpuUsageAnalyzer.CpuUsageInfo,
                     MemoryInfo = memoryAnalyzer.MemoryInfo,
                     ThreadsInfo = threadsAnalyzer.ThreadsInfo,
+                    StorageIo = storageIoAnalyzer.StorageIo,
                 };
                 
                 var clusterAnalysisInfo = new ClusterAnalysisInfo
@@ -220,6 +223,9 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 RecommendedAction = $"Please check that node {nodeTag} is running and reachable, then create the debug package again to include it"
             });
         }
+
+        // a node held back by its disk explains many of the symptoms below (slow pings, elections, log lag), so it goes first
+        StorageIoAnalyzer.DetectClusterWideIssues(reports, clusterWideIssues);
 
         var customElectionTimeoutDetected = false;
         

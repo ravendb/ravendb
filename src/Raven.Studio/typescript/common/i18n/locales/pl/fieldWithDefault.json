@@ -1,0 +1,6 @@
+{
+    "optimal": "Optymalna",
+    "resetToDefault": "Przywróć wartość domyślną",
+    "optimalValueHint": "Optymalna wartość: {{value}}.",
+    "useOptimalValue": "Użyj {{value}}"
+}

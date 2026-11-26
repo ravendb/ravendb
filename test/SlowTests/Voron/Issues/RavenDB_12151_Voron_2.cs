@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
@@ -65,9 +67,8 @@ namespace SlowTests.Voron.Issues
             Assert.True(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes < totalSize);
             Assert.Equal(Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes, _scratchSpaceMonitor.Size);
 
-            scratches = new DirectoryInfo(temp).GetFiles("scratch.*");
-
-            totalSize = scratches.Sum(x => x.Length);
+            // disposed scratch files can still be listed for a while on Windows (FILE_FLAG_DELETE_ON_CLOSE keeps them until every handle, e.g. AV scanner, indexer, is closed)
+            totalSize = WaitForSizeOnDiskToMatch(temp, _scratchSpaceMonitor.Size, "scratch.*");
 
             Assert.Equal(totalSize, _scratchSpaceMonitor.Size);
             Assert.Equal(totalSize, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
@@ -91,7 +92,22 @@ namespace SlowTests.Voron.Issues
             Assert.Equal(0, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
         }
 
-         private class TestScratchSpaceMonitor : IScratchSpaceMonitor
+        private static long WaitForSizeOnDiskToMatch(string directory, long expectedSize, params string[] searchPatterns)
+        {
+            var sw = Stopwatch.StartNew();
+
+            while (true)
+            {
+                var sizeOnDisk = searchPatterns.Sum(pattern => new DirectoryInfo(directory).GetFiles(pattern).Sum(x => x.Length));
+
+                if (sizeOnDisk == expectedSize || sw.Elapsed > TimeSpan.FromSeconds(30))
+                    return sizeOnDisk;
+
+                Thread.Sleep(50);
+            }
+        }
+
+        private class TestScratchSpaceMonitor : IScratchSpaceMonitor
         {
             public long Size;
 

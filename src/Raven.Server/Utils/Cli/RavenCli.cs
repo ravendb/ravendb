@@ -595,7 +595,8 @@ namespace Raven.Server.Utils.Cli
                        Environment.NewLine +
                        $" {RuntimeSettings.Describe()}" +
                        Environment.NewLine +
-                       $"librvnpal Expected Version: {Pal.PAL_VER}, librvnpal Current Version: {Pal.rvn_get_pal_ver()}";
+                       $"librvnpal Expected Version: {Pal.PAL_VER}, librvnpal Current Version: {Pal.rvn_get_pal_ver()}, " +
+                       $"Data file write mode: {PalConfiguration.WriteMode} (configured {PalConfiguration.RequestedWriteMode})";
             }
         }
 

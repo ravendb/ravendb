@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -735,6 +736,40 @@ namespace Voron.Data.Tables
                 {
                     ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
                 }
+            }
+        }
+
+        /// <summary>
+        /// The pages that updating the value <paramref name="id"/> modifies and reading it did not bring in: its whole page,
+        /// its section header page and the leaf pages of its entries in the given fixed-size indexes. Returns how many it put
+        /// in <paramref name="pages"/>, which needs room for 2 + <paramref name="indexes"/>.Length.
+        /// </summary>
+        public int GetPagesToUpdate(long id, Span<long> pages, params ReadOnlySpan<TableSchema.FixedSizeKeyIndexDef> indexes)
+        {
+            var llt = _tx.LowLevelTransaction;
+            var count = 0;
+            count = Add(llt, pages, count, id / Constants.Storage.PageSize);
+            if (id % Constants.Storage.PageSize != 0) // a small value: its section header page tracks its space
+                count = Add(llt, pages, count, RawDataSection.GetSectionPageNumber(llt, id));
+
+            if (indexes.IsEmpty == false)
+            {
+                DirectRead(id, out TableValueReader value);
+                foreach (var indexDef in indexes)
+                {
+                    if (GetFixedSizeTree(indexDef).TryGetLeafPageNumber(indexDef.GetValue(value), out var leaf))
+                        count = Add(llt, pages, count, leaf);
+                }
+            }
+            return count;
+
+            // a page in scratch is in memory, and its data file copy is stale
+            static int Add(LowLevelTransaction llt, Span<long> pages, int count, long page)
+            {
+                if (llt.IsInScratch(page))
+                    return count;
+                pages[count] = page;
+                return count + 1;
             }
         }
 

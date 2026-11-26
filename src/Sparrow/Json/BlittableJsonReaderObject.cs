@@ -1063,6 +1063,17 @@ namespace Sparrow.Json
             }
         }
 
+        /// <summary>
+        /// The offset of the property's value back from the start of the object: insertion order is descending offset, as in
+        /// <see cref="GetPropertiesByInsertionOrder"/>.
+        /// </summary>
+        internal int GetPropertyOffset(int index)
+        {
+            AssertContextNotDisposed();
+            var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
+            return ReadNumber(_metadataPtr + index * metadataSize, _currentOffsetSize);
+        }
+
         public InsertionOrderProperties GetPropertiesByInsertionOrder()
         {
             AssertContextNotDisposed();

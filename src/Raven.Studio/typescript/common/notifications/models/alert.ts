@@ -3,12 +3,16 @@
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
 import licenseAgpl = require("viewmodels/common/notificationCenter/customControlls/licenseAgpl");
+import notificationDetailsByReason = require("common/notifications/models/notificationDetailsByReason");
 
-class alert extends abstractNotification {
+type AlertReason = Raven.Server.NotificationCenter.Notifications.AlertReason;
+type AlertDetails<TReason extends AlertReason> = notificationDetailsByReason.AlertDetails<TReason>;
 
-    alertReason = ko.observable<Raven.Server.NotificationCenter.Notifications.AlertReason>();
+class alert<TReason extends AlertReason = AlertReason> extends abstractNotification {
+
+    alertReason = ko.observable<TReason>();
     key = ko.observable<string>();
-    details = ko.observable<Raven.Server.NotificationCenter.Notifications.Details.INotificationDetails>();
+    details = ko.observable<AlertDetails<TReason>>();
     isLicenseAlert: KnockoutComputed<boolean>;
 
     constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
@@ -38,9 +42,9 @@ class alert extends abstractNotification {
     updateWith(incomingChanges: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
         super.updateWith(incomingChanges);
 
-        this.alertReason(incomingChanges.Reason);
+        this.alertReason(incomingChanges.Reason as TReason);
         this.key(incomingChanges.Key);
-        this.details(incomingChanges.Details);
+        this.details(incomingChanges.Details as AlertDetails<TReason>);
 
         this.severity(incomingChanges.Severity);
     }

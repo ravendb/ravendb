@@ -123,6 +123,7 @@ namespace Sparrow.Collections
             }
 
             item = cell.Value;
+            cell.Value = default; // must happen before the cell is handed back to enqueuers below
             Volatile.Write(ref cell.Sequence, pos + _buffer.Length); // This will perform a Volatile.Write on the sequence number.
             return true;
         }
@@ -131,14 +132,11 @@ namespace Sparrow.Collections
         {
             get
             {
-                // managed refs into the array so Volatile.Read reads directly from there
-                long currentEnqueuePos = Volatile.Read(ref _positions.Enqueue);
-                ref Cell enqueueCell = ref _buffer[currentEnqueuePos & _bufferMask];
+                long enqueuePos = Volatile.Read(ref _positions.Enqueue);
+                long dequeuePos = Volatile.Read(ref _positions.Dequeue);
 
-                long currentDequeuePos = Volatile.Read(ref _positions.Dequeue);
-                ref Cell dequeueCell = ref _buffer[currentDequeuePos & _bufferMask];
-
-                return (int) (Volatile.Read(ref enqueueCell.Sequence) - Volatile.Read(ref dequeueCell.Sequence));
+                // read in this order the difference can't exceed the capacity, but concurrent dequeues can make it negative
+                return (int)Math.Max(0, enqueuePos - dequeuePos);
             }
         }
 

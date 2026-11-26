@@ -76,7 +76,7 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(size / Constants.Storage.JournalPageSize);
         }
 
-        public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, SafeJournalWriteContext context)
+        public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs, SafeJournalWriteContext context, bool pipelined = false, int batchOperations = 0)
         {
             Debug.Assert(_options.IoMetrics != null);
 
@@ -92,6 +92,7 @@ namespace Voron.Impl.Journal
             {
                 using var metrics = _options.IoMetrics.MeterIoRate(FileName.FullPath, IoMetrics.MeterType.JournalWrite,
                     totalNumberOf4Kbs * Constants.Storage.JournalPageSize);
+                metrics.SetJournalWrite(pipelined, batchOperations);
                 var result = Pal.rvn_write_journal(_writeHandle, context, pEntries, entries.Length, posBy4Kb * Constants.Storage.JournalPageSize, out var error);
                 if (result != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(result, error,

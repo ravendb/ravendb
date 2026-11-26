@@ -180,6 +180,30 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
             ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
     }
 
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData("not json at all")]
+    [InlineData("[1, 2]")]
+    [InlineData("\"quoted\"")]
+    public void ValidateActions_rejects_a_parameter_sample_that_is_not_a_json_object(string sample)
+    {
+        var config = ConfigWith(("create_ticket", "files a ticket"));
+        config.Actions[0].ParametersSampleObject = sample;
+
+        Assert.Contains("action 'create_ticket': parametersSampleObject must be a JSON object",
+            ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void ValidateActions_rejects_a_parameter_schema_that_is_not_a_json_object()
+    {
+        var config = ConfigWith(("create_ticket", "files a ticket"));
+        config.Actions[0].ParametersSampleObject = null;
+        config.Actions[0].ParametersSchema = "[1, 2]";
+
+        Assert.Contains("action 'create_ticket': parametersSchema must be a JSON object",
+            ErrorsOf(config, new() { ["create_ticket"] = Webhook("https://h/x") }));
+    }
+
     [RavenFact(RavenTestCategory.Quill)]
     public void ValidateActions_reports_bindings_that_collide_once_matched_without_case()
     {
@@ -194,6 +218,94 @@ public class AgentConfigValidatorTests(ITestOutputHelper output) : NoDisposalNee
         };
 
         Assert.Contains(ErrorsOf(config, bindings), e => e.Contains("is declared more than once"));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void PrepareChatTrimming_keeps_the_thresholds_the_caller_set()
+    {
+        var config = ConfigWith();
+        config.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
+        {
+            MaxTokensBeforeSummarization = 20_000,
+            MaxTokensAfterSummarization = 2_000,
+        });
+
+        Assert.True(AgentConfigValidator.TryPrepareChatTrimming(config, out _));
+
+        Assert.Equal(20_000, config.ChatTrimming.Tokens.MaxTokensBeforeSummarization);
+        Assert.Equal(2_000, config.ChatTrimming.Tokens.MaxTokensAfterSummarization);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void PrepareChatTrimming_defaults_to_a_threshold_a_single_turn_can_reach()
+    {
+        var config = ConfigWith();
+
+        Assert.True(AgentConfigValidator.TryPrepareChatTrimming(config, out _));
+
+        Assert.Equal(32 * 1024, config.ChatTrimming.Tokens.MaxTokensBeforeSummarization);
+        Assert.Equal(4 * 1024, config.ChatTrimming.Tokens.MaxTokensAfterSummarization);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void PrepareChatTrimming_fills_in_only_the_threshold_the_caller_left_unset()
+    {
+        var config = ConfigWith();
+        config.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
+        {
+            MaxTokensBeforeSummarization = 8_000,
+        });
+
+        Assert.True(AgentConfigValidator.TryPrepareChatTrimming(config, out _));
+
+        Assert.Equal(8_000, config.ChatTrimming.Tokens.MaxTokensBeforeSummarization);
+        Assert.Equal(4 * 1024, config.ChatTrimming.Tokens.MaxTokensAfterSummarization);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void PrepareChatTrimming_keeps_the_rest_of_the_trimming_configuration()
+    {
+        var config = ConfigWith();
+        config.ChatTrimming = new AiAgentChatTrimmingConfiguration(
+            new AiAgentSummarizationByTokens { ResultPrefix = "Earlier in this chat: " },
+            new AiAgentHistoryConfiguration { HistoryExpirationInSec = 900 });
+
+        Assert.True(AgentConfigValidator.TryPrepareChatTrimming(config, out _));
+
+        Assert.Equal("Earlier in this chat: ", config.ChatTrimming.Tokens.ResultPrefix);
+        Assert.Equal(900, config.ChatTrimming.History.HistoryExpirationInSec);
+    }
+
+    [RavenTheory(RavenTestCategory.Quill)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void PrepareChatTrimming_rejects_a_threshold_that_is_not_positive(long before)
+    {
+        var config = ConfigWith();
+        config.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
+        {
+            MaxTokensBeforeSummarization = before,
+            MaxTokensAfterSummarization = 1_000,
+        });
+
+        Assert.False(AgentConfigValidator.TryPrepareChatTrimming(config, out var errors));
+        Assert.Contains("chatTrimming.tokens.maxTokensBeforeSummarization must be greater than 0", errors);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public void PrepareChatTrimming_rejects_a_summary_that_is_not_smaller_than_the_threshold()
+    {
+        var config = ConfigWith();
+        config.ChatTrimming = new AiAgentChatTrimmingConfiguration(new AiAgentSummarizationByTokens
+        {
+            MaxTokensBeforeSummarization = 4_000,
+            MaxTokensAfterSummarization = 4_000,
+        });
+
+        Assert.False(AgentConfigValidator.TryPrepareChatTrimming(config, out var errors));
+        Assert.Contains(
+            "chatTrimming.tokens.maxTokensAfterSummarization must be smaller than maxTokensBeforeSummarization",
+            errors);
     }
 
     private static AiAgentConfiguration ConfigWith(params (string Name, string Description)[] actions) => new()

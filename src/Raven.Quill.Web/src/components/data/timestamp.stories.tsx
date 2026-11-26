@@ -122,8 +122,8 @@ function TimestampGallery() {
                 </div>
                 <Alert variant="destructive">
                     <AlertDescription>
-                        A delivery failed signature verification at <Timestamp value={recent} textVariant="inherit" /> —
-                        the signing secret configured here likely differs from the Slack app&apos;s.
+                        The bot couldn&apos;t deliver a reply at <Timestamp value={recent} textVariant="inherit" />:
+                        channel_not_found
                     </AlertDescription>
                 </Alert>
             </Section>

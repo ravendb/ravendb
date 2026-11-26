@@ -1,5 +1,5 @@
 import { ScrollText } from "lucide-react";
-import { CodeBlock, TranscriptDisclosure } from "@/pages/apps/conversations/transcript-disclosure";
+import { CodeBlock, TranscriptDisclosure } from "@/components/chat/transcript-disclosure";
 
 export function ConversationSystemPrompt({ disclosureKey, content }: { disclosureKey: string; content: string }) {
     return (

@@ -88,14 +88,14 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
         {
             var logger = GetLogger();
             operationDescription.EndTime = SystemTime.UtcNow;
-            
-            if (operationState.PersistProgressOnFaultedStatus == false)
-                operationState.Progress = null;
+
+            IOperationResult result;
+            OperationStatus status;
 
             if (taskResult.IsCanceled)
             {
-                operationState.Result = null;
-                operationState.Status = OperationStatus.Canceled;
+                result = null;
+                status = OperationStatus.Canceled;
                 if (logger.IsInfoEnabled)
                     logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} was canceled.");
             }
@@ -106,7 +106,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
                     logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} faulted.", innerException);
 
                 var isConflict = innerException is DocumentConflictException or ConcurrencyException;
-                var status = isConflict ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError;
+                var statusCode = isConflict ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError;
 
                 var shouldPersist = false;
 
@@ -118,16 +118,18 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
                         break;
                 }
 
-                operationState.Result = new OperationExceptionResult(innerException, status, shouldPersist);
-                operationState.Status = OperationStatus.Faulted;
+                result = new OperationExceptionResult(innerException, statusCode, shouldPersist);
+                status = OperationStatus.Faulted;
             }
             else
             {
-                operationState.Result = taskResult.Result;
-                operationState.Status = OperationStatus.Completed;
+                result = taskResult.Result;
+                status = OperationStatus.Completed;
                 if (logger.IsInfoEnabled)
                     logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} completed successfully.");
             }
+
+            operation.State = notification.State = operationState.Finish(result, status);
 
             if (Monitor.TryEnter(locker) == false)
             {
@@ -156,7 +158,11 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
 
         void ProgressNotification(IOperationProgress progress)
         {
-            notification.State.Progress = progress;
+            var state = notification.State;
+            if (state.Status != OperationStatus.InProgress)
+                return;
+
+            state.Progress = progress;
             RaiseNotifications(notification, operation);
         }
     }

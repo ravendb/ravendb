@@ -62,36 +62,9 @@ const destinationSchema = yup
 
 const schema = yup.object({
     isRemoteAttachmentsEnabled: yup.boolean(),
-    isCheckFrequencyInSecEnabled: yup.boolean(),
-    checkFrequencyInSec: yup
-        .number()
-        .nullable()
-        .positive()
-        .integer()
-        .when("isCheckFrequencyInSecEnabled", {
-            is: true,
-            then: (schema) => schema.required(),
-        }),
-    isMaxItemsToProcessEnabled: yup.boolean(),
-    maxItemsToProcess: yup
-        .number()
-        .nullable()
-        .positive()
-        .integer()
-        .when("isMaxItemsToProcessEnabled", {
-            is: true,
-            then: (schema) => schema.required(),
-        }),
-    isConcurrentUploadsEnabled: yup.boolean(),
-    concurrentUploads: yup
-        .number()
-        .nullable()
-        .positive()
-        .integer()
-        .when("isConcurrentUploadsEnabled", {
-            is: true,
-            then: (schema) => schema.required(),
-        }),
+    checkFrequencyInSec: yup.number().nullable().positive().integer(),
+    maxItemsToProcess: yup.number().nullable().positive().integer(),
+    concurrentUploads: yup.number().nullable().positive().integer(),
 });
 
 export const remoteAttachmentsDestinationYupResolver = yupResolver(destinationSchema);

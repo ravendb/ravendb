@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -12,6 +12,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using System.Runtime.CompilerServices;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
@@ -19,6 +20,39 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
 {
     public DocumentHandlerProcessorForPatch([NotNull] DocumentHandler requestHandler) : base(requestHandler)
     {
+    }
+
+    // The merger is a single thread: page faults and patch work done here do not stall the writes queued behind this one.
+    // Returns a task that completes once the pages the update modifies are in memory.
+    private ValueTask PrepareOutsideOfMerger(DocumentsOperationContext context, string id, PatchDocumentCommand command, BlittableJsonReaderObject args)
+    {
+        var simplePatch = command.SimplePatch;
+        var storage = RequestHandler.Database.DocumentsStorage;
+        var readAhead = Pager.CanReadPagesAhead(storage.Environment.Options);
+        if (simplePatch == null && readAhead == false)
+            return ValueTask.CompletedTask; // only the read-ahead would read the document here
+
+        using (context.OpenReadTransaction())
+        {
+            PatchDocumentCommand.ValidateId(context, id); // validate here, we may skip the merger
+            if (simplePatch == null)
+                return storage.PrefetchDocumentAsync(context, id); // the script runs in the merger: only read ahead the pages it will modify
+
+            using var document = storage.Get(context, id, DocumentFields.All, throwOnConflict: false);
+            if (document == null)
+                return ValueTask.CompletedTask;
+
+            if (simplePatch.TryApply(context, document.Data, args, out var modified))
+            {
+                if (modified == null)
+                {
+                    command.CompleteAsNotModified(context, document.Data);
+                    return ValueTask.CompletedTask;
+                }
+                command.SetPrepared(document.Id, document.ChangeVector, document.Flags, modified);
+            }
+            return readAhead ? storage.PrefetchDocumentAsync(context, document) : ValueTask.CompletedTask;
+        }
     }
 
     [AsyncMethodBuilder(typeof(PoolingAsyncValueTaskMethodBuilder))]
@@ -55,7 +89,10 @@ internal sealed class DocumentHandlerProcessorForPatch : AbstractDocumentHandler
 
         if (isTest == false)
         {
-            await RequestHandler.Database.TxMerger.Enqueue(command);
+            if (debugMode == false)
+                await PrepareOutsideOfMerger(context, id, command, patchArgs);
+            if (command.PatchResult == null)
+                await RequestHandler.Database.TxMerger.Enqueue(command);
         }
         else
         {

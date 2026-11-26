@@ -697,16 +697,14 @@ namespace Raven.Client.Util
                 {
                     javascriptWriter.Write(".reduce((a, b) => a + b, 0)");
                 }
+            }
 
-                return;
+            private static Expression UnwrapImplicitOperatorIfNeeded(Expression expression)
+            {
+                if (expression is MethodCallExpression { Method.Name: "op_Implicit" } callExpression)
+                    return callExpression.Arguments[0];
 
-                static Expression UnwrapImplicitOperatorIfNeeded(Expression expression)
-                {
-                    if (expression is MethodCallExpression { Method.Name: "op_Implicit" } callExpression)
-                        return callExpression.Arguments[0];
-
-                    return expression;
-                }
+                return expression;
             }
 
             private static void OrderByToSort(JavascriptConversionContext context, MethodCallExpression methodCallExpression, bool desc = false)
@@ -774,7 +772,8 @@ namespace Raven.Client.Util
             private static void HandleMaxOrMin(JavascriptConversionContext context, MethodCallExpression methodCallExpression, bool max = false)
             {
                 context.PreventDefault();
-                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                // since .NET 11 array.Max()/array.Min() bind to MemoryExtensions.Max/Min(ReadOnlySpan<T>)
+                context.Visitor.Visit(UnwrapImplicitOperatorIfNeeded(methodCallExpression.Arguments[0]));
 
                 var maxOrMin = max ? "Raven_Max" : "Raven_Min";
                 var writer = context.GetWriter();

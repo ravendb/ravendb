@@ -1,0 +1,823 @@
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.DependencyInjection;
+using QuillTests.E2E.Fixtures;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Quill.Channels;
+using Raven.Quill.Contracts;
+using Raven.Quill.Hosting;
+using Raven.Quill.Slack;
+using Tests.Infrastructure;
+using Xunit;
+
+namespace QuillTests;
+
+[Collection(QuillSlackCollection.Name)]
+public class SlackSocketModeTests(ITestOutputHelper output, QuillSlackFixture fixture)
+    : QuillSlackTestBase(output, fixture)
+{
+    private const string Sender = "U0SENDER01";
+    private const string OtherSender = "U0SENDER02";
+    private const string DmChannel = "D0CHANNEL1";
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Provisioning_opens_a_socket_with_the_app_token_and_health_reports_it_connected()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        await Slack.WaitUntilConnectedAsync();
+        Assert.Contains(channel.AppToken, Slack.SocketOpenCalls);
+
+        var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        var row = Assert.Single(rows, r => r.ChannelId == channel.ChannelId);
+        Assert.True(row.SocketConnected);
+        Assert.NotNull(row.LastConnectedAt);
+        Assert.Null(row.LastSocketError);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Dm_runs_the_agent_and_streams_the_reply_through_an_edit()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("slackUser", "the sender's Slack user id"));
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0001", DmMessage(Sender, "What are your hours?"));
+
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
+        var request = Assert.Single(Router.Requests);
+        Assert.Equal("What are your hours?", request.Prompt);
+        Assert.Equal(Channel.IdPrefix + channel.ChannelId, request.ChannelId);
+        Assert.Matches($"^chats/slack/{channel.ChannelId}/{Sender}/[0-9a-f]{{16}}$", request.ConversationId);
+        Assert.Equal(Sender, request.Parameters["slackUser"].GetString());
+        Assert.NotNull(request.IdleWindow);
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."), "the finalized edit");
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.Equal(DmChannel, sent.Channel);
+        Assert.All(Slack.EditedMessages, e => Assert.Equal(sent.Ts, e.Ts));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Updating_a_constant_binding_starts_a_fresh_conversation_with_the_new_value()
+    {
+        await using var app = await NewAppAsync();
+
+        var agentId = "slack-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Slack Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = [new AiAgentParameter("userId", "the customer's document id")],
+        });
+
+        var botToken = NewBotToken();
+        var teamId = NewTeamId();
+        Slack.AddBot(botToken, teamId, "Socket Test Co", NewBotUserId());
+
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null,
+            DisplayName: "Support bot",
+            Slack: new(botToken, NewAppToken(), ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/1" },
+            })));
+
+        await Slack.DispatchEventAsync(teamId, "Ev-bind-1", DmMessage(Sender, "first question"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
+        var connectsBefore = Slack.Connects;
+        await app.UpdateChannelAsync(created.ChannelId, new UpdateChannelRequest(null, null, null,
+            Slack: new(ParameterBindings: new Dictionary<string, ChannelParameterBinding>
+            {
+                ["userId"] = new() { Source = ChannelParameterSource.Constant, Value = "users/2" },
+            })));
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the socket to reconnect after the update");
+
+        await Slack.DispatchEventAsync(teamId, "Ev-bind-2", DmMessage(Sender, "second question"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "the second agent dispatch");
+
+        var firstRequest = Router.Requests[0];
+        var secondRequest = Router.Requests[1];
+        Assert.Equal("users/1", firstRequest.Parameters["userId"].GetString());
+        Assert.Equal("users/2", secondRequest.Parameters["userId"].GetString());
+        Assert.NotEqual(firstRequest.ConversationId, secondRequest.ConversationId);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Streaming_chunks_edit_the_same_message_in_place()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Router.Chunks = ["One ", "two ", "three."];
+        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0002", DmMessage(Sender, "count"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Text == "One two three."), "the finalized edit");
+
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.All(Slack.EditedMessages, e => Assert.Equal(sent.Ts, e.Ts));
+        Assert.True(Slack.EditedMessages.Count >= 2, "mid-stream previews must edit, not re-post");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Long_replies_split_into_multiple_messages()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        var limit = new SlackOptions().MessageLimit;
+        var reply = new string('x', limit + 4);
+        Router.Chunks = [reply];
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0003", DmMessage(Sender, "long please"));
+
+        await Slack.WaitUntilAsync(() => Slack.SentMessages.Count == 2, "both reply parts");
+        Assert.All(Slack.SentMessages, m => Assert.True(m.Text.Length <= limit));
+        Assert.Equal(reply, string.Concat(Slack.SentMessages.Select(m => m.Text)));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Finalize_survives_one_rate_limited_edit()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Slack.NextUpdateRateLimit429 = true;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0004", DmMessage(Sender, "hi"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."),
+            "the finalized edit after the rate-limit retry");
+        Assert.DoesNotContain(Slack.SentMessages, m => m.Text == ChannelReplies.Default.Error);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Every_envelope_is_acked_including_the_ones_the_runtime_ignores()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var dm = await Slack.DispatchEventAsync(channel.TeamId, "Ev-ack-1", DmMessage(Sender, "hi"));
+        var interactive = await Slack.DispatchEnvelopeAsync(new JsonObject
+        {
+            ["type"] = "interactive",
+            ["accepts_response_payload"] = true,
+            ["payload"] = new JsonObject { ["type"] = "block_actions" },
+        });
+        var foreign = await Slack.DispatchEventAsync("TOTHERTEAM", "Ev-ack-2", DmMessage(Sender, "foreign"));
+
+        await Slack.WaitUntilAsync(() => Slack.Acks.Count == 3, "all three acks");
+        Assert.Equal(new[] { dm, interactive, foreign }.Order(), Slack.Acks.Order());
+
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the single agent dispatch");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Bot_echoes_foreign_teams_and_non_dm_events_are_ignored()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-bot", DmMessage(Sender, "echo", botId: "B0MOCK"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-sub", DmMessage(Sender, "edited", subtype: "message_changed"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-own", DmMessage(channel.BotUserId, "self"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-chn", DmMessage(Sender, "in a channel", channelType: "channel"));
+        await Slack.DispatchEventAsync("TOTHERTEAM", "Ev-team", DmMessage(Sender, "foreign"));
+
+        await Slack.WaitUntilAsync(() => Slack.Acks.Count == 5, "all acks");
+        await Task.Delay(250);
+        Assert.Empty(Router.Requests);
+        Assert.Empty(Slack.SentMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task File_shares_get_the_unsupported_kind_reply()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0009", DmMessage(Sender, "see attached", subtype: "file_share"));
+
+        await Slack.WaitUntilAsync(() => Slack.SentMessages.Count == 1, "the unsupported-kind reply");
+        Assert.Equal(ChannelReplies.UnsupportedKind, Slack.SentMessages[0].Text);
+        Assert.Empty(Router.Requests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Same_sender_turns_are_serialized()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = 1;
+        Router.BeforeRun = _ =>
+            Interlocked.Exchange(ref first, 0) == 1 ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-one", DmMessage(Sender, "one"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first dispatch");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-two", DmMessage(Sender, "two"));
+        await Task.Delay(250);
+        Assert.Single(Router.Requests);
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "the queued second dispatch");
+        Assert.Equal("one", Router.Requests[0].Prompt);
+        Assert.Equal("two", Router.Requests[1].Prompt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_file_queued_between_messages_gets_its_own_reply_in_order()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var fileRepliedAtTurnStart = new Dictionary<string, bool>();
+        Router.BeforeRun = request =>
+        {
+            lock (fileRepliedAtTurnStart)
+                fileRepliedAtTurnStart[request.Prompt] = UnsupportedReplies() > 0;
+            return request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+        };
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-1", DmMessage(Sender, "before"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-2", DmMessage(Sender, "see attached", subtype: "file_share"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-file-3", DmMessage(Sender, "after"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-file-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() =>
+        {
+            lock (fileRepliedAtTurnStart)
+                return fileRepliedAtTurnStart.ContainsKey("after");
+        }, "the turn after the file");
+
+        Assert.Equal(["hold", "before", "after"], SenderPrompts());
+        Assert.Equal(1, UnsupportedReplies());
+        lock (fileRepliedAtTurnStart)
+        {
+            Assert.False(fileRepliedAtTurnStart["before"]);
+            Assert.True(fileRepliedAtTurnStart["after"]);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Blank_texts_are_left_out_of_the_merged_prompt()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-1", DmMessage(Sender, "   "));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-2", DmMessage(Sender, "real"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-blank-3", DmMessage(Sender, ""));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-blank-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Length == 2, "the merged turn");
+        await Task.Delay(250);
+
+        Assert.Equal(["hold", "real"], SenderPrompts());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_failing_turn_does_not_skip_the_rest_of_the_batch()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt switch
+        {
+            "hold" => gate.Task,
+            "boom" => Task.FromException(new InvalidOperationException("the agent failed")),
+            _ => Task.CompletedTask,
+        };
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-1", DmMessage(Sender, "boom"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-2", DmMessage(Sender, "see attached", subtype: "file_share"));
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-fail-3", DmMessage(Sender, "after"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-fail-marker");
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => SenderPrompts().Contains("after"), "the turn after the failure");
+
+        Assert.Equal(["hold", "boom", "after"], SenderPrompts());
+        Assert.Equal(1, Slack.SentMessages.Count(m => m.Text == ChannelReplies.Default.Error));
+        Assert.Equal(1, UnsupportedReplies());
+    }
+
+    private async Task WaitUntilQueuedAsync(string teamId, string markerEventId)
+    {
+        await Slack.DispatchEventAsync(teamId, markerEventId, DmMessage(OtherSender, "marker"));
+        await Slack.WaitUntilAsync(
+            () => Router.Requests.Any(r => r.Prompt == "marker"), "a later sender's turn, so earlier events are queued");
+    }
+
+    private string[] SenderPrompts() =>
+        Router.Requests.Where(r => r.Prompt != "marker").Select(r => r.Prompt).ToArray();
+
+    private int UnsupportedReplies() =>
+        Slack.SentMessages.Count(m => m.Text == ChannelReplies.UnsupportedKind);
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Send_errors_surface_in_health_without_a_reply_loop()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Slack.SendError = "channel_not_found";
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0010", DmMessage(Sender, "hi"));
+
+        await Slack.WaitUntilAsync(async () =>
+        {
+            var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+                Host.Client, QuillRoutes.SlackHealth(app.Slug));
+            return rows.Single(r => r.ChannelId == channel.ChannelId).LastSendErrorAt is not null;
+        }, "the send error to surface in health");
+
+        await Task.Delay(250);
+        Assert.Empty(Slack.SentMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_successful_reply_clears_the_recorded_send_error()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Slack.SendError = "channel_not_found";
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-send-clear-1", DmMessage(Sender, "hi"));
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSendError is not null,
+            "the send error to surface in health");
+
+        Slack.SendError = null;
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-send-clear-2", DmMessage(Sender, "hi again"));
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSendError is null,
+            "the send error to clear");
+        Assert.Null((await HealthRowAsync(app, channel)).LastSendErrorAt);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Markdown_replies_are_sent_as_a_markdown_block_with_an_escaped_fallback()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        const string markdown = "**Bold**, [docs](https://example.org/a) & <!here>";
+        Router.Chunks = [markdown];
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0011", DmMessage(Sender, "format"));
+
+        await Slack.WaitUntilAsync(() => Slack.SentMessages.Count == 1, "the reply");
+        await Task.Delay(250);
+
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.Equal(markdown, sent.Markdown);
+        Assert.Equal("**Bold**, [docs](https://example.org/a) &amp; &lt;!here&gt;", sent.Text);
+        Assert.Equal("none", sent.Parse);
+        Assert.Empty(Slack.EditedMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Previews_and_finals_carry_the_markdown_block()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        Router.Chunks = ["# Title\n", "- one\n", "- two"];
+        Router.ChunkDelay = TimeSpan.FromMilliseconds(120);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev0012", DmMessage(Sender, "list"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Markdown == "# Title\n- one\n- two"), "the finalized edit");
+
+        var sent = Assert.Single(Slack.SentMessages);
+        Assert.Equal(sent.Text, sent.Markdown);
+        Assert.All(Slack.EditedMessages, e => Assert.NotNull(e.Markdown));
+        Assert.All(Slack.EditedMessages, e => Assert.Equal("none", e.Parse));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Email_bound_parameters_resolve_from_the_senders_slack_profile()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-1", DmMessage(Sender, "who am i?"));
+
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the agent dispatch");
+        Assert.Equal("dana@acme.example", Assert.Single(Router.Requests).Parameters["senderEmail"].GetString());
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Repeat_senders_reuse_one_cached_profile_lookup()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-2", DmMessage(Sender, "again"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 1, "the first agent dispatch");
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-3", DmMessage(Sender, "again"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Count == 2, "both agent dispatches");
+        Assert.Equal(Sender, Assert.Single(Slack.UserInfoCalls));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_sender_without_an_email_gets_the_error_reply_and_never_dispatches()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, email: null);
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-4", DmMessage(Sender, "who am i?"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.SentMessages.Any(m => m.Text == ChannelReplies.Default.Error), "the error reply");
+        Assert.Empty(Router.Requests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task An_app_missing_the_users_read_scope_gets_the_error_reply_and_never_dispatches()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app,
+            new AiAgentParameter("senderEmail", "the sender's email"), ChannelParameterSource.Email);
+        Slack.AddUser(Sender, "dana@acme.example");
+        Slack.UsersReadScopeGranted = false;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-mail-5", DmMessage(Sender, "who am i?"));
+
+        await Slack.WaitUntilAsync(
+            () => Slack.SentMessages.Any(m => m.Text == ChannelReplies.Default.Error), "the error reply");
+        Assert.Empty(Router.Requests);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pausing_a_channel_disconnects_the_socket()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+
+        await Slack.WaitUntilAsync(() => Slack.IsConnected == false, "the socket to disconnect");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Pausing_a_channel_clears_its_stale_socket_error()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        Slack.RemoveAppToken(channel.AppToken);
+        await Slack.CloseCurrentAsync();
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is not null,
+            "the recorded socket error");
+
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, Enabled: false));
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is null,
+            "the socket error to clear");
+        Assert.False((await HealthRowAsync(app, channel)).SocketConnected);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_disconnect_frame_reconnects_through_a_fresh_socket_url()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        var opensBefore = Slack.SocketOpenCalls.Count;
+        var connectsBefore = Slack.Connects;
+        await Slack.SendDisconnectAsync("refresh_requested");
+
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "a second socket connection");
+        await Slack.WaitUntilConnectedAsync();
+        Assert.True(Slack.SocketOpenCalls.Count > opensBefore, "the reconnect must ask Slack for a new socket url");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_revoked_app_token_stops_reconnecting_and_surfaces_in_health()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        Slack.RemoveAppToken(channel.AppToken);
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(
+            async () =>
+            {
+                var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+                    Host.Client, QuillRoutes.SlackHealth(app.Slug));
+                return rows.Single(r => r.ChannelId == channel.ChannelId).LastSocketError is not null;
+            },
+            "the recorded socket error");
+
+        var health = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        Assert.Contains("rejected the app-level token",
+            health.Single(r => r.ChannelId == channel.ChannelId).LastSocketError);
+
+        var opensAfterFatal = Slack.SocketOpenCalls.Count;
+        await Task.Delay(750);
+        Assert.Equal(opensAfterFatal, Slack.SocketOpenCalls.Count);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_transient_open_failure_retries_until_slack_recovers()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        Slack.SocketOpenError = "internal_error";
+        var opensBefore = Slack.SocketOpenCalls.Count;
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(() => Slack.SocketOpenCalls.Count >= opensBefore + 2, "repeated open attempts");
+        Slack.SocketOpenError = null;
+
+        await Slack.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_rate_limited_open_waits_out_retry_after_before_trying_again()
+    {
+        await using var app = await NewAppAsync();
+        await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        Slack.SocketOpenError = "ratelimited";
+        Slack.SocketOpenRetryAfter = TimeSpan.FromSeconds(2);
+        var opensBefore = Slack.SocketOpenCalls.Count;
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(() => Slack.SocketOpenCalls.Count == opensBefore + 1, "the first rate-limited open");
+        await Task.Delay(1000);
+        Assert.Equal(opensBefore + 1, Slack.SocketOpenCalls.Count);
+
+        Slack.SocketOpenError = null;
+        Slack.SocketOpenRetryAfter = null;
+        await Slack.WaitUntilConnectedAsync();
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_transient_reconnect_give_up_replaces_the_socket_and_keeps_the_runtime()
+    {
+        await using var host = await NewHostAsync(configure: opts => opts.Slack.SocketRestartDelay = TimeSpan.FromMinutes(10));
+        var app = await NewAppAsync(host);
+        await using var appGuard = app;
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+        var before = RuntimeFor(app, channel);
+
+        var connectsBefore = Slack.Connects;
+        Slack.NextSocketOpenError = "internal_error";
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the replacement socket's connection");
+        await Slack.WaitUntilConnectedAsync();
+        await Slack.WaitUntilAsync(async () => (await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(host.Client, QuillRoutes.SlackHealth(app.Slug))).Single(r => r.ChannelId == channel.ChannelId).SocketConnected, "health to report the new socket");
+        Assert.Same(before, RuntimeFor(app, channel));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Health_follows_the_socket_through_a_drop_and_the_reconnect()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected, "the first connection in health");
+        var firstConnectedAt = (await HealthRowAsync(app, channel)).LastConnectedAt;
+        Assert.NotNull(firstConnectedAt);
+
+        Slack.SocketOpenError = "internal_error";
+        var connectsBefore = Slack.Connects;
+        await Task.Delay(20);
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected == false, "health to notice the drop");
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).LastSocketError is not null, "health to record the failed reconnect attempts");
+
+        Slack.SocketOpenError = null;
+        await Slack.WaitUntilAsync(() => Slack.Connects > connectsBefore, "the reconnect");
+        await Slack.WaitUntilAsync(
+            async () => (await HealthRowAsync(app, channel)) is { SocketConnected: true } row && row.LastConnectedAt > firstConnectedAt,
+            "health to record the reconnect time");
+        Assert.Null((await HealthRowAsync(app, channel)).LastSocketError);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task A_socket_outage_keeps_the_runtime_and_finishes_the_running_turn()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-outage-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        var before = RuntimeFor(app, channel);
+
+        Slack.SocketOpenError = "ratelimited";
+        Slack.SocketOpenRetryAfter = TimeSpan.FromSeconds(1);
+        var opensBefore = Slack.SocketOpenCalls.Count;
+        await Slack.CloseCurrentAsync();
+
+        await Slack.WaitUntilAsync(() => Slack.SocketOpenCalls.Count >= opensBefore + 4, "an outage longer than several apply passes");
+        Assert.Same(before, RuntimeFor(app, channel));
+        Assert.False((await HealthRowAsync(app, channel)).SocketConnected);
+
+        Slack.SocketOpenError = null;
+        Slack.SocketOpenRetryAfter = null;
+        await Slack.WaitUntilAsync(async () => (await HealthRowAsync(app, channel)).SocketConnected, "health to report the socket again");
+        gate.SetResult();
+
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Any(e => e.Text == "Hello from the fake agent."), "the held turn's reply");
+        Assert.Same(before, RuntimeFor(app, channel));
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Renaming_the_channel_keeps_the_runtime_and_its_running_turn()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-rename-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-rename-1", DmMessage(Sender, "queued"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-rename-marker");
+
+        var before = RuntimeFor(app, channel);
+        var connectsBefore = Slack.Connects;
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest("Renamed bot", null, null));
+        await Task.Delay(1500);
+        Assert.Same(before, RuntimeFor(app, channel));
+        Assert.Equal(connectsBefore, Slack.Connects);
+
+        gate.SetResult();
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "queued"), "the queued turn after the rename");
+        await Slack.WaitUntilAsync(
+            () => Slack.EditedMessages.Count(e => e.Text == "Hello from the fake agent.") >= 2, "both replies");
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Rotating_credentials_cancels_a_running_turn_and_drops_its_queue_silently()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+
+        var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Router.BeforeRun = request => request.Prompt == "hold" ? gate.Task : Task.CompletedTask;
+
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-edit-0", DmMessage(Sender, "hold"));
+        await Slack.WaitUntilAsync(() => Router.Requests.Any(r => r.Prompt == "hold"), "the blocking turn to start");
+        await Slack.DispatchEventAsync(channel.TeamId, "Ev-edit-1", DmMessage(Sender, "queued"));
+        await WaitUntilQueuedAsync(channel.TeamId, "Ev-edit-marker");
+
+        var before = RuntimeFor(app, channel);
+        await app.UpdateChannelAsync(channel.ChannelId, new UpdateChannelRequest(null, null, null, Slack: new(AppToken: NewAppToken())));
+        await Slack.WaitUntilAsync(() => RuntimeFor(app, channel) is { } now && now != before, "the runtime swap after the rotation");
+        var sent = Slack.SentMessages.Count;
+        var edited = Slack.EditedMessages.Count;
+
+        gate.SetResult();
+        await Task.Delay(400);
+
+        Assert.DoesNotContain(Router.Requests, r => r.Prompt == "queued");
+        Assert.Equal(sent, Slack.SentMessages.Count);
+        Assert.Equal(edited, Slack.EditedMessages.Count);
+    }
+
+    [RavenFact(RavenTestCategory.Quill)]
+    public async Task Channels_without_an_app_token_stay_offline_and_health_says_why()
+    {
+        await using var app = await NewAppAsync();
+        var channel = await NewChannelAsync(app);
+        await Slack.WaitUntilConnectedAsync();
+
+        using (var session = app.Store.OpenAsyncSession(app.Slug))
+        {
+            var doc = await session.LoadAsync<Channel>(Channel.IdPrefix + channel.ChannelId);
+            doc.Slack!.AppToken = "";
+            await session.SaveChangesAsync();
+        }
+
+        await Slack.WaitUntilAsync(() => Slack.IsConnected == false, "the socket to disconnect");
+
+        var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        var row = Assert.Single(rows, r => r.ChannelId == channel.ChannelId);
+        Assert.False(row.SocketConnected);
+        Assert.Contains("predates Socket Mode", row.LastSocketError);
+
+        var summary = Assert.Single(await app.GetChannelsAsync(), c => c.ChannelId == channel.ChannelId);
+        Assert.True(summary.Enabled);
+        Assert.Contains("predates Socket Mode", summary.SetupError);
+    }
+
+    private async Task<SlackChannelHealthResponse> HealthRowAsync(QuillApp app, ProvisionedChannel channel)
+    {
+        var rows = await QuillHttp.GetAsync<SlackChannelHealthResponse[]>(
+            Host.Client, QuillRoutes.SlackHealth(app.Slug));
+        return rows.Single(r => r.ChannelId == channel.ChannelId);
+    }
+
+    private static IChannelRuntime? RuntimeFor(QuillApp app, ProvisionedChannel channel) =>
+        app.Host.Services.GetRequiredService<ChannelManager>().RuntimeFor(app.Slug, channel.ChannelId);
+
+    private sealed record ProvisionedChannel(
+        string ChannelId, string BotToken, string AppToken, string TeamId, string BotUserId);
+
+    private async Task<ProvisionedChannel> NewChannelAsync(
+        QuillApp app,
+        AiAgentParameter? parameter = null,
+        ChannelParameterSource source = ChannelParameterSource.UserId)
+    {
+        var agentId = "slack-agent-" + Guid.NewGuid().ToString("N")[..8];
+        await app.ProvisionAgentAsync(new AiAgentConfiguration
+        {
+            Identifier = agentId,
+            Name = "Slack Demo Agent",
+            SystemPrompt = "You are a placeholder demo agent.",
+            ConnectionStringName = app.Host.ConnectionStringName,
+            Parameters = parameter is null ? [] : [parameter],
+        });
+
+        var botToken = NewBotToken();
+        var appToken = NewAppToken();
+        var teamId = NewTeamId();
+        var botUserId = NewBotUserId();
+        Slack.AddBot(botToken, teamId, "Socket Test Co", botUserId);
+
+        var bindings = parameter is null
+            ? null
+            : new Dictionary<string, ChannelParameterBinding>
+            {
+                [parameter.Name] = new() { Source = source },
+            };
+
+        var created = await app.ProvisionChannelAsync(new ProvisionChannelRequest(
+            ChannelType.Slack, agentId, null,
+            DisplayName: "Support bot", Slack: new(botToken, appToken, ParameterBindings: bindings)));
+
+        return new ProvisionedChannel(created.ChannelId, botToken, appToken, teamId, botUserId);
+    }
+
+    private static JsonObject DmMessage(
+        string user, string text, string? subtype = null, string? botId = null, string channelType = "im")
+    {
+        var message = new JsonObject
+        {
+            ["type"] = "message",
+            ["channel"] = DmChannel,
+            ["channel_type"] = channelType,
+            ["user"] = user,
+            ["text"] = text,
+            ["ts"] = "1700000000.000100",
+        };
+        if (subtype is not null)
+            message["subtype"] = subtype;
+        if (botId is not null)
+            message["bot_id"] = botId;
+        return message;
+    }
+}

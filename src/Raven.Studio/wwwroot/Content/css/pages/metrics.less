@@ -260,6 +260,25 @@ rect.pane {
             .text {
                 color: @text-emphasis;
             }
+
+            .drainSync {
+                color: @brand-warning;
+            }
+        }
+    }
+
+    .io-stats-storage {
+        min-height: 30px;
+        margin-top: 4px;
+        margin-bottom: 4px;
+        font-size: 12px;
+
+        .io-stats-storage-item {
+            margin-right: @grid-gutter-width/2;
+        }
+
+        .io-stats-storage-value {
+            margin-left: @grid-gutter-width/4;
         }
     }
 
@@ -310,8 +329,15 @@ rect.pane {
     .tooltip-inner {
         white-space: nowrap;
         max-width: 350px;
+
+        .tooltip-help {
+            white-space: normal;
+            opacity: 0.75;
+            font-size: 11px;
+        }
     }
 }
+
 
 @legend-container-width: 200px;
 @legend-arrow-border: 6px;

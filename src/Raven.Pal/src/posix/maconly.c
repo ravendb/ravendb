@@ -141,6 +141,28 @@ int io_ring_setup_successful(void)
     return 0;
 }
 
+PRIVATE int32_t
+rvn_io_ring_register_file(struct handle_global_state *global_state, int fd, int32_t *detailed_error_code)
+{
+    (void)global_state;
+    (void)fd;
+    *detailed_error_code = ENOTSUP;
+    return FAIL_CREATE_IO_RING;
+}
+
+PRIVATE void
+rvn_io_ring_unregister_file(struct handle_global_state *global_state)
+{
+    (void)global_state;
+}
+
+EXPORT int32_t
+rvn_io_ring_limit_files_for_testing(int32_t max)
+{
+    (void)max;
+    return SUCCESS;
+}
+
 EXPORT
 rvn_writer rvn_get_writer(void *handle)
 {
@@ -249,3 +271,83 @@ rvn_pager_get_next_sparse_region(void* handle,
 }
 
 #endif
+
+PRIVATE int32_t
+rvn_prefetch_register(void *ring, int fd, int64_t *ticket, int32_t *detailed_error_code)
+{
+    (void)ring;
+    (void)fd;
+    (void)detailed_error_code;
+    *ticket = -1;
+    return SUCCESS;
+}
+
+PRIVATE void
+rvn_prefetch_unregister(void *ring, int64_t ticket)
+{
+    (void)ring;
+    (void)ticket;
+}
+
+PRIVATE int32_t
+rvn_prefetch_enqueue(void *ring, int64_t ticket, int64_t offset, int64_t length, int64_t request_size)
+{
+    (void)ring;
+    (void)ticket;
+    (void)offset;
+    (void)length;
+    (void)request_size;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_read_pages(void *ring, int64_t ticket, const int64_t *offsets, int32_t count, uint32_t group)
+{
+    (void)ring;
+    (void)ticket;
+    (void)offsets;
+    (void)count;
+    (void)group;
+    return 0;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_create(int32_t ring_entries, int32_t max_files, int32_t queue_size, int32_t max_groups,
+    rvn_reads_done on_reads_done, void *on_reads_done_context, void **ring, int32_t *detailed_error_code)
+{
+    (void)max_groups;
+    (void)on_reads_done;
+    (void)on_reads_done_context;
+    (void)ring_entries;
+    (void)max_files;
+    (void)queue_size;
+    *ring = NULL;
+    *detailed_error_code = ENOTSUP;
+    return FAIL_CREATE_IO_RING; // no io_uring
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_destroy(void *ring, int32_t *detailed_error_code)
+{
+    (void)ring;
+    *detailed_error_code = 0;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_fail_submits(void *ring, int32_t count, int32_t error, int32_t give_up_ms)
+{
+    (void)ring;
+    (void)count;
+    (void)error;
+    (void)give_up_ms;
+    return FAIL_INVALID_HANDLE;
+}
+
+EXPORT int32_t
+rvn_prefetch_ring_stats(void *ring, struct rvn_prefetch_ring_stats *stats)
+{
+    (void)ring;
+    memset(stats, 0, sizeof(*stats));
+    return FAIL_INVALID_HANDLE;
+}

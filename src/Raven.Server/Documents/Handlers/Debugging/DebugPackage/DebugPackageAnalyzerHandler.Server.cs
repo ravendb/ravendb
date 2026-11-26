@@ -1,4 +1,6 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -44,6 +46,25 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         }
     }
     
+    [RavenAction("/debug/info-package/analyzer/storage-io", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetStorageIoInfo()
+    {
+        var packageId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("packageId");
+        var nodeTag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("nodeTag");
+
+        if (TryGetReportOrSetNotFound(packageId, out var packageReport) == false)
+            return;
+
+        var nodeReport = packageReport.ForNode(nodeTag);
+
+        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+        using (var json = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(nodeReport.Server.StorageIo ?? new StorageIoAnalysisInfo(), context))
+        {
+            writer.WriteObject(json);
+        }
+    }
+
     [RavenAction("/debug/info-package/analyzer/threads/runaway", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task RunawayThreads()
     {

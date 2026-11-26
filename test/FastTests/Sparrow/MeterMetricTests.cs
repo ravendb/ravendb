@@ -1,5 +1,6 @@
 using System;
 using Raven.Server.Utils.Metrics;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 

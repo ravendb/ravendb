@@ -1,11 +1,9 @@
 import app = require("durandal/app");
-import eventsCollector = require("common/eventsCollector");
 import viewModelBase = require("viewmodels/viewModelBase");
 
 jest.mock("views/common/confirmationDialog.html", () => ({ default: "<div></div>" }));
 
 ko.DirtyFlag = require("external/dirtyFlag").DirtyFlag;
-eventsCollector.default.reportViewModel = jest.fn();
 
 class pageWithUnsavedChanges extends viewModelBase {
     view = { default: "<div></div>" };

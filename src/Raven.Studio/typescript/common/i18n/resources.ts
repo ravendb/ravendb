@@ -1,9 +1,14 @@
 import aboutView from "./locales/en/aboutView";
 import common from "./locales/en/common";
 import conflicts from "./locales/en/conflicts";
+import documentExpiration from "./locales/en/documentExpiration";
 import documentRefresh from "./locales/en/documentRefresh";
+import durationPicker from "./locales/en/durationPicker";
 import editCustomSorter from "./locales/en/editCustomSorter";
 import featureAvailabilitySummary from "./locales/en/featureAvailabilitySummary";
+import fieldWithDefault from "./locales/en/fieldWithDefault";
+import licenseLimitedFrequencyField from "./locales/en/licenseLimitedFrequencyField";
+import maxItemsToProcessField from "./locales/en/maxItemsToProcessField";
 import revisionsBin from "./locales/en/revisionsBin";
 import studioGlobalConfiguration from "./locales/en/studioGlobalConfiguration";
 
@@ -24,9 +29,14 @@ export const en = {
     aboutView,
     common,
     conflicts,
+    documentExpiration,
     documentRefresh,
+    durationPicker,
     editCustomSorter,
     featureAvailabilitySummary,
+    fieldWithDefault,
+    licenseLimitedFrequencyField,
+    maxItemsToProcessField,
     revisionsBin,
     studioGlobalConfiguration,
 };
