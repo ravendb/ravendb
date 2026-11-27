@@ -43,7 +43,6 @@ namespace SlowTests.Blittable
             using (var database = CreateDocumentDatabase())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                //Arrange
                 var resolvedConflicts = new List<(DocumentConflict, long, bool)>
                     {
                         (new DocumentConflict
@@ -52,23 +51,27 @@ namespace SlowTests.Blittable
                             LowerId = context.GetLazyString("Some lower id"),
                             Collection = context.GetLazyString("Some collection"),
                             Doc = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { SomeName = "Some Value" }, context)
-                        }, 10, false)
+                        }, 10, true)
                     };
 
                 var expected = new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
                     null, resolvedConflicts, null);
                 var expectedDto = expected.ToDto(context);
 
-                //Serialize
                 BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, expectedDto);
 
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                //Deserialize
                 var actualDto = ReplayTxCommandHelper.Deserialize<PutResolvedConflictsCommandDto>(context, fromStream);
 
-                //Assert
-                //                    Assert.Equal(expectedDto.)
+                var (conflict, maxConflictEtag, resolvedToLatest) = Assert.Single(actualDto.ResolvedConflicts);
+                Assert.Equal("Some id", conflict.Id.ToString());
+                Assert.Equal("Some lower id", conflict.LowerId.ToString());
+                Assert.Equal("Some collection", conflict.Collection.ToString());
+                Assert.True(conflict.Doc.TryGet("SomeName", out string someName));
+                Assert.Equal("Some Value", someName);
+                Assert.Equal(10, maxConflictEtag);
+                Assert.True(resolvedToLatest);
             }
         }
 
