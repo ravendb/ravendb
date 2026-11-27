@@ -193,6 +193,12 @@ $row-bg-selection-preview: color-mix(in srgb, colors.$primary-var 8%, colors.$ro
                     white-space: nowrap;
                 }
 
+                .cell-wrap,
+                .cell-wrap * {
+                    white-space: normal;
+                    overflow-wrap: anywhere;
+                }
+
                 &.col-pinned {
                     z-index: 1;
                     background-color: colors.$row-even-bg-var;
