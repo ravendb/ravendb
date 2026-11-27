@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 
@@ -35,6 +37,28 @@ namespace Raven.Server.Documents
             
             public static DocumentCompareOptions  MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata =
                 new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: true, compareDataArchivalMetadata: true);
+
+            public static DocumentCompareOptions MergeMetadataCompareDataArchivalMetadata =
+                new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: false, compareDataArchivalMetadata: true);
+        }
+
+        public static bool TryGetUnchangedDocument(DocumentsOperationContext context, DocumentsStorage documentsStorage, string id, BlittableJsonReaderObject document,
+            DocumentFields fields, in DocumentCompareOptions options, out Document existing)
+        {
+            existing = documentsStorage.Get(context, id, fields, throwOnConflict: false);
+            if (existing == null)
+                return false;
+
+            var compareResult = IsEqualTo(existing.Data, document, options);
+            if (compareResult.HasFlag(DocumentCompareResult.Equal) == false)
+                return false;
+
+            Debug.Assert(BitOperations.PopCount((ulong)compareResult) == 1 ||
+                         compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual) ||
+                         compareResult.HasFlag(DocumentCompareResult.CountersNotEqual) ||
+                         compareResult.HasFlag(DocumentCompareResult.TimeSeriesNotEqual));
+
+            return true;
         }
 
         public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified, in DocumentCompareOptions options)

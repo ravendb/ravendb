@@ -7,6 +7,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     
     connectionStringName = ko.observable<string>(); // Contains list of discovery urls in the targeted cluster. The task communicates with these urls.
     loadRequestTimeout = ko.observable<number>();
+    skipOverwriteIfUnchanged = ko.observable<boolean>(false);
         
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
     transformationScripts = ko.observableArray<ongoingTaskRavenEtlTransformationModel>([]);
@@ -63,6 +64,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                 this.connectionStringName,
                 this.allowEtlOnNonEncryptedChannel,
                 this.loadRequestTimeout,
+                this.skipOverwriteIfUnchanged,
                 scriptsCount,
                 hasAnyDirtyTransformationScript
             ],
@@ -108,6 +110,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             this.pinMentorNode(dto.Configuration.PinToMentorNode);
             this.mentorNode(dto.Configuration.MentorNode);
             this.loadRequestTimeout(dto.Configuration.LoadRequestTimeoutInSec);
+            this.skipOverwriteIfUnchanged(!!dto.Configuration.SkipOverwriteIfUnchanged);
         }
     }
 
@@ -122,7 +125,8 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             PinToMentorNode: this.pinMentorNode(),
             TaskId: this.taskId,
-            LoadRequestTimeoutInSec: this.loadRequestTimeout() || null
+            LoadRequestTimeoutInSec: this.loadRequestTimeout() || null,
+            SkipOverwriteIfUnchanged: this.skipOverwriteIfUnchanged(),
         };
     }
 
@@ -157,7 +161,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     }
 
     hasAdvancedOptionsDefined(): boolean {
-        return !!this.loadRequestTimeout();
+        return !!this.loadRequestTimeout() || this.skipOverwriteIfUnchanged();
     }
 }
 

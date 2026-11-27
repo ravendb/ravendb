@@ -77,6 +77,13 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.PUT:
 
                     DocumentsStorage.PutOperationResults putResult;
+                    if (cmd.SkipOverwriteIfUnchanged && TryGetUnchangedDocument(context, cmd, out putResult))
+                    {
+                        AddPutResult(putResult);
+                        lastPutResult = putResult;
+                        break;
+                    }
+
                     try
                     {
                         var flags = DocumentFlags.None;
@@ -533,6 +540,30 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
             AttachmentStreams = AttachmentStreams,
             IncludeReply = IncludeReply
         };
+    }
+
+    private bool TryGetUnchangedDocument(DocumentsOperationContext context, BatchRequestParser.CommandData cmd, out DocumentsStorage.PutOperationResults result)
+    {
+        result = default;
+
+        if (cmd.ChangeVector != null || cmd.ForceRevisionCreationStrategy != ForceRevisionStrategy.None)
+            return false;
+
+        if (DocumentCompare.TryGetUnchangedDocument(context, Database.DocumentsStorage, cmd.Id, cmd.Document, DocumentFields.All,
+                DocumentCompare.DocumentCompareOptions.MergeMetadataCompareDataArchivalMetadata, out Document existing) == false)
+            return false;
+
+        result = new DocumentsStorage.PutOperationResults
+        {
+            Id = existing.Id,
+            Etag = existing.Etag,
+            Collection = Database.DocumentsStorage.ExtractCollectionName(context, existing.Data),
+            LastModified = existing.LastModified,
+            ChangeVector = existing.ChangeVector,
+            Flags = existing.Flags
+        };
+
+        return true;
     }
 
     private string EtlGetDocIdFromPrefixIfNeeded(string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)

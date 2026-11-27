@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Server.Documents.Handlers.Batches;
@@ -39,24 +38,10 @@ public sealed class MergedInsertBulkCommand : DocumentMergedTransactionCommand
                 case CommandType.PUT:
                     try
                     {
-                        if (SkipOverwriteIfUnchanged)
-                        {
-                            var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id, DocumentFields.Data, throwOnConflict: false);
-                            if (existingDoc != null)
-                            {
-                                var compareResult = DocumentCompare.IsEqualTo(existingDoc.Data, cmd.Document,
-                                    DocumentCompare.DocumentCompareOptions.MergeMetadata);
-
-                                if (compareResult.HasFlag(DocumentCompareResult.Equal))
-                                {
-                                    Debug.Assert(BitOperations.PopCount((ulong)compareResult) == 1 ||
-                                                 compareResult.HasFlag(DocumentCompareResult.AttachmentsNotEqual) ||
-                                                 compareResult.HasFlag(DocumentCompareResult.CountersNotEqual) ||
-                                                 compareResult.HasFlag(DocumentCompareResult.TimeSeriesNotEqual));
-                                    continue;
-                                }
-                            }
-                        }
+                        if (SkipOverwriteIfUnchanged &&
+                            DocumentCompare.TryGetUnchangedDocument(context, Database.DocumentsStorage, cmd.Id, cmd.Document, DocumentFields.Data,
+                                DocumentCompare.DocumentCompareOptions.MergeMetadata, out _))
+                            continue;
 
                         Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                     }
