@@ -160,6 +160,12 @@ namespace Raven.Server.Web.System
                             error = responseString;
                             errorMessage = GeneralDomainRegistrationError;
                         }
+                        else if (string.IsNullOrWhiteSpace(responseString))
+                        {
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                            error = $"{ApiHttpClient.ApiRavenDbNet} returned an empty response with status {(int)response.StatusCode}";
+                            errorMessage = GeneralDomainRegistrationError;
+                        }
                         else
                         {
                             result = JsonNode.Parse(responseString)?.AsObject();
