@@ -314,28 +314,22 @@ public sealed unsafe partial class SortingMatch<TInner> : SortingMatch
         }
         else
         {
-            // With LIMIT k: pick k random ranks from [0, totalCount), deduplicated,
-            // then resolve all ranks to entry IDs in a single bulk Select call —
-            // one container walk instead of one per rank.
+            // With LIMIT k: run the first k steps of the shuffle above over ranks, so a smaller take is a prefix of a bigger one,
+            // then resolve all ranks to entry IDs in a single bulk Select call — one container walk instead of one per rank.
             var allocator = match._searcher.Allocator;
+            int count = (int)totalCount;
             int k = (int)Math.Min(take, totalCount);
             match._results.EnsureCapacityFor(k);
 
-            // Generate k unique random ranks using Floyd's algorithm (O(k), no rejection).
-            var selected = new HashSet<long>(k);
-            for (long i = totalCount - k; i < totalCount; i++)
+            using var ranksList = new ContextBoundNativeList<long>(allocator, k);
+            var swapped = new Dictionary<int, int>(k); // only the positions a swap moved
+            for (int i = 0; i < k; i++)
             {
-                long r = random.NextInt64(i + 1);
-                if (selected.Add(r) == false)
-                    selected.Add(i);
+                int j = random.Next(i, count);
+                ranksList.AddUnsafe(swapped.GetValueOrDefault(j, j));
+                swapped[j] = swapped.GetValueOrDefault(i, i);
             }
 
-            // Materialize ranks into a contiguous buffer; results land directly in _results.
-            using var ranksList = new ContextBoundNativeList<long>(allocator, k);
-            foreach (long rank in selected)
-                ranksList.AddUnsafe(rank);
-
-            // Floyd's only emits ranks in [0, totalCount), so every result is valid.
             match._results.Count = k;
             bitmap.Select(allocator, ranksList.ToSpan(), match._results.ToSpan());
         }

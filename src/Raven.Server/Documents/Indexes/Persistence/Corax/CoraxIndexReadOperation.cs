@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                                 DynamicFieldName = AutoIndexField.GetSearchAutoIndexFieldName(highlighting.Field.Value),
                                 GroupKey = options.GroupKey
                             };
-                            highlightingTerms.Add(query.Metadata.IsDynamic ? termIndex.DynamicFieldName : termIndex.FieldName, termIndex);
+                            highlightingTerms[query.Metadata.IsDynamic ? termIndex.DynamicFieldName : termIndex.FieldName] = termIndex;
                         }
 
                         if (termIndex is not null)
@@ -638,7 +638,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 ThrowExplanationsIsNotImplementedInCorax();
 
             long take = pageSize + query.Start;
-            if (take > IndexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
+            if (take < 0 || take > IndexSearcher.NumberOfEntries || fieldsToFetch.IsDistinct)
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             bool isDistinctCount = query.PageSize == 0 && typeof(TDistinct) == typeof(HasDistinct);
@@ -660,6 +660,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
             long docsToLoad = pageSize;
             bool runQuery = true;
+            // one seed for every pass, so a re-read continues the same random order
+            int freshRandomSeed = Random.Shared.Next();
             // Loop-invariant: depends only on index type / fields / query.
             bool willAlwaysIncludeInResults = WillAlwaysIncludeInResults(_index.Type, fieldsToFetch, query);
             
@@ -679,7 +681,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                     var builderParameters = new QueryBuilderParameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
                         query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take,
-                        indexReadOperation: this, token: token, queryTime: queryTime);
+                        indexReadOperation: this, token: token, queryTime: queryTime, freshRandomSeed: freshRandomSeed);
 
                     var planParams = new QueryPlanBuilder.PlanParameters
                     {
@@ -843,6 +845,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
                         else
                         {
+                            docsToLoad++;
                             skippedResults.Value++;
                         }
                     }
@@ -897,21 +900,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     _ => -1
                 };
 
-                if(sortingMatchTotalResults is -1)
-                    break; // this is only relevant if we are sorting, since we may have filtered items and need to read more, see: RavenDB-20294
+                // A match cut at its take holds more than it handed out. When the page lost rows (missing documents, duplicates, filter),
+                // we run it again with a bigger take and skip what was read, see: RavenDB-20294
+                bool cutAtTake = sortingMatchTotalResults >= 0
+                    ? sortingMatchTotalResults != totalResults.Value
+                    : compileResult.QueryMatch is CompiledQueryMatch { CutAtLimit: true } or DirectScanMatchBase { ReachedTake: true };
 
                 if (docsToLoad == 0 ||
-                    sortingMatchTotalResults == totalResults.Value ||
+                    cutAtTake == false ||
                     totalResults.Value == totalResultsBefore || // no progress this iteration — match exhausted
                     scannedDocuments.Value >= query.FilterLimit)
                 {
-                    totalResults.Value = (int)Math.Min(sortingMatchTotalResults, int.MaxValue);
+                    if (sortingMatchTotalResults >= 0)
+                        totalResults.Value = (int)Math.Min(sortingMatchTotalResults, int.MaxValue);
                     runQuery = false;
                 }
                 else
                 {
                     Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
-                    take += (pageSize - (pageSize - docsToLoad)) * _maxNumberOfOutputsPerDocument;
+                    // grow the read window geometrically, so a long run of missing documents costs a few passes, not one per page
+                    take = Math.Min(take + Math.Max(take - query.Start, Math.Min(docsToLoad, int.MaxValue) * _maxNumberOfOutputsPerDocument), int.MaxValue);
                     if (take < 0) // handle overflow
                         take = int.MaxValue;
                     // start *after* all the items we already read and returned to the caller

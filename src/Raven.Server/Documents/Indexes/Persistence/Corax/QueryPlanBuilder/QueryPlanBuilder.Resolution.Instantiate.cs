@@ -81,7 +81,7 @@ internal static partial class QueryPlanBuilder
                     goto default;
                 }
                 string directScanReason = forced is not null ? "forced via $rvn_corax_strategy" : null;
-                bool directScanEffective = forced is not null || DirectScanCostEffective(ref ctx, isFullScan, out directScanReason);
+                bool directScanEffective = forced is not null || DirectScanCostEffective(ref ctx, walkerCtx, isFullScan, out directScanReason);
                 exec.StrategyGateReason = directScanReason;
                 if (directScanEffective)
                 {
@@ -201,7 +201,7 @@ internal static partial class QueryPlanBuilder
             return IsDirectScanCostEffective(entriesToScan, bitmapCost, resultsWanted, passRate, ctx.WantTimings, unboundedReason, out reason);
         }
         
-        static bool DirectScanCostEffective(ref InstantiateContext ctx, bool isFullScan, out string directScanReason)
+        static bool DirectScanCostEffective(ref InstantiateContext ctx, ResolutionContext walkerCtx, bool isFullScan, out string directScanReason)
         {
             if (isFullScan)
             {
@@ -236,6 +236,8 @@ internal static partial class QueryPlanBuilder
             // Residual present: scan reads scanned entry's fields and over-scans. Estimate the over-scan amount for the costs
             long drivingCard = drivingExec.GetEffectiveCardinality(indexSearcher);
             var entriesToScan = ComputeNumberOfEntriesQueryLikelyToScan(execs, drivingExec, drivingCard, ResolveEffectiveScanPageSize(ctx.BuilderParams), indexSearcher, out long resultsWanted, out double passRate);
+            if (ctx.OrderByFields.Length == 2)
+                entriesToScan = Math.Max(entriesToScan, TwoKeyWalkChecks(ref ctx, walkerCtx, drivingExec, entriesToScan, resultsWanted));
 
             string unboundedReason = ctx.WantTimings ? DescribeUnboundedScanTake(ctx.BuilderParams) : null;
             return IsDirectScanCostEffective(entriesToScan, bitmapCost, resultsWanted, passRate, ctx.WantTimings, unboundedReason, out directScanReason);
@@ -329,6 +331,51 @@ internal static partial class QueryPlanBuilder
                 }
             }
             return resultsWanted;
+        }
+
+        // The two-key walk reads whole groups in sort order and truncates one every max(4 * take, 1024) entries, each round checking up to
+        // entriesToScan of them, so it is priced by the sizes of the groups it reaches: an average over the range hides a large first group.
+        static long TwoKeyWalkChecks(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution drivingExec, long entriesToScan, long resultsWanted)
+        {
+            if (entriesToScan > QueryPrimitives.EntryScanCountThreshold)
+                return entriesToScan;
+
+            const int maxPricedGroups = 64;
+            double maxGroup = Math.Max(4 * resultsWanted, QueryPrimitives.TieBreakGroupInitialCapacity);
+            IQueryMatch groups = ResolveDrivingProvider(ref ctx, walkerCtx, drivingExec, ctx.OrderByFields[0].Ascending);
+            try
+            {
+                if (groups is not TermsProviderMatch { Provider: IAggregationProvider terms })
+                    return entriesToScan;
+
+                long checks = 0, remaining = entriesToScan;
+                for (int i = 0; i < maxPricedGroups && remaining > 0; i++)
+                {
+                    RangePostingStats group = terms.CountPostingsInRange(1);
+                    if (group.Terms == 0)
+                        return checks; // the walk ends with the range
+
+                    if (group.Postings >= remaining)
+                        return checks + GroupChecks(group.Postings, remaining);
+
+                    checks += group.Postings;
+                    remaining -= group.Postings;
+                }
+
+                if (remaining > 0) // past the priced groups, each group of the rest of the range is taken at the rest's average size
+                {
+                    double restAvg = Math.Max(0, drivingExec.Cardinality - checks) / (double)Math.Max(1, (drivingExec.RangeEstimate?.RangeTerms ?? 0) - maxPricedGroups);
+                    checks += restAvg >= remaining ? GroupChecks(restAvg, remaining) : remaining;
+                }
+                return checks;
+            }
+            finally
+            {
+                (groups as IDisposable)?.Dispose();
+            }
+
+            // the group where the page fills: one the walk truncates looks for the whole take, entriesToScan checks, in every round
+            long GroupChecks(double size, long rest) => (long)Math.Min(size, size > maxGroup ? size / maxGroup * entriesToScan : rest);
         }
     }
 

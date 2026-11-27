@@ -64,7 +64,7 @@ public static class QueryIlEmitter
 
         int lastEffectiveIndex = GetLastEffectiveIndex(ops);
 
-        // OpLimit starts unlimited; arm it (= ctx.Limit) on the first slot-0 op after which we only add, never subtracts
+        // OpLimit starts unlimited; armed (= ctx.Limit) before the first op whose output no later op narrows
         bool opLimitArmed = false;
 
         int lastNarrowingIndex = ComputeLastNarrowingIndex(ops);
@@ -75,21 +75,16 @@ public static class QueryIlEmitter
 
             bool isLastEffectiveOp = i >= lastEffectiveIndex;
             bool emitGoToEmpty = !op.SkipEarlyExit && !isLastEffectiveOp;
-            bool emitGotoLimitReached = op.BitmapLocal == 0 && !isLastEffectiveOp;
 
             // The cursor advance after the last cursor-consuming op is a dead store 
             bool advanceCursor = !isLastEffectiveOp;
 
-            // True once no op after i narrows slot 0 — see lastNarrowingIndex above.
-            bool noLaterNarrowing = i >= lastNarrowingIndex;
-
-            // If we can only ever grow the set of results, we should check if we reached the limit early
-            bool shouldCheckLimitReached = op.BitmapLocal == 0 && !isLastEffectiveOp && noLaterNarrowing;
-
             if (op.DebugLabel != null)
                 d.SetPendingComment(op.DebugLabel);
 
-            if (!opLimitArmed && op.BitmapLocal == 0 && noLaterNarrowing)
+            // A cut op keeps only its first Limit entry ids, so nothing may narrow its output afterwards; the last narrowing op
+            // qualifies only as a single AND (an ALL IN loop narrows its own output again)
+            if (!opLimitArmed && (i > lastNarrowingIndex || (i == lastNarrowingIndex && op.Kind is PlanOpKind.AndFromPostingSource)))
             {
                 d.EmitArmOpLimit();
                 opLimitArmed = true;
@@ -103,20 +98,14 @@ public static class QueryIlEmitter
             {
                 case PlanOpKind.FillFromPostingSource:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxFillFromPostingSource, op.BitmapLocal, advanceCursor);
-                    if (shouldCheckLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.FillFromTreeScan:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxFillFromTreeScan, op.BitmapLocal, advanceCursor);
-                    if (shouldCheckLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.FillFromMatch:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxFillFromMatch, op.BitmapLocal, advanceCursor);
-                    if (shouldCheckLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.FillAllEntries:
@@ -143,20 +132,14 @@ public static class QueryIlEmitter
 
                 case PlanOpKind.OrFromPostingSource:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxOrFillFromPostingSource, op.BitmapLocal, advanceCursor);
-                    if (emitGotoLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.OrFromTreeScan:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxOrFillFromTreeScan, op.BitmapLocal, advanceCursor);
-                    if (emitGotoLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.OrFromMatch:
                     d.EmitCancelledCursorSlotCall(cursorVar, IlEmitterShared.CtxOrWithMatchSlot, op.BitmapLocal, advanceCursor);
-                    if (emitGotoLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.AndNotFromPostingSource:
@@ -207,16 +190,12 @@ public static class QueryIlEmitter
                     EmitInRangeLoop(ref d, cursorVar, op.ParamIndex2, op.BitmapLocal,
                         IlEmitterShared.CtxOrFillFromPostingSource, i,
                         earlyExit: false, skipEarlyExit: false, doneLabel);
-                    if (emitGotoLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.InRangeFromMatch:
                     EmitInRangeLoop(ref d, cursorVar, op.ParamIndex2, op.BitmapLocal,
                         IlEmitterShared.CtxOrWithMatchSlot, i,
                         earlyExit: false, skipEarlyExit: false, doneLabel);
-                    if (emitGotoLimitReached)
-                        d.EmitLimitReachedGoto(doneLabel);
                     break;
 
                 case PlanOpKind.AllInRangeFromPostingSource:
@@ -276,19 +255,14 @@ public static class QueryIlEmitter
             PlanOpKind.AndBitmaps,
             PlanOpKind.AndNotBitmaps,
             PlanOpKind.AllInRangeFromPostingSource,
-            PlanOpKind.AllInRangeFromMatch
+            PlanOpKind.AllInRangeFromMatch,
+            PlanOpKind.ClearBitmap,
+            PlanOpKind.MaybeEntryScan
         ];
         
         for (int i = ops.Length - 1; i >= 0; i--)
         {
-            ref var op = ref ops[i];
-            if (op.Kind is PlanOpKind.MaybeEntryScan)
-                return i; // always counts as narrowing: it reads slot 0 as its candidate set and only removes
-
-            if (op.BitmapLocal is not 0) // only ops writing the primary result bitmap can narrow it
-                continue;
-
-            if (narrowingOps.Contains(op.Kind)) // all those ops can _remove_ matches
+            if (narrowingOps.Contains(ops[i].Kind)) // all those ops can _remove_ matches, also from a slot that is merged into slot 0 later
                 return i;
         }
 

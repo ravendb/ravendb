@@ -311,7 +311,7 @@ internal static partial class QueryPlanBuilder
                     break;
 
                 case SortSlotPatchKind.RandomFreshSeed:
-                    result[target] = new OrderMetadata(Random.Shared.Next());
+                    result[target] = new OrderMetadata(builderParameters.FreshRandomSeed ?? Random.Shared.Next());
                     break;
 
                 case SortSlotPatchKind.RandomSeeded:

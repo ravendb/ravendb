@@ -59,6 +59,9 @@ public abstract class DirectScanMatchBase : IQueryMatch, IDisposable
     public long KnownTotalProbeTicks = -1;
     public int KnownTotalProbeTerms;
 
+    /// <summary>The scan stopped at its take, more entries may match.</summary>
+    public bool ReachedTake => Take > 0 && TotalMatched >= Take;
+
     protected DirectScanMatchBase(IndexSearcher searcher, IQueryMatch drivingMatch, int take, CancellationToken token)
     {
         Searcher = searcher;
@@ -96,6 +99,8 @@ public abstract class DirectScanMatchBase : IQueryMatch, IDisposable
         if (EntryScanTicks > 0) parameters["EntryScans_ms"] = (EntryScanTicks / tickFreq).ToString("F3");
 
         parameters["TreeEntriesScanned"] = TreeEntriesScanned.ToString("N0");
+        if (DrivingMatch is SortedDrivingWithTieBreakMatch walk)
+            parameters["GroupEntriesRead"] = walk.GroupEntriesRead.ToString("N0");
         parameters["Output"] = TotalMatched.ToString("N0");
         if (StoppedReason != null) parameters["StoppedAt"] = StoppedReason;
         if (KnownExactTotal >= 0) parameters["KnownExactTotal"] = KnownExactTotal.ToString("N0");
@@ -121,7 +126,7 @@ public sealed class DirectScanSimpleMatch(IndexSearcher searcher, IQueryMatch dr
     [SkipLocalsInit]
     public override unsafe int Fill(Span<long> matches)
     {
-        if (Take > 0 && TotalMatched >= Take)
+        if (ReachedTake)
             return 0;
 
         int count = 0;
@@ -193,7 +198,7 @@ public sealed class DirectScanFilteredMatch(
     [SkipLocalsInit]
     public override unsafe int Fill(Span<long> matches)
     {
-        if (Take > 0 && TotalMatched >= Take)
+        if (ReachedTake)
             return 0;
 
         int count = 0;
@@ -224,7 +229,8 @@ public sealed class DirectScanFilteredMatch(
                 Token.ThrowIfCancellationRequested();
 
                 long t0 = Stopwatch.GetTimestamp();
-                int read = DrivingMatch.Fill(batch[..batchSize]);
+                // a passing entry read past the take is not needed, one that does not fit into matches would be lost
+                int read = DrivingMatch.Fill(batch[..Math.Min(batchSize, matches.Length - count)]);
                 TreeScanTicks += Stopwatch.GetTimestamp() - t0;
 
                 if (read == 0)

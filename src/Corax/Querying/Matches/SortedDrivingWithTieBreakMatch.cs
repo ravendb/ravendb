@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches;
 using Corax.Querying.Matches.SortingMatches.Meta;
+using Corax.Querying.Planning;
 using Corax.Querying.Primitives;
 using Corax.Utils;
 using Sparrow;
@@ -34,7 +36,9 @@ namespace Corax.Querying.Matches;
 ///
 /// To bound memory when many docs share one primary value, each primary-term group is capped at _maxGroupSize
 /// and truncated to its top-<c>take</c> entries by secondary value (a bounded top-K heap). This is loss-free for
-/// a paged query: only a group's top-<c>take</c> can ever reach the final result. An unbounded take (no LIMIT)
+/// a paged query: only a group's top-<c>take</c> among the entries that pass the residual can ever reach the final
+/// result, so with a residual the truncation keeps the first <c>take</c> entries that pass it. A page that still loses
+/// rows (a missing document) reads again with a bigger take. An unbounded take (no LIMIT)
 /// disables truncation (_maxGroupSize = int.MaxValue), so the group grows to hold every matching doc.
 /// Same-field optimization as SortedDrivingMatch: a WHERE on the primary sort field narrows the
 /// TermsRangeProvider. Residual predicates on other fields are evaluated by the wrapping
@@ -52,6 +56,17 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
     private readonly long _missingSecondaryValue;
     private readonly int _take;
     private readonly int _maxGroupSize;
+
+    private readonly IndexSearcher _searcher;
+    private readonly QueryExecution _residualExec;
+    private readonly ResidualScanIlEmitter.ResidualScanPredicate _residual;
+    private readonly CancellationToken _token;
+    // The first _groupPassing entries of the current group are known to pass the residual
+    private int _groupPassing;
+    // The last of them in rank order, once a cut kept take entries
+    private long _groupLastKept;
+
+    public long GroupEntriesRead { get; private set; }
 
     // String tie-break: container IDs for null/non-existing terms, resolved once in ctor.
     private readonly long _nullTermContainerId;
@@ -108,11 +123,18 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         bool includeNoValue,
         bool nullFirst,
         bool nullIsSmallest,
-        int take)
+        int take,
+        QueryExecution residualExec,
+        ResidualScanIlEmitter.ResidualScanPredicate residual,
+        CancellationToken token)
     {
         if (secondaryType is not (MatchCompareFieldType.Integer or MatchCompareFieldType.Floating or MatchCompareFieldType.Sequence))
             throw new NotSupportedException($"SortedDrivingWithTieBreakMatch only supports Integer, Floating, or Sequence tie-break fields (got {secondaryType})");
 
+        _searcher = searcher;
+        _residualExec = residualExec;
+        _residual = residual;
+        _token = token;
         _provider = provider;
         _llt = llt;
         _allocator = allocator;
@@ -178,8 +200,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
             _groupTerms.Initialize(allocator, QueryPrimitives.TieBreakGroupInitialCapacity);
 
         // Bounded-take path only: scratch term buffer the shared heap sorter keeps parallel to its
-        // surviving indices (capacity _take). TakeAll never truncates, so it needs none.
-        if (_maxGroupSize != int.MaxValue)
+        // surviving indices (capacity _take). TakeAll never truncates, so it needs none, and a residual truncates without the heap.
+        if (_maxGroupSize != int.MaxValue && residual is null)
         {
             if (secondaryType == MatchCompareFieldType.Sequence)
                 _groupHeapTermsSeq.Initialize(allocator, _take);
@@ -266,7 +288,13 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
                     continue;
                 }
 
+                // with a residual every truncation round checks it, and the caller may need none of the group's rows,
+                // so a group that will be truncated is read only into an empty batch
+                if (count > 0 && _residual is not null && GroupSize(plId, termType) >= _maxGroupSize)
+                    return count;
+
                 _groupEntries.Clear();
+                _groupPassing = 0;
                 switch (termType)
                 {
                     case TermIdMask.SmallPostingList:
@@ -340,6 +368,13 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
             _groupTerms.Grow(_allocator, addition);
     }
 
+    private long GroupSize(long plId, TermIdMask termType) => termType switch
+    {
+        TermIdMask.SmallPostingList => VariableSizeEncoding.Read<int>(_smallContainerItems.RawItems[_smallItemsIdx].Address, out _),
+        TermIdMask.PostingList => MemoryMarshal.AsRef<PostingListState>(Container.GetReadOnly(_llt, EntryIdEncodings.GetContainerId(plId))).NumberOfEntries,
+        _ => 0
+    };
+
     private void DrainSmallIntoGroup(ref FastPForBufferedReader reader, Span<long> entryBuffer)
     {
         fixed (long* pBuffer = entryBuffer)
@@ -411,6 +446,7 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
 
     private void AddToGroup(Span<long> entryBuffer, int read)
     {
+        GroupEntriesRead += read;
         EntryIdEncodings.DecodeAndDiscardFrequency(entryBuffer[..read], read);
         int newCount = _emittedBitmap.DedupAddNew(entryBuffer, read);
         if (newCount == 0)
@@ -431,6 +467,12 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         int n = _groupEntries.Count;
         if (n <= _take)
             return;
+
+        if (_residual is not null)
+        {
+            KeepTopTakeThatPassTheResidual();
+            return;
+        }
 
         ResolveGroupSecondary();
 
@@ -476,6 +518,82 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         new Span<long>(entries, _take).Sort();
     }
 
+    // The wrapping scan drops the entries that fail the residual, so the cut keeps the first take entries that pass it.
+    // Unchecked entries are checked in rank order, in growing batches, each at most once.
+    [SkipLocalsInit]
+    private void KeepTopTakeThatPassTheResidual()
+    {
+        ResolveGroupSecondary();
+        if (_groupPassing == _take)
+            DropEntriesThatRankAfterTheLastKept();
+        SortResolvedGroup();
+        int n = _groupEntries.Count;
+        long* entries = _groupEntries.RawItems;
+        int* order = _groupSortedIndexes.RawItems;
+        long* kept = _groupSecondary.RawItems; // the secondary values are not needed once the order is known
+        Span<long> batch = stackalloc long[QueryPrimitives.EntryScanBatchSize];
+
+        int keptCount = 0;
+        int batchSize = Math.Min(_take, batch.Length);
+        for (int rank = 0; rank < n && keptCount < _take; batchSize = Math.Min(batchSize * 2, batch.Length))
+        {
+            int end = rank, toCheck = 0;
+            for (; end < n && toCheck < batchSize; end++)
+            {
+                if (order[end] >= _groupPassing)
+                    batch[toCheck++] = entries[order[end]];
+            }
+
+            var passing = batch[..toCheck];
+            passing.Sort();
+            passing = passing[..CompiledQueryHelper.FilterSortedEntries(_searcher, _residualExec, _residual, passing, _token)];
+
+            for (; rank < end && keptCount < _take; rank++)
+            {
+                int idx = order[rank];
+                if (idx < _groupPassing || passing.BinarySearch(entries[idx]) >= 0)
+                    kept[keptCount++] = entries[idx];
+            }
+        }
+
+        if (keptCount == _take)
+            _groupLastKept = kept[keptCount - 1];
+
+        // The secondary lookup reads the group in entry id order
+        var survivors = new Span<long>(kept, keptCount);
+        survivors.Sort();
+        survivors.CopyTo(new Span<long>(entries, keptCount));
+        _groupSortedIndexes.Count = _groupSecondary.Count = _groupEntries.Count = _groupPassing = keptCount;
+    }
+
+    // The take entries known to pass rank before every unchecked entry that does not rank before the last of them (a tie goes to
+    // the kept entry, it has the smaller id), so such an entry can never reach the result and is dropped without a residual check.
+    private void DropEntriesThatRankAfterTheLastKept()
+    {
+        long* entries = _groupEntries.RawItems, values = _groupSecondary.RawItems;
+        UnmanagedSpan* terms = _groupTerms.RawItems;
+        int last = new Span<long>(entries, _groupPassing).BinarySearch(_groupLastKept), count = _groupPassing;
+        for (int i = _groupPassing; i < _groupEntries.Count; i++)
+        {
+            int cmp = _secondaryType switch
+            {
+                MatchCompareFieldType.Integer => values[i].CompareTo(values[last]),
+                MatchCompareFieldType.Floating => BitConverter.Int64BitsToDouble(values[i]).CompareTo(BitConverter.Int64BitsToDouble(values[last])),
+                _ => CompactKeyComparer.Compare(terms[i], terms[last], _nullIsSmallest ? 1 : -1)
+            };
+
+            if ((_secondaryDescending ? -cmp : cmp) >= 0)
+                continue;
+
+            values[count] = values[i]; // the resolved secondary moves with its entry, so the sort does not read it again
+            if (_secondaryType == MatchCompareFieldType.Sequence)
+                terms[count] = terms[i];
+            entries[count++] = entries[i];
+        }
+
+        _groupEntries.Count = count;
+    }
+
     private void ResolveGroupSecondary()
     {
         var entriesSpan = _groupEntries.ToSpan();
@@ -483,6 +601,8 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
         if (_secondaryLookup is null)
         {
             secondarySpan[..entriesSpan.Length].Fill(_missingSecondaryValue);
+            if (_secondaryType == MatchCompareFieldType.Sequence)
+                new Span<UnmanagedSpan>(_groupTerms.RawItems, _groupTerms.Capacity)[..entriesSpan.Length].Clear();
             return;
         }
 
@@ -501,37 +621,25 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
 
     private void SortGroupBySecondary()
     {
-        var entriesSpan = _groupEntries.ToSpan();
+        ResolveGroupSecondary();
+        SortResolvedGroup();
+    }
+
+    private void SortResolvedGroup()
+    {
         var secondarySpan = new Span<long>(_groupSecondary.RawItems, _groupSecondary.Capacity);
         var indexesSpan = new Span<int>(_groupSortedIndexes.RawItems, _groupSortedIndexes.Capacity);
         var termsSpan = new Span<UnmanagedSpan>(_groupTerms.RawItems, _groupTerms.Capacity);
 
         _groupEmitIdx = 0;
-        int n = entriesSpan.Length;
+        int n = _groupEntries.Count;
 
-        Debug.Assert(secondarySpan.Length >= n);
         Debug.Assert(indexesSpan.Length >= n);
-        // _groupTerms (hence termsSpan) is only allocated for the Sequence path, so its length is asserted
-        // inside that branch — Integer/Floating tie-breaks never touch termsSpan.
-
         RoaringBitmap.InitializeIndices(indexesSpan, n);
         var idxs = indexesSpan[..n];
 
         if (_secondaryLookup is null)
-        {
-            if (_secondaryType is MatchCompareFieldType.Integer or MatchCompareFieldType.Floating)
-            {
-                secondarySpan[..n].Fill(_missingSecondaryValue);
-            }
-            else
-            {
-                termsSpan[..n].Clear();
-            }
-
-            return;
-        } 
-        
-        _secondaryLookup.GetFor(entriesSpan, secondarySpan, _missingSecondaryValue);
+            return; // every entry holds the missing value, so the group keeps its entry order
 
         switch (_secondaryType)
         {
@@ -543,8 +651,6 @@ public sealed unsafe class SortedDrivingWithTieBreakMatch : IQueryMatch, IDispos
                 break;
             case MatchCompareFieldType.Sequence:
                 Debug.Assert(termsSpan.Length >= n);
-                SortingHelpers.ReplaceNullAndNonExistingTermIds(secondarySpan[..n], _nonExistingTermContainerId, _nullTermContainerId, SortingHelpers.MissingTermId);
-                Container.GetAllSortedByPage(_llt, secondarySpan[..n], termsSpan[..n], _llt.PageLocator);
                 fixed (UnmanagedSpan* termsPtr = termsSpan)
                 {
                     idxs.Sort(new SliceComparer(termsPtr, _nullIsSmallest ? 1 : -1, _secondaryDescending));

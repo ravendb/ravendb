@@ -40,7 +40,8 @@ internal static partial class QueryPlanBuilder
 
         // Only the full scan adds the documents without a sort value; a driving clause that gets this far matches neither null nor missing
         IQueryMatch drivingMatch = hasTieBreak
-            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, includeNoValue: isFullScan, nullFirst, take)
+            ? BuildSortedDrivingWithTieBreakMatch(ctx, tpm.Provider, tpm.Llt, ctx.BuilderParams.Index.Configuration.NullsSortMode, indexSearcher, includeNoValue: isFullScan, nullFirst, take,
+                hasResidual ? ctx.Plan.DirectScanResidualSet.Compiled : null)
             : isFullScan
                 ? new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator, indexSearcher, ctx.OrderByFields[0].Field, nullFirst)
                 : new SortedDrivingMatch(tpm.Provider, tpm.Llt, ctx.PlanParams.Allocator);
@@ -66,51 +67,6 @@ internal static partial class QueryPlanBuilder
                 isFullScan ? "full index-only scan (no WHERE clause)" : reasonForInspection);
         }
         return ds;
-        
-        static IQueryMatch ResolveDrivingProvider(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution drivingExec, bool forward)
-        {
-            var match = drivingExec.ClauseType == ClauseType.Equals
-                // WHERE PublishedAt = X ORDER BY PublishedAt          - degenerate single-value sort
-                // WHERE Category = 'X' ORDER BY Category, Published   - pinned key + real secondary sort
-                ? ResolveEqualsClauseWithDirection(drivingExec, ctx.Exec, forward, walkerCtx)
-                // WHERE PublishedAt > X ORDER BY PublishedAt          - half-open range, walked in sort order
-                // WHERE Price BETWEEN 10 AND 50 ORDER BY Price DESC   - bounded range, walked backward
-                : ResolveRangeClauseWithDirection(drivingExec, ctx.Exec, forward, walkerCtx);
-        
-            return match;
-        }
-        
-        static IQueryMatch ResolveEqualsClauseWithDirection(ClauseExecution drivingExec, QueryExecution queryExec, bool forward, ResolutionContext walkerCtx)
-        {
-            var indexSearcher = walkerCtx.IndexSearcher;
-            FieldMetadata fieldMeta = ResolveFieldMetadata(drivingExec.Clause, walkerCtx);
-            var packed = drivingExec.PackedParamValue;
-            return packed.ValueType switch
-            {
-                PackedParam.TypeLong => indexSearcher.BetweenQuery(fieldMeta, queryExec.LongValues[packed.Param1], queryExec.LongValues[packed.Param1], forward: forward),
-                PackedParam.TypeDouble => indexSearcher.BetweenQuery(fieldMeta, queryExec.DoubleValues[packed.Param1], queryExec.DoubleValues[packed.Param1], forward: forward),
-                _ when queryExec.StringValues[packed.Param1] is null => null, // = null is the null posting list, which the walk cannot produce
-                _ => indexSearcher.BetweenQuery(fieldMeta, queryExec.StringValues[packed.Param1], queryExec.StringValues[packed.Param1], forward: forward)
-            };
-        }
-
-        static IQueryMatch ResolveRangeClauseWithDirection(ClauseExecution drivingExec, QueryExecution queryExec, bool forward, ResolutionContext walkerCtx)
-        {
-            var indexSearcher = walkerCtx.IndexSearcher;
-            FieldMetadata fieldMeta = ResolveFieldMetadata(drivingExec.Clause, walkerCtx);
-            var packed = drivingExec.PackedParamValue;
-
-            return drivingExec.ClauseType switch
-            {
-                ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual or ClauseType.LessThan or ClauseType.LessThanOrEqual
-                    => packed.RangeQuery(drivingExec.ClauseType, fieldMeta, indexSearcher, queryExec, forward),
-                ClauseType.Between when drivingExec.SentinelRewriteType == ClauseType.Exists => null, // exists() also matches null, which ExistsQuery yields first in either direction
-                ClauseType.Between when drivingExec.SentinelRewriteType != null =>
-                    ResolveSentinelRewrittenBetween(drivingExec, fieldMeta, indexSearcher, queryExec, forward),
-                ClauseType.Between => packed.BetweenQuery(fieldMeta, indexSearcher, queryExec, forward),
-                _ => ResolveClause(drivingExec, queryExec, walkerCtx) // fallback
-            };
-        }
 
         static IQueryMatch ResolveFullScanDrivingProvider(ref InstantiateContext ctx, bool forward)
         {
@@ -159,5 +115,50 @@ internal static partial class QueryPlanBuilder
             isFullScan 
                 ? $"{ctx.OrderByFields[0].Field.FieldName} [all]"
                 : $"{drivingClause.Clause.FieldName} {drivingClause.ClauseType}";
+    }
+
+    private static IQueryMatch ResolveDrivingProvider(ref InstantiateContext ctx, ResolutionContext walkerCtx, ClauseExecution drivingExec, bool forward)
+    {
+        var match = drivingExec.ClauseType == ClauseType.Equals
+            // WHERE PublishedAt = X ORDER BY PublishedAt          - degenerate single-value sort
+            // WHERE Category = 'X' ORDER BY Category, Published   - pinned key + real secondary sort
+            ? ResolveEqualsClauseWithDirection(drivingExec, ctx.Exec, forward, walkerCtx)
+            // WHERE PublishedAt > X ORDER BY PublishedAt          - half-open range, walked in sort order
+            // WHERE Price BETWEEN 10 AND 50 ORDER BY Price DESC   - bounded range, walked backward
+            : ResolveRangeClauseWithDirection(drivingExec, ctx.Exec, forward, walkerCtx);
+    
+        return match;
+    }
+    
+    private static IQueryMatch ResolveEqualsClauseWithDirection(ClauseExecution drivingExec, QueryExecution queryExec, bool forward, ResolutionContext walkerCtx)
+    {
+        var indexSearcher = walkerCtx.IndexSearcher;
+        FieldMetadata fieldMeta = ResolveFieldMetadata(drivingExec.Clause, walkerCtx);
+        var packed = drivingExec.PackedParamValue;
+        return packed.ValueType switch
+        {
+            PackedParam.TypeLong => indexSearcher.BetweenQuery(fieldMeta, queryExec.LongValues[packed.Param1], queryExec.LongValues[packed.Param1], forward: forward),
+            PackedParam.TypeDouble => indexSearcher.BetweenQuery(fieldMeta, queryExec.DoubleValues[packed.Param1], queryExec.DoubleValues[packed.Param1], forward: forward),
+            _ when queryExec.StringValues[packed.Param1] is null => null, // = null is the null posting list, which the walk cannot produce
+            _ => indexSearcher.BetweenQuery(fieldMeta, queryExec.StringValues[packed.Param1], queryExec.StringValues[packed.Param1], forward: forward)
+        };
+    }
+
+    private static IQueryMatch ResolveRangeClauseWithDirection(ClauseExecution drivingExec, QueryExecution queryExec, bool forward, ResolutionContext walkerCtx)
+    {
+        var indexSearcher = walkerCtx.IndexSearcher;
+        FieldMetadata fieldMeta = ResolveFieldMetadata(drivingExec.Clause, walkerCtx);
+        var packed = drivingExec.PackedParamValue;
+
+        return drivingExec.ClauseType switch
+        {
+            ClauseType.GreaterThan or ClauseType.GreaterThanOrEqual or ClauseType.LessThan or ClauseType.LessThanOrEqual
+                => packed.RangeQuery(drivingExec.ClauseType, fieldMeta, indexSearcher, queryExec, forward),
+            ClauseType.Between when drivingExec.SentinelRewriteType == ClauseType.Exists => null, // exists() also matches null, which ExistsQuery yields first in either direction
+            ClauseType.Between when drivingExec.SentinelRewriteType != null =>
+                ResolveSentinelRewrittenBetween(drivingExec, fieldMeta, indexSearcher, queryExec, forward),
+            ClauseType.Between => packed.BetweenQuery(fieldMeta, indexSearcher, queryExec, forward),
+            _ => ResolveClause(drivingExec, queryExec, walkerCtx) // fallback
+        };
     }
 }

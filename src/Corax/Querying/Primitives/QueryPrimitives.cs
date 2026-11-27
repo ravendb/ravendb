@@ -44,7 +44,7 @@ public static class QueryPrimitives
     {
         ctx.Bitmaps[bitmapSlot].Clear();
         long postingListId = ResolvePostingListId(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec);
-        FillBitmapFromPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit);
+        ctx.CutAtLimit |= FillBitmapFromPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit);
     }
 
     // Use as the complement for negation (NOT x means All Entries AND NOT x) 
@@ -52,7 +52,7 @@ public static class QueryPrimitives
     public static void CtxFillAllEntries(Matches.CompiledQueryMatch ctx, int bitmapSlot)
     {
         ctx.Bitmaps[bitmapSlot].Clear();
-        OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
+        ctx.CutAtLimit |= OrWithMatch(ctx.Searcher.AllEntries(), ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit);
     }
 
     public static void CtxSaveScoringGroup(Matches.CompiledQueryMatch ctx, int bitmapSlot, int groupIndex)
@@ -64,9 +64,10 @@ public static class QueryPrimitives
     public static void CtxFillFromTreeScan(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
         ctx.Bitmaps[bitmapSlot].Clear();
-        long tally = FillBitmapFromTreeScan(ResolveTermsProvider(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec), ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit);
+        var (tally, cut) = FillBitmapFromTreeScan(ResolveTermsProvider(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec), ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit);
+        ctx.CutAtLimit |= cut;
         if (ctx.OpLimit != long.MaxValue) 
-            return; // we cannot observe the tree scan if we didn't complete it (stopped because of the set limit). 
+            return; // we cannot observe the tree scan if we didn't complete it (each posting list is cut at the set limit).
         ObserveTreeScanTally(ref ctx.Leaves[paramIndex], tally);
     }
 
@@ -78,36 +79,31 @@ public static class QueryPrimitives
             leaf.RangeCalibration.Observe(tally, leaf.RangeEstimate);
     }
 
+    // An OR operand is cut to its own first OpLimit ids: the union of these holds the first OpLimit ids of the whole union
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxOrFillFromPostingSource(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
-        long remaining = bitmapSlot == 0 ? ctx.OpLimit - ctx.Bitmaps[0].ComputeCount() : ctx.OpLimit;
-        if (remaining <= 0) return;
         long postingListId = ResolvePostingListId(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec);
-        FillBitmapFromPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, remaining);
+        ctx.CutAtLimit |= FillBitmapFromPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxOrFillFromTreeScan(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
-        long remaining = bitmapSlot == 0 ? ctx.OpLimit - ctx.Bitmaps[0].ComputeCount() : ctx.OpLimit;
-        if (remaining <= 0) return;
-        FillBitmapFromTreeScan(ResolveTermsProvider(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec), ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, remaining);
+        ctx.CutAtLimit |= FillBitmapFromTreeScan(ResolveTermsProvider(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec), ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ctx.Token, ctx.OpLimit).Cut;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxOrWithMatchSlot(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
-        long remaining = bitmapSlot == 0 ? ctx.OpLimit - ctx.Bitmaps[0].ComputeCount() : ctx.OpLimit;
-        if (remaining <= 0) return;
-        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], remaining, ctx.Token, ctx.PreserveLeavesForScoring);
+        ctx.CutAtLimit |= OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit, ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void CtxFillFromMatch(Matches.CompiledQueryMatch ctx, int paramIndex, int bitmapSlot)
     {
         ctx.Bitmaps[bitmapSlot].Clear();
-        OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit, ctx.Token, ctx.PreserveLeavesForScoring);
+        ctx.CutAtLimit |= OrWithMatch(ctx.ResolvedMatches[paramIndex], ref ctx.Bitmaps[bitmapSlot], ctx.OpLimit, ctx.Token, ctx.PreserveLeavesForScoring);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -115,7 +111,7 @@ public static class QueryPrimitives
     {
         Debug.Assert(bitmapSlot != EphemeralBitmapSlot, "AND destination must not alias the AND scratch slot.");
         long postingListId = ResolvePostingListId(ref ctx.Leaves[paramIndex], ctx.Searcher, ctx.Exec);
-        AndWithPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token, ctx.OpLimit);
+        ctx.CutAtLimit |= AndWithPostingSource(postingListId, ctx.Searcher, ctx.Llt, ref ctx.Bitmaps[bitmapSlot], ref ctx.Bitmaps[EphemeralBitmapSlot], ctx.Token, ctx.OpLimit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -213,23 +209,28 @@ public static class QueryPrimitives
     // Unset leaves the cost gate in charge; setting to a negative number disable this entirely
     public const int EntryScanGateUnset = int.MinValue;
 
+    /// <returns>True when the limit cut entries off (the list goes on past its first <paramref name="limit"/> ids).</returns>
     [SkipLocalsInit]
-    private static void FillFromPostings(ref PostingList.Iterator iterator, ref RoaringBitmap bitmap, CancellationToken token, long limit = long.MaxValue)
+    private static bool FillFromPostings(ref PostingList.Iterator iterator, ref RoaringBitmap bitmap, CancellationToken token, long limit = long.MaxValue)
     {
         Span<long> buffer = stackalloc long[PostingScanBufferSize];
 
         long total = 0;
-        while (iterator.Fill(buffer, out int read) && read > 0)
+        // one entry past the limit is enough to tell that the list goes on
+        while (iterator.Fill(buffer[..((int)Math.Min(buffer.Length - 1, limit - total) + 1)], out int read) && read > 0)
         {
             token.ThrowIfCancellationRequested();
-            long remaining = limit - total;
-            read = (int)Math.Min(read, remaining);
-            if (read <= 0)
-                break;
+            bool cut = read > limit - total;
+            if (cut)
+                read = (int)(limit - total);
             EntryIdEncodings.DecodeAndDiscardFrequency(buffer, read);
             bitmap.AddRange(buffer[..read]);
+            if (cut)
+                return true;
             total += read;
         }
+
+        return false;
     }
 
     /// <summary>
@@ -279,13 +280,14 @@ public static class QueryPrimitives
     }
 
     /// <summary>
-    /// Limit-aware AND for unordered "limit N" queries, where any N valid survivors suffice.
+    /// Limit-aware AND for unordered "limit N" queries: keeps every survivor below the first container past N survivors,
+    /// so the first N survivors by entry id are kept.
     /// </summary>
     [SkipLocalsInit]
-    private static void AndWithPostingsLimited(ref PostingList.Iterator iterator, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token, long limit)
+    private static bool AndWithPostingsLimited(ref PostingList.Iterator iterator, ref RoaringBitmap bitmap, ref RoaringBitmap tempBitmap, CancellationToken token, long limit)
     {
         if (TrySetupPostingScan(ref iterator, ref bitmap, out long pruneAfter) is false)
-            return;
+            return false;
 
         tempBitmap.Clear();
         Span<long> buffer = stackalloc long[PostingScanBufferSize];
@@ -304,11 +306,13 @@ public static class QueryPrimitives
             if (matched < limit) continue;
             
             // enough survivors already; drop the unscanned tail
+            bool cut = bitmap.MaxContainerKey >= processedKey;
             bitmap.RemoveContainersFrom(processedKey);
-            return;
+            return cut;
         }
 
         bitmap.AndWithRange(ref tempBitmap, processedKey, int.MaxValue); // term complete: finish the tail
+        return false;
     }
 
     /// <summary>
@@ -362,9 +366,10 @@ public static class QueryPrimitives
     ///   - IBitmapQueryMatch: steal containers via LazyOrWith + one RepairAfterLazy pass.
     ///   - TermMatch backed by a large posting list: native FillFromPostings on the iterator,
     ///     skipping the per-batch IQueryMatch + function-pointer indirection.</summary>
+    /// <returns>True when the limit cut entries off.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     [SkipLocalsInit]
-    public static void OrWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, long limit = long.MaxValue, CancellationToken token = default, bool preserveLeaf = false)
+    public static bool OrWithMatch(IQueryMatch match, ref RoaringBitmap bitmap, long limit = long.MaxValue, CancellationToken token = default, bool preserveLeaf = false)
     {
         if (match is IBitmapQueryMatch bm)
         {
@@ -373,7 +378,7 @@ public static class QueryPrimitives
             // (used for TotalResults) and Contains (used by sorting).
             ref RoaringBitmap srcData = ref bm.BitmapState;
             if (srcData.IsEmpty)
-                return;
+                return false;
             if (preserveLeaf)
             {
                 // Score-sorted query: OrWith would steal this leaf's unique containers and mark it consumed,
@@ -381,30 +386,38 @@ public static class QueryPrimitives
                 var clone = srcData.Clone();
                 bitmap.OrWith(ref clone);
                 clone.Dispose(); // OrWith stole only unique containers (detached from the clone); the clone still owns any shared ones, so dispose to release them.
-                return;
+                return false;
             }
             bitmap.OrWith(ref srcData);
-            return;
+            return false;
         }
         // A term whose relevance is stored must go through Fill: that is where TermMatch hands ids and frequencies
         // to Bm25Relevance. Bigger posting lists are re-read at score time, so they keep the fast path.
         if (match is Matches.TermMatch tm && tm.ScoringNeedsFill == false && tm.TryGetPostingListIterator(out var iter))
         {
-            FillFromPostings(ref iter, ref bitmap, token, limit);
-            return;
+            return FillFromPostings(ref iter, ref bitmap, token, limit);
         }
+
+        // Fill sorts within one call only, so a cut keeps the first ids only of a source sorted across calls
+        if (match is not Matches.AllEntriesMatch)
+            limit = long.MaxValue;
+
         Span<long> buffer = stackalloc long[FillBufferSize];
         int read;
         long total = 0;
         while ((read = match.Fill(buffer)) > 0)
         {
             token.ThrowIfCancellationRequested();
-            long remaining = limit - total;
-            read = (int)Math.Min(read, remaining);
-            if (read <= 0) break;
+            bool cut = read > limit - total;
+            if (cut)
+                read = (int)(limit - total);
             bitmap.AddRange(buffer.Slice(0, read));
+            if (cut)
+                return true;
             total += read;
         }
+
+        return false;
     }
 
     /// <summary>Fill temp bitmap from match, then AND with target.
@@ -482,8 +495,9 @@ public static class QueryPrimitives
     /// <summary>OR a posting-list source into the bitmap. The low two bits of the id select the source type
     /// (Single → Add; SmallPostingList → decode FastPFor buffer + AddRange; PostingList → <see cref="FillFromPostings"/>).
     /// A synthetic id (NotARealValue bucket) can only be Empty here → no-op.</summary>
+    /// <returns>True when the limit cut entries off.</returns>
     [SkipLocalsInit]
-    private static void FillBitmapFromPostingSource(
+    private static bool FillBitmapFromPostingSource(
         long postingListId,
         IndexSearcher searcher,
         LowLevelTransaction llt,
@@ -496,19 +510,17 @@ public static class QueryPrimitives
             case TermIdMask.Single:
                 if (limit > 0)
                     bitmap.Add((long)EntryIdEncodings.GetContainerId(postingListId));
-                return;
+                return false;
 
             case TermIdMask.SmallPostingList:
-                AddSmallPostingListToBitmap(llt, (long)EntryIdEncodings.GetContainerId(postingListId), ref bitmap, token, limit);
-                return;
+                return AddSmallPostingListToBitmap(llt, (long)EntryIdEncodings.GetContainerId(postingListId), ref bitmap, token, limit);
 
             case TermIdMask.PostingList:
                 var iterator = searcher.GetPostingList(postingListId).Iterate();
-                FillFromPostings(ref iterator, ref bitmap, token, limit);
-                return;
+                return FillFromPostings(ref iterator, ref bitmap, token, limit);
 
             case  TermIdMask.Reserved when postingListId == EmptyPostingsId:
-                return; // nothing to do
+                return false; // nothing to do
                 
             default:
                 throw new ArgumentOutOfRangeException(nameof(postingListId), "All posting source is not expected on a fill path.");
@@ -518,8 +530,9 @@ public static class QueryPrimitives
     /// <summary>AND the bitmap with a posting-list source. Bounded range scan when the source is a large
     /// PostingList; per-key membership / temp-bitmap-fill for the smaller cases. A synthetic id is either
     /// Empty (clears the bitmap — intersection with nothing) or All (universal pass-through — no-op).</summary>
+    /// <returns>True when the limit cut survivors off.</returns>
     [SkipLocalsInit]
-    private static void AndWithPostingSource(
+    private static bool AndWithPostingSource(
         long postingListId,
         IndexSearcher searcher,
         LowLevelTransaction llt,
@@ -529,7 +542,7 @@ public static class QueryPrimitives
         long limit = long.MaxValue)
     {
         if (bitmap.IsEmpty)
-            return;
+            return false;
 
         switch ((TermIdMask)postingListId & TermIdMask.EnsureIsSingleMask)
         {
@@ -540,26 +553,27 @@ public static class QueryPrimitives
                 bitmap.Clear();
                 if (keep)
                     bitmap.Add(entryId);
-                return;
+                return false;
             }
 
             case TermIdMask.SmallPostingList:
                 // not limiting the small posting list, since we want to limit the AND result, not the source data 
                 MaterializeTermSourceIntoBitmap(postingListId, llt, ref tempBitmap, token);
                 bitmap.AndWith(ref tempBitmap);
-                return;
+                return false;
 
             case TermIdMask.PostingList:
                 var iterator = searcher.GetPostingList(postingListId).Iterate();
-                AndWithPostingsLimited(ref iterator, ref bitmap, ref tempBitmap, token, limit);
-                return;
+                return AndWithPostingsLimited(ref iterator, ref bitmap, ref tempBitmap, token, limit);
 
             case TermIdMask.Reserved when postingListId == AllPostingsId:
-                return;
+                return false;
             case TermIdMask.Reserved when postingListId == EmptyPostingsId:
                 bitmap.Clear();
-                return;
+                return false;
         }
+
+        return false;
     }
 
     /// <summary>ANDNOT the bitmap with a posting-list source (subtract). A synthetic id can only be Empty
@@ -625,7 +639,7 @@ public static class QueryPrimitives
     /// FastPFor stream into the bitmap. Allocates a stackalloc buffer +
     /// FastPForBufferedReader scoped to this call.</summary>
     [SkipLocalsInit]
-    private static unsafe void AddSmallPostingListToBitmap(
+    private static unsafe bool AddSmallPostingListToBitmap(
         LowLevelTransaction llt,
         long smallPostingListId,
         ref RoaringBitmap bitmap,
@@ -640,17 +654,21 @@ public static class QueryPrimitives
         reader.Init(item.Address + offset, item.Length - offset);
         int read;
         long total = 0;
-        while (total < limit && (read = reader.Fill(buffer, FillBufferSize)) > 0)
+        while ((read = reader.Fill(buffer, FillBufferSize)) > 0)
         {
             token.ThrowIfCancellationRequested();
-            long remaining = limit - total;
-            read = (int)Math.Min(read, remaining);
-            if (read <= 0) break;
+            bool cut = read > limit - total;
+            if (cut)
+                read = (int)(limit - total);
             var results = new Span<long>(buffer, read);
             EntryIdEncodings.DecodeAndDiscardFrequency(results, read);
             bitmap.AddRange(results[..read]);
+            if (cut)
+                return true;
             total += read;
         }
+
+        return false;
     }
 
     /// <summary>
@@ -661,15 +679,16 @@ public static class QueryPrimitives
     ///     decode each posting list inline via FastPForBufferedReader.
     ///   - PostingList: container ID strip + sort/dedup, then iterate each via FillFromPostings.
     /// Partitioning is branchless: (id &amp; EnsureIsSingleMask) yields the bucket index.
+    /// A <paramref name="limit"/> cuts each term's posting list to its first ids, never the term walk: terms come in term
+    /// order, not entry id order, and the union of the cut lists still holds the first <paramref name="limit"/> ids of the scan.
     /// </summary>
     /// <returns>The over-counting postings tally: the running sum of posting-list sizes fed into the
     /// bitmap (singles + small + large bucket <c>PostingListState.NumberOfEntries</c>), counting
     /// multi-valued documents once per matching term. This is exactly the quantity
     /// <c>EstimateMatchesInRange</c> predicts, so callers can Observe(tally, estimate) to calibrate it —
-    /// but only when the fill was unbounded (<paramref name="limit"/> == long.MaxValue); a truncated fill
-    /// stops early and the tally is a partial undercount.</returns>
+    /// but only when the fill was unbounded (<paramref name="limit"/> == long.MaxValue).</returns>
     [SkipLocalsInit]
-    public static unsafe long FillBitmapFromTreeScan(
+    public static unsafe (long Tally, bool Cut) FillBitmapFromTreeScan(
         ITermsProvider provider,
         LowLevelTransaction llt,
         ref RoaringBitmap bitmap,
@@ -696,13 +715,12 @@ public static class QueryPrimitives
         bool readerInitialized = false;
 
         // an upper bound on the real cardinality (duplicates across terms collapse on insert).
-        // While upperBound < limit the real count cannot have reached the limit, so expensive bitmap.ComputeCount() can be skipped.
-        // Limit is checked on a per batch boundary, not exact, caller needs to check it
         long upperBound = 0;
+        bool cut = false;
         try
         {
             int read;
-            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (read = provider.FillPostingListIds(plIds, termLengths: Span<int>.Empty)) > 0)
+            while ((read = provider.FillPostingListIds(plIds, termLengths: Span<int>.Empty)) > 0)
             {
                 token.ThrowIfCancellationRequested();
                 for (int b = 0; b < buckets.Length; b++)
@@ -749,19 +767,28 @@ public static class QueryPrimitives
 
                     fixed (long* pEntryBuffer = entryBuffer)
                     {
-                        for (int i = 0; i < smallLen && (upperBound < limit || bitmap.ComputeCount() < limit); i++)
+                        for (int i = 0; i < smallLen; i++)
                         {
                             var item = containerItems[i];
                             _ = VariableSizeEncoding.Read<int>(item.Address, out var offset);
                             smallListReader.Init(item.Address + offset, item.Length - offset);
 
                             int smallRead;
-                            while ((upperBound < limit || bitmap.ComputeCount() < limit) && (smallRead = smallListReader.Fill(pEntryBuffer, entryBuffer.Length)) > 0)
+                            long left = limit;
+                            while ((smallRead = smallListReader.Fill(pEntryBuffer, (int)Math.Min(entryBuffer.Length - 1, left) + 1)) > 0)
                             {
                                 token.ThrowIfCancellationRequested();
                                 EntryIdEncodings.DecodeAndDiscardFrequency(entryBuffer, smallRead);
-                                bitmap.AddRange(entryBuffer[..smallRead]);
                                 upperBound += smallRead;
+                                if (smallRead > left)
+                                {
+                                    bitmap.AddRange(entryBuffer[..(int)left]);
+                                    cut = true;
+                                    break;
+                                }
+
+                                bitmap.AddRange(entryBuffer[..smallRead]);
+                                left -= smallRead;
                             }
                         }
                     }
@@ -773,13 +800,13 @@ public static class QueryPrimitives
                 {
                     EntryIdEncodings.DecodeAndDiscardFrequency(largeSpan, largeSpan.Length);
                     var largeLen = Sorting.SortAndRemoveDuplicates(largeSpan);
-                    for (int i = 0; i < largeLen && (upperBound < limit || bitmap.ComputeCount() < limit); i++)
+                    for (int i = 0; i < largeLen; i++)
                     {
                         var setStateSpan = Container.GetReadOnly(llt, new ContainerEntryId(largeSpan[i]));
                         ref readonly var setState = ref MemoryMarshal.AsRef<PostingListState>(setStateSpan);
                         using var postingList = new PostingList(llt, Slices.Empty, in setState);
                         var iterator = postingList.Iterate();
-                        FillFromPostings(ref iterator, ref bitmap, token);
+                        cut |= FillFromPostings(ref iterator, ref bitmap, token, limit);
 
                         // FillFromPostings doesn't tell us the exact count it added, so we use NumberOfEntries
                         // to keep upperBound an over-counting tally. May be less than that if there are duplicates, but not less 
@@ -797,7 +824,7 @@ public static class QueryPrimitives
                 buckets[b].Dispose(llt.Allocator);
         }
 
-        return upperBound;
+        return (upperBound, cut);
     }
 
     /// <summary>AND the bitmap with the union of all posting lists produced by the term provider.
@@ -816,7 +843,7 @@ public static class QueryPrimitives
         if (bitmap.IsEmpty)
             return -1;
         tempBitmap.Clear();
-        long tally = FillBitmapFromTreeScan(provider, llt, ref tempBitmap, token);
+        long tally = FillBitmapFromTreeScan(provider, llt, ref tempBitmap, token).Tally;
         if (tempBitmap.IsEmpty)
         {
             bitmap.Clear();
@@ -840,7 +867,7 @@ public static class QueryPrimitives
         if (bitmap.IsEmpty)
             return -1;
         tempBitmap.Clear();
-        long tally = FillBitmapFromTreeScan(provider, llt, ref tempBitmap, token);
+        long tally = FillBitmapFromTreeScan(provider, llt, ref tempBitmap, token).Tally;
         if (tempBitmap.IsEmpty)
             return tally; // subtracting nothing is a no-op
         bitmap.AndNotWith(ref tempBitmap);
