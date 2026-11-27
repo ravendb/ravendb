@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -139,6 +140,38 @@ public class DeviceIoSamplerTests(ITestOutputHelper output) : NoDisposalNeeded(o
         }
         finally
         {
+            DeviceIoSampler.OpenCountersForTesting = null;
+        }
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Voron | RavenTestCategory.Monitoring, RavenPlatform.Windows)] // elsewhere the counters open on the caller's thread
+    public void TheDeviceBudgetDoesNotWaitForTheDeviceCountersToOpen()
+    {
+        var device = 0xFFFF_FFFF_0000_0000 | (uint)Random.Shared.Next(); // no real device has this id
+        var opened = false;
+        using var release = new ManualResetEventSlim();
+        DeviceIoSampler.OpenCountersForTesting = (id, _) =>
+        {
+            if (id != device)
+                return null;
+            release.Wait(TimeSpan.FromSeconds(30));
+            Volatile.Write(ref opened, true);
+            return new FixedCounters();
+        };
+        try
+        {
+            // what the pager does when a storage environment opens, then what a flush does
+            var budget = DeviceWriteBudget.GetForDevice(device, "test", syncCostThresholdTicks: long.MaxValue, queueDepthThreshold: 5, classifyAboveLatencyTicks: 0);
+            Assert.False(budget.ShouldDrain());
+            Assert.False(Volatile.Read(ref opened), "the budget waited for the counters to open");
+            Assert.Null(budget.QueueDepth);
+
+            release.Set();
+            Assert.True(SpinWait.SpinUntil(() => budget.QueueDepth != null, TimeSpan.FromSeconds(10)), "the sampler was not attached after the counters opened");
+        }
+        finally
+        {
+            release.Set();
             DeviceIoSampler.OpenCountersForTesting = null;
         }
     }

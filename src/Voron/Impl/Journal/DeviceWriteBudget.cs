@@ -3,7 +3,9 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron.Logging;
@@ -51,9 +53,16 @@ namespace Voron.Impl.Journal
             DeviceWriteBudget Unlikely()
             {
                 var candidate = new DeviceWriteBudget(sampler: null, pathOnDevice, syncCostThresholdTicks, queueDepthThreshold, classifyAboveLatencyTicks, deviceId);
+                candidate._nextSamplerAttemptMs = DeviceIoSampler.RetryIntervalMs; // the first attempt is made below, a flush asks again only after it
                 var winner = DevicesById.GetOrAdd(deviceId, candidate);
-                if (ReferenceEquals(winner, candidate))
-                    candidate.TryAttachSampler(nowMs: 0); // only the winner: a sampler outlives every budget it feeds
+                if (ReferenceEquals(winner, candidate)) // only the winner: a sampler outlives every budget it feeds
+                {
+                    // the first read of the Windows performance counters in a process takes seconds: not on the thread that opens the environment
+                    if (PlatformDetails.RunningOnWindows)
+                        Task.Run(() => candidate.AttachSampler(deviceId));
+                    else
+                        candidate.AttachSampler(deviceId);
+                }
                 return winner;
             }
         }
@@ -374,7 +383,12 @@ namespace Voron.Impl.Journal
             if (_deviceId is not { } deviceId || nowMs < _nextSamplerAttemptMs)
                 return;
             _nextSamplerAttemptMs = nowMs + DeviceIoSampler.RetryIntervalMs;
-            var sampler = DeviceIoSampler.ForDevice(deviceId, _pathOnDevice);
+            AttachSampler(deviceId);
+        }
+
+        private void AttachSampler(ulong deviceId)
+        {
+            DeviceIoSampler sampler = DeviceIoSampler.ForDevice(deviceId, _pathOnDevice);
             if (sampler != null && Interlocked.CompareExchange(ref _sampler, sampler, null) == null)
                 sampler.Sampled += OnSample;
         }
