@@ -3,6 +3,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useAsync } from "react-async-hook";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
+import Spinner from "react-bootstrap/Spinner";
 import {
     FormGroup,
     FormInput,
@@ -12,7 +13,6 @@ import {
     FormSwitch,
 } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
-import { LoadingDots } from "components/common/LoadingDots";
 import SegmentedControl from "components/common/SegmentedControl";
 import { SelectOption } from "components/common/select/Select";
 import { useAppSelector } from "components/store";
@@ -91,10 +91,9 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                     <div className="position-relative">
                         <Form.Control readOnly value={isLoading ? "" : formatServerVersion(version)} />
                         {isLoading && (
-                            <LoadingDots
-                                label={t("migrate.detectingVersion")}
-                                className="position-absolute top-50 end-0 translate-middle-y"
-                            />
+                            <span className="position-absolute top-50 end-0 translate-middle-y me-2 d-flex">
+                                <Spinner size="sm" role="status" aria-label={t("migrate.detectingVersion")} />
+                            </span>
                         )}
                     </div>
                     {error && !isLoading && <div className="text-danger mt-1 text-break">{error}</div>}
