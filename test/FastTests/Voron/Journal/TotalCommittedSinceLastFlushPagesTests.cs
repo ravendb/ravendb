@@ -37,7 +37,7 @@ namespace FastTests.Voron.Journal
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void CommittedPagesAreCountedForAsyncCommittedTransactions()
         {
             const int numberOfTransactions = 20;

@@ -32,7 +32,7 @@ public class RavenDB_27168 : StorageTest
     // and pruning must not drop the versions the pending flush still needs - if it does, the flusher
     // skips the page as "freed", the journal holding its only full image is deleted, and the database
     // cannot recover.
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void FlushMustWritePagesModifiedAgainAfterTheFlushRecordWasPicked()
     {
         RequireFileBasedPager();
@@ -82,7 +82,7 @@ public class RavenDB_27168 : StorageTest
         AssertAllReadable(expected);
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void PagesFlushedBeforeJournalDeletionMustSurviveRestart_SequentialRounds()
     {
         RequireFileBasedPager();
@@ -103,7 +103,7 @@ public class RavenDB_27168 : StorageTest
         AssertAllReadable(expected);
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void PagesFlushedBeforeJournalDeletionMustSurviveRestart_FlushConcurrentWithCommits()
     {
         RequireFileBasedPager();
