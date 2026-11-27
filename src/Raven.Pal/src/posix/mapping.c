@@ -80,7 +80,7 @@ rvn_create_and_mmap64_file(
         goto error_cleanup;
     }
     mfh->flags = flags;
-    mfh->fd = open(path, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+    mfh->fd = open(path, O_RDWR | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
     if (mfh->fd == -1)
     {
         rc = FAIL_OPEN_FILE;

@@ -79,7 +79,7 @@ rvn_test_storage_durability(
     const char *temp_file_name,
     int32_t *detailed_error_code)
 {
-    int fd = open(temp_file_name, O_WRONLY | O_DSYNC | O_DIRECT | O_CREAT, S_IWUSR | S_IRUSR);
+    int fd = open(temp_file_name, O_WRONLY | O_DSYNC | O_DIRECT | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
     int rc = SUCCESS;
     if (fd == -1)
     {

@@ -75,7 +75,8 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
             }
             break;
         case EINTR:
-            *detailed_error_code = errno;
+            /* posix_fallocate returns the error without setting errno */
+            *detailed_error_code = EINTR;
             continue; /* retry */
 
         case SUCCESS:
@@ -86,7 +87,7 @@ _allocate_file_space(int32_t fd, int64_t size, int32_t *detailed_error_code)
             return FAIL_ALLOC_FILE;
         }
     }
-    return result; /* return EINTR */
+    return FAIL_ALLOC_FILE; /* detailed_error_code is EINTR */
 }
 
 /* dirname(3) on macOS returns a buffer shared by all threads. buffer must hold PATH_MAX bytes */
@@ -182,7 +183,7 @@ cleanup:
 PRIVATE int32_t 
 _open_file_to_read(const char *file_name, int32_t *fd, int32_t *detailed_error_code)
 {
-    *fd = open(file_name, O_RDONLY, S_IRUSR);
+    *fd = open(file_name, O_RDONLY | O_CLOEXEC, S_IRUSR);
     if (*fd != -1)
         return SUCCESS;    
 
