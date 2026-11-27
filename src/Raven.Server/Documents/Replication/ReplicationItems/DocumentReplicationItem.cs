@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Runtime.Serialization;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -19,6 +20,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Id;
         public DocumentFlags Flags;
         public long StorageId;
+
+        [IgnoreDataMember]
         public DocumentsOperationContext Context;
 
         public override long Size => GetReplicationBatchItemSize();

@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class SliceJsonConverter : RavenTypeJsonConverter<Slice>
+    internal sealed class SliceJsonConverter : JsonConverter<Slice>
     {
         public static readonly SliceJsonConverter Instance = new SliceJsonConverter();
 
@@ -16,28 +16,31 @@ namespace Raven.Server.Json.Converters
         {
         }
 
-        protected override void WriteJson(BlittableJsonWriter writer, Slice value, JsonSerializer serializer)
-        {
-            var buffer = new byte[value.Size];
-            value.CopyTo(buffer);
-            var strValue = Convert.ToBase64String(buffer);
+        public override bool HandleNull => true;
 
-            writer.WriteValue(strValue);
+        public override void Write(Utf8JsonWriter writer, Slice value, JsonSerializerOptions options)
+        {
+            if (value.HasValue == false)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+
+            writer.WriteBase64StringValue(value.AsReadOnlySpan());
         }
 
-        internal override Slice ReadJson(BlittableJsonReader reader)
+        public override Slice Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (!(reader.Value is string strValue))
-            {
-                throw new SerializationException($"Try to read {nameof(Slice)} from {reader.Value?.GetType()}. Should be string here");
-            }
+            if (reader.TokenType == JsonTokenType.Null)
+                return default;
 
-            if (!(reader.Context is DocumentsOperationContext context))
-            {
+            if (reader.TokenType != JsonTokenType.String)
+                throw new SerializationException($"Try to read {nameof(Slice)} from {reader.TokenType} token. Should be string here");
+
+            if (!(RecordingJson.Context is DocumentsOperationContext context))
                 throw new SerializationException($"{nameof(DocumentsOperationContext)} must to be used for reading {nameof(Slice)}");
-            }
 
-            var buffer = Convert.FromBase64String(strValue);
+            byte[] buffer = reader.GetBytesFromBase64();
             Slice.From(context.Allocator, buffer, ByteStringType.Immutable, out var slice);
 
             return slice;

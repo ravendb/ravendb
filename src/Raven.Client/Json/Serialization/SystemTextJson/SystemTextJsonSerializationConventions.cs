@@ -34,6 +34,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
+        private bool _unboundedReadDepth;
         private JsonSerializerContext _sourceGenerationContext;
         private readonly JsonSerializerOptions[] _options = new JsonSerializerOptions[3];
 
@@ -105,6 +106,44 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
+        internal bool UnboundedReadDepth
+        {
+            get => _unboundedReadDepth;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _unboundedReadDepth = value;
+            }
+        }
+
+        internal JsonReaderOptions GetReaderOptions(JsonSerializerOptions options)
+        {
+            return new JsonReaderOptions
+            {
+                AllowTrailingCommas = options.AllowTrailingCommas,
+                CommentHandling = options.ReadCommentHandling,
+                MaxDepth = _unboundedReadDepth ? int.MaxValue : options.MaxDepth
+            };
+        }
+
+        internal object Deserialize(ReadOnlySpan<byte> utf8Json, Type type, JsonSerializerOptions options)
+        {
+            if (_unboundedReadDepth == false)
+                return JsonSerializer.Deserialize(utf8Json, type, options);
+
+            var reader = new Utf8JsonReader(utf8Json, GetReaderOptions(options));
+            return JsonSerializer.Deserialize(ref reader, type, options);
+        }
+
+        internal T Deserialize<T>(ReadOnlySpan<byte> utf8Json, JsonSerializerOptions options)
+        {
+            if (_unboundedReadDepth == false)
+                return JsonSerializer.Deserialize<T>(utf8Json, options);
+
+            var reader = new Utf8JsonReader(utf8Json, GetReaderOptions(options));
+            return JsonSerializer.Deserialize<T>(ref reader, options);
+        }
+
         internal JsonSerializerOptions Options => GetOptions(TypeNameHandling.Auto);
 
         private JsonSerializerOptions GetOptions(TypeNameHandling typeNameHandling)
@@ -141,13 +180,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
             TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
-            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), this, typeNameHandling);
         }
 
         IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
             TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
-            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), typeNameHandling);
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), this, typeNameHandling);
         }
 
         IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)

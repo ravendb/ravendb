@@ -7,10 +7,27 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class SystemTextJsonBlittableReader : IJsonReader
     {
+        [ThreadStatic]
+        private static JsonOperationContext _current;
+
         private ContextMemoryBufferWriter _buffer;
+
+        private JsonOperationContext _previous;
+
+        private bool _entered;
+
+        internal static JsonOperationContext Current => _current;
 
         public void Initialize(BlittableJsonReaderObject blittable)
         {
+            if (_entered == false)
+            {
+                _previous = _current;
+                _entered = true;
+            }
+
+            _current = blittable._context;
+
             BlittableJsonReaderObject materialized = blittable.Modifications != null
                 ? blittable._context.ReadObject(blittable, "system-text-json/modifications")
                 : null;
@@ -21,7 +38,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 _buffer = new ContextMemoryBufferWriter(source._context, Math.Max(source.Size * 2, 512));
 
                 using (var stream = new BufferWriterStream(_buffer))
-                using (var writer = new BlittableJsonTextWriter(source._context, stream) { EscapeNamedFloatingPointLiterals = true })
+                using (var writer = new BlittableJsonTextWriter(source._context, stream) { NamedFloatingPointLiteralFormat = NamedFloatingPointLiteralFormat.Escaped })
                     source.WriteJsonTo(writer);
             }
         }
@@ -35,6 +52,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             _buffer?.Dispose();
             _buffer = null;
+
+            if (_entered)
+            {
+                _current = _previous;
+                _previous = null;
+                _entered = false;
+            }
         }
 
         public void Dispose()

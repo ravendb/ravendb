@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -53,15 +52,8 @@ namespace Raven.Server.Web.Studio
             {
                 using (var sqlImportDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "sql-migration-request"))
                 {
-                    MigrationRequest migrationRequest;
-
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.DefaultForServer.Serialization.CreateDeserializer();
-                    using (var blittableJsonReader = new BlittableJsonReader())
-                    {
-                        blittableJsonReader.Initialize(sqlImportDoc);
-                        migrationRequest = serializer.Deserialize<MigrationRequest>(blittableJsonReader);
-                    }
+                    var migrationRequest = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MigrationRequest>(sqlImportDoc);
 
                     var operationId = Database.Operations.GetNextOperationId();
 
@@ -119,15 +111,8 @@ namespace Raven.Server.Web.Studio
             {
                 using (var sqlImportTestDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "sql-migration-test-request"))
                 {
-                    MigrationTestRequest testRequest;
-
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.DefaultForServer.Serialization.CreateDeserializer();
-                    using (var blittableJsonReader = new BlittableJsonReader())
-                    {
-                        blittableJsonReader.Initialize(sqlImportTestDoc);
-                        testRequest = serializer.Deserialize<MigrationTestRequest>(blittableJsonReader);
-                    }
+                    var testRequest = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<MigrationTestRequest>(sqlImportTestDoc);
 
                     var sourceSqlDatabase = testRequest.Source;
 

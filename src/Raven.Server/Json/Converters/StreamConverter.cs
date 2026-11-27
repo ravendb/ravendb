@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Raven.Client.Extensions.Streams;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class StreamConverter : RavenTypeJsonConverter<Stream>
+    internal sealed class StreamConverter : JsonConverter<Stream>
     {
         public static readonly StreamConverter Instance = new StreamConverter();
 
@@ -15,7 +15,12 @@ namespace Raven.Server.Json.Converters
         {
         }
 
-        protected override void WriteJson(BlittableJsonWriter writer, Stream value, JsonSerializer serializer)
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeof(Stream).IsAssignableFrom(typeToConvert);
+        }
+
+        public override void Write(Utf8JsonWriter writer, Stream value, JsonSerializerOptions options)
         {
             if (false == value.CanSeek)
             {
@@ -25,19 +30,15 @@ namespace Raven.Server.Json.Converters
             value.Seek(0, SeekOrigin.Begin);
             var buffer = value.ReadData();
             value.Seek(0, SeekOrigin.Begin);
-            var strBuffer = Convert.ToBase64String(buffer);
-            writer.WriteValue(strBuffer);
+            writer.WriteBase64StringValue(buffer);
         }
 
-        internal override Stream ReadJson(BlittableJsonReader blittableReader)
+        public override Stream Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (!(blittableReader.Value is string strValue))
-            {
-                throw new SerializationException($"Try to read {nameof(Stream)} from {blittableReader.Value?.GetType()}. Should be string here");
-            }
+            if (reader.TokenType != JsonTokenType.String)
+                throw new SerializationException($"Try to read {nameof(Stream)} from {reader.TokenType} token. Should be string here");
 
-            var buffer = Convert.FromBase64String(strValue);
-            return new MemoryStream(buffer);
+            return new MemoryStream(reader.GetBytesFromBase64());
         }
     }
 }

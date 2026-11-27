@@ -11,7 +11,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -599,7 +599,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 private readonly object[] _orderedMultipleGroupByValues;
                 private readonly ReduceKeyProcessor _reduceKeyProcessor;
                 private readonly Queue<(string PropertyName, object PropertyValue)> _propertyQueue = new Queue<(string PropertyName, object PropertyValue)>();
-                private readonly CurrentIndexingScope.MetadataFieldCache _metadataFields;
 
                 public Enumerator(IEnumerator enumerator, AnonymousObjectToBlittableMapResultsEnumerableWrapper parent, IndexingStatsScope createBlittableResult)
                 {
@@ -612,8 +611,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     if (_orderedMultipleGroupByFieldPositions is {Count: > 0})
                         _orderedMultipleGroupByValues = new object[_orderedMultipleGroupByFieldPositions.Count];
-
-                    _metadataFields = CurrentIndexingScope.Current.MetadataFields;
                 }
 
                 public bool MoveNext()
@@ -672,10 +669,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                         _parent._indexContext.CachedProperties.NewDocument();
 
-                        using (var writer = new BlittableJsonWriter(_parent._indexContext,
-                            idField: _metadataFields.Id,
-                            keyField: _metadataFields.Key,
-                            collectionField: _metadataFields.Collection))
+                        using (var writer = new SystemTextJsonBlittableWriter(_parent._indexContext))
                         {
                             writer.WriteStartObject();
 
@@ -701,7 +695,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     return true;
 
-                    static void WriteValue(BlittableJsonWriter writer, object value)
+                    static void WriteValue(SystemTextJsonBlittableWriter writer, object value)
                     {
                         switch (value)
                         {
@@ -788,7 +782,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                 for (int i = 0; i < val.Count; i++)
                                 {
                                     val.GetPropertyByIndex(i, ref propertyDetails);
-                                    writer.WritePropertyName(propertyDetails.Name);
+                                    writer.WritePropertyName((string)propertyDetails.Name);
                                     WriteValue(writer, propertyDetails.Value);
                                 }
 

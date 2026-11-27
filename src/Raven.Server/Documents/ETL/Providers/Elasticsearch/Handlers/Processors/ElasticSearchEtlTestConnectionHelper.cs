@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Elastic.Clients.Elasticsearch;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -20,7 +20,7 @@ internal static class ElasticSearchEtlTestConnectionHelper
         {
             string url = requestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
             string authenticationJson = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            Authentication authentication = JsonConvert.DeserializeObject<Authentication>(authenticationJson);
+            Authentication authentication = JsonStringHelper.Deserialize<Authentication>(authenticationJson);
 
             ElasticsearchClient client = ElasticSearchHelper.CreateClient(new ElasticSearchConnectionString { Nodes = new[] { url }, Authentication = authentication });
 

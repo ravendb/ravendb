@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
@@ -1400,6 +1401,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (constructedWithParameters && isCollection == false)
                     continue;
 
+                if (isCollection && CannotAddTo(property.PropertyType))
+                    continue;
+
                 Func<object, object> get = property.Get;
                 JsonConverter tracker = isCollection == false ? TrackPresentMembers(property) : null;
                 property.Set = (target, value) =>
@@ -1686,6 +1690,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(typeInfo, i, property.Name, hasCaseOnlyNameCollisions)))
                     property.Set(target, property.Get(value));
             }
+        }
+
+        private static bool CannotAddTo(Type type)
+        {
+            if (type.IsArray)
+                return true;
+
+            if (type.IsInterface || type.IsAbstract)
+                return false;
+
+            Type definition = type.IsGenericType ? type.GetGenericTypeDefinition() : null;
+            if (definition == typeof(ReadOnlyCollection<>) || definition == typeof(ReadOnlyDictionary<,>) || definition == typeof(ReadOnlyObservableCollection<>))
+                return true;
+
+            return type.Namespace == "System.Collections.Immutable" || _collectionAdders.GetOrAdd(type, CreateCollectionAdder) == null;
         }
 
         private static void AddItems(object target, object items)

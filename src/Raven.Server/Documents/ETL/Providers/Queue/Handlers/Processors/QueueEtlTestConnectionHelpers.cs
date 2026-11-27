@@ -7,8 +7,8 @@ using Amazon.SQS;
 using Azure.Messaging.ServiceBus;
 using Azure.Storage.Queues;
 using Confluent.Kafka;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
 using Sparrow.Json;
@@ -26,7 +26,7 @@ internal static class QueueEtlTestConnectionHelpers
         try
         {
             string jsonConfig = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            var settings = JsonConvert.DeserializeObject<KafkaConnectionSettings>(jsonConfig);
+            var settings = JsonStringHelper.Deserialize<KafkaConnectionSettings>(jsonConfig);
 
             var adminConfig = new AdminClientConfig() { BootstrapServers = settings.BootstrapServers };
 
@@ -97,7 +97,7 @@ internal static class QueueEtlTestConnectionHelpers
         try
         {
             string jsonConfig = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            var settings = JsonConvert.DeserializeObject<RabbitMqConnectionSettings>(jsonConfig);
+            var settings = JsonStringHelper.Deserialize<RabbitMqConnectionSettings>(jsonConfig);
 
             using (QueueBrokerConnectionHelper.CreateRabbitMqConnection(settings))
             {
@@ -116,7 +116,7 @@ internal static class QueueEtlTestConnectionHelpers
         try
         {
             string authenticationJson = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            AzureQueueStorageConnectionSettings connectionSettings = JsonConvert.DeserializeObject<AzureQueueStorageConnectionSettings>(authenticationJson);
+            AzureQueueStorageConnectionSettings connectionSettings = JsonStringHelper.Deserialize<AzureQueueStorageConnectionSettings>(authenticationJson);
 
             QueueServiceClient client = QueueBrokerConnectionHelper.CreateAzureQueueStorageServiceClient(connectionSettings);
 
@@ -135,7 +135,7 @@ internal static class QueueEtlTestConnectionHelpers
         try
         {
             string authenticationJson = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            AmazonSqsConnectionSettings connectionSettings = JsonConvert.DeserializeObject<AmazonSqsConnectionSettings>(authenticationJson);
+            AmazonSqsConnectionSettings connectionSettings = JsonStringHelper.Deserialize<AmazonSqsConnectionSettings>(authenticationJson);
 
             IAmazonSQS client = QueueBrokerConnectionHelper.CreateAmazonSqsClient(connectionSettings);
 
@@ -164,7 +164,7 @@ internal static class QueueEtlTestConnectionHelpers
         try
         {
             string authenticationJson = await new StreamReader(requestHandler.HttpContext.Request.Body).ReadToEndAsync();
-            AzureServiceBusConnectionSettings connectionSettings = JsonConvert.DeserializeObject<AzureServiceBusConnectionSettings>(authenticationJson);
+            AzureServiceBusConnectionSettings connectionSettings = JsonStringHelper.Deserialize<AzureServiceBusConnectionSettings>(authenticationJson);
 
             var probeEntity = $"ravendb-connection-test-{Guid.NewGuid():N}";
             await using var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient("RavenDB-test-connectivity", connectionSettings);
@@ -199,7 +199,7 @@ internal static class QueueEtlTestConnectionHelpers
 
     private static async Task WriteErrorAsync(RequestHandler requestHandler, Exception exception)
     {
-        var errorJson = JsonConvert.SerializeObject(new { Message = exception.Message, Error = exception.ToString() });
+        var errorJson = JsonStringHelper.Serialize(new { Message = exception.Message, Error = exception.ToString() });
 
         using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))

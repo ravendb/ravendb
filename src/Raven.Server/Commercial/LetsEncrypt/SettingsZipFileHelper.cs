@@ -7,7 +7,6 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
@@ -96,7 +95,7 @@ public static class SettingsZipFileHelper
 
                     try
                     {
-                        var licenseString = JsonConvert.SerializeObject(parameters.SetupInfo.License, Formatting.Indented);
+                        var licenseString = JsonStringHelper.Serialize(parameters.SetupInfo.License, indented: true);
 
                         var entry = archive.CreateEntry("license.json");
                         entry.ExternalAttributes = ((int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR)) << 16;

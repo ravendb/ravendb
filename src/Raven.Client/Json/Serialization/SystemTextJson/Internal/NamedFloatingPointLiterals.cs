@@ -9,6 +9,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         [ThreadStatic]
         private static bool _escaped;
 
+        public static NamedFloatingPointLiteralFormat BlittableFormat => _escaped ? NamedFloatingPointLiteralFormat.Escaped : NamedFloatingPointLiteralFormat.Bare;
+
         public static EscapeScope WriteEscaped()
         {
             bool previous = _escaped;

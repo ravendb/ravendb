@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -166,7 +165,7 @@ namespace Raven.Server.Smuggler.Migration
                 }
             }
 
-            var json = JsonConvert.SerializeObject(databaseSmugglerOptionsServerSide);
+            var json = JsonStringHelper.Serialize(databaseSmugglerOptionsServerSide);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {

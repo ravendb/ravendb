@@ -6,10 +6,11 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Polly;
 using Polly.Retry;
 using Raven.Client.Http;
@@ -24,10 +25,12 @@ namespace Raven.Server.Commercial
     {
         private static readonly AsyncRetryPolicy<HttpResponseMessage> RetryPolicy;
 
-        private static readonly JsonSerializerSettings jsonSettings = new JsonSerializerSettings
+        private static readonly JsonSerializerOptions JwsMessageOptions = new JsonSerializerOptions
         {
-            NullValueHandling = NullValueHandling.Ignore,
-            Formatting = Formatting.Indented
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = true,
+            IncludeFields = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         private static Dictionary<string, RavenHttpClient> _cachedClients = new(StringComparer.OrdinalIgnoreCase);
@@ -127,7 +130,7 @@ namespace Raven.Server.Commercial
                 {
                     lock (Locker)
                     {
-                        _cache = JsonConvert.DeserializeObject<RegistrationCache>(File.ReadAllText(_path));
+                        _cache = JsonStringHelper.Deserialize<RegistrationCache>(File.ReadAllText(_path));
                     }
 
                     _accountKey.ImportCspBlob(_cache.AccountKey);
@@ -174,7 +177,7 @@ namespace Raven.Server.Commercial
                     Key = account.Key
                 };
                 File.WriteAllText(_path,
-                    JsonConvert.SerializeObject(_cache, Formatting.Indented));
+                    JsonStringHelper.Serialize(_cache, indented: true));
             }
         }
 
@@ -185,7 +188,7 @@ namespace Raven.Server.Commercial
             if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
             {
                 var problemJson = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
-                var problem = JsonConvert.DeserializeObject<Problem>(problemJson);
+                var problem = JsonStringHelper.Deserialize<Problem>(problemJson);
                 problem.RawJson = problemJson;
                 throw new LetsEncryptException(problem, response);
             }
@@ -198,7 +201,9 @@ namespace Raven.Server.Commercial
                 return ((TResult)(object)responseText, null);
             }
 
-            var responseContent = JObject.Parse(responseText).ToObject<TResult>();
+            var responseContent = JsonStringHelper.Deserialize<TResult>(responseText);
+            if (responseContent == null)
+                throw new LetsEncryptException($"Got an empty response from '{uri}' with status {response.StatusCode}");
 
             if (responseContent is IHasLocation ihl)
             {
@@ -279,7 +284,7 @@ namespace Raven.Server.Commercial
                     Url = uri
                 });
 
-                var json = JsonConvert.SerializeObject(encodedMessage, jsonSettings);
+                var json = JsonSerializer.Serialize(encodedMessage, JwsMessageOptions);
 
                 request.Content = new StringContent(json, Encoding.UTF8, "application/jose+json")
                 {
@@ -482,7 +487,7 @@ namespace Raven.Server.Commercial
             lock (Locker)
             {
                 File.WriteAllText(_path,
-                    JsonConvert.SerializeObject(_cache, Formatting.Indented));
+                    JsonStringHelper.Serialize(_cache, indented: true));
             }
 
             return (cert, key);
@@ -559,6 +564,7 @@ namespace Raven.Server.Commercial
 
         private sealed class RegistrationCache
         {
+            [JsonObjectCreationHandling(JsonObjectCreationHandling.Populate)]
             public readonly Dictionary<string, CertificateCache> CachedCerts = new Dictionary<string, CertificateCache>(StringComparer.OrdinalIgnoreCase);
             public byte[] AccountKey;
             public string Id;
@@ -574,121 +580,121 @@ namespace Raven.Server.Commercial
 
         private sealed class AuthorizationChallengeResponse
         {
-            [JsonProperty("identifier")]
+            [JsonPropertyName("identifier")]
             public OrderIdentifier Identifier { get; set; }
 
-            [JsonProperty("status")]
+            [JsonPropertyName("status")]
             public string Status { get; set; }
 
-            [JsonProperty("expires")]
+            [JsonPropertyName("expires")]
             public DateTime? Expires { get; set; }
 
-            [JsonProperty("wildcard")]
+            [JsonPropertyName("wildcard")]
             public bool Wildcard { get; set; }
 
-            [JsonProperty("challenges")]
+            [JsonPropertyName("challenges")]
             public AuthorizationChallenge[] Challenges { get; set; }
 
-            [JsonProperty("error")]
+            [JsonPropertyName("error")]
             public Problem Error { get; set; }
         }
 
         private sealed class AuthorizeChallenge
         {
-            [JsonProperty("keyAuthorization")]
+            [JsonPropertyName("keyAuthorization")]
             public string KeyAuthorization { get; set; }
         }
 
         private sealed class AuthorizationChallenge
         {
-            [JsonProperty("type")]
+            [JsonPropertyName("type")]
             public string Type { get; set; }
 
-            [JsonProperty("status")]
+            [JsonPropertyName("status")]
             public string Status { get; set; }
 
-            [JsonProperty("url")]
+            [JsonPropertyName("url")]
             public Uri Url { get; set; }
 
-            [JsonProperty("token")]
+            [JsonPropertyName("token")]
             public string Token { get; set; }
 
-            [JsonProperty("error")]
+            [JsonPropertyName("error")]
             public Problem Error { get; set; }
         }
 
         private sealed class Jwk
         {
-            [JsonProperty("kty")]
+            [JsonPropertyName("kty")]
             public string KeyType { get; set; }
 
-            [JsonProperty("kid")]
+            [JsonPropertyName("kid")]
             public string KeyId { get; set; }
 
-            [JsonProperty("use")]
+            [JsonPropertyName("use")]
             public string Use { get; set; }
 
-            [JsonProperty("n")]
+            [JsonPropertyName("n")]
             public string Modulus { get; set; }
 
-            [JsonProperty("e")]
+            [JsonPropertyName("e")]
             public string Exponent { get; set; }
 
-            [JsonProperty("d")]
+            [JsonPropertyName("d")]
             public string D { get; set; }
 
-            [JsonProperty("p")]
+            [JsonPropertyName("p")]
             public string P { get; set; }
 
-            [JsonProperty("q")]
+            [JsonPropertyName("q")]
             public string Q { get; set; }
 
-            [JsonProperty("dp")]
+            [JsonPropertyName("dp")]
             public string DP { get; set; }
 
-            [JsonProperty("dq")]
+            [JsonPropertyName("dq")]
             public string DQ { get; set; }
 
-            [JsonProperty("qi")]
+            [JsonPropertyName("qi")]
             public string InverseQ { get; set; }
 
-            [JsonProperty("alg")]
+            [JsonPropertyName("alg")]
             public string Algorithm { get; set; }
         }
 
         private sealed class Directory
         {
-            [JsonProperty("keyChange")]
+            [JsonPropertyName("keyChange")]
             public Uri KeyChange { get; set; }
 
-            [JsonProperty("newNonce")]
+            [JsonPropertyName("newNonce")]
             public Uri NewNonce { get; set; }
 
-            [JsonProperty("newAccount")]
+            [JsonPropertyName("newAccount")]
             public Uri NewAccount { get; set; }
 
-            [JsonProperty("newOrder")]
+            [JsonPropertyName("newOrder")]
             public Uri NewOrder { get; set; }
 
-            [JsonProperty("revokeCert")]
+            [JsonPropertyName("revokeCert")]
             public Uri RevokeCertificate { get; set; }
 
-            [JsonProperty("meta")]
+            [JsonPropertyName("meta")]
             public DirectoryMeta Meta { get; set; }
         }
 
         private sealed class DirectoryMeta
         {
-            [JsonProperty("termsOfService")]
+            [JsonPropertyName("termsOfService")]
             public string TermsOfService { get; set; }
         }
 
         public sealed class Problem
         {
-            [JsonProperty("type")]
+            [JsonPropertyName("type")]
             public string Type { get; set; }
 
-            [JsonProperty("detail")]
+            [JsonPropertyName("detail")]
             public string Detail { get; set; }
 
             public string RawJson { get; set; }
@@ -722,16 +728,16 @@ namespace Raven.Server.Commercial
 
         private sealed class JwsMessage
         {
-            [JsonProperty("header")]
+            [JsonPropertyName("header")]
             public JwsHeader Header { get; set; }
 
-            [JsonProperty("protected")]
+            [JsonPropertyName("protected")]
             public string Protected { get; set; }
 
-            [JsonProperty("payload")]
+            [JsonPropertyName("payload")]
             public string Payload { get; set; }
 
-            [JsonProperty("signature")]
+            [JsonPropertyName("signature")]
             public string Signature { get; set; }
         }
 
@@ -747,19 +753,19 @@ namespace Raven.Server.Commercial
                 Key = key;
             }
 
-            [JsonProperty("alg")]
+            [JsonPropertyName("alg")]
             public string Algorithm { get; set; }
 
-            [JsonProperty("jwk")]
+            [JsonPropertyName("jwk")]
             public Jwk Key { get; set; }
 
-            [JsonProperty("kid")]
+            [JsonPropertyName("kid")]
             public string KeyId { get; set; }
 
-            [JsonProperty("nonce")]
+            [JsonPropertyName("nonce")]
             public string Nonce { get; set; }
 
-            [JsonProperty("url")]
+            [JsonPropertyName("url")]
             public Uri Url { get; set; }
         }
 
@@ -772,70 +778,70 @@ namespace Raven.Server.Commercial
         {
             public Uri Location { get; set; }
 
-            [JsonProperty("status")]
+            [JsonPropertyName("status")]
             public string Status { get; set; }
 
-            [JsonProperty("expires")]
+            [JsonPropertyName("expires")]
             public DateTime? Expires { get; set; }
 
-            [JsonProperty("identifiers")]
+            [JsonPropertyName("identifiers")]
             public OrderIdentifier[] Identifiers { get; set; }
 
-            [JsonProperty("notBefore")]
+            [JsonPropertyName("notBefore")]
             public DateTime? NotBefore { get; set; }
 
-            [JsonProperty("notAfter")]
+            [JsonPropertyName("notAfter")]
             public DateTime? NotAfter { get; set; }
 
-            [JsonProperty("error")]
+            [JsonPropertyName("error")]
             public Problem Error { get; set; }
 
-            [JsonProperty("authorizations")]
+            [JsonPropertyName("authorizations")]
             public Uri[] Authorizations { get; set; }
 
-            [JsonProperty("finalize")]
+            [JsonPropertyName("finalize")]
             public Uri Finalize { get; set; }
 
-            [JsonProperty("certificate")]
+            [JsonPropertyName("certificate")]
             public Uri Certificate { get; set; }
             
-            [JsonProperty("profile")]
+            [JsonPropertyName("profile")]
             public string Profile { get; set; }
         }
 
         private sealed class OrderIdentifier
         {
-            [JsonProperty("type")]
+            [JsonPropertyName("type")]
             public string Type { get; set; }
 
-            [JsonProperty("value")]
+            [JsonPropertyName("value")]
             public string Value { get; set; }
         }
 
         private sealed class Account : IHasLocation
         {
-            [JsonProperty("termsOfServiceAgreed")]
+            [JsonPropertyName("termsOfServiceAgreed")]
             public bool TermsOfServiceAgreed { get; set; }
 
-            [JsonProperty("contact")]
+            [JsonPropertyName("contact")]
             public string[] Contacts { get; set; }
 
-            [JsonProperty("status")]
+            [JsonPropertyName("status")]
             public string Status { get; set; }
 
-            [JsonProperty("id")]
+            [JsonPropertyName("id")]
             public string Id { get; set; }
 
-            [JsonProperty("createdAt")]
+            [JsonPropertyName("createdAt")]
             public DateTime CreatedAt { get; set; }
 
-            [JsonProperty("key")]
+            [JsonPropertyName("key")]
             public Jwk Key { get; set; }
 
-            [JsonProperty("initialIp")]
+            [JsonPropertyName("initialIp")]
             public string InitialIp { get; set; }
 
-            [JsonProperty("orders")]
+            [JsonPropertyName("orders")]
             public Uri Orders { get; set; }
 
             public Uri Location { get; set; }
@@ -843,7 +849,7 @@ namespace Raven.Server.Commercial
 
         private sealed class FinalizeRequest
         {
-            [JsonProperty("csr")]
+            [JsonPropertyName("csr")]
             public string CSR { get; set; }
         }
 
@@ -901,13 +907,13 @@ namespace Raven.Server.Commercial
                 }
                 else
                 {
-                    encodedPayload = Base64UrlEncoded(JsonConvert.SerializeObject(payload));
+                    encodedPayload = Base64UrlEncoded(JsonStringHelper.Serialize(payload));
                 }
 
                 var message = new JwsMessage
                 {
                     Payload = encodedPayload,
-                    Protected = Base64UrlEncoded(JsonConvert.SerializeObject(protectedHeader))
+                    Protected = Base64UrlEncoded(JsonStringHelper.Serialize(protectedHeader))
                 };
 
                 message.Signature = Base64UrlEncoded(

@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -33,7 +33,7 @@ public abstract class MergedTransactionCommand<TOperationContext, TTransaction> 
 
     public abstract IReplayableCommandDto<TOperationContext, TTransaction, MergedTransactionCommand<TOperationContext, TTransaction>> ToDto(TOperationContext context);
 
-    [JsonIgnore]
+    [IgnoreDataMember]
     public readonly TaskCompletionSource<object> TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public Exception Exception;

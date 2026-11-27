@@ -5,9 +5,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Util;
-#if DEBUG
-using Newtonsoft.Json;
-#endif
 
 namespace Corax.Querying.Matches.SortingMatches;
 

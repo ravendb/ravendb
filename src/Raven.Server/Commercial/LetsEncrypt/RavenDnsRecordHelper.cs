@@ -6,10 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Http;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -70,7 +69,7 @@ public static class RavenDnsRecordHelper
                 return;
             }
 
-            var serializeObject = JsonConvert.SerializeObject(registrationInfo);
+            var serializeObject = JsonStringHelper.Serialize(registrationInfo);
             HttpResponseMessage response;
             try
             {
@@ -107,7 +106,7 @@ public static class RavenDnsRecordHelper
                 }
             }
 
-            var id = (JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString) ?? throw new InvalidOperationException()).First().Value;
+            var id = (JsonStringHelper.Deserialize<Dictionary<string, string>>(responseString) ?? throw new InvalidOperationException()).First().Value;
 
             try
             {
@@ -132,7 +131,7 @@ public static class RavenDnsRecordHelper
                         throw new InvalidOperationException($"Got unsuccessful response from registration-result request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                     }
 
-                    registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
+                    registrationResult = JsonStringHelper.Deserialize<RegistrationResult>(responseString);
                     switch (sw.Elapsed.TotalSeconds)
                     {
                         case >= 120:
@@ -311,18 +310,24 @@ public static class RavenDnsRecordHelper
                     throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's API ({GoogleDnsApi}).{Environment.NewLine}" +
                                                         $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
                 
-                dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
+                using JsonDocument dnsResult = JsonDocument.Parse(responseString);
+                JsonElement dnsResponse = dnsResult.RootElement;
                 
                 // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
                 
-                if (dnsResult?.Status != 0)
+                if (dnsResponse.ValueKind != JsonValueKind.Object ||
+                    dnsResponse.TryGetProperty("Status", out JsonElement status) == false ||
+                    status.ValueKind != JsonValueKind.Number ||
+                    status.GetInt32() != 0)
                     throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's API ({GoogleDnsApi}).{Environment.NewLine}" +
                                                         $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
                                                         Environment.NewLine +
                                                         "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
                 
-                JArray answers = dnsResult.Answer;
-                return answers.Select(answer => answer["data"].ToString()).ToHashSet();
+                if (dnsResponse.TryGetProperty("Answer", out JsonElement answers) == false || answers.ValueKind != JsonValueKind.Array)
+                    return [];
+
+                return answers.EnumerateArray().Select(answer => answer.GetProperty("data").ToString()).ToHashSet();
             }
         }
 
@@ -381,7 +386,7 @@ public static class RavenDnsRecordHelper
                 registrationInfo.SubDomains.Add(regNodeInfo);
             }
 
-            var serializeObject = JsonConvert.SerializeObject(registrationInfo);
+            var serializeObject = JsonStringHelper.Serialize(registrationInfo);
 
             if (logger is { IsInfoEnabled: true })
                 logger.Info($"Start update process for certificate. License Id: {registrationInfo.License.Id}, " +
@@ -406,7 +411,7 @@ public static class RavenDnsRecordHelper
                 throw new InvalidOperationException($"Got unsuccessful response from registration request: {response.StatusCode}.{Environment.NewLine}{responseString}");
             }
 
-            var id = (JsonConvert.DeserializeObject<Dictionary<string, string>>(responseString) ?? throw new InvalidOperationException()).First().Value;
+            var id = (JsonStringHelper.Deserialize<Dictionary<string, string>>(responseString) ?? throw new InvalidOperationException()).First().Value;
 
             try
             {
@@ -430,7 +435,7 @@ public static class RavenDnsRecordHelper
                         throw new InvalidOperationException($"Got unsuccessful response from registration-result request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                     }
 
-                    registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
+                    registrationResult = JsonStringHelper.Deserialize<RegistrationResult>(responseString);
                 } while (registrationResult?.Status == "PENDING");
             }
             catch (Exception e)

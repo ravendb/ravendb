@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Api.Gax;
@@ -8,7 +9,6 @@ using Google.Apis.Auth.OAuth2;
 using Google.Apis.Storage.v1.Data;
 using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
 using Sparrow.Server.Utils;
@@ -28,6 +28,12 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
         private readonly Progress _progress;
 
         private const string ProjectIdPropertyName = "project_id";
+
+        private static readonly JsonDocumentOptions CredentialsReadOptions = new()
+        {
+            CommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
 
         public RavenGoogleCloudClient(GoogleCloudSettings settings, Config.Categories.BackupConfiguration configuration, Progress progress = null, CancellationToken? cancellationToken = null)
         {
@@ -51,17 +57,35 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
-            var credentialJsonType = JObject.Parse(settings.GoogleCredentialsJson);
-
-            if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var value))
-            {
-                _projectId = value.Value<string>();
-            }
-
+            _projectId = ReadProjectId(settings.GoogleCredentialsJson);
             _bucketName = settings.BucketName;
             CancellationToken = cancellationToken ?? CancellationToken.None;
 
             _progress = progress;
+        }
+
+        internal static string ReadProjectId(string credentialsJson)
+        {
+            using (JsonDocument credentials = JsonDocument.Parse(credentialsJson, CredentialsReadOptions))
+            {
+                JsonElement? projectId = null;
+                foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, ProjectIdPropertyName, StringComparison.Ordinal))
+                    {
+                        projectId = property.Value;
+                        break;
+                    }
+
+                    if (projectId == null && string.Equals(property.Name, ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase))
+                        projectId = property.Value;
+                }
+
+                if (projectId is not { } value || value.ValueKind == JsonValueKind.Null)
+                    return null;
+
+                return value.ToString();
+            }
         }
 
         public Object UploadObject(string fileName, Stream stream, Dictionary<string, string> metadata = null)

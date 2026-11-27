@@ -5,7 +5,6 @@ using Sparrow.Json.Sync;
 using System;
 using System.IO;
 using System.IO.Compression;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 
@@ -140,15 +139,7 @@ public abstract partial class AbstractTransactionOperationsMerger<TOperationCont
             JsonOperationContext context,
             RecordingDetails commandDetails)
         {
-            using (var writer = new BlittableJsonWriter(context))
-            {
-                var jsonSerializer = ReplayTxCommandHelper.GetJsonSerializer();
-
-                jsonSerializer.Serialize(writer, commandDetails);
-                writer.FinalizeDocument();
-
-                return writer.CreateReader();
-            }
+            return ReplayTxCommandHelper.Serialize(context, commandDetails);
         }
 
 

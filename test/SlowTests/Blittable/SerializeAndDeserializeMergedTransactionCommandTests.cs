@@ -6,10 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron.Util;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
@@ -17,14 +16,18 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
+using Voron;
 using Xunit;
 
 namespace SlowTests.Blittable
@@ -41,7 +44,6 @@ namespace SlowTests.Blittable
             using (var database = CreateDocumentDatabase())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                //Arrange
                 var resolvedConflicts = new List<(DocumentConflict, long, bool)>
                     {
                         (new DocumentConflict
@@ -50,36 +52,77 @@ namespace SlowTests.Blittable
                             LowerId = context.GetLazyString("Some lower id"),
                             Collection = context.GetLazyString("Some collection"),
                             Doc = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { SomeName = "Some Value" }, context)
-                        }, 10, false)
+                        }, 10, true)
                     };
 
                 var expected = new ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand(
                     null, resolvedConflicts, null);
                 var expectedDto = expected.ToDto(context);
 
-                //Serialize
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    jsonSerializer.Serialize(writer, expectedDto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, expectedDto);
 
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
-                //Deserialize
-                using (var reader = new BlittableJsonReader(context))
+                var actualDto = ReplayTxCommandHelper.Deserialize<PutResolvedConflictsCommandDto>(context, fromStream);
+
+                var (conflict, maxConflictEtag, resolvedToLatest) = Assert.Single(actualDto.ResolvedConflicts);
+                Assert.Equal("Some id", conflict.Id.ToString());
+                Assert.Equal("Some lower id", conflict.LowerId.ToString());
+                Assert.Equal("Some collection", conflict.Collection.ToString());
+                Assert.True(conflict.Doc.TryGet("SomeName", out string someName));
+                Assert.Equal("Some Value", someName);
+                Assert.Equal(10, maxConflictEtag);
+                Assert.True(resolvedToLatest);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task SerializeAndDeserialize_MergedDocumentReplicationCommand()
+        {
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var item = new DocumentReplicationItem
                 {
-                    reader.Initialize(fromStream);
+                    Type = ReplicationBatchItem.ReplicationItemType.Document,
+                    Etag = 3,
+                    ChangeVector = "A:1-abc",
+                    Data = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { Name = "Avi" }, context),
+                    Id = context.GetLazyString("users/1"),
+                    Collection = context.GetLazyString("Users"),
+                    Context = context
+                };
 
-                    var actualDto = jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
+                var expectedDto = new MergedDocumentReplicationCommandDto
+                {
+                    LastEtag = 3,
+                    SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, TcpConnectionHeaderMessage.ReplicationTcpVersion),
+                    ReplicatedItemDtos = [item.Clone(context, context.Allocator)],
+                    SourceDatabaseId = "source",
+                    ReplicatedAttachmentStreams = [KeyValuePair.Create("hash", (Stream)new MemoryStream([1, 2, 3]))]
+                };
 
-                    //Assert
-                    //                    Assert.Equal(expectedDto.)
-                }
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, expectedDto);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedDocumentReplicationCommandDto>(context, fromStream);
+
+                Assert.Equal(3, actualDto.LastEtag);
+                Assert.Equal("source", actualDto.SourceDatabaseId);
+                Assert.Equal(expectedDto.SupportedFeatures.Replication.MissingAttachments, actualDto.SupportedFeatures.Replication.MissingAttachments);
+                Assert.Equal(expectedDto.SupportedFeatures.Replication.TimeSeries, actualDto.SupportedFeatures.Replication.TimeSeries);
+
+                var actualItem = Assert.IsType<DocumentReplicationItem>(Assert.Single(actualDto.ReplicatedItemDtos));
+                Assert.Equal(ReplicationBatchItem.ReplicationItemType.Document, actualItem.Type);
+                Assert.Equal("A:1-abc", actualItem.ChangeVector);
+                Assert.Equal("users/1", actualItem.Id.ToString());
+                Assert.Equal("Users", actualItem.Collection.ToString());
+                Assert.True(actualItem.Data.TryGet("Name", out string name));
+                Assert.Equal("Avi", name);
+                Assert.Null(actualItem.Context);
+
+                var (hash, stream) = Assert.Single(actualDto.ReplicatedAttachmentStreams);
+                Assert.Equal("hash", hash);
+                Assert.Equal([1, 2, 3], ((MemoryStream)stream).ToArray());
             }
         }
 
@@ -99,28 +142,15 @@ namespace SlowTests.Blittable
                 };
 
                 //Serialize
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
 
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 //Deserialize
                 AttachmentHandler.MergedDeleteAttachmentCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
-                    actual = dto.ToCommand(null, null);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedDeleteAttachmentCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(null, null);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<AttachmentHandler.MergedDeleteAttachmentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
@@ -154,28 +184,15 @@ namespace SlowTests.Blittable
                 };
 
                 //Serialize
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
 
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 //Deserialize
                 AttachmentHandler.MergedPutAttachmentCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
-                    actual = dto.ToCommand(null, null);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedPutAttachmentCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(null, null);
 
                 //Assert
                 Assert.Equal(expected, actual,
@@ -201,29 +218,37 @@ namespace SlowTests.Blittable
                 var expected = new MergedPutCommand(document, "user/", changeVector, null);
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 MergedPutCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
-                    actual = dto.ToCommand(null, null);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedPutCommand.MergedPutCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(null, null);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<MergedPutCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void SerializeAndDeserialize_MergedPutCommandKeepsNamedFloatingPointLiterals()
+        {
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var document = context.Sync.ReadForMemory("""{ "Score": NaN, "Max": Infinity, "Min": -Infinity }""", "document");
+                var dto = new MergedPutCommand(document, "users/1", null, null).ToDto(context);
+
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedPutCommand.MergedPutCommandDto>(context, blitCommand);
+
+                Assert.True(actualDto.Document.TryGetMember("Score", out object score));
+                Assert.True(Assert.IsType<LazyNumberValue>(score).IsNaN());
+                Assert.True(actualDto.Document.TryGetMember("Max", out object max));
+                Assert.True(Assert.IsType<LazyNumberValue>(max).IsPositiveInfinity());
+                Assert.True(actualDto.Document.TryGetMember("Min", out object min));
+                Assert.True(Assert.IsType<LazyNumberValue>(min).IsNegativeInfinity());
             }
         }
 
@@ -250,25 +275,12 @@ namespace SlowTests.Blittable
                     false, false, false, false);
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
                 PatchDocumentCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
-                    actual = dto.ToCommand(context, database);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<PatchDocumentCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(context, database);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<PatchDocumentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
@@ -285,26 +297,13 @@ namespace SlowTests.Blittable
                 var expected = new DeleteDocumentCommand("Some Id", "Some Change Vector", null);
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 DeleteDocumentCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<DeleteDocumentCommandDto>(reader);
-                    actual = dto.ToCommand(null, null);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<DeleteDocumentCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(null, null);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<DeleteDocumentCommand, DocumentsOperationContext, DocumentsTransaction>(context));
@@ -335,26 +334,13 @@ namespace SlowTests.Blittable
                 };
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 MergedBatchCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
-                    actual = dto.ToCommand(null, null);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedBatchCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(null, null);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<MergedBatchCommand, DocumentsOperationContext, DocumentsTransaction>(context));
@@ -382,26 +368,13 @@ namespace SlowTests.Blittable
                 expected.Add(document);
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 DatabaseDestination.MergedBatchPutCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
-                    actual = dto.ToCommand(context, database);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(context, database);
 
                 //Assert
                 var expectedDoc = expected.Documents[0].Document;
@@ -439,39 +412,43 @@ namespace SlowTests.Blittable
                 };
 
                 //Action
-                var jsonSerializer = GetJsonSerializer();
-                BlittableJsonReaderObject blitCommand;
-                using (var writer = new BlittableJsonWriter(context))
-                {
-                    var dto = expected.ToDto(context);
-                    jsonSerializer.Serialize(writer, dto);
-                    writer.FinalizeDocument();
-
-                    blitCommand = writer.CreateReader();
-                }
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
                 var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 MergedInsertBulkCommand actual;
-                using (var reader = new BlittableJsonReader(context))
-                {
-                    reader.Initialize(fromStream);
-
-                    var dto = jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
-                    actual = dto.ToCommand(context, database);
-                }
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedInsertBulkCommandDto>(context, fromStream);
+                actual = actualDto.ToCommand(context, database);
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<MergedInsertBulkCommand, DocumentsOperationContext, DocumentsTransaction>(context));
             }
         }
 
-        private static JsonSerializer GetJsonSerializer()
+        [RavenFact(RavenTestCategory.TimeSeries)]
+        public async Task SerializeAndDeserialize_TimeSeriesRetentionCommandTest()
         {
-            var jsonSerializer = (JsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
-            jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
-            jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
-            jsonSerializer.Converters.Add(StreamConverter.Instance);
-            return jsonSerializer;
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                //Arrange
+                Slice.From(context.Allocator, "users/1", out Slice key);
+                var to = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+                var expected = new TimeSeriesRollups.TimeSeriesRetentionCommand(new List<Slice> { key }, "Users", to);
+
+                //Action
+                var dto = expected.ToDto(context);
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
+                var actualDto = ReplayTxCommandHelper.Deserialize<TimeSeriesRollups.TimeSeriesRetentionCommand.TimeSeriesRetentionCommandDto>(context, fromStream);
+
+                //Assert
+                Assert.Equal("users/1", Assert.Single(actualDto._keys).ToString());
+                Assert.Equal("Users", actualDto._collection);
+                Assert.Equal(to, actualDto._to);
+                Assert.NotNull(actualDto.ToCommand(context, database));
+            }
         }
 
         private class CustomComparer<TRecordableCommand, TOperationContext, TTransaction> : IEqualityComparer<TRecordableCommand>

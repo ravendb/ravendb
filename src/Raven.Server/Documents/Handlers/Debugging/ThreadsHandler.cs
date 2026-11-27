@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Util;
@@ -45,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 OutputResultToStream(sw, threadIdsAsString.ToHashSet(), includeStackObjects);
 
-                var result = JObject.Parse(sw.GetStringBuilder().ToString());
+                var stackTraces = sw.GetStringBuilder().ToString();
 
                 var wait = 100 - sp.ElapsedMilliseconds;
                 if (wait > 0)
@@ -55,7 +54,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 var threadStats = threadsUsage.Calculate(threadIds: threadIdsAsString.Count == 0 ? null : threadIdsAsString.Select(int.Parse).ToHashSet());
-                result["Threads"] = JArray.FromObject(threadStats.List);
 
                 if (download)
                 {
@@ -68,13 +66,30 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var stackTracesStream = new MemoryStream(Encoding.UTF8.GetBytes(stackTraces)))
+                using (var stackTracesJson = await context.ReadForMemoryAsync(stackTracesStream, "threads/stack-trace"))
                 {
+                    stackTracesJson.Modifications = new DynamicJsonValue(stackTracesJson)
+                    {
+                        ["Threads"] = new DynamicJsonArray(threadStats.List.Select(ToStackTraceJson))
+                    };
+
+                    using (var result = context.ReadObject(stackTracesJson, "threads/stack-trace"))
                     await using (var writer = new AsyncBlittableJsonTextWriterForDebug(context, ServerStore, ResponseBodyStream()))
                     {
-                        context.Write(writer, DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(result, context));
+                        context.Write(writer, result);
                     }
                 }
             }
+        }
+
+        private static DynamicJsonValue ToStackTraceJson(ThreadInfo thread)
+        {
+            DynamicJsonValue json = thread.ToJson();
+            json[nameof(ThreadInfo.State)] = (int?)thread.State;
+            json[nameof(ThreadInfo.Priority)] = (int?)thread.Priority;
+            json[nameof(ThreadInfo.WaitReason)] = (int?)thread.WaitReason;
+            return json;
         }
 
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]

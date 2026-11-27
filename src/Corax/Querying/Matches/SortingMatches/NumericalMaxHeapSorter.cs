@@ -5,9 +5,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Sparrow.Server;
 using Voron.Util;
-#if DEBUG
-using Newtonsoft.Json;
-#endif
 
 namespace Corax.Querying.Matches.SortingMatches;
 
@@ -301,7 +298,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
             }
         }
 
-        return JsonConvert.SerializeObject(root);
+        return System.Text.Json.JsonSerializer.Serialize(root);
     }
     
     

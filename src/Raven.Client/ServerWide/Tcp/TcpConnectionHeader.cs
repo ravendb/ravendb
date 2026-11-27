@@ -180,6 +180,10 @@ namespace Raven.Client.ServerWide.Tcp
         {
             public readonly int ProtocolVersion;
 
+            private SupportedFeatures()
+            {
+            }
+
             public SupportedFeatures(int version)
             {
                 ProtocolVersion = version;

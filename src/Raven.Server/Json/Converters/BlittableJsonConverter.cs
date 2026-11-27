@@ -1,11 +1,12 @@
-﻿using System.Runtime.Serialization;
-using Newtonsoft.Json;
-using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+﻿using System;
+using System.Runtime.Serialization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Server.Json.Converters
 {
-    internal sealed class BlittableJsonConverter : RavenTypeJsonConverter<BlittableJsonReaderObject>
+    internal sealed class BlittableJsonConverter : JsonConverter<BlittableJsonReaderObject>
     {
         public static readonly BlittableJsonConverter Instance = new BlittableJsonConverter();
 
@@ -13,31 +14,20 @@ namespace Raven.Server.Json.Converters
         {
         }
 
-        protected override void WriteJson(BlittableJsonWriter writer, BlittableJsonReaderObject value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, BlittableJsonReaderObject value, JsonSerializerOptions options)
         {
-            writer.WriteValue(value);
+            RecordingJson.Write(writer, value);
         }
 
-        internal override BlittableJsonReaderObject ReadJson(BlittableJsonReader blittableReader)
+        public override BlittableJsonReaderObject Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (!(blittableReader.Value is BlittableJsonReaderObject blittableValue))
+            if (reader.TokenType != JsonTokenType.StartObject)
             {
                 throw new SerializationException(
-                    $"Can't convert {blittableReader.Value?.GetType()} type to {nameof(BlittableJsonReaderObject)}. The value must to be a complex object");
+                    $"Can't convert {reader.TokenType} token to {nameof(BlittableJsonReaderObject)}. The value must to be a complex object");
             }
 
-            if (blittableReader.TokenType == JsonToken.StartObject)
-            {
-                //Because the value that return is the blittable as a whole
-                //we skip the reading inside this blittable
-                blittableReader.SkipBlittableInside();
-            }
-
-            return
-                blittableValue.BelongsToContext(blittableReader.Context) &&
-                blittableValue.HasParent == false
-                    ? blittableValue
-                    : blittableValue.Clone(blittableReader.Context);
+            return RecordingJson.ReadObject(ref reader);
         }
     }
 }

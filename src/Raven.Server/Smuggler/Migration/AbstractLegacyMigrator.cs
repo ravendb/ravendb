@@ -7,7 +7,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
@@ -101,7 +100,7 @@ namespace Raven.Server.Smuggler.Migration
             using (var reader = new StreamReader(responseStream, Encoding.UTF8))
             {
                 var jsonStr = await reader.ReadToEndAsync();
-                return JsonConvert.DeserializeObject<List<string>>(jsonStr);
+                return JsonStringHelper.Deserialize<List<string>>(jsonStr);
             }
         }
 
