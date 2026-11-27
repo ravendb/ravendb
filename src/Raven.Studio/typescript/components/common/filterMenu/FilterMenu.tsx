@@ -1,6 +1,7 @@
 import "./FilterMenu.scss";
 import React, { ReactNode, useEffect, useRef, useState } from "react";
 import classNames from "classnames";
+import moment from "moment";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -9,6 +10,8 @@ import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { Checkbox } from "components/common/Checkbox";
 import { CustomDropdownToggle } from "components/common/Dropdown";
+import DatePicker from "components/common/DatePicker";
+import useUniqueId from "components/hooks/useUniqueId";
 import IconName from "typings/server/icons";
 
 interface FilterOption<T> {
@@ -43,7 +46,25 @@ export interface SingleChoiceFilterCategory<T = unknown> extends FilterCategoryB
     onChange(value: T | null): void;
 }
 
-export type FilterCategory = TextFilterCategory | CheckboxListFilterCategory | SingleChoiceFilterCategory;
+export interface DateRange {
+    start: Date | null;
+    end: Date | null;
+}
+
+export interface DateRangeFilterCategory extends FilterCategoryBase {
+    type: "dateRange";
+    value: DateRange;
+    onChange(value: DateRange): void;
+}
+
+export type FilterCategory =
+    | TextFilterCategory
+    | CheckboxListFilterCategory
+    | SingleChoiceFilterCategory
+    | DateRangeFilterCategory;
+
+const DATE_RANGE_LABEL_FORMAT = "DD/MM/YYYY HH:mm";
+const TIME_INPUT_FORMAT = "HH:mm";
 
 export function isFilterCategoryActive(category: FilterCategory): boolean {
     switch (category.type) {
@@ -53,6 +74,8 @@ export function isFilterCategoryActive(category: FilterCategory): boolean {
             return category.selectedValues.length > 0;
         case "singleChoice":
             return category.selectedValue != null;
+        case "dateRange":
+            return category.value.start != null || category.value.end != null;
     }
 }
 
@@ -67,6 +90,10 @@ function getFilterValueLabel(category: FilterCategory): string {
                 .join(", ");
         case "singleChoice":
             return category.options.find((x) => x.value === category.selectedValue)?.label;
+        case "dateRange":
+            return [category.value.start, category.value.end]
+                .map((x) => (x ? moment(x).format(DATE_RANGE_LABEL_FORMAT) : "..."))
+                .join(" - ");
     }
 }
 
@@ -78,6 +105,8 @@ function clearFilterCategory(category: FilterCategory) {
             return category.onChange([]);
         case "singleChoice":
             return category.onChange(null);
+        case "dateRange":
+            return category.onChange({ start: null, end: null });
     }
 }
 
@@ -303,6 +332,8 @@ function FilterCategoryControl({ category, closeMenu }: { category: FilterCatego
             return <CheckboxListFilter category={category} onEnter={closeMenu} />;
         case "singleChoice":
             return <SingleChoiceFilter category={category} onEnter={closeMenu} />;
+        case "dateRange":
+            return <DateRangeFilter category={category} />;
     }
 }
 
@@ -385,6 +416,61 @@ function SingleChoiceFilter({ category, onEnter }: { category: SingleChoiceFilte
                 );
             })}
         </>
+    );
+}
+
+function withTime(date: Date, time: string) {
+    const parsedTime = moment(time, TIME_INPUT_FORMAT);
+    return moment(date).hours(parsedTime.hours()).minutes(parsedTime.minutes()).toDate();
+}
+
+function DateRangeFilter({ category }: { category: DateRangeFilterCategory }) {
+    const { value, onChange } = category;
+    const idPrefix = useUniqueId("filter-menu-date-range-");
+    const [startTime, setStartTime] = useState(() =>
+        value.start ? moment(value.start).format(TIME_INPUT_FORMAT) : "00:00"
+    );
+    const [endTime, setEndTime] = useState(() => moment(value.end ?? undefined).format(TIME_INPUT_FORMAT));
+
+    const toRange = (startDate: Date | null, endDate: Date | null, start = startTime, end = endTime): DateRange => ({
+        start: startDate && moment(withTime(startDate, start)).startOf("minute").toDate(),
+        end: endDate && moment(withTime(endDate, end)).endOf("minute").toDate(),
+    });
+
+    return (
+        <div className="filter-menu-field filter-menu-date-range">
+            <DatePicker
+                inline
+                selectsRange
+                startDate={value.start}
+                endDate={value.end}
+                onChange={([startDate, endDate]) => onChange(toRange(startDate, endDate))}
+            />
+            <div className="hstack gap-2">
+                <Form.Group className="flex-fill" controlId={`${idPrefix}-start-time`}>
+                    <Form.Label className="small mb-1">Start time</Form.Label>
+                    <Form.Control
+                        type="time"
+                        value={startTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            setStartTime(e.target.value);
+                            onChange(toRange(value.start, value.end, e.target.value, endTime));
+                        }}
+                    />
+                </Form.Group>
+                <Form.Group className="flex-fill" controlId={`${idPrefix}-end-time`}>
+                    <Form.Label className="small mb-1">End time</Form.Label>
+                    <Form.Control
+                        type="time"
+                        value={endTime}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            setEndTime(e.target.value);
+                            onChange(toRange(value.start, value.end, startTime, e.target.value));
+                        }}
+                    />
+                </Form.Group>
+            </div>
+        </div>
     );
 }
 
