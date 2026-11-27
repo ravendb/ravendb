@@ -2602,6 +2602,33 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class ReadOnlyFieldsWithoutAdd
+    {
+        public readonly Queue<Exception> Errors = new();
+
+        public readonly Stack<string> Pending = new();
+
+        public string Name { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSkipsReadOnlyCollectionsWithoutAddLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("""{ "Errors": ["System.Exception: boom"], "Pending": ["a", "b"], "Name": "n" }""", "json"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ReadOnlyFieldsWithoutAdd>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ReadOnlyFieldsWithoutAdd>(json);
+
+            Assert.Empty(expected.Errors);
+            Assert.Empty(expected.Pending);
+            Assert.Equal("n", expected.Name);
+            Assert.Empty(actual.Errors);
+            Assert.Empty(actual.Pending);
+            Assert.Equal(expected.Name, actual.Name);
+        }
+    }
+
     private class UntypedNamedFloatingPointValues
     {
         public object NaN { get; set; }

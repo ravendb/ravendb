@@ -1400,6 +1400,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (constructedWithParameters && isCollection == false)
                     continue;
 
+                if (isCollection && IsConcreteWithoutAdder(property.PropertyType))
+                    continue;
+
                 Func<object, object> get = property.Get;
                 JsonConverter tracker = isCollection == false ? TrackPresentMembers(property) : null;
                 property.Set = (target, value) =>
@@ -1686,6 +1689,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (property.Get != null && property.Set != null && (present == null || property.IsExtensionData || present.Contains(typeInfo, i, property.Name, hasCaseOnlyNameCollisions)))
                     property.Set(target, property.Get(value));
             }
+        }
+
+        private static bool IsConcreteWithoutAdder(Type type)
+        {
+            return type.IsInterface == false && type.IsAbstract == false && _collectionAdders.GetOrAdd(type, CreateCollectionAdder) == null;
         }
 
         private static void AddItems(object target, object items)
