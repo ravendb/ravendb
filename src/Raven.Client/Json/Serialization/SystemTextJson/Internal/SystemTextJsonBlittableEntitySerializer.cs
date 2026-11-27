@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Text.Json;
 using Raven.Client.Documents.Identity;
 using Sparrow.Json;
 
@@ -26,8 +25,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using (var reader = new SystemTextJsonBlittableReader())
             {
                 reader.Initialize(json);
-                var jsonReader = new Utf8JsonReader(reader.GetUtf8Json(), _conventions.GetReaderOptions(_conventions.Options));
-                entity = JsonSerializer.Deserialize(ref jsonReader, type, _conventions.Options);
+                entity = _conventions.Deserialize(reader.GetUtf8Json(), type, _conventions.Options);
             }
 
             if (entity != null && _identityReadWithEntity.GetOrAdd(type, t => RavenJsonTypeInfoResolver.ReadsMetadataIdentity(_conventions.Options, t)) == false)

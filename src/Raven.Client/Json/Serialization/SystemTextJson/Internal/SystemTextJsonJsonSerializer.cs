@@ -14,14 +14,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
     {
         private readonly TypeNameHandling _typeNameHandling;
 
+        private readonly SystemTextJsonSerializationConventions _conventions;
+
         private readonly JsonReaderOptions _readerOptions;
 
         public JsonSerializerOptions Options { get; }
 
-        public SystemTextJsonJsonSerializer(JsonSerializerOptions options, JsonReaderOptions readerOptions, TypeNameHandling typeNameHandling)
+        public SystemTextJsonJsonSerializer(JsonSerializerOptions options, SystemTextJsonSerializationConventions conventions, TypeNameHandling typeNameHandling)
         {
             Options = options;
-            _readerOptions = readerOptions;
+            _conventions = conventions;
+            _readerOptions = conventions.GetReaderOptions(options);
             _typeNameHandling = typeNameHandling;
         }
 
@@ -258,14 +261,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public object Deserialize(IJsonReader reader, Type type)
         {
-            var jsonReader = new Utf8JsonReader(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), _readerOptions);
-            return JsonSerializer.Deserialize(ref jsonReader, type, Options);
+            return _conventions.Deserialize(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), type, Options);
         }
 
         public T Deserialize<T>(IJsonReader reader)
         {
-            var jsonReader = new Utf8JsonReader(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), _readerOptions);
-            return JsonSerializer.Deserialize<T>(ref jsonReader, Options);
+            return _conventions.Deserialize<T>(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), Options);
         }
 
         private void WriteJsonToBlittableWriter(SystemTextJsonBlittableWriter writer, ReadOnlySpan<byte> utf8Json)

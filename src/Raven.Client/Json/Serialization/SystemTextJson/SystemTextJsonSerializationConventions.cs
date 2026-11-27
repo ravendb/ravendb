@@ -126,6 +126,24 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             };
         }
 
+        internal object Deserialize(ReadOnlySpan<byte> utf8Json, Type type, JsonSerializerOptions options)
+        {
+            if (_unboundedReadDepth == false)
+                return JsonSerializer.Deserialize(utf8Json, type, options);
+
+            var reader = new Utf8JsonReader(utf8Json, GetReaderOptions(options));
+            return JsonSerializer.Deserialize(ref reader, type, options);
+        }
+
+        internal T Deserialize<T>(ReadOnlySpan<byte> utf8Json, JsonSerializerOptions options)
+        {
+            if (_unboundedReadDepth == false)
+                return JsonSerializer.Deserialize<T>(utf8Json, options);
+
+            var reader = new Utf8JsonReader(utf8Json, GetReaderOptions(options));
+            return JsonSerializer.Deserialize<T>(ref reader, options);
+        }
+
         internal JsonSerializerOptions Options => GetOptions(TypeNameHandling.Auto);
 
         private JsonSerializerOptions GetOptions(TypeNameHandling typeNameHandling)
@@ -162,15 +180,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
             TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
-            JsonSerializerOptions serializerOptions = GetOptions(typeNameHandling);
-            return new SystemTextJsonJsonSerializer(serializerOptions, GetReaderOptions(serializerOptions), typeNameHandling);
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), this, typeNameHandling);
         }
 
         IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
             TypeNameHandling typeNameHandling = options?.TypeNameHandling ?? TypeNameHandling.Auto;
-            JsonSerializerOptions serializerOptions = GetOptions(typeNameHandling);
-            return new SystemTextJsonJsonSerializer(serializerOptions, GetReaderOptions(serializerOptions), typeNameHandling);
+            return new SystemTextJsonJsonSerializer(GetOptions(typeNameHandling), this, typeNameHandling);
         }
 
         IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
