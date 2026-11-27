@@ -600,6 +600,24 @@
     background-color: transparent !important;
 }
 
+.react-datepicker__month .react-datepicker__day--in-range,
+.react-datepicker__month .react-datepicker__day--in-selecting-range {
+    width: calc(1.7rem + 0.332rem);
+    margin-inline: 0;
+    border-radius: 0;
+    background-color: var(--faded-primary);
+    color: colors.$primary-var;
+}
+
+.react-datepicker__month .react-datepicker__day--range-start,
+.react-datepicker__month .react-datepicker__day--range-end,
+.react-datepicker__month .react-datepicker__day--selecting-range-start,
+.react-datepicker__month .react-datepicker__day--selecting-range-end {
+    border-radius: sizes.$border-radius-sm;
+    background-color: colors.$primary-var;
+    color: colors.$white;
+}
+
 .react-datepicker__input-container {
     position: relative;
     display: inline-block;
