@@ -131,7 +131,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
 
     const renderUnsupportable = (children: ReactNode) =>
         isUnsupported ? (
-            <ConditionalPopover conditions={{ isActive: true, message: unsupportedReason }}>
+            <ConditionalPopover className="w-100" conditions={{ isActive: true, message: unsupportedReason }}>
                 <fieldset disabled className="item-disabled w-100 border-0 p-0 m-0">
                     {children}
                 </fieldset>

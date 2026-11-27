@@ -12,6 +12,7 @@
     border: 1px solid colors.$border-color-light-var;
     border-radius: bs5variables.$input-border-radius;
     flex: 1 1 auto;
+    min-width: 0;
 
     &.is-invalid {
         border-color: bs5variables.$form-invalid-border-color;
