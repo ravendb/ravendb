@@ -57,22 +57,35 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 throw new ArgumentException("Wrong format for Google Credentials.", e);
             }
 
-            using (JsonDocument credentials = JsonDocument.Parse(settings.GoogleCredentialsJson, CredentialsReadOptions))
-            {
-                foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
-                {
-                    if (string.Equals(property.Name, ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase) == false)
-                        continue;
-
-                    _projectId = property.Value.ValueKind == JsonValueKind.Null ? null : property.Value.ToString();
-                    break;
-                }
-            }
-
+            _projectId = ReadProjectId(settings.GoogleCredentialsJson);
             _bucketName = settings.BucketName;
             CancellationToken = cancellationToken ?? CancellationToken.None;
 
             _progress = progress;
+        }
+
+        internal static string ReadProjectId(string credentialsJson)
+        {
+            using (JsonDocument credentials = JsonDocument.Parse(credentialsJson, CredentialsReadOptions))
+            {
+                JsonElement? projectId = null;
+                foreach (JsonProperty property in credentials.RootElement.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, ProjectIdPropertyName, StringComparison.Ordinal))
+                    {
+                        projectId = property.Value;
+                        break;
+                    }
+
+                    if (projectId == null && string.Equals(property.Name, ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase))
+                        projectId = property.Value;
+                }
+
+                if (projectId is not { } value || value.ValueKind == JsonValueKind.Null)
+                    return null;
+
+                return value.ToString();
+            }
         }
 
         public Object UploadObject(string fileName, Stream stream, Dictionary<string, string> metadata = null)
