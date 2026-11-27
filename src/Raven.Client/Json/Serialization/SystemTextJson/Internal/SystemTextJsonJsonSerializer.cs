@@ -311,8 +311,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
             if (exponent < 0 && digits <= MaxExactDecimalDigits && jsonReader.TryGetDecimal(out decimal dec))
                 writer.WriteValue(dec);
-            else if (exponent >= 0 && digits <= MaxExactDoubleDigits)
-                writer.WriteValue(jsonReader.GetDouble());
+            else if (exponent >= 0 && digits <= MaxExactDoubleDigits && jsonReader.TryGetDouble(out double dbl) && double.IsInfinity(dbl) == false && double.IsNaN(dbl) == false)
+                writer.WriteValue(dbl);
             else
                 writer.WriteNumber(number);
         }

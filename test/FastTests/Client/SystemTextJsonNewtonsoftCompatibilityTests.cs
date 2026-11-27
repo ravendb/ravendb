@@ -741,6 +741,40 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonStoresExponentNumbersOutsideTheDoubleRange()
+    {
+        var holder = new HoldsSystemTextJsonNodes
+        {
+            Node = System.Text.Json.Nodes.JsonNode.Parse("{\"Big\":1e400,\"Small\":-2.5E+500}"),
+            Element = System.Text.Json.JsonDocument.Parse("{\"Big\":1e400}").RootElement
+        };
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = SerializeThroughWriter(holder, context))
+        {
+            Assert.True(json.TryGet(nameof(HoldsSystemTextJsonNodes.Node), out BlittableJsonReaderObject node));
+            Assert.True(node.TryGet("Big", out LazyNumberValue big));
+            Assert.Equal("1e400", big.ToString());
+            Assert.True(node.TryGet("Small", out LazyNumberValue small));
+            Assert.Equal("-2.5E+500", small.ToString());
+
+            var read = SystemTextJson.Serialization.DefaultConverter.FromBlittable<HoldsSystemTextJsonNodes>(json);
+            Assert.Equal("1e400", read.Element.GetProperty("Big").GetRawText());
+        }
+
+        static BlittableJsonReaderObject SerializeThroughWriter(object value, JsonOperationContext context)
+        {
+            Raven.Client.Json.Serialization.ISerializationConventions serialization = SystemTextJson.Serialization;
+            using (Raven.Client.Json.Serialization.IJsonWriter writer = serialization.CreateWriter(context))
+            {
+                serialization.CreateSerializer().Serialize(writer, value);
+                writer.FinalizeDocument();
+                return writer.CreateReader();
+            }
+        }
+    }
+
     private class Marker
     {
     }
