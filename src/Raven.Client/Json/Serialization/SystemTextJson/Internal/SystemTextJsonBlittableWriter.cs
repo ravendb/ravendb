@@ -97,7 +97,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         internal void WriteNumber(ReadOnlySpan<byte> utf8Number)
         {
+#if NETSTANDARD2_0
             string number = System.Text.Encoding.UTF8.GetString(utf8Number.ToArray());
+#else
+            string number = System.Text.Encoding.UTF8.GetString(utf8Number);
+#endif
             _manualBlittableJsonDocumentBuilder.WriteValue(new LazyNumberValue(Context.GetLazyString(number)));
         }
 
