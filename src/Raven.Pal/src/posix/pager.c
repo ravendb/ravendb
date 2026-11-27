@@ -485,6 +485,7 @@ _open_anonymous_pager(int fd,
     if (rc != SUCCESS)
         goto Error;
 
+    // from here on a failure keeps the range committed; the next grow reuses it
     mem = rvn_mmap(NULL, size, PROT_READ, MAP_SHARED, fd, 0L);
     if (mem == MAP_FAILED)
     {

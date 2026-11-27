@@ -146,14 +146,13 @@ rvn_free_journal_write_context(void* context, int32_t* detailed_error_code)
 EXPORT int32_t
 rvn_close_journal(void *handle, int32_t *detailed_error_code)
 {
-    int32_t rc;
+    int32_t rc = SUCCESS;
     struct journal_handle *jfh = (struct journal_handle *)handle;
     if (jfh->delete_on_close == true)
     {
-        int32_t unlink_rc = unlink(jfh->path);
-        if (unlink_rc != 0)
+        /* record the error and continue to close; a file that is already gone is what we wanted */
+        if (unlink(jfh->path) != 0 && errno != ENOENT)
         {
-            /* record the error and continue to close */
             rc = FAIL_UNLINK;
             *detailed_error_code = errno;
         }
@@ -165,7 +164,6 @@ rvn_close_journal(void *handle, int32_t *detailed_error_code)
         goto error_cleanup;
     }
 
-    rc = SUCCESS;
     goto cleanup;
 
 error_cleanup:

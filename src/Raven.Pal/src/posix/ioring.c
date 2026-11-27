@@ -161,9 +161,15 @@ void mark_all_cqes_as_errors(struct io_uring *ring, int rc)
         }
         g_worker.inflight--;
         struct workitem *work = io_uring_cqe_get_data(cqe);
+        int res = cqe->res;
         io_uring_cqe_seen(ring, cqe);
         if (work != NULL && !((uintptr_t)work & NON_FINAL_STAGE_TAG))
+        {
+            // a folder that was opened is the caller's to close
+            if (work->type == workitem_open_folders)
+                work->op.folder_sync.folderid = res;
             fail_work(work, rc);
+        }
     }
 }
 
@@ -878,13 +884,22 @@ rvn_sync_directories_ioring(void *handle, char **folders, int32_t count, int32_t
             .type = workitem_open_folders,
             .submittion = &submittion,
             .next = &arr[i + 1], // fine to also set on the last, queue_work will override it
-            .op = {.folder_sync = {.path = folders[i]}}};
+            .op = {.folder_sync = {.path = folders[i], .folderid = -1}}};
     }
     *detailed_error_code = 0;
     queue_work(&arr[0], &arr[count - 1]);
     rc = wait_for_work_completion(handle_ptr, &submittion, detailed_error_code);
     if (rc != SUCCESS)
     {
+        // the ring failed: every item is completed, the folders it opened before that are ours to close
+        if (rc == FAIL_IO_RING_WRITE_RESULT)
+        {
+            for (size_t i = 0; i < count; i++)
+            {
+                if (arr[i].op.folder_sync.folderid >= 0)
+                    close(arr[i].op.folder_sync.folderid);
+            }
+        }
         pthread_mutex_unlock(&handle_ptr->global_state->fsync_dir_arena.lock);
         // ignoring possible error code because we are in error path
         return rc;
