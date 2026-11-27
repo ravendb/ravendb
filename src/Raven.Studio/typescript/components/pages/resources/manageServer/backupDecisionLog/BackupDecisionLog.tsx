@@ -27,7 +27,7 @@ export default function BackupDecisionLog() {
     return (
         <div className="content-padding vstack">
             <div className="hstack justify-content-between mb-4">
-                <AboutViewHeading title="Backup Decision Log" icon="backups" marginBottom={0} />
+                <AboutViewHeading title="Backup Decision Log" icon="backup-history" marginBottom={0} />
                 <BackupDecisionLogInfoHub />
             </div>
             <div className="hstack justify-content-end mb-4">

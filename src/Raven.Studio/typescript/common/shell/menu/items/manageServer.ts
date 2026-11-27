@@ -332,7 +332,7 @@ function getManageServerMenuItem() {
             moduleId: reactUtils.bridgeToReact(BackupDecisionLog.default, "nonShardedView"),
             title: 'Backup Decision Log',
             nav: true,
-            css: 'icon-backups',
+            css: 'icon-backup-history',
             dynamicHash: appUrl.forBackupDecisionLog,
             requiredAccess: "Operator",
         }),
