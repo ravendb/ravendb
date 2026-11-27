@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.MsSQL, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.Migration
             using (WithSqlDatabase(provider, out var connectionString, out string schemaName, "basic"))
             {
                 var driver = DatabaseDriverDispatcher.CreateDriver(provider, connectionString);
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(Options.ForNewtonsoftJson()))
                 {
                     var db = await Databases.GetDocumentDatabaseInstanceFor(store);
 
