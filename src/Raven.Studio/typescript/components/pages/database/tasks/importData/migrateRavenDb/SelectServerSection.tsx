@@ -13,12 +13,12 @@ import {
 } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
 import { LoadingDots } from "components/common/LoadingDots";
-import SegmentedControl, { SegmentedControlItem } from "components/common/SegmentedControl";
+import SegmentedControl from "components/common/SegmentedControl";
 import { SelectOption } from "components/common/select/Select";
-import { RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
 import {
     AuthenticationMethod,
@@ -37,6 +37,7 @@ interface SelectServerSectionProps {
 }
 
 export default function SelectServerSection({ serverInfo, canDetect }: SelectServerSectionProps) {
+    const t = useStudioTranslation("importData");
     const { control, setValue } = useFormContext<MigrateRavenDbFormData>();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
@@ -52,27 +53,28 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
     const isLegacy = !!version && isLegacyVersion(version);
     const isRavenFsImport = isLegacy && isImportRavenFs;
     const lowerCaseUrl = serverUrl.toLowerCase();
-    const resourceLabel = isRavenFsImport ? "File system name" : "Database name";
+    const resourceContext = isRavenFsImport ? "fileSystem" : "database";
+    const resourceLabel = t("migrate.resourceName", { context: resourceContext });
 
     return (
         <ImportSection<MigrateRavenDbFormData>
             id={SELECT_SERVER_SECTION.id}
-            title={SELECT_SERVER_SECTION.label}
+            title={t(SELECT_SERVER_SECTION.label)}
             errorPaths={["server"]}
         >
             <Card className="p-4 mb-4">
                 {!canDetect && (
                     <RichAlert variant="info" className="mb-3">
-                        Migrating requires Operator security clearance (needed to detect the source server version).
+                        {t("migrate.operatorRequired")}
                     </RichAlert>
                 )}
                 <FormGroup>
-                    <FormLabel>Server URL</FormLabel>
+                    <FormLabel>{t("migrate.serverUrl")}</FormLabel>
                     <FormSelectAutocomplete
                         control={control}
                         name="server.serverUrl"
-                        aria-label="Server URL"
-                        placeholder="e.g. https://a.ravendb.example:8080"
+                        aria-label={t("migrate.serverUrl")}
+                        placeholder={t("migrate.serverUrlPlaceholder")}
                         options={toOptions(asyncServerUrls.result?.List)}
                         isLoading={asyncServerUrls.loading}
                     />
@@ -80,17 +82,17 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                 {lowerCaseUrl.startsWith("https://") && (
                     <FormGroup>
                         <FormSwitch control={control} name="server.isSkipServerCertificateValidation">
-                            Skip Server Certificate Validation
+                            {t("migrate.skipCertificateValidation")}
                         </FormSwitch>
                     </FormGroup>
                 )}
                 <FormGroup>
-                    <FormLabel>Server version</FormLabel>
+                    <FormLabel>{t("migrate.serverVersion")}</FormLabel>
                     <div className="position-relative">
                         <Form.Control readOnly value={isLoading ? "" : formatServerVersion(version)} />
                         {isLoading && (
                             <LoadingDots
-                                label="Detecting server version"
+                                label={t("migrate.detectingVersion")}
                                 className="position-absolute top-50 end-0 translate-middle-y"
                             />
                         )}
@@ -99,21 +101,24 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                 </FormGroup>
                 {isLegacy && (
                     <FormGroup>
-                        <FormLabel>Resource type</FormLabel>
+                        <FormLabel>{t("migrate.resourceType")}</FormLabel>
                         <FormRadioToggleWithIcon
                             control={control}
                             name="server.isImportRavenFs"
-                            leftItem={DATABASE_ITEM}
-                            rightItem={RAVEN_FS_ITEM}
+                            leftItem={{ label: t("migrate.resourceTypeDatabase"), value: false, iconName: "database" }}
+                            rightItem={{ label: t("migrate.resourceTypeRavenFs"), value: true, iconName: "filesystem" }}
                         />
                     </FormGroup>
                 )}
                 {isLegacy && (
                     <>
                         <FormGroup>
-                            <FormLabel>Authentication method</FormLabel>
+                            <FormLabel>{t("migrate.authenticationMethod")}</FormLabel>
                             <SegmentedControl<AuthenticationMethod>
-                                items={AUTHENTICATION_ITEMS}
+                                items={AUTHENTICATION_METHODS.map((value) => ({
+                                    value,
+                                    label: t(`migrate.authentication.${value}`),
+                                }))}
                                 selected={authenticationMethod}
                                 onSelect={(method) =>
                                     setValue("server.authenticationMethod", method, { shouldValidate: true })
@@ -123,16 +128,16 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         {authenticationMethod === "windows" && (
                             <>
                                 <FormGroup>
-                                    <FormLabel>User name</FormLabel>
+                                    <FormLabel>{t("migrate.userName")}</FormLabel>
                                     <FormInput
                                         control={control}
                                         name="server.userName"
                                         type="text"
-                                        placeholder="e.g. john.doe"
+                                        placeholder={t("migrate.userNamePlaceholder")}
                                     />
                                 </FormGroup>
                                 <FormGroup>
-                                    <FormLabel>Password</FormLabel>
+                                    <FormLabel>{t("migrate.password")}</FormLabel>
                                     <FormInput
                                         control={control}
                                         name="server.password"
@@ -141,12 +146,12 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                                     />
                                 </FormGroup>
                                 <FormGroup>
-                                    <FormLabel>Domain</FormLabel>
+                                    <FormLabel>{t("migrate.domain")}</FormLabel>
                                     <FormInput
                                         control={control}
                                         name="server.domain"
                                         type="text"
-                                        placeholder="e.g. CORP"
+                                        placeholder={t("migrate.domainPlaceholder")}
                                     />
                                 </FormGroup>
                             </>
@@ -154,7 +159,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         {authenticationMethod === "apiKey" && (
                             <>
                                 <FormGroup>
-                                    <FormLabel>API Key</FormLabel>
+                                    <FormLabel>{t("migrate.apiKey")}</FormLabel>
                                     <FormInput
                                         control={control}
                                         name="server.apiKey"
@@ -168,7 +173,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                                             control={control}
                                             name="server.isEnableBasicAuthenticationOverUnsecuredHttp"
                                         >
-                                            Enable Basic Authentication Over Unsecured Http
+                                            {t("migrate.enableBasicAuthentication")}
                                         </FormSwitch>
                                     </FormGroup>
                                 )}
@@ -182,15 +187,11 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         control={control}
                         name="server.databaseName"
                         aria-label={resourceLabel}
-                        placeholder={isRavenFsImport ? "e.g. FileSystem1" : "e.g. Northwind"}
+                        placeholder={t("migrate.resourceNamePlaceholder", { context: resourceContext })}
                         options={toOptions(isRavenFsImport ? fileSystemNames : databaseNames)}
                         isLoading={isLoading}
                     />
-                    {isLegacy && !isAuthorized && (
-                        <div className="text-warning mt-1">
-                            Unauthorized access to the server, please enter your credentials
-                        </div>
-                    )}
+                    {isLegacy && !isAuthorized && <div className="text-warning mt-1">{t("migrate.unauthorized")}</div>}
                 </FormGroup>
             </Card>
         </ImportSection>
@@ -201,20 +202,4 @@ function toOptions(values: string[] = []): SelectOption[] {
     return values.map((value) => ({ label: value, value }));
 }
 
-const DATABASE_ITEM: RadioToggleWithIconInputItem<boolean> = {
-    label: "Database",
-    value: false,
-    iconName: "database",
-};
-
-const RAVEN_FS_ITEM: RadioToggleWithIconInputItem<boolean> = {
-    label: "RavenFS",
-    value: true,
-    iconName: "filesystem",
-};
-
-const AUTHENTICATION_ITEMS: SegmentedControlItem<AuthenticationMethod>[] = [
-    { value: "none", label: "None" },
-    { value: "apiKey", label: "API Key" },
-    { value: "windows", label: "Windows Credentials" },
-];
+const AUTHENTICATION_METHODS: AuthenticationMethod[] = ["none", "apiKey", "windows"];

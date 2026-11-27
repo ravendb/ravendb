@@ -1,12 +1,15 @@
 import * as yup from "yup";
 import { FieldPath } from "react-hook-form";
+import { createTranslator } from "common/i18n/i18n";
+
+const t = createTranslator("importData");
 
 function getJavaScriptSyntaxError(script: string): string | null {
     try {
         new Function(script);
         return null;
     } catch (e) {
-        return e instanceof SyntaxError ? `Invalid JavaScript: ${e.message}` : null;
+        return e instanceof SyntaxError ? t("transformScript.invalidJavaScript", { message: e.message }) : null;
     }
 }
 
@@ -100,13 +103,15 @@ export const transformScriptSchema = yup.object({
     transformScript: yup.string().when("isUseTransformScript", {
         is: true,
         then: (schema) =>
-            schema.required("Transform script is required when enabled").test("valid-javascript", (value, ctx) => {
-                if (!value?.trim()) {
-                    return true; // "required" above already covers the empty case
-                }
-                const error = getJavaScriptSyntaxError(value);
-                return error ? ctx.createError({ message: error }) : true;
-            }),
+            schema
+                .required(() => t("transformScript.required"))
+                .test("valid-javascript", (value, ctx) => {
+                    if (!value?.trim()) {
+                        return true; // "required" above already covers the empty case
+                    }
+                    const error = getJavaScriptSyntaxError(value);
+                    return error ? ctx.createError({ message: error }) : true;
+                }),
     }),
 });
 

@@ -1,10 +1,13 @@
 import IconName from "typings/server/icons";
+import { TranslationKey } from "common/i18n/resources";
+
+export type SectionLabelKey = Extract<TranslationKey<"importData">, `sections.${string}`>;
 
 export interface SectionNavItem {
     id: string;
-    label: string;
+    label: SectionLabelKey;
     icon: IconName;
-    children?: { id: string; label: string }[];
+    children?: { id: string; label: SectionLabelKey }[];
 }
 
 export interface ErrorFieldTarget {

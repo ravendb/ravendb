@@ -11,6 +11,8 @@ import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
+import { createTranslator } from "common/i18n/i18n";
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import { useImportFromFileForm } from "./useImportFromFileForm";
 import { useImportOperation } from "./useImportOperation";
@@ -43,6 +45,7 @@ export default function ImportDatabaseFromFile() {
 }
 
 function ImportDatabaseFromFileContent() {
+    const t = useStudioTranslation("importData");
     const { forCurrentDatabase } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -101,7 +104,7 @@ function ImportDatabaseFromFileContent() {
     return (
         <FormProvider {...form}>
             <ImportPageLayout
-                title="Import data from a .ravendbdump file"
+                title={t("importFile.title")}
                 icon="import-database"
                 backUrl={importOptionsUrl}
                 navItems={sectionNav}
@@ -109,8 +112,7 @@ function ImportDatabaseFromFileContent() {
                 alert={
                     hasExistingData && (
                         <Alert variant="warning" className="w-50">
-                            <Icon icon="warning" color="warning" /> Note: Importing will overwrite any existing
-                            documents and indexes.
+                            <Icon icon="warning" color="warning" /> {t("importFile.overwriteNote")}
                         </Alert>
                     )
                 }
@@ -122,7 +124,7 @@ function ImportDatabaseFromFileContent() {
                             disabled={!canImport}
                             onClick={handleSubmit(startImport, onInvalidSubmit)}
                         >
-                            <Icon icon="import-database" /> Import database
+                            <Icon icon="import-database" /> {t("importFile.importButton")}
                         </Button>
                         <Button
                             variant="secondary"
@@ -130,7 +132,7 @@ function ImportDatabaseFromFileContent() {
                             disabled={!file}
                             onClick={() => setIsCommandModalOpen(true)}
                         >
-                            <Icon icon="code" /> Use import command
+                            <Icon icon="code" /> {t("importFile.commandButton")}
                         </Button>
                     </>
                 }
@@ -148,7 +150,7 @@ function ImportDatabaseFromFileContent() {
                         )}
                         {!hasInclude && (
                             <Alert variant="warning" className="mb-2">
-                                Note: At least one &apos;include&apos; option must be checked.
+                                {t("includeRequired")}
                             </Alert>
                         )}
                     </>
@@ -177,11 +179,12 @@ function ImportDatabaseFromFileContent() {
 }
 
 function uploadInProgressDialog(): JQueryDeferred<confirmDialogResult> {
+    const t = createTranslator("importData");
     const result = $.Deferred<confirmDialogResult>();
 
     viewHelpers
-        .confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", {
-            buttons: ["OK"],
+        .confirmationMessage(t("importFile.uploadInProgressTitle"), t("importFile.uploadInProgressMessage"), {
+            buttons: [t("importFile.ok")],
         })
         .always(() => result.resolve({ can: false }));
 

@@ -19,25 +19,18 @@ import { useImportRestrictions } from "components/pages/database/tasks/importDat
 import { getTasksMissingConnectionStrings } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
 import Card from "react-bootstrap/Card";
-import {
-    connectionStringLabels,
-    databaseSettingLabels,
-    ongoingTaskLabels,
-} from "components/pages/database/tasks/importData/shared/importLabels";
 import classNames from "classnames";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
-
-const missingConnectionStringWarning =
-    "This task is selected without its connection string. It will be imported but won't run until a matching " +
-    "connection string exists in this database.";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 
 interface ConfigurationToImportSectionProps {
     unsupportedReason?: string;
 }
 
 export default function ConfigurationToImportSection({ unsupportedReason }: ConfigurationToImportSectionProps) {
+    const t = useStudioTranslation("importData");
     const isUnsupported = !!unsupportedReason;
     const { control, setValue, resetField } = useFormContext<ImportOptionsFormData>();
     const {
@@ -141,18 +134,18 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
         );
 
     return (
-        <ImportSection id="configuration-to-import" title="Configuration to import">
+        <ImportSection id="configuration-to-import" title={t("sections.configurationToImport")}>
             <div className="d-flex justify-content-between align-items-center mb-2">
                 <h4 id="database-entities" className="m-0">
-                    Select database entities
+                    {t("configuration.databaseEntities")}
                 </h4>
                 <Button variant="link" size="sm" onClick={() => setAllEntities(!areAllEntitiesSelected)}>
-                    {areAllEntitiesSelected ? "Deselect all" : "Select all"}
+                    {t("toggleAll", { context: areAllEntitiesSelected ? "deselect" : "select" })}
                 </Button>
             </div>
             <div className="card p-4 mb-4">
                 <FormSwitch control={control} name="configuration.isIncludeIndexes" className="pb-1">
-                    Include Indexes
+                    {t("configuration.includeIndexes")}
                 </FormSwitch>
                 <div className="ms-4 d-flex flex-column gap-1">
                     <FormSwitch
@@ -160,16 +153,16 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                         name="configuration.isIncludeIndexHistory"
                         afterChange={forceIndexesOn}
                     >
-                        Include Index History
+                        {t("configuration.includeIndexHistory")}
                     </FormSwitch>
                     <FormSwitch control={control} name="configuration.isRemoveAnalyzers" afterChange={forceIndexesOn}>
-                        Remove Analyzers
+                        {t("configuration.removeAnalyzers")}
                     </FormSwitch>
                 </div>
                 <hr className="my-1" />
                 {renderUnsupportable(
                     <FormSwitch control={control} name="configuration.isIncludeIdentities" disabled={isUnsupported}>
-                        Include Identities
+                        {t("configuration.includeIdentities")}
                     </FormSwitch>
                 )}
                 <hr className="my-1" />
@@ -181,7 +174,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                 name="configuration.isIncludeConnectionStringsAndOngoingTasks"
                                 disabled={isUnsupported}
                             >
-                                Include Connection Strings &amp; Ongoing Tasks
+                                {t("configuration.includeTasks")}
                             </FormSwitch>
                             <Button
                                 variant="link"
@@ -193,7 +186,9 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                         : setValue("configuration.isCustomizeOngoingTasks", true, { shouldDirty: true })
                                 }
                             >
-                                {isCustomizeTasks ? "Reset to default" : "Customize"}
+                                {t("configuration.customizeTasks", {
+                                    context: isCustomizeTasks ? "reset" : "customize",
+                                })}
                             </Button>
                         </div>
                         <Collapse in={isIncludeTasks && isCustomizeTasks}>
@@ -201,13 +196,15 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                 <div className="row mt-3">
                                     <div className="col-md-6">
                                         <div className="import-list-header mb-1">
-                                            <span className="flex-grow-1 fw-semibold">Ongoing tasks</span>
+                                            <span className="flex-grow-1 fw-semibold">
+                                                {t("configuration.ongoingTasks")}
+                                            </span>
                                             <div className="d-flex align-items-center gap-2">
-                                                <span>Select all</span>
+                                                <span>{t("selectAll")}</span>
                                                 <Form.Check
                                                     type="switch"
                                                     id="select-all-ongoing-tasks"
-                                                    aria-label="Select all ongoing tasks"
+                                                    aria-label={t("configuration.selectAllOngoingTasks")}
                                                     label=""
                                                     className="m-0"
                                                     disabled={selectableOngoingTaskKeys.length === 0}
@@ -225,11 +222,11 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                                         restriction={ongoingTaskRestrictions[key]}
                                                         warning={
                                                             tasksMissingConnectionStrings.includes(key)
-                                                                ? missingConnectionStringWarning
+                                                                ? t("configuration.missingConnectionString")
                                                                 : undefined
                                                         }
                                                     >
-                                                        {ongoingTaskLabels[key]}
+                                                        {t(`ongoingTasks.${key}`)}
                                                     </RestrictedSwitch>
                                                 </div>
                                             ))}
@@ -237,13 +234,15 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                     </div>
                                     <div className="col-md-6">
                                         <div className="import-list-header mb-1">
-                                            <span className="flex-grow-1 fw-semibold">Connection strings</span>
+                                            <span className="flex-grow-1 fw-semibold">
+                                                {t("configuration.connectionStrings")}
+                                            </span>
                                             <div className="d-flex align-items-center gap-2">
-                                                <span>Select all</span>
+                                                <span>{t("selectAll")}</span>
                                                 <Form.Check
                                                     type="switch"
                                                     id="select-all-connection-strings"
-                                                    aria-label="Select all connection strings"
+                                                    aria-label={t("configuration.selectAllConnectionStrings")}
                                                     label=""
                                                     className="m-0"
                                                     disabled={selectableConnectionStringKeys.length === 0}
@@ -260,7 +259,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                                         name={`configuration.connectionStrings.${key}`}
                                                         restriction={connectionStringRestrictions[key]}
                                                     >
-                                                        {connectionStringLabels[key]}
+                                                        {t(`connectionStrings.${key}`)}
                                                     </RestrictedSwitch>
                                                 </div>
                                             ))}
@@ -271,7 +270,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                         </Collapse>
                         {isIncludeTasks && (
                             <Alert variant="info" className="mt-3 mb-0">
-                                <Icon icon="info" color="info" /> Imported ongoing tasks will be disabled by default.
+                                <Icon icon="info" color="info" /> {t("configuration.tasksDisabledInfo")}
                             </Alert>
                         )}
                     </>
@@ -279,7 +278,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
             </div>
 
             <h4 id="database-settings" className="mb-2">
-                Select database settings
+                {t("configuration.databaseSettings")}
             </h4>
             {renderUnsupportable(
                 <Card className="p-4">
@@ -291,7 +290,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                             onClick={() => setValue("configuration.isImportAllSettings", true, { shouldDirty: true })}
                         >
                             <Icon icon="database" margin="m-0" />
-                            Import all settings
+                            {t("configuration.importAllSettings")}
                         </button>
                         <button
                             type="button"
@@ -300,19 +299,19 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                             onClick={() => setValue("configuration.isImportAllSettings", false, { shouldDirty: true })}
                         >
                             <Icon icon="settings" addon="edit" margin="m-0" />
-                            Customize
+                            {t("configuration.customizeSettings")}
                         </button>
                     </div>
                     {!isImportAllSettings && (
                         <div className="mt-4">
                             <div className="import-list-header mb-1">
-                                <span className="flex-grow-1 fw-semibold">Setting name</span>
+                                <span className="flex-grow-1 fw-semibold">{t("configuration.settingName")}</span>
                                 <div className="d-flex align-items-center gap-2">
-                                    <span>Select all</span>
+                                    <span>{t("selectAll")}</span>
                                     <Form.Check
                                         type="switch"
                                         id="select-all-database-settings"
-                                        aria-label="Select all database settings"
+                                        aria-label={t("configuration.selectAllDatabaseSettings")}
                                         label=""
                                         className="m-0"
                                         checked={areAllSettingsSelected}
@@ -329,7 +328,7 @@ export default function ConfigurationToImportSection({ unsupportedReason }: Conf
                                             restriction={settingRestrictions[key]}
                                             warning={settingLimitWarnings[key]}
                                         >
-                                            {databaseSettingLabels[key]}
+                                            {t(`databaseSettings.${key}`)}
                                         </RestrictedSwitch>
                                     </div>
                                 ))}

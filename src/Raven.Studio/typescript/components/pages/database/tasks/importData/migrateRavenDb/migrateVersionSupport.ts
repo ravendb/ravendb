@@ -4,6 +4,9 @@ import {
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import { ImportRestriction } from "components/pages/database/tasks/importData/shared/importRestrictions";
 import { AuthenticationMethod } from "components/pages/database/tasks/importData/migrateRavenDb/migrateRavenDbValidation";
+import { createTranslator } from "common/i18n/i18n";
+
+const t = createTranslator("importData");
 
 type MajorVersion = Raven.Server.Smuggler.Migration.MajorVersion;
 
@@ -88,23 +91,22 @@ export function getMigratableDocumentToggles(version: SourceServerVersion): Migr
 
 export function formatServerVersion(version: SourceServerVersion | null): string {
     if (!version || version.majorVersion === "Unknown") {
-        return "N/A";
+        return t("migrate.versionNotAvailable");
     }
-    const build = `(build: ${version.buildVersion})`;
     switch (version.majorVersion) {
         case "V2":
-            return `2.x ${build}`;
+            return t("migrate.legacyVersion", { version: "2.x", build: version.buildVersion });
         case "V30":
-            return `3.0 ${build}`;
+            return t("migrate.legacyVersion", { version: "3.0", build: version.buildVersion });
         case "V35":
-            return `3.5 ${build}`;
+            return t("migrate.legacyVersion", { version: "3.5", build: version.buildVersion });
         default:
             return version.fullVersion || version.productVersion;
     }
 }
 
 export function getUnsupportedVersionReason(version: SourceServerVersion): string {
-    return `Not supported by source server version ${formatServerVersion(version)}`;
+    return t("migrate.unsupportedByVersion", { version: formatServerVersion(version) });
 }
 
 export function getVisibleDocumentToggles(version: SourceServerVersion | null): MigrateDocumentToggleKey[] {
@@ -120,7 +122,7 @@ export function getVersionToggleRestrictions(
     }
     const restriction = {
         reason: "sourceVersion",
-        label: "Source server version",
+        label: t("migrate.sourceServerVersion"),
         icon: "server",
         tooltip: getUnsupportedVersionReason(version),
     } satisfies ImportRestriction;

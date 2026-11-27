@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { DatabaseSettingKey } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
-import { databaseSettingLabels } from "components/pages/database/tasks/importData/shared/importLabels";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 
 type MinPeriodLicenseKey = "MinPeriodForRefreshInHours" | "MinPeriodForExpirationInHours";
 
@@ -18,6 +18,7 @@ export interface MinPeriodWarning {
 }
 
 export function useMinPeriodWarning(): MinPeriodWarning[] {
+    const t = useStudioTranslation("importData");
     const licenseStatus = useAppSelector(licenseSelectors.status);
 
     return useMemo(
@@ -29,8 +30,8 @@ export function useMinPeriodWarning(): MinPeriodWarning[] {
                     return [];
                 }
 
-                return [{ key, label: databaseSettingLabels[key], minPeriodInHours }];
+                return [{ key, label: t(`databaseSettings.${key}`), minPeriodInHours }];
             }),
-        [licenseStatus]
+        [licenseStatus, t]
     );
 }

@@ -6,6 +6,7 @@ import documentRefresh from "./locales/en/documentRefresh";
 import durationPicker from "./locales/en/durationPicker";
 import editCustomSorter from "./locales/en/editCustomSorter";
 import featureAvailabilitySummary from "./locales/en/featureAvailabilitySummary";
+import importData from "./locales/en/importData";
 import fieldWithDefault from "./locales/en/fieldWithDefault";
 import licenseLimitedFrequencyField from "./locales/en/licenseLimitedFrequencyField";
 import maxItemsToProcessField from "./locales/en/maxItemsToProcessField";
@@ -34,6 +35,7 @@ export const en = {
     durationPicker,
     editCustomSorter,
     featureAvailabilitySummary,
+    importData,
     fieldWithDefault,
     licenseLimitedFrequencyField,
     maxItemsToProcessField,

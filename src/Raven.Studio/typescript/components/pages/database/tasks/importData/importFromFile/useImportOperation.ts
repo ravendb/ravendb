@@ -7,6 +7,7 @@ import { useIsMounted } from "components/hooks/useIsMounted";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { useImportOperationMonitor } from "components/pages/database/tasks/importData/shared/useImportOperationMonitor";
 import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
@@ -15,6 +16,7 @@ import { ImportFromFileFormData } from "./importFromFileValidation";
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
 
 export function useImportOperation() {
+    const t = useStudioTranslation("importData");
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
     const { reportEvent } = useEventsCollector();
@@ -54,7 +56,7 @@ export function useImportOperation() {
             );
         } catch (error) {
             messagePublisher.reportError(
-                "Invalid import options",
+                t("importFile.invalidOptions"),
                 error?.responseText ?? String(error),
                 error?.statusText
             );
@@ -66,7 +68,7 @@ export function useImportOperation() {
             operationId = await tasksService.getNextOperationId(databaseName);
         } catch (error) {
             messagePublisher.reportError(
-                "Could not get next task id.",
+                t("importFile.nextTaskIdError"),
                 error?.responseText ?? String(error),
                 error?.statusText
             );

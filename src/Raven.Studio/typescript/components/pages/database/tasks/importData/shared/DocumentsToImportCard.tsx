@@ -6,6 +6,7 @@ import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { useAppSelector } from "components/store";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 import RestrictedSwitch from "components/pages/database/tasks/importData/shared/RestrictedSwitch";
 import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
 import {
@@ -20,12 +21,14 @@ interface DocumentsToImportCardProps {
 }
 
 interface ToggleExtras {
+    label?: ReactNode;
     afterChange?: (value: boolean) => void;
     warning?: string;
     className?: string;
 }
 
 export default function DocumentsToImportCard({ visibleToggles = documentToggleKeys }: DocumentsToImportCardProps) {
+    const t = useStudioTranslation("importData");
     const { control, setValue } = useFormContext<ImportOptionsFormData>();
     const documents = useWatch({ control, name: "documents" });
     const { documentToggles: restrictions } = useImportRestrictions();
@@ -45,7 +48,7 @@ export default function DocumentsToImportCard({ visibleToggles = documentToggleK
         selectableToggleKeys.forEach((key) => setValue(`documents.${key}`, value, { shouldDirty: true }));
     };
 
-    const renderToggle = (key: DocumentToggleKey, label: ReactNode, extras?: ToggleExtras) =>
+    const renderToggle = (key: DocumentToggleKey, extras?: ToggleExtras) =>
         visibleToggles.includes(key) && (
             <RestrictedSwitch
                 key={key}
@@ -56,19 +59,19 @@ export default function DocumentsToImportCard({ visibleToggles = documentToggleK
                 warning={extras?.warning}
                 className={extras?.className}
             >
-                {label}
+                {extras?.label ?? t(`documents.toggles.${key}`)}
             </RestrictedSwitch>
         );
 
-    const documentsToggle = renderToggle("isIncludeDocuments", "Include Documents", { className: "pb-1" });
+    const documentsToggle = renderToggle("isIncludeDocuments", { className: "pb-1" });
     const extensionToggles = [
-        renderToggle("isIncludeAttachments", "Include Attachments", { afterChange: forceDocumentsOn }),
-        renderToggle("isIncludeCounters", "Include Counters", { afterChange: forceDocumentsOn }),
-        renderToggle("isIncludeRevisions", "Include Revisions", { afterChange: forceDocumentsOn }),
-        renderToggle("isIncludeTimeSeries", "Include Time Series", { afterChange: forceDocumentsOn }),
-        renderToggle("isIncludeTimeSeriesDeletedRanges", "Include Time Series Deleted Ranges"),
-        renderToggle("isIncludeLegacyAttachments", "Include Legacy Attachments"),
-        renderToggle("isIncludeDocumentsTombstones", "Include Documents Tombstones"),
+        renderToggle("isIncludeAttachments", { afterChange: forceDocumentsOn }),
+        renderToggle("isIncludeCounters", { afterChange: forceDocumentsOn }),
+        renderToggle("isIncludeRevisions", { afterChange: forceDocumentsOn }),
+        renderToggle("isIncludeTimeSeries", { afterChange: forceDocumentsOn }),
+        renderToggle("isIncludeTimeSeriesDeletedRanges"),
+        renderToggle("isIncludeLegacyAttachments"),
+        renderToggle("isIncludeDocumentsTombstones"),
     ].filter(Boolean);
 
     const groups = [
@@ -78,33 +81,34 @@ export default function DocumentsToImportCard({ visibleToggles = documentToggleK
                 {extensionToggles.length > 0 && <div className="ms-4 d-flex flex-column gap-1">{extensionToggles}</div>}
             </>
         ),
-        renderToggle(
-            "isIncludeArtificialDocuments",
-            <>
-                Include Artificial Documents{" "}
-                <PopoverWithHoverWrapper message="Importing artificial documents might cause import error of Map-Reduce indexes with OutputReduceToCollection.">
-                    <span onClick={(e) => e.preventDefault()}>
-                        <Icon icon="info" color="info" margin="ms-1" />
-                    </span>
-                </PopoverWithHoverWrapper>
-            </>
-        ),
-        renderToggle("isIncludeArchivedDocuments", "Include Archived Documents"),
-        renderToggle("isIncludeExpiredDocuments", "Include Expired Documents"),
-        renderToggle("isIncludeConflicts", "Include Conflicts"),
-        renderToggle("isIncludeCompareExchange", "Include Compare Exchange"),
-        renderToggle("isIncludeCompareExchangeTombstones", "Include Compare Exchange Tombstones"),
-        renderToggle("isIncludeSubscriptions", "Include Subscriptions", { warning: subscriptionsLimitWarning }),
+        renderToggle("isIncludeArtificialDocuments", {
+            label: (
+                <>
+                    {t("documents.toggles.isIncludeArtificialDocuments")}{" "}
+                    <PopoverWithHoverWrapper message={t("documents.artificialDocumentsInfo")}>
+                        <span onClick={(e) => e.preventDefault()}>
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </span>
+                    </PopoverWithHoverWrapper>
+                </>
+            ),
+        }),
+        renderToggle("isIncludeArchivedDocuments"),
+        renderToggle("isIncludeExpiredDocuments"),
+        renderToggle("isIncludeConflicts"),
+        renderToggle("isIncludeCompareExchange"),
+        renderToggle("isIncludeCompareExchangeTombstones"),
+        renderToggle("isIncludeSubscriptions", { warning: subscriptionsLimitWarning }),
     ].filter(Boolean);
 
     return (
         <>
             <div className="d-flex justify-content-between align-items-center mb-2">
                 <h4 id="documents-and-extensions" className="m-0">
-                    Select documents and extensions
+                    {t("documents.title")}
                 </h4>
                 <Button variant="link" size="sm" onClick={() => setAll(!areAllSelected)}>
-                    {areAllSelected ? "Deselect all" : "Select all"}
+                    {t("toggleAll", { context: areAllSelected ? "deselect" : "select" })}
                 </Button>
             </div>
             <Card className="p-4">

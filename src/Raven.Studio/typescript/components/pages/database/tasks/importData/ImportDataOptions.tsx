@@ -3,17 +3,18 @@ import React from "react";
 import { AboutViewHeading } from "components/common/AboutView";
 import NavigationCard, { NavigationCardProps } from "components/common/navigationCard/NavigationCard";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 
 type ImportDataVariant = "ImportFile" | "ImportRavenDb" | "ImportCsv" | "ImportSql" | "ImportNoSql";
 
 export default function ImportDataOptions() {
+    const t = useStudioTranslation("importData");
     const { forCurrentDatabase } = useAppUrls();
 
     const importOptions: NavigationCardProps<ImportDataVariant>[] = [
         {
-            title: "From file (.ravendbdump)",
-            description:
-                "Restore a full database, including documents, indexes, and settings, from a single .ravendbdump backup file.",
+            title: t("options.file.title"),
+            description: t("options.file.description"),
             iconName: "file-import",
             variant: "ImportFile",
             link: forCurrentDatabase.importDatabaseFromFileUrl(),
@@ -22,9 +23,8 @@ export default function ImportDataOptions() {
             isShardingSupported: true,
         },
         {
-            title: "From RavenDB Server",
-            description:
-                "Migrate chosen collections, documents, and indexes directly from another active RavenDB server instance.",
+            title: t("options.ravenDb.title"),
+            description: t("options.ravenDb.description"),
             iconName: "server",
             variant: "ImportRavenDb",
             link: forCurrentDatabase.migrateRavenDbDatabaseUrl(),
@@ -33,9 +33,8 @@ export default function ImportDataOptions() {
             isShardingSupported: true,
         },
         {
-            title: "From CSV File",
-            description:
-                "Import documents into a new or existing collection by mapping columns from a CSV file to document properties.",
+            title: t("options.csv.title"),
+            description: t("options.csv.description"),
             iconName: "csv-import",
             variant: "ImportCsv",
             link: forCurrentDatabase.importCollectionFromCsv(),
@@ -44,9 +43,8 @@ export default function ImportDataOptions() {
             isShardingSupported: true,
         },
         {
-            title: "From SQL",
-            description:
-                "Migrate data from a SQL database using a connection string and a custom script to transform tables into documents.",
+            title: t("options.sql.title"),
+            description: t("options.sql.description"),
             iconName: "sql-etl",
             variant: "ImportSql",
             link: forCurrentDatabase.importDatabaseFromSql(),
@@ -55,8 +53,8 @@ export default function ImportDataOptions() {
             isShardingSupported: true,
         },
         {
-            title: "From NoSQL",
-            description: "Import documents from Azure Cosmos DB.",
+            title: t("options.noSql.title"),
+            description: t("options.noSql.description"),
             iconName: "documents",
             variant: "ImportNoSql",
             link: forCurrentDatabase.migrateDatabaseUrl(),
@@ -68,11 +66,11 @@ export default function ImportDataOptions() {
 
     return (
         <div className="content-margin">
-            <AboutViewHeading title="Import data" icon="import-database" marginBottom={2} />
-            <div className="text-muted mb-4">Choose an import option that best suits your needs.</div>
+            <AboutViewHeading title={t("options.title")} icon="import-database" marginBottom={2} />
+            <div className="text-muted mb-4">{t("options.description")}</div>
             <div className="d-grid gap-3 navigation-cards-grid">
                 {importOptions.map((option) => (
-                    <NavigationCard key={option.title} {...option} />
+                    <NavigationCard key={option.variant} {...option} />
                 ))}
             </div>
         </div>

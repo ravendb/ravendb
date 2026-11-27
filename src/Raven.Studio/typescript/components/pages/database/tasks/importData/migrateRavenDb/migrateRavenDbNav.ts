@@ -2,7 +2,7 @@ import { ErrorFieldTarget, SectionNavItem } from "components/pages/database/task
 
 export const SELECT_SERVER_SECTION: SectionNavItem = {
     id: "select-server",
-    label: "Select server & database",
+    label: "sections.selectServer",
     icon: "server",
 };
 
@@ -10,20 +10,20 @@ export const SECTION_NAV: SectionNavItem[] = [
     SELECT_SERVER_SECTION,
     {
         id: "data-to-import",
-        label: "Data to import",
+        label: "sections.dataToImport",
         icon: "document",
-        children: [{ id: "documents-and-extensions", label: "Documents and extensions" }],
+        children: [{ id: "documents-and-extensions", label: "sections.documentsAndExtensions" }],
     },
     {
         id: "configuration-to-import",
-        label: "Configuration to import",
+        label: "sections.configurationToImport",
         icon: "database",
         children: [
-            { id: "database-entities", label: "Database entities" },
-            { id: "database-settings", label: "Database settings" },
+            { id: "database-entities", label: "sections.databaseEntities" },
+            { id: "database-settings", label: "sections.databaseSettings" },
         ],
     },
-    { id: "import-processing", label: "Import processing", icon: "settings" },
+    { id: "import-processing", label: "sections.importProcessing", icon: "settings" },
 ];
 
 export const ERROR_FIELD_TARGETS: ErrorFieldTarget[] = [

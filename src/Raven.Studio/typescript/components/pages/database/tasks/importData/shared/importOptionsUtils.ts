@@ -7,6 +7,9 @@ import {
     OngoingTaskKey,
     ongoingTaskKeys,
 } from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { createTranslator } from "common/i18n/i18n";
+
+const t = createTranslator("importData");
 
 type DatabaseRecordItemType = Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
 type ImportConfiguration = ImportOptionsFormData["configuration"];
@@ -190,13 +193,13 @@ export function getItemsToWarnAbout(formData: Pick<ImportOptionsFormData, "docum
     }
     const items: string[] = [];
     if (d.isIncludeCounters) {
-        items.push("Counters");
+        items.push(t("documents.itemsWithoutDocuments.counters"));
     }
     if (d.isIncludeTimeSeries) {
-        items.push("Time Series");
+        items.push(t("documents.itemsWithoutDocuments.timeSeries"));
     }
     if (d.isIncludeRevisions) {
-        items.push("Revisions");
+        items.push(t("documents.itemsWithoutDocuments.revisions"));
     }
     return items;
 }

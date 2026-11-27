@@ -1,6 +1,7 @@
 import React from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
 import { SectionNavItem } from "components/pages/database/tasks/importData/shared/importNav";
 
 interface ImportSideNavProps {
@@ -33,6 +34,8 @@ interface ImportSideNavItemProps {
 }
 
 function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSideNavItemProps) {
+    const t = useStudioTranslation("importData");
+
     return (
         <>
             <button
@@ -42,7 +45,7 @@ function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSid
                 })}
                 onClick={() => onSelectSection(item.id)}
             >
-                <Icon icon={item.icon} margin="m-0" /> {item.label}
+                <Icon icon={item.icon} margin="m-0" /> {t(item.label)}
             </button>
             {item.children?.map((child) => (
                 <button
@@ -53,7 +56,7 @@ function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSid
                     })}
                     onClick={() => onSelectSection(child.id)}
                 >
-                    {child.label}
+                    {t(child.label)}
                 </button>
             ))}
         </>
