@@ -29,6 +29,7 @@ public class PagerStateDisposalTests(ITestOutputHelper output) : NoDisposalNeede
             using (var options = StorageEnvironmentOptions.ForPathForTests(path))
             {
                 options.ManualFlushing = true;
+                options.EnableJournalPoolPrewarming = false; // the directory is deleted right after Dispose
                 var env = new StorageEnvironment(options);
                 dataFile = env.DataPager.FileName;
 
