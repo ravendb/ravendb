@@ -14,6 +14,7 @@ using Raven.Server.Config;
 using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Util.Settings;
 using Xunit;
 
 namespace SlowTests.Issues;
@@ -39,7 +40,8 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
         var sharedOff = new Dictionary<string, string> { [disableKey] = "true", [maxJournalKey] = "4" };
 
         // Phase 1 (ON): seed + index a Lucene index, then force the index env's sync.
-        using (var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, CustomSettings = sharedOn }))
+        var padded = NewDataPath(); // long enough that the index journal paths exceed MAX_PATH on Windows
+        using (var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = padded, CustomSettings = sharedOn }))
         {
             using var store = new DocumentStore { Urls = new[] { server.WebUrl }, Database = dbName }.Initialize();
             await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new Raven.Client.ServerWide.DatabaseRecord(dbName)));
@@ -104,7 +106,7 @@ public class RavenDB_26707(ITestOutputHelper output) : RavenTestBase(output)
             var pinned = Directory.CreateDirectory(Path.Combine(indexDataPath, "pinned")).FullName;
             foreach (var journal in Directory.GetFiles(Path.Combine(indexDataPath, "Journals"), "*.journal"))
             {
-                var rc = Pal.rvn_hard_link_non_durable(journal, Path.Combine(pinned, Path.GetFileName(journal)), out var errorCode);
+                var rc = Pal.rvn_hard_link_non_durable(PathUtil.ToFullPath(journal), PathUtil.ToFullPath(Path.Combine(pinned, Path.GetFileName(journal))), out var errorCode);
                 Assert.True(rc == PalFlags.FailCodes.Success, $"could not pin {journal}: {rc} errno={errorCode}");
             }
             Output.WriteLine($"P3 end:   {await DescribeBranch(server, store, dbName, indexDataPath)}");
