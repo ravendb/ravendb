@@ -181,6 +181,19 @@ describe("BackupDecisionLog", () => {
             expect(lastQuery()).toBe("take=512&database=Invoices");
         });
 
+        it("shows load error when the server reports an error for the filtered query", async () => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
+
+            watchMock().mockImplementation((_query, onMessage) => {
+                const timeout = setTimeout(() => onMessage({ Type: "Error", Exception: "Invalid task id" }));
+                return { dispose: () => clearTimeout(timeout) };
+            });
+            await openFilterCategory(fireClick, screen, "Event");
+            await fireClick(screen.getByRole("checkbox", { name: "Failed" }));
+
+            expect(await screen.findByText(/Unable to load the backup decision log/)).toBeInTheDocument();
+        });
+
         it("ignores a failure of the connection closed by a filter change", async () => {
             const { screen, fireClick } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
             const onClosedConnectionError = watchMock().mock.lastCall[2];

@@ -65,7 +65,7 @@ export default function BackupDecisionLogStatusCards({ summary, runnerStartTime 
         <div className="backup-decision-log-status-cards mb-2">
             <StatusCard
                 title="Running now"
-                value={`${Running.Current}/${Running.Max}`}
+                value={`${Running.DatabasesBackingUp}/${Running.Max}`}
                 caption={
                     Running.WaitingForSlot > 0
                         ? `${Running.WaitingForSlot} waiting for a free slot`

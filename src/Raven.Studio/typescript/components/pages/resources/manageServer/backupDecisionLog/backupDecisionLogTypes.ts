@@ -34,7 +34,7 @@ export interface BackupDecisionOutcome {
 
 export interface BackupDecisionLogSummary {
     Running: {
-        Current: number;
+        DatabasesBackingUp: number;
         Max: number;
         WaitingForSlot: number;
     };
@@ -80,9 +80,16 @@ export interface BackupDecisionLogDetails {
     Tasks: BackupDecisionLogTask[] | null;
 }
 
-export interface BackupDecisionLogMessage extends BackupDecisionLogDetails {
+export interface BackupDecisionLogDetailsMessage extends BackupDecisionLogDetails {
     Type: "Snapshot" | "Update";
 }
+
+export interface BackupDecisionLogErrorMessage {
+    Type: "Error";
+    Exception: string;
+}
+
+export type BackupDecisionLogMessage = BackupDecisionLogDetailsMessage | BackupDecisionLogErrorMessage;
 
 export interface BackupDecisionFilters {
     reason: string;

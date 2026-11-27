@@ -20,12 +20,16 @@ export function useBackupDecisionLog(filters: BackupDecisionFilters) {
 
         const client = manageServerService.watchBackupDecisionLog(
             query,
-            ({ Type, ...details }) => {
-                if (!isDisposed) {
-                    dispatch(
-                        Type === "Snapshot" ? { type: "SnapshotLoaded", details } : { type: "UpdateLoaded", details }
-                    );
+            (message) => {
+                if (isDisposed) {
+                    return;
                 }
+                if (message.Type === "Error") {
+                    dispatch({ type: "ConnectionFailed" });
+                    return;
+                }
+                const { Type, ...details } = message;
+                dispatch(Type === "Snapshot" ? { type: "SnapshotLoaded", details } : { type: "UpdateLoaded", details });
             },
             () => {
                 if (!isDisposed) {

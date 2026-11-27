@@ -891,7 +891,7 @@ export class ManageServerStubs {
             NodeTag: "A",
             RunnerStartTime: minutesAgo(120),
             Summary: {
-                Running: { Current: 1, Max: 4, WaitingForSlot: 0 },
+                Running: { DatabasesBackingUp: 1, Max: 4, WaitingForSlot: 0 },
                 WaitingForSchedule: {
                     Count: 2,
                     NextBackupUtc: moment().add(23, "minutes").toISOString(),
