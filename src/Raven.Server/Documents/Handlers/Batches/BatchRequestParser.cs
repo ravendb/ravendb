@@ -16,6 +16,7 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Exceptions;
+using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -639,6 +640,10 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case CommandType.Counters:
                     if (commandData.Counters == null)
                         ThrowMissingNameProperty();
+                    break;
+
+                case CommandType.CompareExchangePUT:
+                    commandData.Document = CompareExchangeExpirationStorage.ConvertExpiresToUtc(ctx, commandData.Document, TimeZoneInfo.Local);
                     break;
             }
 

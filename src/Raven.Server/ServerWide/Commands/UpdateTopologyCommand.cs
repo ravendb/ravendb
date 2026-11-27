@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class UpdateTopologyCommand : UpdateDatabaseCommand
+    public sealed class UpdateTopologyCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public DatabaseTopology Topology;
         public DateTime At;

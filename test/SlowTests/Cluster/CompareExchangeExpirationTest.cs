@@ -87,8 +87,18 @@ namespace SlowTests.Cluster
                     var expirationDate = res.Metadata.GetString(Constants.Documents.Metadata.Expires);
                     Assert.NotNull(expirationDate);
                     var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                    Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
-                    Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
+                    if (dateTimeFormat.Value == DateTimeKind.Unspecified)
+                    {
+                        // the receiving node converts a local time to UTC, so every node expires it at the same time
+                        var written = DateTime.ParseExact(expiry.ToString(dateTimeFormat.Key), DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                        Assert.Equal(DateTimeKind.Utc, dateTime.Kind);
+                        Assert.Equal(new DateTime(written.Ticks - TimeZoneInfo.Local.GetUtcOffset(written).Ticks, DateTimeKind.Utc), dateTime);
+                    }
+                    else
+                    {
+                        Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
+                        Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
+                    }
 
                     server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
 

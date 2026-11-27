@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -246,6 +246,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         ErrorOnDatabaseDoesNotExists = false,
                         FromNodes = new[] { promotable },
+                        ClusterNodes = state.ClusterTopology.AllNodes.Keys.ToArray(),
                         HardDelete = _hardDeleteOnReplacement,
                         UpdateReplicationFactor = false
                     };
@@ -775,6 +776,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 ErrorOnDatabaseDoesNotExists = false,
                 FromNodes = nodesToDelete.ToArray(),
+                ClusterNodes = clusterTopology.AllNodes.Keys.ToArray(),
                 HardDelete = _hardDeleteOnReplacement,
                 UpdateReplicationFactor = false,
             };

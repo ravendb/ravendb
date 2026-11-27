@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -27,6 +27,9 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             : base(databaseName, uniqueRequestId)
         {
             Configuration = configuration;
+
+            if (Configuration.TaskId == 0)
+                Configuration.CreatedAt = DateTime.UtcNow;
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -37,7 +40,6 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
                 // this is a new backup configuration
                 newTask = true;
                 Configuration.TaskId = etag;
-                Configuration.CreatedAt = DateTime.UtcNow;
             }
             else
             {

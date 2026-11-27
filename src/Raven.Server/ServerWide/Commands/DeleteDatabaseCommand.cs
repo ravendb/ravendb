@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void Initialize(ServerStore serverStore, ClusterOperationContext context)
         {
-            ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
+            ClusterNodes ??= serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }
 
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -141,6 +141,10 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
             json[nameof(UpdateReplicationFactor)] = UpdateReplicationFactor;
             json[nameof(ShardNumber)] = ShardNumber;
+            if (ClusterNodes != null)
+            {
+                json[nameof(ClusterNodes)] = new DynamicJsonArray(ClusterNodes);
+            }
             if (FromNodes != null)
             {
                 json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);

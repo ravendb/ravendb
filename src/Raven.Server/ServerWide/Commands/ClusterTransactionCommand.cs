@@ -38,6 +38,8 @@ namespace Raven.Server.ServerWide.Commands
         //We take the current ticks in advance to ensure consistent results of the command execution on all nodes
         public long CommandCreationTicks = long.MinValue;
 
+        private DateTime CommandCreationTime => CommandCreationTicks > 0 ? new DateTime(CommandCreationTicks, DateTimeKind.Utc) : default;
+
         public sealed class ClusterTransactionDataCommand : IDynamicJson, IDisposable
         {
             public CommandType Type;
@@ -528,14 +530,16 @@ namespace Raven.Server.ServerWide.Commands
             private readonly RawDatabaseRecord _record;
             private readonly long _index;
             private readonly ClusterTransactionOptions _options;
+            private readonly DateTime _lastModified;
             private long _initialCount;
             private readonly Dictionary<int, List<SingleCommandForShard>> _commands;
             private int _processed = 0;
-            public CommandsPerShard(RawDatabaseRecord record, long index, ClusterTransactionOptions options, long initialCount)
+            public CommandsPerShard(RawDatabaseRecord record, long index, ClusterTransactionOptions options, DateTime lastModified, long initialCount)
             {
                 _record = record;
                 _index = index;
                 _options = options;
+                _lastModified = lastModified;
                 _initialCount = initialCount;
                 _commands = new Dictionary<int, List<SingleCommandForShard>>();
             }
@@ -603,6 +607,7 @@ namespace Raven.Server.ServerWide.Commands
                     ref _initialCount,
                     _options.DisableAtomicDocumentWrites,
                     _index,
+                    _lastModified,
                     _record.Sharding.Shards[shardNumber].DatabaseTopologyIdBase64,
                     _record.GetClusterTransactionId());
             }
@@ -622,6 +627,7 @@ namespace Raven.Server.ServerWide.Commands
             ref long initialCount,
             bool? disableAtomicDocumentWrites,
             long index,
+            DateTime lastModified,
             string databaseTopologyIdBase64,
             string clusterTransactionId)
         {
@@ -631,7 +637,7 @@ namespace Raven.Server.ServerWide.Commands
             var result = new DynamicJsonValue
             {
                 [nameof(ICommandData.Type)] = type, 
-                [Constants.Documents.Metadata.LastModified] = DateTime.UtcNow,
+                [Constants.Documents.Metadata.LastModified] = lastModified,
             };
 
             switch (type)
@@ -682,7 +688,7 @@ namespace Raven.Server.ServerWide.Commands
 
             if (rawRecord.IsSharded)
             {
-                var perShard = new CommandsPerShard(rawRecord, index, Options, prevCount);
+                var perShard = new CommandsPerShard(rawRecord, index, Options, CommandCreationTime, prevCount);
 
                 foreach (BlittableJsonReaderObject command in commands)
                 {
@@ -707,7 +713,7 @@ namespace Raven.Server.ServerWide.Commands
                 if (command.TryGet(nameof(ClusterTransactionDataCommand.Id), out string id) == false)
                     throw new InvalidOperationException($"Got cluster transaction database command without an id: {command}");
 
-                var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, rawRecord.Topology.DatabaseTopologyIdBase64,
+                var dataCmdRes = GetCommandResult(command, id, ref prevCount, Options.DisableAtomicDocumentWrites, index, CommandCreationTime, rawRecord.Topology.DatabaseTopologyIdBase64,
                     rawRecord.GetClusterTransactionId());
                 result.Add(dataCmdRes);
             }

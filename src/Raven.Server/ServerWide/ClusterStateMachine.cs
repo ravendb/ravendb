@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -532,18 +532,9 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveQueueSinkProcessStateCommand):
                     case nameof(UpdateCdcSinkProcessStateCommand):
                     case nameof(RemoveCdcSinkProcessStateCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
-
-                        if (result != null)
-                            leader?.SetStateOf(index, result);
-                        break;
-
                     case nameof(PutShardedSubscriptionCommand):
                     case nameof(PutSubscriptionCommand):
-                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result, onBeforeCommandExecuted: (items, updateValueCommand) =>
-                        {
-                            AssertSubscriptionsLicenseLimits(serverStore, items, (PutSubscriptionCommand)updateValueCommand, context);
-                        });
+                        SetValueForTypedDatabaseCommand(context, type, cmd, index, out result);
 
                         if (result != null)
                             leader?.SetStateOf(index, result);
@@ -600,7 +591,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutLicenseCommand):
-                        AssertLicense(context, type, cmd, serverStore);
                         PutValue<License>(context, type, cmd, index);
                         break;
 
@@ -621,7 +611,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideBackupConfigurationCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideBackups);
 
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
@@ -639,7 +628,6 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideExternalReplicationCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideExternalReplications);
 
                         var serverWideExternalReplication = UpdateValue<ServerWideExternalReplication>(context, type, cmd, index, skipNotifyValueChanged: true);
                         UpdateDatabasesWithExternalReplication(context, type, serverWideExternalReplication, index);
@@ -656,12 +644,10 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutServerWideConnectionStringCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
                         PutServerWideConnectionString(context, type, cmd, index);
                         break;
 
                     case nameof(RemoveServerWideConnectionStringCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideConnectionStrings);
                         var deleteCSConfiguration = UpdateValue<RemoveServerWideConnectionStringCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
                         RemoveServerWideConnectionStringFromAllDatabases(deleteCSConfiguration, context, type, index);
                         break;
@@ -682,23 +668,19 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(PutClientConfigurationCommand):
-                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutClientConfiguration(context, type, cmd, index, serverStore);
                         break;
 
                     case nameof(PutServerWideStudioConfigurationCommand):
-                        AssertLicenseLimits(type, serverStore, databaseRecord: null, items: null, context);
                         PutValue<ServerWideStudioConfiguration>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideAnalyzerCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideAnalyzers);
 
                         PutValue<AnalyzerDefinition>(context, type, cmd, index);
                         break;
 
                     case nameof(PutServerWideSorterCommand):
-                        AssertServerWideFor(serverStore, LicenseAttribute.ServerWideCustomSorters);
 
                         PutValue<SorterDefinition>(context, type, cmd, index);
                         break;
@@ -825,7 +807,7 @@ namespace Raven.Server.ServerWide
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
             try
             {
-                var subscriptionCommands = AssertSubscriptionsBatchLicenseLimits<T>(serverStore, items, subscriptionCommandsBlittable, type, context);
+                var subscriptionCommands = ReadSubscriptionBatch<T>(subscriptionCommandsBlittable, type);
                 foreach (var command in subscriptionCommands)
                 {
                     updateCommand = command;
@@ -1198,6 +1180,9 @@ namespace Raven.Server.ServerWide
 
                 cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
 
+                if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.OldThumbprint), out string oldThumbprint) == false || oldThumbprint == null)
+                    oldThumbprint = serverStore.Server.Certificate.ServerCertificate.Thumbprint;
+
                 var x509Certificate = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(cert));
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not allowed
                 using (Slice.From(context.Allocator, CertificateReplacement.CertificateReplacementDoc, out var key))
@@ -1206,7 +1191,7 @@ namespace Raven.Server.ServerWide
                     {
                         [nameof(CertificateReplacement.Certificate)] = cert,
                         [nameof(CertificateReplacement.Thumbprint)] = x509Certificate.Thumbprint,
-                        [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.ServerCertificate.Thumbprint,
+                        [nameof(CertificateReplacement.OldThumbprint)] = oldThumbprint,
                         [nameof(CertificateReplacement.Confirmations)] = 0,
                         [nameof(CertificateReplacement.Replaced)] = 0,
                         [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately
@@ -1544,7 +1529,7 @@ namespace Raven.Server.ServerWide
             return true;
         }
 
-        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result, Action<Table, UpdateValueForDatabaseCommand> onBeforeCommandExecuted = null)
+        private void SetValueForTypedDatabaseCommand(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
             UpdateValueForDatabaseCommand updateCommand = null;
             Exception exception = null;
@@ -1553,8 +1538,6 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
                 updateCommand = (UpdateValueForDatabaseCommand)JsonDeserializationCluster.Commands[type](cmd);
-
-                onBeforeCommandExecuted?.Invoke(items, updateCommand);
 
                 using (var databaseRecord = ReadRawDatabaseRecord(context, updateCommand.DatabaseName))
                 {
@@ -1835,13 +1818,6 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    AssertLicenseLimits(type, serverStore, addDatabaseCommand.Record, items, context);
-
-                    foreach (var command in _licenseLimitsCommandsForCreateDatabase)
-                    {
-                        AssertLicenseLimits(command, serverStore, addDatabaseCommand.Record, items, context);
-                    }
-
                     bool shouldSetClientConfigEtag;
                     using (var oldDatabaseRecord = ReadRawDatabaseRecord(context, addDatabaseCommand.Name))
                     {
@@ -2018,7 +1994,7 @@ namespace Raven.Server.ServerWide
                 var remote = addDatabaseCommand.Record.Topologies.ToArray();
                 if (databaseExists == false)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -2026,7 +2002,7 @@ namespace Raven.Server.ServerWide
 
                 if (remote.Length != local.Length)
                 {
-                    AddStampToAllRemotes(index, remote);
+                    AddStampToAllRemotes(context, index, remote);
                     return true;
                 }
 
@@ -2046,13 +2022,13 @@ namespace Raven.Server.ServerWide
                     if (nameFound == false)
                     {
                         Debug.Assert(false, $"Same number of topologies {remote.Length}, but can't find remote topology {remoteName} in local topologies");
-                        AddStampToAllRemotes(index, remote);
+                        AddStampToAllRemotes(context, index, remote);
                         return true;
                     }
 
                     if (topologyFound == false)
                     {
-                        AddStampToRemote(index, remoteTopology);
+                        AddStampToRemote(context, index, remoteTopology);
                         changed = true;
                     }
                 }
@@ -2161,21 +2137,21 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void AddStampToAllRemotes(long index, (string Name, DatabaseTopology Topology)[] remote)
+        private void AddStampToAllRemotes(ClusterOperationContext context, long index, (string Name, DatabaseTopology Topology)[] remote)
         {
             foreach (var (name, topology) in remote)
             {
-                AddStampToRemote(index, topology);
+                AddStampToRemote(context, index, topology);
             }
         }
 
-        private void AddStampToRemote(long index, DatabaseTopology topology)
+        private void AddStampToRemote(ClusterOperationContext context, long index, DatabaseTopology topology)
         {
             topology.Stamp = new LeaderStamp
             {
                 Index = index,
                 LeadersTicks = -2,
-                Term = _parent.CurrentTerm
+                Term = _parent.GetTermForKnownExisting(context, index)
             };
         }
 
@@ -2620,20 +2596,25 @@ namespace Raven.Server.ServerWide
                     return;
 
                 // here we'll clear the old values
-                var samePublicKeyHash = new SortedList<DateTime, long>();
+                var samePublicKeyHash = new List<(DateTime NotAfter, string Key, long Id)>();
                 foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeySlice, publicKeySlice, 0))
                 {
                     using var accessBlittable = new BlittableJsonReaderObject(result.Result.Reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
 
                     accessBlittable.TryGet(nameof(command.NotAfter), out DateTime notAfter);
 
-                    samePublicKeyHash.Add(notAfter, result.Result.Reader.Id);
+                    samePublicKeyHash.Add((notAfter, result.Result.Reader.ReadString((int)ReplicationCertificatesTable.Thumbprint), result.Result.Reader.Id));
                 }
 
-                while (samePublicKeyHash.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
+                samePublicKeyHash.Sort((x, y) =>
                 {
-                    certs.Delete(samePublicKeyHash.Values[0]);
-                    samePublicKeyHash.RemoveAt(0);
+                    var compare = x.NotAfter.CompareTo(y.NotAfter);
+                    return compare != 0 ? compare : string.CompareOrdinal(x.Key, y.Key);
+                });
+
+                for (var i = 0; i < samePublicKeyHash.Count - Constants.Certificates.MaxNumberOfCertsWithSameHash; i++)
+                {
+                    certs.Delete(samePublicKeyHash[i].Id);
                 }
             }
         }
@@ -2798,8 +2779,6 @@ namespace Raven.Server.ServerWide
                         DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseRecord, serverStore);
                         return;
                     }
-
-                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context, updateCommand);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
@@ -3624,7 +3603,11 @@ namespace Raven.Server.ServerWide
         public List<CertificateDefinition> GetCertificatesByPinningHashSortedByExpiration(ClusterOperationContext context, string hash)
         {
             var list = GetCertificatesByPinningHash(context, hash).ToList();
-            list.Sort((x, y) => Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter));
+            list.Sort((x, y) =>
+            {
+                var compare = Nullable.Compare<DateTime>(y.NotAfter, x.NotAfter);
+                return compare != 0 ? compare : string.CompareOrdinal(x.Thumbprint, y.Thumbprint);
+            });
             return list;
         }
 

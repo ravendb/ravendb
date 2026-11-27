@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
@@ -8,6 +8,7 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Commercial;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -118,6 +119,11 @@ namespace Raven.Server.ServerWide.Commands
                 Database = databaseName,
                 TopologyDiscoveryUrls = topologyDiscoveryUrls
             };
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            ClusterStateMachine.AssertServerWideFor(serverStore, LicenseAttribute.ServerWideExternalReplications);
         }
     }
 }

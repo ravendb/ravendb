@@ -1,4 +1,4 @@
-﻿using Raven.Server.Commercial;
+using Raven.Server.Commercial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -37,6 +37,11 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            serverStore.Cluster.AssertLicense(context, nameof(PutLicenseCommand), Raw, serverStore);
         }
     }
 }

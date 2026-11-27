@@ -1,4 +1,4 @@
-﻿using Raven.Client;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -26,6 +26,11 @@ namespace Raven.Server.ServerWide.Commands
         public override DynamicJsonValue ValueToJson()
         {
             return Value?.ToJson();
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            serverStore.Cluster.AssertLicenseLimits(GetType().Name, serverStore, databaseRecord: null, items: null, context);
         }
     }
 }

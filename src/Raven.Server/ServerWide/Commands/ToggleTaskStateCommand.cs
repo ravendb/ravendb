@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class ToggleTaskStateCommand : UpdateDatabaseCommand
+    public sealed class ToggleTaskStateCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public long TaskId;
         public OngoingTaskType TaskType;

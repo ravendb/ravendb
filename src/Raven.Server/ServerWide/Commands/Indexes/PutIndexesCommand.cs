@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes
 {
-    public sealed class PutIndexesCommand : UpdateDatabaseCommand
+    public sealed class PutIndexesCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public List<IndexDefinition> Static = new List<IndexDefinition>();
 

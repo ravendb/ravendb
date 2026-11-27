@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -16,7 +16,7 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide.Commands.AI
 {
-    public class AddOrUpdateAiAgentCommand : UpdateDatabaseCommand
+    public class AddOrUpdateAiAgentCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public AiAgentConfiguration Configuration;
 

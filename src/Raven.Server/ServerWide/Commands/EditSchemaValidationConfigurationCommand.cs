@@ -1,4 +1,4 @@
-﻿using Raven.Client;
+using Raven.Client;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands;
 
-public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
+public class EditSchemaValidationConfigurationCommand : UpdateDatabaseRecordFeaturesCommand
 {
     public SchemaValidationConfiguration Configuration;
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2012,7 +2012,8 @@ namespace Raven.Server.ServerWide
             var deleteCommand = new DeleteDatabaseCommand(db, raftRequestId)
             {
                 HardDelete = hardDelete,
-                FromNodes = fromNodes
+                FromNodes = fromNodes,
+                ClusterNodes = GetClusterTopology().AllNodes.Keys.ToArray()
             };
             return SendToLeaderAsync(deleteCommand);
         }

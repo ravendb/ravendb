@@ -81,6 +81,7 @@ namespace Raven.Server.Smuggler.Documents.Actions
             if (ClusterWideTransactionHelper.IsAtomicGuardKey(key, out var docId) && TryHandleAtomicGuard(key, docId, value, existingDocument))
                 return anyCommandsSent;
 
+            value = CompareExchangeExpirationStorage.ConvertExpiresToUtc(_context, value, TimeZoneInfo.Local);
             _compareExchangeAddOrUpdateCommands.Add(new AddOrUpdateCompareExchangeCommand(_databaseName, key, value, 0, _context, RaftIdGenerator.DontCareId, fromBackup: true));
             _compareExchangeValuesSize.Add(value.Size, SizeUnit.Bytes);
 

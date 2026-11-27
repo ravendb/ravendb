@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.TransactionMerger.Commands;
@@ -135,6 +136,22 @@ namespace Raven.Server.Rachis
                 }
                 else
                 {
+                    var modifiedPages = context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages;
+                    try
+                    {
+                        Command.AssertBeforeAppend(context, _engine.ServerStore, _engine.GetLastEntryIndex(context) + 1);
+                    }
+                    catch (Exception e)
+                    {
+                        _tcs.TrySetResult(Task.FromException<(long, object)>(e));
+                        return;
+                    }
+                    finally
+                    {
+                        Debug.Assert(context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages == modifiedPages,
+                            $"{Command.GetType().Name}.{nameof(CommandBase.AssertBeforeAppend)} must not modify the cluster state");
+                    }
+
                     _engine.InvokeBeforeAppendToRaftLog(context, this);
                     var term = _leader.Term;
                     if (_engine.ForTestingPurposes?.ModifyTermBeforeRachisMergedCommandInsertToLeaderLog != null)

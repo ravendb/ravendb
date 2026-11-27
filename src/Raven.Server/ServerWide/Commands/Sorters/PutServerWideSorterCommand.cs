@@ -1,7 +1,8 @@
-﻿using Raven.Client.Documents.Queries.Sorting;
+using Raven.Client.Documents.Queries.Sorting;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Raven.Server.Commercial;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
@@ -42,6 +43,11 @@ namespace Raven.Server.ServerWide.Commands.Sorters
         public static string ExtractName(string name)
         {
             return name.Substring(Prefix.Length);
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            ClusterStateMachine.AssertServerWideFor(serverStore, LicenseAttribute.ServerWideCustomSorters);
         }
     }
 }

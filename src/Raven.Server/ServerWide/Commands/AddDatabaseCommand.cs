@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -59,6 +60,11 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(IsRestore)] = IsRestore;
 
             return djv;
+        }
+
+        public override void AssertBeforeAppend(ClusterOperationContext context, ServerStore serverStore, long index)
+        {
+            serverStore.Cluster.AssertCreateDatabaseLicenseLimits(context, serverStore, Record);
         }
     }
 }

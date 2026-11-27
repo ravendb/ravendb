@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.AI;
@@ -79,7 +79,18 @@ public sealed partial class ClusterStateMachine
         nameof(ToggleTaskStateCommand),
     };
 
-    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
+    internal void AssertCreateDatabaseLicenseLimits(ClusterOperationContext context, ServerStore serverStore, DatabaseRecord databaseRecord)
+    {
+        var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+        AssertLicenseLimits(nameof(AddDatabaseCommand), serverStore, databaseRecord, items, context);
+
+        foreach (var command in _licenseLimitsCommandsForCreateDatabase)
+        {
+            AssertLicenseLimits(command, serverStore, databaseRecord, items, context);
+        }
+    }
+
+    internal void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand = null)
     {
         if (updateDatabaseCommand is UpdateDatabaseRecordFeaturesCommand { Disabled: true })
             return;
@@ -218,7 +229,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void AssertLicense(ClusterOperationContext context, string type, BlittableJsonReaderObject bjro, ServerStore serverStore)
+    internal void AssertLicense(ClusterOperationContext context, string type, BlittableJsonReaderObject bjro, ServerStore serverStore)
     {
         LicenseStatus newLicenseLimits;
 
@@ -240,7 +251,8 @@ public sealed partial class ClusterStateMachine
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-        AssertClusterSizeAndCores(serverStore, newLicenseLimits);
+        // The leader runs this before the command is in the log, so it may read the topology: Apply() never checks it
+        AssertClusterSizeAndCores(serverStore.GetClusterTopology(context).AllNodes.Count, newLicenseLimits);
 
         var emptySubscriptionExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
@@ -263,7 +275,6 @@ public sealed partial class ClusterStateMachine
             AssertDataArchival(databaseRecord, newLicenseLimits, context);
             AssertEncryptionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertDynamicNodesDistribution(databaseRecord, newLicenseLimits, context);
-            AssertSnmp(serverStore, newLicenseLimits);
             AssertRavenEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertSqlEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertElasticSearchEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
@@ -675,7 +686,7 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    private void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
+    internal void AssertSubscriptionsLicenseLimits(ServerStore serverStore, Table items, PutSubscriptionCommand putSubscriptionCommand, ClusterOperationContext context)
     {
         Dictionary<string, List<string>> subscriptionsNamesPerDatabase = new()
         {
@@ -694,22 +705,30 @@ public sealed partial class ClusterStateMachine
         AssertNumberOfSubscriptionsPerClusterLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase);
     }
 
-    private List<T> AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, BlittableJsonReaderArray subscriptionCommands, string type,
-        ClusterOperationContext context)
+    private static List<T> ReadSubscriptionBatch<T>(BlittableJsonReaderArray subscriptionCommands, string type)
         where T : PutSubscriptionCommand
     {
-        var includesRevisions = false;
         var putSubscriptionCommandsList = new List<T>();
-        var subscriptionsNamesPerDatabase = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (BlittableJsonReaderObject command in subscriptionCommands)
         {
             if (command.TryGet("Type", out string putSubscriptionType) == false || putSubscriptionType != typeof(T).Name)
                 throw new RachisApplyException($"Cannot execute {type} command, wrong format");
 
-            var putSubscriptionCommand = (T)JsonDeserializationCluster.Commands[typeof(T).Name](command);
-            putSubscriptionCommandsList.Add(putSubscriptionCommand);
+            putSubscriptionCommandsList.Add((T)JsonDeserializationCluster.Commands[typeof(T).Name](command));
+        }
 
+        return putSubscriptionCommandsList;
+    }
+
+    internal void AssertSubscriptionsBatchLicenseLimits<T>(ServerStore serverStore, Table items, List<T> subscriptionCommands, ClusterOperationContext context)
+        where T : PutSubscriptionCommand
+    {
+        var includesRevisions = false;
+        var subscriptionsNamesPerDatabase = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var putSubscriptionCommand in subscriptionCommands)
+        {
             if (subscriptionsNamesPerDatabase.TryGetValue(putSubscriptionCommand.DatabaseName, out _) == false)
                 subscriptionsNamesPerDatabase.Add(putSubscriptionCommand.DatabaseName, new List<string>());
 
@@ -723,10 +742,9 @@ public sealed partial class ClusterStateMachine
         AssertSubscriptionRevisionFeatureLimits(licenseStatus, includesRevisions, context);
 
         if (AssertNumberOfSubscriptionsPerDatabaseLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase))
-            return putSubscriptionCommandsList;
+            return;
 
         AssertNumberOfSubscriptionsPerClusterLimits(licenseStatus, items, context, subscriptionsNamesPerDatabase);
-        return putSubscriptionCommandsList;
     }
 
     private bool AssertNumberOfSubscriptionsPerDatabaseLimits(
@@ -854,7 +872,7 @@ public sealed partial class ClusterStateMachine
         return true;
     }
 
-    private static void AssertServerWideFor(ServerStore serverStore, LicenseAttribute attribute)
+    internal static void AssertServerWideFor(ServerStore serverStore, LicenseAttribute attribute)
     {
         switch (attribute)
         {
@@ -1277,30 +1295,14 @@ public sealed partial class ClusterStateMachine
         }
     }
 
-    internal void AssertClusterSizeAndCores(ServerStore serverStore, LicenseStatus licenseStatus)
+    private static void AssertClusterSizeAndCores(int numberOfNodes, LicenseStatus licenseStatus)
     {
-        if (serverStore.IsPassive())
-            return;
-        var clusterSize = serverStore.GetClusterTopology().AllNodes.Count;
-        if (clusterSize > licenseStatus.MaxClusterSize)
-            throw new LicenseLimitException(LimitType.ClusterSize, $"Your license supports a cluster size of {licenseStatus.MaxClusterSize}, while the current cluster size is {clusterSize}.");
+        if (numberOfNodes > licenseStatus.MaxClusterSize)
+            throw new LicenseLimitException(LimitType.ClusterSize, $"Your license supports a cluster size of {licenseStatus.MaxClusterSize}, while the current cluster size is {numberOfNodes}.");
 
-        var maxCores = licenseStatus.MaxCores;
-        if (clusterSize > maxCores)
-            throw new LicenseLimitException(LimitType.Cores, $"Your license is limited to {maxCores} cores, while the current cluster has {clusterSize} nodes (each node requires at least one core).");
-    }
-
-    private void AssertSnmp(ServerStore serverStore, LicenseStatus licenseStatus)
-    {
-        if (serverStore.Configuration.Monitoring.Snmp.Enabled == false)
-            return;
-
-        const string message = "SNMP Monitoring is currently enabled. " +
-                               "The provided license cannot be activated as it doesn't contain this feature. " +
-                               "In order to use this license please disable SNMP Monitoring in the server configuration";
-
-        if (licenseStatus.HasSnmpMonitoring == false)
-            throw new LicenseLimitException(LimitType.Snmp, message);
+        // Not the utilized cores: UpdateLicenseLimitsCommand rebalances them under the new license, but each node keeps at least one
+        if (numberOfNodes > licenseStatus.MaxCores)
+            throw new LicenseLimitException(LimitType.Cores, $"Your license is limited to {licenseStatus.MaxCores} cores, while the current cluster has {numberOfNodes} nodes (each node requires at least one core).");
     }
 
     private void AssertToggleTaskStateLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context, UpdateDatabaseCommand updateDatabaseCommand)

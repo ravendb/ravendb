@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
@@ -6,7 +6,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Sorters
 {
-    public sealed class PutSortersCommand : UpdateDatabaseCommand
+    public sealed class PutSortersCommand : UpdateDatabaseRecordFeaturesCommand
     {
         public List<SorterDefinition> Sorters = new List<SorterDefinition>();
 
