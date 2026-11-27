@@ -2,6 +2,7 @@ using System.IO;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
+using Voron.Impl.Scratch;
 
 namespace SlowTests.Voron.Bugs
 {
@@ -35,6 +36,7 @@ namespace SlowTests.Voron.Bugs
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             options.MaxScratchBufferSize *= 2;
         }
 

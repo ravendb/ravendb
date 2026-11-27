@@ -100,6 +100,7 @@ int32_t rvn_lock_memory(struct handle *handle, void *mem, int64_t size, int32_t 
         goto Exit;
     }
 
+    rc = FAIL_LOCK_MEMORY; // unless one of the attempts succeeds
     for (int i = 0; i < 10; ++i)
     {
         if (VirtualLock(mem, (SIZE_T)size) ||
@@ -131,6 +132,13 @@ rvn_pager_get_file_size(void *handle,
                         int32_t *detailed_error_code)
 {
     struct handle *handle_ptr = handle;
+    if (handle_ptr->global_state->open_flags & OPEN_FILE_ANONYMOUS)
+    {
+        // the section may be larger than what this pager maps
+        *total_size = handle_ptr->allocation_size;
+        *phyiscal_size = handle_ptr->allocation_size;
+        return SUCCESS;
+    }
     FILE_STANDARD_INFO standard_info = {0};
 
     if (!GetFileInformationByHandleEx(handle_ptr->file_handle, FileStandardInfo, &standard_info, sizeof(FILE_STANDARD_INFO)))
@@ -361,7 +369,7 @@ int32_t rvn_map_memory(void *handle,
     {
         // intentionally returning the error code & rc from the lock_memory call
         int mem_lock_rc = rvn_lock_memory(handle_ptr, *mem, size, detailed_error_code);
-        if (rc != SUCCESS)
+        if (mem_lock_rc != SUCCESS)
         {
             UnmapViewOfFile(*mem);
             *mem = NULL;
@@ -411,6 +419,7 @@ void delete_global_state(struct handle_global_state *global_state)
     {
         free(global_state->file_path);
     }
+    free(global_state->arena);
     _free_dirty_bitmaps(global_state->dirty_bitmap);
     DeleteCriticalSection(&global_state->lock);
     free(global_state);
@@ -564,6 +573,11 @@ rvn_init_pager(const char *filename,
     *memory_size = 0;
     *memory = NULL;
     *handle = NULL;
+    if (open_flags & OPEN_FILE_ANONYMOUS) // rvn_init_anonymous_pager sets it up, a file pager with it would grow as an anonymous one
+    {
+        *detailed_error_code = ERROR_INVALID_PARAMETER;
+        return FAIL_INVALID_CONFIGURATION;
+    }
     HANDLE h = INVALID_HANDLE_VALUE;
 
     int32_t rc = -1;
@@ -652,6 +666,162 @@ Error:
     return rc;
 }
 
+static int32_t _open_anonymous_pager(HANDLE section,
+                                     struct handle_global_state *global_state,
+                                     int64_t req_size,
+                                     void **handle,
+                                     void **memory,
+                                     void **writable_memory,
+                                     int64_t *memory_size,
+                                     int32_t *detailed_error_code)
+{
+    int32_t rc = SUCCESS;
+    void *mem = NULL;
+    void *wmem = NULL;
+    int64_t size = rvn_max(
+        (req_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1),
+        ALLOCATION_GRANULARITY);
+
+    struct handle *handle_ptr = calloc(1, sizeof(struct handle));
+    if (handle_ptr == NULL)
+    {
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+    handle_ptr->global_state = global_state;
+
+    if (size > global_state->anonymous_max_size)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        rc = FAIL_ALLOC_FILE;
+        goto Error;
+    }
+
+    mem = MapViewOfFile(section, FILE_MAP_READ, 0, 0, (SIZE_T)size);
+    if (mem == NULL)
+    {
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
+    }
+    wmem = MapViewOfFile(section, FILE_MAP_WRITE, 0, 0, (SIZE_T)size);
+    if (wmem == NULL)
+    {
+        rc = FAIL_MAP_VIEW_OF_FILE;
+        goto Error;
+    }
+
+    // The section is SEC_RESERVE: committing through a view commits the section pages for every view,
+    // and charges them to the commit limit now, so running out of memory fails here and not on a later access.
+    // Pages that are already committed stay as they are.
+    if (VirtualAlloc(wmem, (SIZE_T)size, MEM_COMMIT, PAGE_READWRITE) == NULL)
+    {
+        rc = FAIL_ALLOC_FILE;
+        goto Error;
+    }
+
+    // both views share the physical pages, so only one is locked
+    if (global_state->open_flags & OPEN_FILE_LOCK_MEMORY &&
+        rvn_lock_memory(handle_ptr, mem, size, detailed_error_code) != SUCCESS)
+    {
+        rc = FAIL_LOCK_MEMORY;
+        goto Error;
+    }
+
+    handle_ptr->file_handle = section;
+    handle_ptr->file_mapping_handle = INVALID_HANDLE_VALUE;
+    handle_ptr->read_address = mem;
+    handle_ptr->write_address = wmem;
+    handle_ptr->allocation_size = size;
+    *handle = handle_ptr;
+    *memory = mem;
+    *writable_memory = wmem;
+    *memory_size = size;
+    return SUCCESS;
+
+Error:
+    *detailed_error_code = GetLastError();
+    if (mem != NULL)
+    {
+        UnmapViewOfFile(mem);
+    }
+    if (wmem != NULL)
+    {
+        UnmapViewOfFile(wmem);
+    }
+    free(handle_ptr);
+    return rc;
+}
+
+EXPORT int32_t
+rvn_init_anonymous_pager(const char *name,
+                         int64_t initial_size,
+                         int64_t max_size,
+                         int32_t open_flags,
+                         void **handle,
+                         void **memory,
+                         void **writable_memory,
+                         int64_t *memory_size,
+                         int32_t *detailed_error_code)
+{
+    *memory_size = 0;
+    *memory = NULL;
+    *writable_memory = NULL;
+    *handle = NULL;
+    HANDLE section = NULL;
+    int32_t rc = SUCCESS;
+
+    if (max_size <= 0 || initial_size > max_size ||
+        (open_flags & OPEN_FILE_WRITABLE_MAP) == 0 ||
+        (open_flags & (OPEN_FILE_READ_ONLY | OPEN_FILE_COPY_ON_WRITE | OPEN_FILE_DO_NOT_MAP | OPEN_FILE_PREFETCH)))
+    {
+        *detailed_error_code = ERROR_INVALID_PARAMETER;
+        return FAIL_INVALID_CONFIGURATION;
+    }
+
+    struct handle_global_state *global_state = calloc(1, sizeof(struct handle_global_state));
+    if (global_state == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        return FAIL_NOMEM;
+    }
+    global_state->open_flags = open_flags | OPEN_FILE_ANONYMOUS;
+    global_state->ref_count = 1;
+    global_state->io_ring_file = -1;
+    InitializeCriticalSection(&global_state->lock);
+    global_state->anonymous_max_size = (max_size + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1);
+    global_state->file_path = ConvertLPCWSTRToUTF8((LPCWSTR)name);
+    if (global_state->file_path == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_NOMEM;
+        goto Error;
+    }
+
+    // backed by the page file, only reserved: _open_anonymous_pager commits what each pager maps
+    section = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE,
+                                 (DWORD)((uint64_t)global_state->anonymous_max_size >> 32),
+                                 (DWORD)((uint64_t)global_state->anonymous_max_size & 0xFFFFFFFF),
+                                 NULL);
+    if (section == NULL)
+    {
+        *detailed_error_code = GetLastError();
+        rc = FAIL_MMAP64;
+        goto Error;
+    }
+
+    rc = _open_anonymous_pager(section, global_state, initial_size, handle, memory, writable_memory, memory_size, detailed_error_code);
+    if (rc == SUCCESS)
+        return SUCCESS;
+
+Error:
+    if (section != NULL)
+    {
+        CloseHandle(section);
+    }
+    delete_global_state(global_state);
+    return rc;
+}
+
 int32_t
 rvn_increase_pager_size(void *handle,
                         int64_t new_length,
@@ -678,10 +848,15 @@ rvn_increase_pager_size(void *handle,
     }
 
     EnterCriticalSection(&handle_ptr->global_state->lock);
-    int32_t rc = _open_pager_file(h,
-                                  handle_ptr->global_state, new_length,
-                                  new_handle, memory, writable_memory,
-                                  memory_size, detailed_error_code);
+    int32_t rc = (handle_ptr->global_state->open_flags & OPEN_FILE_ANONYMOUS)
+        ? _open_anonymous_pager(h,
+                                handle_ptr->global_state, new_length,
+                                new_handle, memory, writable_memory,
+                                memory_size, detailed_error_code)
+        : _open_pager_file(h,
+                           handle_ptr->global_state, new_length,
+                           new_handle, memory, writable_memory,
+                           memory_size, detailed_error_code);
     if (rc == SUCCESS)
     {
         handle_ptr->global_state->ref_count++;
@@ -728,7 +903,7 @@ rvn_close_pager(
             }
         }
     }
-    else // OPEN_FILE_DO_NOT_MAP
+    else if (handle_ptr->file_mapping_handle != INVALID_HANDLE_VALUE) // OPEN_FILE_DO_NOT_MAP; a zero length read-only file has no mapping
     {
         if (!CloseHandle(handle_ptr->file_mapping_handle))
         {
@@ -807,15 +982,17 @@ int32_t rvn_write_file_io(
     {
         int64_t offset = buffers[i].page_num * VORON_PAGE_SIZE;
         int64_t size = (int64_t)buffers[i].count_of_pages * VORON_PAGE_SIZE;
+        char *ptr = buffers[i].ptr;
         while (size > 0)
         {
             ov.Offset = (DWORD)offset;
             ov.OffsetHigh = (DWORD)(offset >> 32);
 
             int32_t size_to_write = (int32_t)(rvn_min(size, INT32_MAX));
-            if (WriteFile(handle_ptr->file_handle, buffers[i].ptr, size_to_write, NULL, &ov))
+            if (WriteFile(handle_ptr->file_handle, ptr, size_to_write, NULL, &ov))
             {
                 offset += size_to_write;
+                ptr += size_to_write;
                 size -= size_to_write;
                 continue;
             }

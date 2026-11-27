@@ -142,11 +142,29 @@ void queue_work(struct workitem *head, struct workitem *last)
     }
 }
 
-void close_ring_with_error(HRESULT hr)
+static void fail_work_item(struct workitem *work, HRESULT hr)
+{
+    work->submittion->result = hresult_to_detailed_error(hr);
+    work->submittion->error = true;
+    if (--work->submittion->count == 0)
+    {
+        SetEvent(work->submittion->notify);
+    }
+}
+
+// built / built_count: the work items in the submission queue that were never submitted
+void close_ring_with_error(HRESULT hr, struct workitem *built, UINT32 built_count)
 {
     UINT32 submitted = 0;
-    if (SUCCEEDED(IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &submitted)))
-        IoRing.inflight += submitted;
+    if (FAILED(IoRing.SubmitIoRing(IoRing.io_ring, 0, 0, &submitted)))
+        submitted = 0; // not documented on failure, and a wrong count would skip failing built entries
+    IoRing.inflight += submitted;
+    // entries are submitted in the order they were built; the rest never complete, so their callers would wait forever
+    for (UINT32 i = 0; i < built_count; i++, built = built->next)
+    {
+        if (i >= submitted)
+            fail_work_item(built, hr);
+    }
     // closing the ring with operations in flight would leave their callers waiting forever
     IORING_CQE cqe;
     while (IoRing.inflight > 0)
@@ -158,13 +176,7 @@ void close_ring_with_error(HRESULT hr)
             continue;
         }
         IoRing.inflight--;
-        struct workitem *work = (struct workitem *)cqe.UserData;
-        work->submittion->result = hresult_to_detailed_error(hr);        
-        work->submittion->error = true;
-        if (--work->submittion->count == 0)
-        {
-            SetEvent(work->submittion->notify);
-        }
+        fail_work_item((struct workitem *)cqe.UserData, hr);
     }
     IoRing.CloseIoRing(IoRing.io_ring);
 }
@@ -182,6 +194,8 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
     SetThreadDescription(GetCurrentThread(), L"Rvn.Ring.Wrkr");
     HIORING ring = IoRing.io_ring;
     struct workitem *work = NULL;
+    struct workitem *built = NULL; // built since the last successful submit
+    UINT32 built_count = 0;
     HRESULT hr = 0;
     while (true)
     {
@@ -201,6 +215,8 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
             {
                 work = InterlockedExchangePointer((void *volatile *)&IoRing.head, 0);
             }
+            built = work;
+            built_count = 0;
             while (work)
             {
                 has_work = true;
@@ -226,6 +242,7 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
                 if (FAILED(hr))
                     goto error;
 
+                built_count++;
                 work = work->next;
             }
             UINT32 submitted = 0;
@@ -233,6 +250,7 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
             if (FAILED(hr))
                 goto error;
             IoRing.inflight += submitted;
+            built_count = 0;
 
             IORING_CQE cqe;
             while (IoRing.PopIoRingCompletion(ring, &cqe) == S_OK)
@@ -279,7 +297,7 @@ DWORD WINAPI do_ring_work(LPVOID lpThreadParameter)
 error:
     IoRing.error_code = hr ? hresult_to_detailed_error(hr) : ERROR_IO_INCOMPLETE;
     SetEvent(IoRing.has_error);
-    close_ring_with_error(hr);
+    close_ring_with_error(hr, built, built_count);
     // here we are going to keep answering all future inquires
     // with an immediate error, starting with the work we didn't submit yet
     while (true)
@@ -340,7 +358,7 @@ int32_t rvn_write_io_ring(
         void *ptr = realloc(handle_ptr->global_state->arena, size);
         if (!ptr)
         {
-            *detailed_error_code = errno;
+            *detailed_error_code = ERROR_NOT_ENOUGH_MEMORY; // a Win32 code, rvn_get_error_meaning reads it as one
             rc = FAIL_NOMEM;
             goto exit;
         }

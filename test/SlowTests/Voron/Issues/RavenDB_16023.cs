@@ -7,6 +7,7 @@ using Voron;
 using Voron.Global;
 using Voron.Impl;
 using Xunit;
+using Voron.Impl.Scratch;
 
 namespace SlowTests.Voron.Issues
 {
@@ -20,6 +21,7 @@ namespace SlowTests.Voron.Issues
 
         protected override void Configure(StorageEnvironmentOptions options)
         {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
             options.ManualFlushing = true;
             options.Encryption.MasterKey = _masterKey.ToArray();
         }

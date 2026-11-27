@@ -1,7 +1,9 @@
+using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
 using Tests.Infrastructure;
+using Voron.Impl.Scratch;
 
 namespace FastTests.Voron.Bugs
 {
@@ -9,6 +11,12 @@ namespace FastTests.Voron.Bugs
     {
         public RavenDB_9153(ITestOutputHelper output) : base(output)
         {
+        }
+
+        protected override void Configure(StorageEnvironmentOptions options)
+        {
+            options.ScratchMemoryBudget = new ScratchMemoryBudget(limit: 0); // the assertions are about scratch files
+            base.Configure(options);
         }
 
         [RavenFact(RavenTestCategory.Voron)]

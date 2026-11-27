@@ -188,6 +188,11 @@ namespace Voron
 
         public TimeSpan LongRunningFlushingWarning = TimeSpan.FromMinutes(5);
 
+        /// <summary>
+        /// The memory that scratch pages take before they go to scratch files, shared by all environments by default.
+        /// </summary>
+        public ScratchMemoryBudget ScratchMemoryBudget { get; set; } = ScratchMemoryBudget.Global;
+
         public long MaxScratchBufferSize
         {
             get => _maxScratchBufferSize;
@@ -1791,6 +1796,20 @@ namespace Voron
         public static string ScratchBufferName(long number)
         {
             return $"scratch.{number:D10}{DirectoryStorageEnvironmentOptions.BuffersFileExtension}";
+        }
+
+        public static string ScratchMemoryName(long number)
+        {
+            return $"scratch-memory.{number:D10}";
+        }
+
+        public (Pager Pager, Pager.State State) CreateScratchMemoryPager(long number, long initialSize, long maxSize)
+        {
+            // stored encrypted, as in a scratch file: journal writes and flushes copy the raw pages. The memory holds no
+            // plain text, so it is not locked: every segment would count against RLIMIT_MEMLOCK (often 8 MB) on Linux.
+            var flags = Encryption.IsEnabled ? Pal.OpenFileFlags.Encrypted : Pal.OpenFileFlags.None;
+
+            return Pager.CreateAnonymous(this, TempPath.Combine(ScratchMemoryName(number)).FullPath, initialSize, maxSize, flags);
         }
 
         public void Dispose()

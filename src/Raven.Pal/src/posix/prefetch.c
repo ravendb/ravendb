@@ -546,7 +546,7 @@ rvn_prefetch_register(void *ring, int fd, int64_t *ticket, int32_t *detailed_err
     }
     else
     {
-        int dup_fd = dup(fd); /* the pager may close and reopen its descriptor; the duplicate lives until unregister */
+        int dup_fd = fcntl(fd, F_DUPFD_CLOEXEC, 0); /* the pager may close and reopen its descriptor; the duplicate lives until unregister */
         if (dup_fd == -1)
         {
             *detailed_error_code = errno;

@@ -42,6 +42,55 @@ _flush_file(int32_t fd)
 
 #define SMB2_MAGIC_NUMBER 0xfe534d42
 
+#ifndef MFD_CLOEXEC
+#define MFD_CLOEXEC 0x0001U
+#endif
+
+PRIVATE int32_t
+_create_anonymous_file(const char *name, int64_t max_size, int *fd, int32_t *detailed_error_code)
+{
+    (void)max_size; // a memfd grows with each commit, nothing to reserve up front
+
+    // the kernel limits the name to 249 bytes, it is only shown in /proc/<pid>/maps
+    char memfd_name[200];
+    const char *base = strrchr(name, '/');
+    snprintf(memfd_name, sizeof(memfd_name), "%s", base != NULL ? base + 1 : name);
+
+    // the syscall and not the glibc wrapper, which needs glibc 2.27
+    int rc = (int)syscall(SYS_memfd_create, memfd_name, MFD_CLOEXEC);
+    if (rc == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_OPEN_FILE;
+    }
+    *fd = rc;
+    return SUCCESS;
+}
+
+PRIVATE int32_t
+_commit_anonymous_file(int fd, int64_t size, int32_t *detailed_error_code)
+{
+    struct stat st;
+    if (fstat(fd, &st) == -1)
+    {
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+    if (st.st_size >= size)
+        return SUCCESS;
+
+    // fallocate allocates the pages now and charges them to the memory cgroup, so running out of memory
+    // fails here and not with SIGBUS on a later page fault
+    while (fallocate(fd, 0, st.st_size, size - st.st_size) == -1)
+    {
+        if (errno == EINTR)
+            continue;
+        *detailed_error_code = errno;
+        return FAIL_ALLOC_FILE;
+    }
+    return SUCCESS;
+}
+
 PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {
@@ -85,26 +134,26 @@ rvn_test_storage_durability(
     const char *temp_file_name,
     int32_t *detailed_error_code)
 {
-    int fd = open(temp_file_name, O_WRONLY | O_DSYNC | O_DIRECT | O_CREAT, S_IWUSR | S_IRUSR);
+    int fd = open(temp_file_name, O_WRONLY | O_DSYNC | O_DIRECT | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
     int rc = SUCCESS;
     if (fd == -1)
     {
+        *detailed_error_code = errno;
         rc = FAIL_OPEN_FILE;
         goto error_cleanup;
     }
 
+    // posix_fallocate returns its error without setting errno, so only detailed_error_code holds the reason
     rc = _allocate_file_space(fd, 0, 64 * 1024, detailed_error_code);
     if (rc != SUCCESS)
     {
         rc = FAIL_ALLOC_FILE;
-        if (errno == EINVAL)
+        if (*detailed_error_code == EINVAL)
             rc = FAIL_TEST_DURABILITY;
         goto error_cleanup;
     }
 
 error_cleanup:
-    if (rc != SUCCESS)
-        *detailed_error_code = errno;
     if (fd != -1)
     {
         close(fd);
@@ -254,7 +303,8 @@ rvn_write_journal(void *handle, void *context, struct journal_entry *buffer, int
 EXPORT int32_t
 rvn_sync_directories(void* handle, char** folders, int32_t count, int32_t *detailed_error_code)
 {
-    if(io_ring_setup_successful())
+    // the ring path waits on the pager's eventfd, an anonymous pager has none
+    if(io_ring_setup_successful() && ((struct handle *)handle)->global_state->fsync_dir_arena.eventfd != -1)
         return rvn_sync_directories_ioring(handle, folders, count, detailed_error_code);
     return rvn_sync_directories_sync(handle, folders, count, detailed_error_code);
 }

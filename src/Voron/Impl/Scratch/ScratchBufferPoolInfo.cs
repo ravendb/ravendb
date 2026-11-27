@@ -23,6 +23,20 @@ namespace Voron.Impl.Scratch
         public List<ScratchFileUsage> ScratchFilesUsage { get; set; }
 
         public DateTime CurrentUtcTime { get; set; }
+
+        public int MemorySegments { get; set; }
+
+        public long MemorySegmentSizeInMB { get; set; }
+
+        public long MemorySizeInKB { get; set; }
+
+        public bool MemoryFailedRecently { get; set; }
+
+        public long GlobalMemoryUsedInMB { get; set; }
+
+        public long GlobalMemoryLimitInMB { get; set; }
+
+        public bool GlobalMemoryUnderPressure { get; set; }
     }
 
     public sealed class MostAvailableFreePagesBySize
@@ -41,6 +55,10 @@ namespace Voron.Impl.Scratch
         }
 
         public string Name { get; set; }
+
+        public bool IsMemory { get; set; }
+
+        public bool IsDraining { get; set; }
 
         public long SizeInKB { get; set; }
 

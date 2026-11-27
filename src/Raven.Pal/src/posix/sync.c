@@ -23,7 +23,7 @@ PRIVATE int32_t
 _sync_directory_for_internal(char *dir_path, int32_t *detailed_error_code)
 {
     int32_t rc;
-    int32_t fd = open(dir_path, 0, 0);
+    int32_t fd = open(dir_path, O_RDONLY | O_CLOEXEC, 0);
     if (fd == -1)
     {
         rc = FAIL_OPEN_FILE;

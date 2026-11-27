@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -47,9 +49,57 @@ _flush_file(int32_t fd)
 }
 
 PRIVATE int32_t
+_create_anonymous_file(const char *name, int64_t max_size, int *fd, int32_t *detailed_error_code)
+{
+    (void)name;
+    static uint64_t counter = 0;
+
+    // macOS allows a single ftruncate on a shared memory object, so it gets its final size here.
+    // Pages are allocated on first touch. The name (31 characters at most) is unlinked at once,
+    // the descriptor and the mappings keep the object alive.
+    for (int attempt = 0; attempt < 16; attempt++)
+    {
+        char shm_name[32];
+        snprintf(shm_name, sizeof(shm_name), "/rvn.%x.%llx", (unsigned int)getpid(),
+                 (unsigned long long)__atomic_add_fetch(&counter, 1, __ATOMIC_RELAXED));
+
+        int rc = shm_open(shm_name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+        if (rc == -1)
+        {
+            if (errno == EEXIST)
+                continue;
+            *detailed_error_code = errno;
+            return FAIL_OPEN_FILE;
+        }
+        (void)shm_unlink(shm_name);
+
+        if (ftruncate(rc, max_size) == -1)
+        {
+            *detailed_error_code = errno;
+            close(rc);
+            return FAIL_ALLOC_FILE;
+        }
+        *fd = rc;
+        return SUCCESS;
+    }
+    *detailed_error_code = EEXIST;
+    return FAIL_OPEN_FILE;
+}
+
+PRIVATE int32_t
+_commit_anonymous_file(int fd, int64_t size, int32_t *detailed_error_code)
+{
+    // no commit for shared memory on macOS
+    (void)fd;
+    (void)size;
+    (void)detailed_error_code;
+    return SUCCESS;
+}
+
+PRIVATE int32_t
 _sync_directory_allowed(int32_t dir_fd)
 {
-    return 1;
+    return SYNC_DIR_ALLOWED;
 }
 
 PRIVATE int32_t
@@ -69,10 +119,10 @@ _rvn_fallocate(int32_t fd, int64_t offset, int64_t size)
 PRIVATE char *
 _get_strerror_r(int32_t error, char *tmp_buff, int32_t buf_size)
 {
-    int32_t non_gnu_compliant_rc = strerror_r(error, tmp_buff, buf_size);
-    if (non_gnu_compliant_rc != 0)
-        return tmp_buff;
-    return NULL;
+    /* XSI strerror_r: 0 on success */
+    if (strerror_r(error, tmp_buff, buf_size) != 0)
+        return NULL;
+    return tmp_buff;
 }
 
 EXPORT int32_t

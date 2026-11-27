@@ -20,7 +20,7 @@ rvn_write_header(const char *path,
 {
     int32_t rc;
     bool sync_is_needed = false;
-    int32_t fd = open(path, O_WRONLY | O_CREAT, S_IWUSR | S_IRUSR);
+    int32_t fd = open(path, O_WRONLY | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
 
     if (fd == -1)
     {
