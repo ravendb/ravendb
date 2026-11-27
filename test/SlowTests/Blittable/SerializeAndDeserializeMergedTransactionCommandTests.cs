@@ -8,6 +8,7 @@ using FastTests;
 using FastTests.Voron.Util;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Batches;
@@ -15,6 +16,8 @@ using Raven.Server.Documents.Handlers.Batches.Commands;
 using Raven.Server.Documents.Handlers.Processors.BulkInsert;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.Replication.Incoming;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
@@ -66,6 +69,56 @@ namespace SlowTests.Blittable
 
                 //Assert
                 //                    Assert.Equal(expectedDto.)
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public async Task SerializeAndDeserialize_MergedDocumentReplicationCommand()
+        {
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var item = new DocumentReplicationItem
+                {
+                    Type = ReplicationBatchItem.ReplicationItemType.Document,
+                    Etag = 3,
+                    ChangeVector = "A:1-abc",
+                    Data = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { Name = "Avi" }, context),
+                    Id = context.GetLazyString("users/1"),
+                    Collection = context.GetLazyString("Users"),
+                    Context = context
+                };
+
+                var expectedDto = new MergedDocumentReplicationCommandDto
+                {
+                    LastEtag = 3,
+                    SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, TcpConnectionHeaderMessage.ReplicationTcpVersion),
+                    ReplicatedItemDtos = [item.Clone(context, context.Allocator)],
+                    SourceDatabaseId = "source",
+                    ReplicatedAttachmentStreams = [KeyValuePair.Create("hash", (Stream)new MemoryStream([1, 2, 3]))]
+                };
+
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, expectedDto);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedDocumentReplicationCommandDto>(context, fromStream);
+
+                Assert.Equal(3, actualDto.LastEtag);
+                Assert.Equal("source", actualDto.SourceDatabaseId);
+                Assert.Equal(expectedDto.SupportedFeatures.Replication.MissingAttachments, actualDto.SupportedFeatures.Replication.MissingAttachments);
+                Assert.Equal(expectedDto.SupportedFeatures.Replication.TimeSeries, actualDto.SupportedFeatures.Replication.TimeSeries);
+
+                var actualItem = Assert.IsType<DocumentReplicationItem>(Assert.Single(actualDto.ReplicatedItemDtos));
+                Assert.Equal(ReplicationBatchItem.ReplicationItemType.Document, actualItem.Type);
+                Assert.Equal("A:1-abc", actualItem.ChangeVector);
+                Assert.Equal("users/1", actualItem.Id.ToString());
+                Assert.Equal("Users", actualItem.Collection.ToString());
+                Assert.True(actualItem.Data.TryGet("Name", out string name));
+                Assert.Equal("Avi", name);
+                Assert.Null(actualItem.Context);
+
+                var (hash, stream) = Assert.Single(actualDto.ReplicatedAttachmentStreams);
+                Assert.Equal("hash", hash);
+                Assert.Equal([1, 2, 3], ((MemoryStream)stream).ToArray());
             }
         }
 
