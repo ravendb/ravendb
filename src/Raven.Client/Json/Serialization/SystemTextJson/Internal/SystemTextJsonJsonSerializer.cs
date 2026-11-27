@@ -14,11 +14,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
     {
         private readonly TypeNameHandling _typeNameHandling;
 
+        private readonly JsonReaderOptions _readerOptions;
+
         public JsonSerializerOptions Options { get; }
 
-        public SystemTextJsonJsonSerializer(JsonSerializerOptions options, TypeNameHandling typeNameHandling)
+        public SystemTextJsonJsonSerializer(JsonSerializerOptions options, JsonReaderOptions readerOptions, TypeNameHandling typeNameHandling)
         {
             Options = options;
+            _readerOptions = readerOptions;
             _typeNameHandling = typeNameHandling;
         }
 
@@ -255,19 +258,19 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public object Deserialize(IJsonReader reader, Type type)
         {
-            var stjReader = (SystemTextJsonBlittableReader)reader;
-            return JsonSerializer.Deserialize(stjReader.GetUtf8Json(), type, Options);
+            var jsonReader = new Utf8JsonReader(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), _readerOptions);
+            return JsonSerializer.Deserialize(ref jsonReader, type, Options);
         }
 
         public T Deserialize<T>(IJsonReader reader)
         {
-            var stjReader = (SystemTextJsonBlittableReader)reader;
-            return JsonSerializer.Deserialize<T>(stjReader.GetUtf8Json(), Options);
+            var jsonReader = new Utf8JsonReader(((SystemTextJsonBlittableReader)reader).GetUtf8Json(), _readerOptions);
+            return JsonSerializer.Deserialize<T>(ref jsonReader, Options);
         }
 
         private void WriteJsonToBlittableWriter(SystemTextJsonBlittableWriter writer, ReadOnlySpan<byte> utf8Json)
         {
-            var jsonReader = new Utf8JsonReader(utf8Json, new JsonReaderOptions { MaxDepth = Options.MaxDepth });
+            var jsonReader = new Utf8JsonReader(utf8Json, _readerOptions);
             while (jsonReader.Read())
             {
                 switch (jsonReader.TokenType)

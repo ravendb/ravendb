@@ -87,7 +87,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using (var reader = new SystemTextJsonBlittableReader())
             {
                 reader.Initialize(json);
-                newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, options);
+                var jsonReader = new Utf8JsonReader(reader.GetUtf8Json(), Conventions.GetReaderOptions(options));
+                newInstance = JsonSerializer.Deserialize(ref jsonReader, type, options);
             }
 
             if (newInstance == null || TryPopulateDictionary(entity, newInstance))

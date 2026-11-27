@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Server.Documents.Commands.Queries;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Queries;
@@ -204,6 +207,68 @@ public class ServerConventionsConstructorBindingTests(ITestOutputHelper output) 
             Assert.Equal("line", Assert.Single(info).ToString());
             Assert.True(result.DebugActions.TryGet("PutDocument", out BlittableJsonReaderArray puts));
             Assert.Equal("users/1", Assert.Single(puts).ToString());
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void WritingSelfReferencingObjectStopsAtTheDepthLimit()
+    {
+        var operation = new EtlPerformanceOperation(TimeSpan.FromMilliseconds(1)) { Name = "ETL" };
+        operation.Operations = [operation];
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+            Assert.ThrowsAny<JsonException>(() => DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(operation, context));
+    }
+
+    [RavenFact(RavenTestCategory.Studio)]
+    public void ReadingRunawayNestedCollectionsThrowsBeforeTheStackOverflows()
+    {
+        const int depth = 100_000;
+
+        var json = new StringBuilder("""{ "Settings": { "Collections": [ { "Name": "Orders" """);
+        for (int i = 0; i < depth; i++)
+            json.Append(""", "NestedCollections": [ { "Name": "Items" """);
+        for (int i = 0; i < depth; i++)
+            json.Append(" } ]");
+        json.Append(" } ] } }");
+
+        var conventions = (SystemTextJsonSerializationConventions)DocumentConventions.DefaultForServer.Serialization;
+        JsonReaderOptions readerOptions = conventions.GetReaderOptions(conventions.Options);
+        Assert.Equal(int.MaxValue, readerOptions.MaxDepth);
+
+        Assert.Throws<InsufficientExecutionStackException>(() =>
+        {
+            var reader = new Utf8JsonReader(Encoding.UTF8.GetBytes(json.ToString()), readerOptions);
+            return JsonSerializer.Deserialize<MigrationRequest>(ref reader, conventions.Options);
+        });
+    }
+
+    [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
+    public void ReadsBlittableMembersDeeperThanTheTypedDepthLimit()
+    {
+        var document = new StringBuilder("""{ "Name": "Modified" """);
+        for (int i = 0; i < 200; i++)
+            document.Append(""", "Nested": { "Level": 1 """);
+        for (int i = 0; i < 200; i++)
+            document.Append(" }");
+        document.Append(" }");
+
+        string json = $$"""{ "Status": "Patched", "ModifiedDocument": {{document}}, "ChangeVector": "A:1" }""";
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject response = context.Sync.ReadForMemory(json, "response"))
+        {
+            var command = new PatchByQueryTestCommand(DocumentConventions.DefaultForServer, "users/1", new IndexQueryServerSide("from Users"));
+            command.SetResponse(context, response, fromCache: false);
+
+            Assert.True(command.Result.ModifiedDocument.TryGet("Name", out string name));
+            Assert.Equal("Modified", name);
+
+            using (BlittableJsonReaderObject written = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(command.Result, context))
+            {
+                Assert.True(written.TryGet(nameof(PatchByQueryTestCommand.Response.ModifiedDocument), out BlittableJsonReaderObject modified));
+                Assert.Equal(command.Result.ModifiedDocument.ToString(), modified.ToString());
+            }
         }
     }
 

@@ -22,9 +22,10 @@ internal static class DocumentConventionsServerExtensions
             Serialization = new SystemTextJsonSerializationConventions
             {
                 IgnoreUnsafeMembers = true,
+                UnboundedReadDepth = true,
                 CustomizeJsonSerializerOptions = options =>
                 {
-                    options.MaxDepth = int.MaxValue;
+                    DeserializationStackGuard.Register(options);
                     options.Converters.Insert(0, BlittableJsonConverter.Instance);
                     options.Converters.Insert(0, BlittableJsonReaderArrayConverter.Instance);
                     options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);

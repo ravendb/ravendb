@@ -275,9 +275,10 @@ namespace Raven.Server.Documents
                 Serialization = new SystemTextJsonSerializationConventions
                 {
                     IgnoreUnsafeMembers = true,
+                    UnboundedReadDepth = true,
                     CustomizeJsonSerializerOptions = options =>
                     {
-                        options.MaxDepth = int.MaxValue;
+                        DeserializationStackGuard.Register(options);
                         options.Converters.Insert(0, SliceJsonConverter.Instance);
                         options.Converters.Insert(0, Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
                         options.Converters.Insert(0, LazyStringValueJsonConverter.Instance);

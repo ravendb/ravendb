@@ -26,7 +26,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using (var reader = new SystemTextJsonBlittableReader())
             {
                 reader.Initialize(json);
-                entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _conventions.Options);
+                var jsonReader = new Utf8JsonReader(reader.GetUtf8Json(), _conventions.GetReaderOptions(_conventions.Options));
+                entity = JsonSerializer.Deserialize(ref jsonReader, type, _conventions.Options);
             }
 
             if (entity != null && _identityReadWithEntity.GetOrAdd(type, t => RavenJsonTypeInfoResolver.ReadsMetadataIdentity(_conventions.Options, t)) == false)
