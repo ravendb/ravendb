@@ -3037,33 +3037,134 @@ select incl(c)"
         }
 
         [RavenFact(RavenTestCategory.ClusterTransactions)]
-        public async Task ClusterTransactionStore_SameEntitySameId_UpdatesAtomicGuardCV()
+        public async Task ClusterTransactionStore_SameEntitySameId_UsesTheLastAtomicGuardCV()
         {
             using var store = GetDocumentStore();
 
-            using (var session = store.OpenAsyncSession(new SessionOptions
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
             {
-                TransactionMode = TransactionMode.ClusterWide
-            }))
-            {
-                var user = new User { Name = "Karmel" };
-
-                // Store via cluster transaction Store with empty guard (new document)
-                session.Advanced.ClusterTransaction
-                    .Store("users/1", user, atomicGuardChangeVector: string.Empty);
-
-                // Store the same entity again with a different guard value → should just update the CV
-                session.Advanced.ClusterTransaction
-                    .Store("users/1", user, atomicGuardChangeVector: "updated-cv");
-
+                await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                 await session.SaveChangesAsync();
+            }
+
+            // The second Store of an entity that is already tracked under the same ID only replaces its atomic guard
+            // change vector. Each session stores twice, in both orders, to show that the save checks the last one.
+            // a stale guard, then the current one: the save checks the current one
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var current = await session.Advanced.ClusterTransaction.GetAtomicGuardAsync("users/1");
+                Assert.NotNull(current);
+
+                var user = new User { Name = "Indych" };
+                session.Advanced.ClusterTransaction.Store("users/1", user, atomicGuardChangeVector: string.Empty);
+                session.Advanced.ClusterTransaction.Store("users/1", user, atomicGuardChangeVector: current);
+                await session.SaveChangesAsync();
+            }
+
+            // the current guard, then a stale one: the save checks the stale one and fails
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var current = await session.Advanced.ClusterTransaction.GetAtomicGuardAsync("users/1");
+                Assert.NotNull(current);
+
+                var user = new User { Name = "Oren" };
+                session.Advanced.ClusterTransaction.Store("users/1", user, atomicGuardChangeVector: current);
+                session.Advanced.ClusterTransaction.Store("users/1", user, atomicGuardChangeVector: string.Empty);
+                await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() => session.SaveChangesAsync());
             }
 
             using (var session = store.OpenAsyncSession())
             {
                 var loaded = await session.LoadAsync<User>("users/1");
-                Assert.NotNull(loaded);
-                Assert.Equal("Karmel", loaded.Name);
+                Assert.Equal("Indych", loaded.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionGetAtomicGuards_Lazily()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                await session.StoreAsync(new User { Name = "Indych" }, "users/2");
+                await session.SaveChangesAsync();
+            }
+
+            Dictionary<string, string> expected;
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                expected = await session.Advanced.ClusterTransaction.GetAtomicGuardsAsync(["users/1", "users/2", "users/3"]);
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var single = session.Advanced.ClusterTransaction.Lazily.GetAtomicGuardAsync("users/1");
+                var batch = session.Advanced.ClusterTransaction.Lazily.GetAtomicGuardsAsync(["users/2", "users/3"]);
+                var user = session.Advanced.Lazily.LoadAsync<User>("users/2");
+
+                var requests = session.Advanced.NumberOfRequests;
+                await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+                Assert.Equal(requests + 1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(expected["users/1"], await single.Value);
+                var guards = await batch.Value;
+                Assert.Equal(2, guards.Count);
+                Assert.Equal(expected["users/2"], guards["users/2"]);
+                Assert.Null(guards["users/3"]);
+                Assert.Equal("Indych", (await user.Value).Name);
+
+                // the session keeps the guards: a lazy request for them is answered without the server
+                var again = session.Advanced.ClusterTransaction.Lazily.GetAtomicGuardsAsync(["users/1", "users/2"]);
+                Assert.Equal(expected["users/1"], (await again.Value)["users/1"]);
+                Assert.Equal(requests + 1, session.Advanced.NumberOfRequests);
+
+                session.Advanced.ClusterTransaction.Store("users/1", new User { Name = "Oren" }, await single.Value);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+                Assert.Equal("Oren", (await session.LoadAsync<User>("users/1")).Name);
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionGetAtomicGuards_ReturnsTheGuardsOfAllDocumentsInOneRequest()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                await session.StoreAsync(new User { Name = "Indych" }, "users/2");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                var requests = session.Advanced.NumberOfRequests;
+                var guards = await session.Advanced.ClusterTransaction.GetAtomicGuardsAsync(["users/1", "users/2", "users/3"]);
+                Assert.Equal(requests + 1, session.Advanced.NumberOfRequests);
+
+                Assert.Equal(3, guards.Count);
+                Assert.NotNull(guards["users/1"]);
+                Assert.NotNull(guards["users/2"]);
+                Assert.Null(guards["users/3"]);
+
+                // the session keeps them: the single-document call does not go to the server again
+                Assert.Equal(guards["users/1"], await session.Advanced.ClusterTransaction.GetAtomicGuardAsync("users/1"));
+                Assert.Equal(requests + 1, session.Advanced.NumberOfRequests);
+
+                session.Advanced.ClusterTransaction.Store("users/1", new User { Name = "Oren" }, guards["users/1"]);
+                session.Advanced.ClusterTransaction.Store("users/2", new User { Name = "Ayende" }, guards["users/2"]);
+                session.Advanced.ClusterTransaction.Store("users/3", new User { Name = "New" }, string.Empty);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<User>(["users/1", "users/2", "users/3"]);
+                Assert.Equal("Oren", loaded["users/1"].Name);
+                Assert.Equal("Ayende", loaded["users/2"].Name);
+                Assert.Equal("New", loaded["users/3"].Name);
             }
         }
 

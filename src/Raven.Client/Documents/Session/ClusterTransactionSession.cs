@@ -66,28 +66,95 @@ namespace Raven.Client.Documents.Session
                     new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(atomicGuardKey, materializeMetadata: false),
                     sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
 
-                if (value == null)
+                return value == null ? null : TrackAtomicGuard(documentId, value);
+            }
+        }
+
+        internal async Task<Dictionary<string, string>> GetAtomicGuardsAsyncInternal(string[] documentIds, CancellationToken token = default)
+        {
+            var keys = GetAtomicGuardKeysToFetch(documentIds, out var result);
+            if (keys == null)
+                return result;
+
+            using (_session.AsyncTaskHolder())
+            {
+                _session.IncrementRequestCount();
+
+                var values = await _session.Operations.SendAsync(
+                    new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(keys, materializeMetadata: false),
+                    sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+
+                TrackAtomicGuards(values, result);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Fills <paramref name="result"/> with every requested ID (the session's guard, or null), and returns the
+        /// atomic guard keys of the IDs the session does not know, or null when there are none.
+        /// </summary>
+        internal string[] GetAtomicGuardKeysToFetch(string[] documentIds, out Dictionary<string, string> result)
+        {
+            if (documentIds == null)
+                throw new ArgumentNullException(nameof(documentIds));
+
+            result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            List<string> keys = null;
+            foreach (var documentId in documentIds)
+            {
+                if (string.IsNullOrWhiteSpace(documentId))
+                    throw new ArgumentException("Document IDs cannot be null or whitespace", nameof(documentIds));
+
+                if (result.ContainsKey(documentId))
+                    continue;
+
+                if (TryGetMissingAtomicGuardFor(documentId, out var changeVector))
+                {
+                    result[documentId] = changeVector;
+                    continue;
+                }
+
+                result[documentId] = null;
+                keys ??= new List<string>();
+                keys.Add(ClusterWideTransactionHelper.GetAtomicGuardKey(documentId));
+            }
+
+            return keys?.ToArray();
+        }
+
+        internal void TrackAtomicGuards(IEnumerable<KeyValuePair<string, CompareExchangeValue<BlittableJsonReaderObject>>> values, Dictionary<string, string> result)
+        {
+            foreach (var kvp in values)
+            {
+                if (kvp.Value == null)
+                    continue;
+
+                var documentId = ClusterWideTransactionHelper.ExtractDocumentIdFromAtomicGuard(kvp.Key);
+                result[documentId] = TrackAtomicGuard(documentId, kvp.Value);
+            }
+        }
+
+        private string TrackAtomicGuard(string documentId, CompareExchangeValue<BlittableJsonReaderObject> value)
+        {
+            var changeVector = value.ChangeVector;
+
+            if (changeVector == null && value.Index > 0)
+            {
+                var clusterTransactionId = _session.SessionInfo?.ClusterTransactionId;
+                if (clusterTransactionId == null)
                     return null;
 
-                changeVector = value.ChangeVector;
-
-                if (changeVector == null && value.Index > 0)
-                {
-                    var clusterTransactionId = _session.SessionInfo?.ClusterTransactionId;
-                    if (clusterTransactionId == null)
-                        return null;
-
-                    changeVector = $"{Constants.ChangeVector.TrxnTag}:{value.Index}-{clusterTransactionId}";
-                }
-
-                if (changeVector != null)
-                {
-                    _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    _missingDocumentsToAtomicGuardIndex[documentId] = changeVector;
-                }
-
-                return changeVector;
+                changeVector = $"{Constants.ChangeVector.TrxnTag}:{value.Index}-{clusterTransactionId}";
             }
+
+            if (changeVector != null)
+            {
+                _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                _missingDocumentsToAtomicGuardIndex[documentId] = changeVector;
+            }
+
+            return changeVector;
         }
 
         internal int NumberOfTrackedCompareExchangeValues => _state.Count;
@@ -826,6 +893,15 @@ namespace Raven.Client.Documents.Session
         /// <param name="token">Cancellation token</param>
         /// <returns>The atomic guard change vector for the document, or null if the document has no atomic guard</returns>
         Task<string> GetAtomicGuardAsync(string documentId, CancellationToken token = default);
+
+        /// <summary>
+        /// Fetches the atomic guard change vectors for the given document IDs in a single request.
+        /// The returned strings can be passed to <see cref="IClusterTransactionOperationsBase.Store"/>.
+        /// </summary>
+        /// <param name="documentIds">The document IDs</param>
+        /// <param name="token">Cancellation token</param>
+        /// <returns>The atomic guard change vector for each document ID, null for a document that has no atomic guard</returns>
+        Task<Dictionary<string, string>> GetAtomicGuardsAsync(string[] documentIds, CancellationToken token = default);
     }
 
     public interface ILazyClusterTransactionOperationsAsync
@@ -841,6 +917,12 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc cref="ILazyClusterTransactionOperations.GetCompareExchangeValues{T}(string[], Action{Dictionary{string, CompareExchangeValue{T}}})"/> 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> GetCompareExchangeValuesAsync<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval, CancellationToken token = default);
+
+        /// <inheritdoc cref="IClusterTransactionOperationsAsync.GetAtomicGuardAsync(string, CancellationToken)"/>
+        Lazy<Task<string>> GetAtomicGuardAsync(string documentId, CancellationToken token = default);
+
+        /// <inheritdoc cref="IClusterTransactionOperationsAsync.GetAtomicGuardsAsync(string[], CancellationToken)"/>
+        Lazy<Task<Dictionary<string, string>>> GetAtomicGuardsAsync(string[] documentIds, CancellationToken token = default);
     }
 
     public sealed class ClusterTransactionOperationsAsync : ClusterTransactionOperationsBase<AsyncDocumentSession>, IClusterTransactionOperationsAsync, ILazyClusterTransactionOperationsAsync
@@ -884,6 +966,24 @@ namespace Raven.Client.Documents.Session
         Task<string> IClusterTransactionOperationsAsync.GetAtomicGuardAsync(string documentId, CancellationToken token)
         {
             return GetAtomicGuardAsyncInternal(documentId, token);
+        }
+
+        Task<Dictionary<string, string>> IClusterTransactionOperationsAsync.GetAtomicGuardsAsync(string[] documentIds, CancellationToken token)
+        {
+            return GetAtomicGuardsAsyncInternal(documentIds, token);
+        }
+
+        Lazy<Task<string>> ILazyClusterTransactionOperationsAsync.GetAtomicGuardAsync(string documentId, CancellationToken token)
+        {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentNullException(nameof(documentId));
+
+            return Session.AddLazyOperation<string>(new LazyGetAtomicGuardsOperation(this, Session.Conventions, [documentId], single: true), onEval: null, token);
+        }
+
+        Lazy<Task<Dictionary<string, string>>> ILazyClusterTransactionOperationsAsync.GetAtomicGuardsAsync(string[] documentIds, CancellationToken token)
+        {
+            return Session.AddLazyOperation<Dictionary<string, string>>(new LazyGetAtomicGuardsOperation(this, Session.Conventions, documentIds, single: false), onEval: null, token);
         }
 
         Lazy<Task<Dictionary<string, CompareExchangeValue<T>>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValuesAsync<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval, CancellationToken token)
