@@ -827,7 +827,7 @@ for (const comment of this.Comments)
                 };
 
                 // create context objects
-                var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
+                var bjro = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
                 var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 using var requestExecutor = store.GetRequestExecutor();
                 await requestExecutor.ExecuteAsync(cmd, context);
@@ -1064,7 +1064,7 @@ for (const comment of this.Comments)
                 }
 
                 // create context objects
-                var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
+                var bjro = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
                 bjro.Modifications = new DynamicJsonValue(bjro)
                 {
                     [nameof(TestGenAiScript.Document)] = djv

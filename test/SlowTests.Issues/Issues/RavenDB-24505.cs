@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var testGenAiScript = new TestGenAiScript { Configuration = configuration };
-                var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
+                var bjro = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
                 var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
 
                 using var requestExecutor = store.GetRequestExecutor();
