@@ -15,16 +15,27 @@ export function useBackupDecisionLog(filters: BackupDecisionFilters) {
     const [connectionId, setConnectionId] = useState(0);
 
     useEffect(() => {
+        let isDisposed = false;
         dispatch({ type: "Connecting" });
 
         const client = manageServerService.watchBackupDecisionLog(
             query,
-            ({ Type, ...details }) =>
-                dispatch(Type === "Snapshot" ? { type: "SnapshotLoaded", details } : { type: "UpdateLoaded", details }),
-            () => dispatch({ type: "ConnectionFailed" })
+            ({ Type, ...details }) => {
+                if (!isDisposed) {
+                    dispatch(
+                        Type === "Snapshot" ? { type: "SnapshotLoaded", details } : { type: "UpdateLoaded", details }
+                    );
+                }
+            },
+            () => {
+                if (!isDisposed) {
+                    dispatch({ type: "ConnectionFailed" });
+                }
+            }
         );
 
         return () => {
+            isDisposed = true;
             client?.dispose();
         };
     }, [manageServerService, query, connectionId]);
