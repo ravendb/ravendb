@@ -47,6 +47,7 @@ export function TimeCell({ entry }: EntryProps) {
                 getValue={(() => entry.LastTime) as Getter<string>}
                 displayFormat={generalUtils.dateFormat}
                 displayText={getRangeText(entry)}
+                isCopyable={false}
             />
         </div>
     );

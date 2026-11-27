@@ -15,6 +15,7 @@ export interface DateFormatterCellProps<TData, TValue> extends CellContextSubset
     displayFormat?: string;
     showTooltip?: boolean;
     displayText?: string;
+    isCopyable?: boolean;
 }
 
 export function DateFormatterCell<TData, TValue>({
@@ -23,6 +24,7 @@ export function DateFormatterCell<TData, TValue>({
     displayFormat = genUtils.dateFormat,
     showTooltip = true,
     displayText,
+    isCopyable = true,
 }: DateFormatterCellProps<TData, TValue>) {
     const rawValue = getValue();
 
@@ -54,14 +56,26 @@ export function DateFormatterCell<TData, TValue>({
 
     return (
         <PopoverWithHoverWrapper
-            message={<DateTooltip date={dateValue} copyValue={typeof rawValue === "string" ? rawValue : null} />}
+            message={
+                <DateTooltip
+                    date={dateValue}
+                    copyValue={typeof rawValue === "string" ? rawValue : null}
+                    isCopyable={isCopyable}
+                />
+            }
         >
             <CellValue value={displayText ?? formattedDate} className={cellClassName} />
         </PopoverWithHoverWrapper>
     );
 }
 
-function DateTooltip({ date, copyValue }: { date: Date; copyValue: string | null }) {
+interface DateTooltipProps {
+    date: Date;
+    copyValue: string | null;
+    isCopyable: boolean;
+}
+
+function DateTooltip({ date, copyValue, isCopyable }: DateTooltipProps) {
     const utcDate = moment.utc(date).toISOString();
 
     const handleCopyToClipboard = () => {
@@ -78,14 +92,16 @@ function DateTooltip({ date, copyValue }: { date: Date; copyValue: string | null
                 <b>Relative: </b>
                 <time>{genUtils.formatDurationByDate(moment.utc(date), true)}</time>
             </div>
-            <div className="mt-3">
-                <span className="small-label">Actions</span>
-                <div className="d-flex gap-2">
-                    <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
-                        <Icon icon="copy-to-clipboard" margin="m-0" />
-                    </Button>
+            {isCopyable && (
+                <div className="mt-3">
+                    <span className="small-label">Actions</span>
+                    <div className="d-flex gap-2">
+                        <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
+                            <Icon icon="copy-to-clipboard" margin="m-0" />
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
         </>
     );
 }
