@@ -614,6 +614,7 @@ namespace Voron
            
             private sealed class JournalZeroingPacingState
             {
+                public DirectoryStorageEnvironmentOptions Options;
                 public WriteAheadJournal Journal;
                 public int StalledMs;
 
@@ -621,6 +622,8 @@ namespace Voron
                 public static int JournalZeroingPacing(void* state)
                 {
                     var pacing = (JournalZeroingPacingState)GCHandle.FromIntPtr((IntPtr)state).Target!;
+                    if (pacing.Options.Disposed)
+                        return -1; // nobody will use this file
 
                     pacing.Journal.Env.Options.ForTestingPurposes?.OnJournalZeroingPacing?.Invoke();
 
@@ -704,7 +707,7 @@ namespace Voron
                 string zeroingPath = new VoronPathSetting(path + TempFileExtension).FullPath;
 
                 long zeroedBytes;
-                var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Journal = journal });
+                var pacingHandle = GCHandle.Alloc(new JournalZeroingPacingState { Options = this, Journal = journal });
                 try
                 {
                     PalFlags.FailCodes rc;
