@@ -39,7 +39,7 @@ function getRangeText({ FirstTime, LastTime, Count }: BackupDecisionLogEntry): s
 export function TimeCell({ entry }: EntryProps) {
     return (
         <div
-            className="ps-2 align-self-stretch d-flex align-items-center"
+            className="ps-2 h-100 d-flex align-items-center"
             style={{ borderLeft: `4px solid var(--bs-${eventStyles[entry.Category].color})` }}
         >
             <DateFormatterCell<BackupDecisionLogEntry, string>
@@ -100,7 +100,7 @@ export function ReasonCell({ entry }: EntryProps) {
     const detail = entry.Category === "Waiting" ? getDetailLabel(entry.Detail) : null;
 
     const content = (
-        <div className="d-flex flex-column">
+        <div className="d-flex flex-column cell-wrap py-1">
             {detail && <strong>{detail}</strong>}
             <span>{entry.Reason ?? "-"}</span>
         </div>

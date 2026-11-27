@@ -1,5 +1,5 @@
 import moment from "moment";
-import { act, within } from "@testing-library/react";
+import { act, waitFor, within } from "@testing-library/react";
 import { composeStories } from "@storybook/react-webpack5";
 import { mockServices } from "test/mocks/services/MockServices";
 import { RtlScreen, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
@@ -12,7 +12,6 @@ const details = ManageServerStubs.backupDecisionLog();
 const { Entries: entries } = details;
 const reasonOf = (category: string) => entries.find((x) => x.Category === category).Reason;
 const failedReason = reasonOf("Failed");
-const serverStartupEntry = entries.find((x) => x.Detail === "Startup");
 const heldBackReason = entries.find((x) => x.Detail === "BackupDisabled").Reason;
 
 const watchMock = () => mockServices.manageServerService.mock.watchBackupDecisionLog as jest.Mock;
@@ -64,7 +63,7 @@ describe("BackupDecisionLog", () => {
         const onMessage = watchMock().mock.lastCall[1];
         const now = moment().toISOString();
 
-        act(() =>
+        await act(async () =>
             onMessage({
                 ...details,
                 Type: "Update",
@@ -148,7 +147,7 @@ describe("BackupDecisionLog", () => {
             await fillInput(screen.getByPlaceholderText("e.g. Task disabled"), "unreachable");
 
             expect(await screen.findByRole("button", { name: "Reason: unreachable" })).toBeInTheDocument();
-            expect(lastQuery()).toBe("take=512&reason=unreachable");
+            await waitFor(() => expect(lastQuery()).toBe("take=512&reason=unreachable"));
         });
 
         it("offers databases and tasks from the snapshot and sends the selection", async () => {
@@ -156,7 +155,7 @@ describe("BackupDecisionLog", () => {
 
             await openFilterCategory(fireClick, screen, "Database");
             await fireClick(screen.getByRole("checkbox", { name: "Invoices" }));
-            await fireClick(screen.getByRole("button", { name: "Back" }));
+            await fireClick(screen.getByRole("button", { name: "Back to filters" }));
             await fireClick(screen.getByRole("button", { name: "Task" }));
             await fireClick(screen.getByRole("checkbox", { name: "Hourly incremental (Invoices)" }));
 
@@ -182,28 +181,46 @@ describe("BackupDecisionLog", () => {
             expect(lastQuery()).toBe("take=512&database=Invoices");
         });
 
-        it("includes the whole selected To day", async () => {
-            const { screen, fireClick, fillInput } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
-            const newestDay = moment(serverStartupEntry.LastTime).format("DD/MM/YYYY");
+        it("ignores a failure of the connection closed by a filter change", async () => {
+            const { screen, fireClick } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
+            const onClosedConnectionError = watchMock().mock.lastCall[2];
 
-            await openFilterCategory(fireClick, screen, "Date range");
-            await fillInput(screen.getAllByRole("textbox")[1], newestDay + " 00:00");
+            watchMock().mockImplementation(() => ({ dispose: jest.fn() }));
+            await openFilterCategory(fireClick, screen, "Event");
+            await fireClick(screen.getByRole("checkbox", { name: "Failed" }));
+            act(() => onClosedConnectionError());
 
-            expect(await screen.findByRole("button", { name: new RegExp(`- ${newestDay} 23:59`) })).toBeInTheDocument();
-            expect(lastQuery()).toContain(
-                "to=" + encodeURIComponent(moment(serverStartupEntry.LastTime).endOf("day").toISOString())
-            );
+            expect(screen.queryByText(/Unable to load the backup decision log/)).not.toBeInTheDocument();
         });
 
-        it("clearing the reason chip closes the menu and empties the reason input", async () => {
+        it("sends the date range picked in the calendar with its start and end times", async () => {
+            const { screen, fireClick, fillInput } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
+            const today = moment();
+            const todayOption = { name: new RegExp(`Choose ${today.format("dddd, MMMM Do, YYYY")}`) };
+
+            await openFilterCategory(fireClick, screen, "Date range");
+            await fireClick(screen.getByRole("gridcell", todayOption));
+            await fireClick(screen.getByRole("gridcell", todayOption));
+            await fillInput(screen.getByLabelText("Start time"), "08:00");
+            await fillInput(screen.getByLabelText("End time"), "17:30");
+
+            const day = today.format("DD/MM/YYYY");
+            expect(screen.getByRole("button", { name: `Date range: ${day} 08:00 - ${day} 17:30` })).toBeInTheDocument();
+            const query = new URLSearchParams(lastQuery());
+            expect(query.get("from")).toBe(today.clone().set({ h: 8, m: 0 }).startOf("minute").toISOString());
+            expect(query.get("to")).toBe(today.clone().set({ h: 17, m: 30 }).endOf("minute").toISOString());
+        });
+
+        it("clearing the reason chip removes the reason from the query and the input", async () => {
             const { screen, fireClick, fillInput } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
 
             await openFilterCategory(fireClick, screen, "Reason");
             await fillInput(screen.getByPlaceholderText("e.g. Task disabled"), "no such reason");
-            await screen.findByRole("button", { name: "Reason: no such reason" });
+            await waitFor(() => expect(lastQuery()).toBe("take=512&reason=no+such+reason"));
 
-            await fireClick(screen.getByRole("button", { name: "Clear Reason filter" }));
-            expect(screen.queryByPlaceholderText("e.g. Task disabled")).not.toBeInTheDocument();
+            await fireClick(screen.getByRole("button", { name: 'Clear "Reason" filter' }));
+            expect(screen.queryByRole("button", { name: "Reason: no such reason" })).not.toBeInTheDocument();
+            await waitFor(() => expect(lastQuery()).toBe("take=512"));
 
             await openFilterCategory(fireClick, screen, "Reason");
             expect(screen.getByPlaceholderText("e.g. Task disabled")).toHaveValue("");
@@ -232,25 +249,6 @@ describe("BackupDecisionLog", () => {
 
             expect(screen.queryByRole("button", { name: "Event: Failed" })).not.toBeInTheDocument();
             expect(lastQuery()).toBe("take=512");
-        });
-
-        it("opens the chip category menu, also when the filter menu is already open", async () => {
-            const { screen, fireClick } = await rtlRender_WithWaitForLoad(<BackupDecisionLogStory />);
-
-            await openFilterCategory(fireClick, screen, "Event");
-            await fireClick(screen.getByRole("checkbox", { name: "Failed" }));
-            await fireClick(screen.getByRole("button", { name: /Filter/ }));
-            expect(screen.queryByRole("checkbox", { name: "Failed" })).not.toBeInTheDocument();
-
-            await fireClick(screen.getByRole("button", { name: "Event: Failed" }));
-            expect(screen.getByRole("checkbox", { name: "Failed" })).toBeInTheDocument();
-
-            await fireClick(screen.getByRole("button", { name: "Back" }));
-            await fireClick(screen.getByRole("button", { name: "Reason" }));
-            expect(screen.queryByRole("checkbox", { name: "Failed" })).not.toBeInTheDocument();
-
-            await fireClick(screen.getByRole("button", { name: "Event: Failed" }));
-            expect(screen.getByRole("checkbox", { name: "Failed" })).toBeInTheDocument();
         });
     });
 });

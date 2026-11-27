@@ -25,7 +25,7 @@ export default function BackupDecisionLog() {
     const isFiltering = !isEqual(filters, emptyBackupDecisionFilters);
 
     return (
-        <div className="content-padding">
+        <div className="content-padding vstack">
             <div className="hstack justify-content-between mb-4">
                 <AboutViewHeading title="Backup Decision Log" icon="backups" marginBottom={0} />
                 <BackupDecisionLogInfoHub />

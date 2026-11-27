@@ -98,6 +98,23 @@ export const ServerBlocked: StoryObj<BackupDecisionLogStoryArgs> = {
     },
 };
 
+export const LongValues: StoryObj<BackupDecisionLogStoryArgs> = {
+    ...BackupDecisionLogStory,
+    args: {
+        ...BackupDecisionLogStory.args,
+        details: (x) => {
+            const longReason =
+                "Cannot start the backup because the destination 'S3 bucket ravendb-production-backups-eu-central-1' rejected the upload: the request signature does not match and the access key may have been rotated";
+            x.Entries = x.Entries.map((entry) => ({ ...entry, Reason: longReason }));
+            x.Summary.ServerBlock = {
+                Detail: "LowMemory",
+                Reason: "The server is low on memory (available 512 MB of 32 GB), scheduled backups are held back until memory is released",
+                Since: x.RunnerStartTime,
+            };
+        },
+    },
+};
+
 function withEntries(
     transform: (entries: BackupDecisionLogDetails["Entries"]) => BackupDecisionLogDetails["Entries"]
 ): BackupDecisionLogDetails {

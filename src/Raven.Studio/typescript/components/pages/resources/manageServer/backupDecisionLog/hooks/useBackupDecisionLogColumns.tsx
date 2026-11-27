@@ -1,10 +1,18 @@
-import { ColumnDef } from "@tanstack/react-table";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import { BackupDecisionLogEntry } from "../backupDecisionLogTypes";
 import { DatabaseCell, EventCell, ReasonCell, TaskCell, TimeCell } from "../partials/BackupDecisionLogCells";
 
-export function useBackupDecisionLogColumns(): ColumnDef<BackupDecisionLogEntry>[] {
-    const getSize = virtualTableUtils.getCellSizeProvider();
+type EntryCellContext = CellContext<BackupDecisionLogEntry, unknown>;
+
+const renderTimeCell = ({ row }: EntryCellContext) => <TimeCell entry={row.original} />;
+const renderEventCell = ({ row }: EntryCellContext) => <EventCell entry={row.original} />;
+const renderDatabaseCell = ({ row }: EntryCellContext) => <DatabaseCell entry={row.original} />;
+const renderTaskCell = ({ row }: EntryCellContext) => <TaskCell entry={row.original} />;
+const renderReasonCell = ({ row }: EntryCellContext) => <ReasonCell entry={row.original} />;
+
+export function useBackupDecisionLogColumns(availableWidth: number): ColumnDef<BackupDecisionLogEntry>[] {
+    const getSize = virtualTableUtils.getCellSizeProvider(virtualTableUtils.getTableBodyWidth(availableWidth));
 
     return [
         {
@@ -14,31 +22,31 @@ export function useBackupDecisionLogColumns(): ColumnDef<BackupDecisionLogEntry>
             accessorFn: (row) => new Date(row.LastTime),
             sortingFn: "datetime",
             enableSorting: true,
-            cell: ({ row }) => <TimeCell entry={row.original} />,
+            cell: renderTimeCell,
         },
         {
             id: "event",
             header: "Event",
             size: getSize(14),
-            cell: ({ row }) => <EventCell entry={row.original} />,
+            cell: renderEventCell,
         },
         {
             id: "database",
             header: "Database",
             size: getSize(16),
-            cell: ({ row }) => <DatabaseCell entry={row.original} />,
+            cell: renderDatabaseCell,
         },
         {
             id: "task",
             header: "Task",
             size: getSize(16),
-            cell: ({ row }) => <TaskCell entry={row.original} />,
+            cell: renderTaskCell,
         },
         {
             id: "reason",
             header: "Reason",
             size: getSize(34),
-            cell: ({ row }) => <ReasonCell entry={row.original} />,
+            cell: renderReasonCell,
         },
     ];
 }

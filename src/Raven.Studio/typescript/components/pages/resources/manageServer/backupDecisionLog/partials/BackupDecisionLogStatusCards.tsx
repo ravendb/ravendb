@@ -1,3 +1,4 @@
+import "./BackupDecisionLogStatusCards.scss";
 import { ReactNode } from "react";
 import classNames from "classnames";
 import moment from "moment";
@@ -24,19 +25,19 @@ const formatTime = (time: string) => moment(time).format("HH:mm");
 function StatusCard({ title, value, caption, tooltip, isDanger }: StatusCardProps) {
     return (
         <Card
-            className={classNames("flex-fill", { "bg-faded-danger": isDanger })}
+            className={classNames({ "bg-faded-danger": isDanger })}
             style={isDanger ? { border: "1px solid var(--text-faded-danger)" } : undefined}
         >
-            <Card.Body>
-                <div className="hstack gap-1 text-muted">
+            <Card.Body className="p-3">
+                <div className="hstack gap-1 text-muted mb-1">
                     {title}
                     {tooltip && (
                         <PopoverWithHoverWrapper message={tooltip} placement="top">
-                            <Icon icon="info" color="emphasis" margin="m-0" />
+                            <Icon icon="info" color="muted" margin="m-0" />
                         </PopoverWithHoverWrapper>
                     )}
                 </div>
-                <div className={classNames("fs-1 fw-bold", { "text-danger": isDanger })}>{value}</div>
+                <div className={classNames("h3 fw-bold mb-2", { "text-danger": isDanger })}>{value}</div>
                 <div className="text-muted small">{caption}</div>
             </Card.Body>
         </Card>
@@ -61,7 +62,7 @@ export default function BackupDecisionLogStatusCards({ summary, runnerStartTime 
     const since = ` - since ${formatTime(runnerStartTime)}`;
 
     return (
-        <div className="hstack gap-3 flex-wrap align-items-stretch mb-4">
+        <div className="backup-decision-log-status-cards mb-2">
             <StatusCard
                 title="Running now"
                 value={`${Running.Current}/${Running.Max}`}
