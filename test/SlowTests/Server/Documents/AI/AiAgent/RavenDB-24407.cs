@@ -80,6 +80,7 @@ public class RavenDB_24407 : RavenTestBase
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false], Skip = "RavenDB-24806")]
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
+        options.ModifyDocumentStore = Options.UseNewtonsoftJson;
         using var store = GetDocumentStore(options);
 
         var diagSb = new StringBuilder().AppendLine("Debug Info: ");
@@ -343,6 +344,7 @@ public class RavenDB_24407 : RavenTestBase
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false, false })]
     public async Task AnswerActionToolRequest(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
+        options.ModifyDocumentStore = Options.UseNewtonsoftJson;
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 

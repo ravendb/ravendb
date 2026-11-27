@@ -24,7 +24,7 @@ public class RavenDB_24973(ITestOutputHelper output) : RavenTestBase(output)
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanSetupTracingInGenAiTask(Options options, GenAiConfiguration config)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(Options.ForNewtonsoftJson());
         const string docId = "posts/1";
 
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
