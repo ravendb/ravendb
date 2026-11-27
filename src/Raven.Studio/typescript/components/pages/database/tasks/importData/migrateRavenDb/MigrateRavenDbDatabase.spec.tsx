@@ -40,23 +40,23 @@ async function detectVersion(rendered: Rendered, url = SERVER_URL) {
 }
 
 describe("MigrateRavenDbDatabase", () => {
-    let openDetails: jest.SpyInstance;
+    let monitorOperation: jest.SpyInstance;
 
     beforeEach(() => {
         jest.useFakeTimers();
-        openDetails = jest
-            .spyOn(notificationCenter.instance, "openDetailsForOperationById")
-            .mockImplementation(() => {});
+        monitorOperation = jest
+            .spyOn(notificationCenter.instance, "monitorOperation")
+            .mockImplementation(() => $.Deferred());
         tasksMocks().getRemoteServerBuildInfo.mockClear();
         tasksMocks().migrateRavenDbDatabase.mockClear();
     });
 
     afterEach(() => {
-        openDetails.mockRestore();
+        monitorOperation.mockRestore();
         jest.useRealTimers();
     });
 
-    it("detects the source version and migrates the chosen database", async () => {
+    it("detects the source version, migrates the chosen database and shows the migration progress", async () => {
         const rendered = rtlRender(<Default />);
         const { screen, fillInput, fireClick } = rendered;
 
@@ -78,7 +78,8 @@ describe("MigrateRavenDbDatabase", () => {
         expect(dto.ServerUrl).toBe(SERVER_URL);
         expect(dto.MigrationSettings.DatabaseName).toBe("Northwind");
         expect(dto.BuildMajorVersion).toBe("V7");
-        await waitFor(() => expect(openDetails).toHaveBeenCalledWith(databaseName, 1234));
+        await waitFor(() => expect(monitorOperation).toHaveBeenCalledWith(databaseName, 1234, expect.any(Function)));
+        expect(await screen.findByRole("heading", { name: /Database migration/ })).toBeInTheDocument();
     });
 
     it("disables the toggles the source version does not support", async () => {

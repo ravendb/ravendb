@@ -4,25 +4,15 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useServices } from "components/hooks/useServices";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useIsMounted } from "components/hooks/useIsMounted";
-import notificationCenter from "common/notifications/notificationCenter";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import collectionsTracker from "common/helpers/database/collectionsTracker";
 import messagePublisher from "common/messagePublisher";
 import { useImportRestrictions } from "components/pages/database/tasks/importData/shared/useImportRestrictions";
+import { useImportOperationMonitor } from "components/pages/database/tasks/importData/shared/useImportOperationMonitor";
 import { hasAnyInclude, toImportDto } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
 
 type SmugglerResult = Raven.Client.Documents.Smuggler.SmugglerResult;
-type OperationStatus = Raven.Client.Documents.Operations.OperationStatus;
-type OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
-
-export interface OperationState {
-    progress: SmugglerResult | null;
-    error: OperationExceptionResult | null;
-    status: OperationStatus;
-    startTime: Date;
-    endTime: Date | null;
-}
 
 export function useImportOperation() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -32,8 +22,8 @@ export function useImportOperation() {
         useImportRestrictions();
 
     const [uploadPercent, setUploadPercent] = useState<number | null>(null);
-    const [operationState, setOperationState] = useState<OperationState | null>(null);
-    const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+    const { operationState, isResultModalOpen, closeResultModal, monitorOperation, markFaultedWhenNoProgress } =
+        useImportOperationMonitor();
 
     const isUploading = uploadPercent != null;
 
@@ -83,41 +73,8 @@ export function useImportOperation() {
             return;
         }
 
-        setOperationState({
-            progress: null,
-            error: null,
-            status: "InProgress",
-            startTime: new Date(),
-            endTime: null,
-        });
-        setIsResultModalOpen(true);
+        const monitor = monitorOperation(databaseName, operationId);
         setUploadPercent(0);
-
-        const monitor = notificationCenter.instance.monitorOperation<SmugglerResult>(
-            databaseName,
-            operationId,
-            (progress) => {
-                if (isMounted()) {
-                    setOperationState((prev) => (prev ? { ...prev, progress } : prev));
-                }
-            }
-        );
-
-        monitor
-            .done((result: SmugglerResult) => {
-                if (isMounted()) {
-                    setOperationState((prev) =>
-                        prev ? { ...prev, progress: result, status: "Completed", endTime: new Date() } : prev
-                    );
-                }
-            })
-            .fail((error: OperationExceptionResult) => {
-                if (isMounted()) {
-                    setOperationState((prev) =>
-                        prev ? { ...prev, error, status: "Faulted", endTime: new Date() } : prev
-                    );
-                }
-            });
 
         refreshRevisionsConfigurationWhenDone(monitor);
 
@@ -138,13 +95,7 @@ export function useImportOperation() {
             });
         } catch {
             // when the upload fails before the server registers progress, monitorOperation never settles
-            if (isMounted()) {
-                setOperationState((prev) =>
-                    prev && prev.status === "InProgress" && !prev.progress
-                        ? { ...prev, status: "Faulted", endTime: new Date() }
-                        : prev
-                );
-            }
+            markFaultedWhenNoProgress();
         } finally {
             if (isMounted()) {
                 setUploadPercent(null);
@@ -177,6 +128,6 @@ export function useImportOperation() {
         isUploading,
         operationState,
         isResultModalOpen,
-        closeResultModal: () => setIsResultModalOpen(false),
+        closeResultModal,
     };
 }

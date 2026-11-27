@@ -31,7 +31,7 @@ import SelectFileSection from "./sections/SelectFileSection";
 import DataToImportSection from "./sections/DataToImportSection";
 import ConfigurationToImportSection from "components/pages/database/tasks/importData/shared/ConfigurationToImportSection";
 import ImportProcessingSection from "./sections/ImportProcessingSection";
-import ImportResultModal from "./ImportResultModal";
+import ImportResultModal from "components/pages/database/tasks/importData/shared/ImportResultModal";
 import ImportCommandModal from "./ImportCommandModal";
 
 export default function ImportDatabaseFromFile() {

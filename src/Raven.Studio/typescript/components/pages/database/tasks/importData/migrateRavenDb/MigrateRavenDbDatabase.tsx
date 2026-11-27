@@ -12,6 +12,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import ImportPageLayout from "components/pages/database/tasks/importData/shared/ImportPageLayout";
 import ImportSection from "components/pages/database/tasks/importData/shared/ImportSection";
+import ImportResultModal from "components/pages/database/tasks/importData/shared/ImportResultModal";
 import DocumentsToImportCard from "components/pages/database/tasks/importData/shared/DocumentsToImportCard";
 import ConfigurationToImportSection from "components/pages/database/tasks/importData/shared/ConfigurationToImportSection";
 import { getItemsToWarnAbout } from "components/pages/database/tasks/importData/shared/importOptionsUtils";
@@ -141,7 +142,7 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
     const form = useFormContext<MigrateRavenDbFormData>();
     const { control, handleSubmit, formState } = form;
     const restrictedKeys = useMigrateRestrictedKeys();
-    const { migrate } = useMigrateOperation();
+    const { migrate, operationState, isResultModalOpen, closeResultModal } = useMigrateOperation();
 
     useImportOptionsFormSync(form, getDefaultMigrateFormData);
 
@@ -164,61 +165,75 @@ function MigrateRavenDbContent({ serverInfo, canDetect, isRavenFsImport }: Migra
     };
 
     return (
-        <ImportPageLayout
-            title="Migrate data from another RavenDB Server"
-            icon="import-database"
-            backUrl={forCurrentDatabase.importDataOptionsUrl()}
-            navItems={navItems}
-            scroll={scroll}
-            alert={
-                <Alert variant="info" className="w-50">
-                    <Icon icon="info" color="info" /> Note: Migration will overwrite any existing documents and indexes.
-                </Alert>
-            }
-            actions={
-                <AccessPopover accessRequired="DatabaseAdmin">
-                    <Button
-                        variant="primary"
-                        className="rounded-pill"
-                        disabled={!canMigrate}
-                        onClick={handleSubmit((data) => migrate(data, version), onInvalidSubmit)}
-                    >
-                        <Icon icon="import-database" /> Migrate database
-                    </Button>
-                </AccessPopover>
-            }
-            banner={
-                !hasInclude && (
-                    <Alert variant="warning" className="mb-2">
-                        Note: At least one &apos;include&apos; option must be checked.
+        <>
+            <ImportPageLayout
+                title="Migrate data from another RavenDB Server"
+                icon="import-database"
+                backUrl={forCurrentDatabase.importDataOptionsUrl()}
+                navItems={navItems}
+                scroll={scroll}
+                alert={
+                    <Alert variant="info" className="w-50">
+                        <Icon icon="info" color="info" /> Note: Migration will overwrite any existing documents and
+                        indexes.
                     </Alert>
-                )
-            }
-        >
-            <SelectServerSection serverInfo={serverInfo} canDetect={canDetect} />
-            {!isRavenFsImport && (
-                <fieldset disabled={!version} className={classNames({ "item-disabled": !version })}>
-                    <ImportSection<MigrateRavenDbFormData> id="data-to-import" title="Data to import">
-                        <DocumentsToImportCard visibleToggles={getVisibleDocumentToggles(version)} />
-                        {itemsToWarnAbout.length > 0 && (
-                            <Alert variant="warning" className="mt-3 mb-0">
-                                <Icon icon="warning" color="warning" /> You are migrating {itemsToWarnAbout.join(", ")}{" "}
-                                data without including the Documents.
-                            </Alert>
-                        )}
-                    </ImportSection>
-                    <ConfigurationToImportSection
-                        unsupportedReason={isLegacy ? getUnsupportedVersionReason(version) : undefined}
-                    />
-                    <ImportSection<MigrateRavenDbFormData>
-                        id="import-processing"
-                        title="Import processing"
-                        errorPaths={["processing.transformScript"]}
-                    >
-                        <TransformScriptCard />
-                    </ImportSection>
-                </fieldset>
+                }
+                actions={
+                    <AccessPopover accessRequired="DatabaseAdmin">
+                        <Button
+                            variant="primary"
+                            className="rounded-pill"
+                            disabled={!canMigrate}
+                            onClick={handleSubmit((data) => migrate(data, version), onInvalidSubmit)}
+                        >
+                            <Icon icon="import-database" /> Migrate database
+                        </Button>
+                    </AccessPopover>
+                }
+                banner={
+                    !hasInclude && (
+                        <Alert variant="warning" className="mb-2">
+                            Note: At least one &apos;include&apos; option must be checked.
+                        </Alert>
+                    )
+                }
+            >
+                <SelectServerSection serverInfo={serverInfo} canDetect={canDetect} />
+                {!isRavenFsImport && (
+                    <fieldset disabled={!version} className={classNames({ "item-disabled": !version })}>
+                        <ImportSection<MigrateRavenDbFormData> id="data-to-import" title="Data to import">
+                            <DocumentsToImportCard visibleToggles={getVisibleDocumentToggles(version)} />
+                            {itemsToWarnAbout.length > 0 && (
+                                <Alert variant="warning" className="mt-3 mb-0">
+                                    <Icon icon="warning" color="warning" /> You are migrating{" "}
+                                    {itemsToWarnAbout.join(", ")} data without including the Documents.
+                                </Alert>
+                            )}
+                        </ImportSection>
+                        <ConfigurationToImportSection
+                            unsupportedReason={isLegacy ? getUnsupportedVersionReason(version) : undefined}
+                        />
+                        <ImportSection<MigrateRavenDbFormData>
+                            id="import-processing"
+                            title="Import processing"
+                            errorPaths={["processing.transformScript"]}
+                        >
+                            <TransformScriptCard />
+                        </ImportSection>
+                    </fieldset>
+                )}
+            </ImportPageLayout>
+            {isResultModalOpen && operationState && (
+                <ImportResultModal
+                    title="Database migration"
+                    progress={operationState.progress}
+                    error={operationState.error}
+                    status={operationState.status}
+                    startTime={operationState.startTime}
+                    endTime={operationState.endTime}
+                    onClose={closeResultModal}
+                />
             )}
-        </ImportPageLayout>
+        </>
     );
 }

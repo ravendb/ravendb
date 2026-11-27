@@ -32,6 +32,7 @@ interface ImportResultRow {
 }
 
 interface ImportResultModalProps {
+    title?: string;
     progress: ImportProgress | null;
     error?: OperationExceptionResult | null;
     status: OperationStatus;
@@ -41,6 +42,7 @@ interface ImportResultModalProps {
 }
 
 export default function ImportResultModal({
+    title = "Database import",
     progress,
     error,
     status,
@@ -77,7 +79,7 @@ export default function ImportResultModal({
         <Modal size="lg" show onHide={onClose} className="modal-border bulge-primary">
             <Modal.Header closeButton onCloseClick={onClose} className="pb-0">
                 <h3 className="mb-0">
-                    <Icon icon="import-database" color="primary" /> Database import
+                    <Icon icon="import-database" color="primary" /> {title}
                 </h3>
             </Modal.Header>
             <Modal.Body>
