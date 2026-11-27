@@ -108,7 +108,7 @@ namespace FastTests.Voron.ScratchBuffer
             }
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
         public void Rolling_back_the_transaction_started_by_an_async_commit_frees_only_its_own_scratch_pages()
         {
             var committedValue = new string('c', 20000);

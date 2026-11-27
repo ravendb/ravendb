@@ -17,7 +17,7 @@ public class RavenDB_27377(ITestOutputHelper output) : RavenTestBase(output)
 {
     private const int PipelineDepth = 4;
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void AsyncCommitChain_KeepsSeveralJournalWritesInFlight()
     {
         var path = NewDataPath();
@@ -49,7 +49,7 @@ public class RavenDB_27377(ITestOutputHelper output) : RavenTestBase(output)
             $"the pipeline window was exceeded - {maxConcurrent} concurrent journal writes with a limit of {PipelineDepth}");
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void LostJournalWrite_IsNotPublishedEvenWhenTheNextWriteLands()
     {
         var path = NewDataPath();
@@ -233,7 +233,7 @@ public class RavenDB_27377(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenMultiplatformFact(RavenTestCategory.Voron, RavenArchitecture.AllX64)]
     public void PipelinedCommits_SurviveARestart()
     {
         var path = NewDataPath();
