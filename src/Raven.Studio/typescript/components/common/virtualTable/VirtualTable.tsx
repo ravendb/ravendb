@@ -19,6 +19,7 @@ import { NumberCondition, parseNumberCondition } from "./utils/numberFilterUtils
 interface VirtualTableProps<T> extends Omit<VirtualTableBodyWrapperProps<T>, "tableContainerRef"> {
     overscan?: number;
     rowHeightInPx?: number;
+    isRowHeightDynamic?: boolean;
     tableContainerRef?: React.RefObject<HTMLDivElement>;
     onRowClick?: (row: Row<T>) => void;
     getRowClassName?: (row: Row<T>) => string;
@@ -31,6 +32,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
         heightInPx = 300,
         overscan = 5,
         rowHeightInPx,
+        isRowHeightDynamic = false,
         isLoading = false,
         isEmpty,
         emptyMessage,
@@ -62,11 +64,13 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
 
     const { rows } = table.getRowModel();
 
+    const estimatedRowHeightInPx =
+        rowHeightInPx ??
+        (isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx);
+
     const rowVirtualizer = useVirtualizer({
         count: rows.length,
-        estimateSize: () =>
-            rowHeightInPx ??
-            (isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx),
+        estimateSize: () => estimatedRowHeightInPx,
         getScrollElement: () => tableContainerRef.current,
         overscan,
     });
@@ -105,7 +109,9 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                             }
                             style={{
                                 transform: `translateY(${virtualRow.start}px)`,
-                                height: `${virtualRow.size}px`,
+                                ...(isRowHeightDynamic
+                                    ? { minHeight: `${estimatedRowHeightInPx}px` }
+                                    : { height: `${virtualRow.size}px` }),
                             }}
                             className={classNames({ "is-odd": virtualRow.index % 2 !== 0 }, getRowClassName?.(row))}
                         >

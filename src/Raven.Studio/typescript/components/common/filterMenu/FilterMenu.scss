@@ -159,3 +159,13 @@
 .filter-menu-field {
     padding: sizes.$gutter-xxxs;
 }
+
+.filter-menu-date-range {
+    display: flex;
+    flex-direction: column;
+    gap: sizes.$gutter-xs;
+
+    .react-datepicker {
+        align-self: center;
+    }
+}

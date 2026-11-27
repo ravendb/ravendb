@@ -226,6 +226,10 @@ class appUrl {
         return base;
     }
 
+    static forBackupDecisionLog(): string {
+        return "#admin/settings/backupDecisionLog";
+    }
+
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";
     }
