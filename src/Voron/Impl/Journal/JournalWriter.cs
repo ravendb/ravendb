@@ -106,7 +106,7 @@ namespace Voron.Impl.Journal
                     _workingSetQuotaLogged = true;
                 }
 
-                metrics.SetFileSize(NumberOfAllocated4Kb * Constants.Storage.JournalPageSize);
+                metrics.SetFileSize((long)NumberOfAllocated4Kb * Constants.Storage.JournalPageSize);
 
                 _options.ForTestingPurposes?.OnJournalWriteCompleted?.Invoke(posBy4Kb, totalNumberOf4Kbs);
             }
