@@ -51,6 +51,9 @@ namespace Voron.Debugging
         public List<TableReport> Tables { get; set; }
         public PreAllocatedBuffersReport PreAllocatedBuffers { get; set; }
         public string TotalEncryptionBufferSize { get; set; }
+
+        // null when the storage has no streams tree
+        public long? UnaccountedSpaceInBytes { get; set; }
     }
 
     public sealed class DataFileReport

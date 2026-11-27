@@ -28,8 +28,9 @@ import { EmptySet } from "components/common/EmptySet";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
 import { Icon } from "components/common/Icon";
-import { ReplicationHubSinksHeader } from "../partials/ReplicationHubSinksHeader";
+import { DISCONNECTED_SINKS_HINT, ReplicationHubSinksHeader } from "../partials/ReplicationHubSinksHeader";
 import { getSinkKey, useReplicationHubSinks } from "../partials/useReplicationHubSinks";
+import { DetailsToggleProps, TaskPanelToggleButton } from "./EtlPanelComponents";
 
 interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
     connectedSinks: OngoingTaskReplicationHubInfo[];
@@ -79,8 +80,39 @@ function restoreSinkPosition(sinksList: HTMLElement, { sinkIndex, top }: SinkPos
     findScrollContainer(sinksList).scrollTop += sink.getBoundingClientRect().top - top;
 }
 
-function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
-    const { connectedSinks, data } = props;
+function Summary(props: ReplicationHubPanelProps & DetailsToggleProps) {
+    const { connectedSinks, detailsVisible, toggleDetails } = props;
+
+    return (
+        <RichPanelDetails>
+            <TaskPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+            <RichPanelDetailItem label="Connected Sinks">{connectedSinks.length.toLocaleString()}</RichPanelDetailItem>
+        </RichPanelDetails>
+    );
+}
+
+function Settings(props: ReplicationHubPanelProps) {
+    const { data } = props;
+
+    const delayHumane = data.shared.delayReplicationTime
+        ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
+        : null;
+
+    return (
+        <RichPanelDetails>
+            <RichPanelDetailItem label="Replication Mode">
+                {formatReplicationMode(data.shared.taskMode)}
+            </RichPanelDetailItem>
+            <RichPanelDetailItem label="Has Filtering">
+                {data.shared.hasFiltering ? "True" : "False"}
+            </RichPanelDetailItem>
+            {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
+        </RichPanelDetails>
+    );
+}
+
+function Details(props: ReplicationHubPanelProps) {
+    const { connectedSinks } = props;
     const sinksState = useReplicationHubSinks(connectedSinks);
     const { visibleSinks, expandedSinkKeys, toggleSinkExpanded, toggleAllExpanded } = sinksState;
 
@@ -106,21 +138,8 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
         toggleSinkExpanded(sinkKey);
     };
 
-    const delayHumane = data.shared.delayReplicationTime
-        ? genUtils.formatTimeSpan(data.shared.delayReplicationTime * 1000, true)
-        : null;
-
     return (
         <div>
-            <RichPanelDetails>
-                {delayHumane && <RichPanelDetailItem label="Replication Delay Time">{delayHumane}</RichPanelDetailItem>}
-                <RichPanelDetailItem label="Replication Mode">
-                    {formatReplicationMode(data.shared.taskMode)}
-                </RichPanelDetailItem>
-                <RichPanelDetailItem label="Has Filtering">
-                    {data.shared.hasFiltering ? "True" : "False"}
-                </RichPanelDetailItem>
-            </RichPanelDetails>
             {connectedSinks.length > 0 && (
                 <div
                     ref={sinksListRef}
@@ -147,7 +166,12 @@ function Details(props: ReplicationHubPanelProps & { canEdit: boolean }) {
                     {visibleSinks.length === 0 && <EmptySet>No sinks match the selected filters</EmptySet>}
                 </div>
             )}
-            <div className="margin-left">{connectedSinks.length === 0 && <EmptySet>No sinks connected</EmptySet>}</div>
+            {connectedSinks.length === 0 && (
+                <div className="margin-left">
+                    <EmptySet>No sinks connected</EmptySet>
+                    <p className="small text-muted text-center mb-3">{DISCONNECTED_SINKS_HINT}</p>
+                </div>
+            )}
         </div>
     );
 }
@@ -193,15 +217,15 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                         canEdit={canEdit}
                         onEdit={onEdit}
                         onTaskOperation={onTaskOperation}
-                        toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
-                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <Summary {...props} detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
+                    <Settings {...props} />
+                    <Details {...props} />
                 </div>
             </Collapse>
         </RichPanel>

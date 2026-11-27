@@ -7,6 +7,8 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
+using Voron.Impl;
 using Xunit;
 
 namespace FastTests.Voron
@@ -572,6 +574,62 @@ namespace FastTests.Voron
             }
         }
         
+        [RavenFact(RavenTestCategory.Voron)]
+        public unsafe void MultiAdd_ChildTreeCreated_ChildTreeOwnsItsName()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("foo");
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var parent = tx.ReadTree("foo");
+                byte* callersKey;
+
+                using (Slice.From(Allocator, "ChildTreeKey", out var key))
+                {
+                    AddUntilTheNestedPageBecomesATree(parent, key);
+                    callersKey = key.Content.Ptr;
+                }
+
+                AssertChildTreeOwnsItsName(tx, parent, "ChildTreeKey", callersKey);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public unsafe void MultiRead_ChildTreeReopened_ChildTreeOwnsItsName()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("foo");
+                tx.Commit();
+            }
+
+            using (var tx = Env.WriteTransaction())
+            {
+                using (Slice.From(Allocator, "ChildTreeKey", out var key))
+                    AddUntilTheNestedPageBecomesATree(tx.ReadTree("foo"), key);
+
+                tx.Commit();
+            }
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var parent = tx.ReadTree("foo");
+                byte* callersKey;
+
+                using (Slice.From(Allocator, "ChildTreeKey", out var key))
+                {
+                    parent.MultiRead(key).Dispose();
+                    callersKey = key.Content.Ptr;
+                }
+
+                AssertChildTreeOwnsItsName(tx, parent, "ChildTreeKey", callersKey);
+            }
+        }
+
         private void ValidateInputExistence(List<string> inputData, string childtreeKey, int inputDataSize, string treeName)
         {
             using (var tx = Env.ReadTransaction())
@@ -630,6 +688,29 @@ namespace FastTests.Voron
             var span = CollectionsMarshal.AsSpan(sortedData);
             span.Sort(SliceComparer.Instance);
             return span;
+        }
+
+        private void AddUntilTheNestedPageBecomesATree(Tree parent, Slice key)
+        {
+            var value = new byte[100];
+            for (int i = 0; i < 50; i++)
+            {
+                BitConverter.TryWriteBytes(value, i);
+                using (Slice.From(Allocator, value, out var valueSlice))
+                    parent.MultiAdd(key, valueSlice);
+            }
+        }
+
+        private unsafe void AssertChildTreeOwnsItsName(Transaction tx, Tree parent, string expectedName, byte* callersKey)
+        {
+            // Claims the slot the caller's key was released into - freed bytes are not scrubbed, so without this Name still reads back correctly.
+            using (Slice.From(Allocator, new string('x', expectedName.Length), out _))
+            using (Slice.From(tx.Allocator, expectedName, out var lookup))
+            {
+                Assert.True(tx.TryGetMultiValueTree(parent, lookup, out var child));
+                Assert.NotEqual((nint)callersKey, (nint)child.Name.Content.Ptr);
+                Assert.Equal(expectedName, child.Name.ToString());
+            }
         }
     }
 }

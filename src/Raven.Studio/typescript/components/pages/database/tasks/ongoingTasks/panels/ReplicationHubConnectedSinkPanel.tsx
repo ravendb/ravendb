@@ -15,10 +15,7 @@ import {
     getVisibleNodes,
     ReplicationTaskSummaryProgress,
 } from "../partials/ExternalReplicationTaskDistribution";
-import { getSinkConnectionStatus, getSinkError, sinkConnectionStatusLabels } from "../partials/useReplicationHubSinks";
-import { ErrorModal } from "../partials/ErrorModal";
 import { Icon } from "components/common/Icon";
-import useBoolean from "components/hooks/useBoolean";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/Collapse";
 
@@ -30,10 +27,7 @@ interface ReplicationHubConnectedSinkPanelProps {
 
 export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedSinkPanelProps) {
     const { data, isExpanded, toggleExpanded } = props;
-
     const visibleNodes = getVisibleNodes(data);
-    const connectionStatus = getSinkConnectionStatus(data);
-    const error = getSinkError(data);
 
     return (
         <RichPanel className="well">
@@ -63,12 +57,6 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                     </Button>
                 </RichPanelDetailItem>
                 <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Sink URL" />
-                {connectionStatus && (
-                    <RichPanelDetailItem label="Replication Status">
-                        {sinkConnectionStatusLabels[connectionStatus]}
-                    </RichPanelDetailItem>
-                )}
-                {error && <SinkErrorItem error={error} />}
                 {visibleNodes.length > 0 && (
                     <RichPanelDetailItem>
                         <ReplicationTaskSummaryProgress task={data} nodesInfo={visibleNodes} />
@@ -77,28 +65,9 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
             </RichPanelDetails>
             <Collapse in={isExpanded} mountOnEnter>
                 <div>
-                    <ExternalReplicationTaskDistribution task={data} />
+                    <ExternalReplicationTaskDistribution task={data} canReportConnectionHealth={false} />
                 </div>
             </Collapse>
         </RichPanel>
-    );
-}
-
-function SinkErrorItem({ error }: { error: string }) {
-    const { value: isErrorModalOpen, toggle: toggleErrorModal } = useBoolean(false);
-
-    return (
-        <RichPanelDetailItem>
-            <Button
-                variant="link"
-                onClick={toggleErrorModal}
-                className="d-flex gap-1 align-items-center p-0"
-                title="Show error details"
-            >
-                <Icon icon="warning" color="danger" margin="m-0" />
-                <span className="text-danger">Error</span>
-            </Button>
-            {isErrorModalOpen && <ErrorModal toggleErrorModal={toggleErrorModal} error={error} />}
-        </RichPanelDetailItem>
     );
 }

@@ -1,3 +1,4 @@
+import "./CellWithCopy.scss";
 import classNames from "classnames";
 import copyToClipboard from "common/copyToClipboard";
 import Code, { CodeLanguage } from "components/common/Code";
@@ -5,10 +6,9 @@ import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CSSProperties, PropsWithChildren, ReactNode, useState } from "react";
-import { useAsync } from "react-async-hook";
+import { UseAsyncReturn, useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
-import Spinner from "react-bootstrap/Spinner";
 
 interface CellWithCopyProps extends PropsWithChildren {
     value: unknown;
@@ -30,6 +30,7 @@ export function CellWithCopy({
     resolvePreviewValue,
 }: CellWithCopyProps) {
     const [valuePopover, setValuePopover] = useState<HTMLElement>();
+    const asyncResolvePreviewValue = useAsyncCallback(resolvePreviewValue);
 
     if (value === undefined) {
         return null;
@@ -43,12 +44,13 @@ export function CellWithCopy({
             <PopoverWithHover
                 target={valuePopover}
                 placement="bottom-start"
+                prepare={resolvePreviewValue ? asyncResolvePreviewValue.execute : undefined}
                 style={popoverMaxWidth ? ({ "--bs-popover-max-width": popoverMaxWidth } as CSSProperties) : undefined}
             >
                 <Popover.Body>
                     {resolvePreviewValue ? (
                         <CellWithCopyResolvedPreview
-                            resolvePreviewValue={resolvePreviewValue}
+                            asyncResolvePreviewValue={asyncResolvePreviewValue}
                             previewLanguage={previewLanguage}
                             additionalButtons={additionalButtons}
                         />
@@ -82,14 +84,17 @@ function CellWithCopyPreview({
         <>
             <pre
                 style={{ maxHeight: "300px" }}
-                className={classNames("overflow-auto rounded mb-3 p-0 token", previewCode == null && typeof value)}
+                className={classNames(
+                    "cell-preview-code overflow-auto rounded mb-3 p-0 token",
+                    previewCode == null && typeof value
+                )}
             >
                 <Code language={previewLanguage} code={previewBody} isActionsHidden />
             </pre>
             <span className="small-label">Actions</span>
             <div className="d-flex gap-2">
                 <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
-                    <Icon icon="copy-to-clipboard" margin="m-0" />
+                    <Icon icon="copy" margin="m-0" />
                 </Button>
                 {additionalButtons}
             </div>
@@ -98,31 +103,29 @@ function CellWithCopyPreview({
 }
 
 function CellWithCopyResolvedPreview({
-    resolvePreviewValue,
+    asyncResolvePreviewValue,
     previewLanguage,
     additionalButtons,
-}: Required<Pick<CellWithCopyProps, "resolvePreviewValue">> &
-    Pick<CellWithCopyProps, "previewLanguage" | "additionalButtons">) {
-    const asyncValue = useAsync(resolvePreviewValue, []);
+}: { asyncResolvePreviewValue: UseAsyncReturn<unknown> } & Pick<
+    CellWithCopyProps,
+    "previewLanguage" | "additionalButtons"
+>) {
+    const { status, result } = asyncResolvePreviewValue;
 
-    if (asyncValue.loading) {
-        return <Spinner size="sm" />;
+    if (status === "error") {
+        return <span className="text-danger">Unable to load the value</span>;
     }
 
-    if (asyncValue.error) {
-        return <span className="text-danger">Unable to load the value: {asyncValue.error.message}</span>;
+    if (status !== "success") {
+        return null;
     }
 
-    if (asyncValue.result === undefined) {
+    if (result === undefined) {
         return <span className="text-muted">The value no longer exists</span>;
     }
 
     return (
-        <CellWithCopyPreview
-            value={asyncValue.result}
-            previewLanguage={previewLanguage}
-            additionalButtons={additionalButtons}
-        />
+        <CellWithCopyPreview value={result} previewLanguage={previewLanguage} additionalButtons={additionalButtons} />
     );
 }
 

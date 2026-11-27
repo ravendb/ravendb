@@ -179,44 +179,36 @@ export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
 interface OngoingTaskActionsProps {
     canEdit: boolean;
     task: OngoingTaskInfo;
-    toggleDetails?: () => void;
     onEdit: () => void;
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: boolean;
-    isDetailsOpen?: boolean;
-    isEtl?: boolean;
 }
 
 export function OngoingTaskActions(props: OngoingTaskActionsProps) {
-    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting, isDetailsOpen, isEtl } = props;
+    const { canEdit, task, onEdit, onTaskOperation, isDeleting } = props;
+
+    if (task.shared.serverWide) {
+        return null;
+    }
 
     return (
         <div className="actions">
             <ButtonGroup>
-                {!isEtl && (
-                    <Button variant="secondary" onClick={toggleDetails} title="Click for details">
-                        <Icon icon={isDetailsOpen ? "fold" : "unfold"} margin="m-0" />
-                    </Button>
-                )}
-                {!task.shared.serverWide && (
-                    <Button variant="secondary" onClick={onEdit} title="Edit task">
-                        <Icon icon="edit" margin="m-0" />
-                    </Button>
-                )}
-                {!task.shared.serverWide && (
-                    <ButtonWithSpinner
-                        variant="danger"
-                        disabled={!canEdit}
-                        isSpinning={isDeleting}
-                        onClick={() => onTaskOperation("delete", [task.shared])}
-                        title="Delete task"
-                        spinnerMargin="m-0"
-                        icon={{
-                            icon: "trash",
-                            margin: "m-0",
-                        }}
-                    ></ButtonWithSpinner>
-                )}
+                <Button variant="secondary" onClick={onEdit} title="Edit task">
+                    <Icon icon="edit" margin="m-0" />
+                </Button>
+                <ButtonWithSpinner
+                    variant="danger"
+                    disabled={!canEdit}
+                    isSpinning={isDeleting}
+                    onClick={() => onTaskOperation("delete", [task.shared])}
+                    title="Delete task"
+                    spinnerMargin="m-0"
+                    icon={{
+                        icon: "trash",
+                        margin: "m-0",
+                    }}
+                ></ButtonWithSpinner>
             </ButtonGroup>
         </div>
     );

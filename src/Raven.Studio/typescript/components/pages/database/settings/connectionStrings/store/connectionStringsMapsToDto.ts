@@ -276,6 +276,9 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.azureOpenAiSettings.enablePromptCache,
                       Temperature: mapTemperatureToDto(connection),
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.azureOpenAiSettings.reasoningEffort : null,
+                      ChatApi: connection.azureOpenAiSettings.chatApi,
                   }
                 : null,
         GoogleSettings:
@@ -305,10 +308,14 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       Model: connection.ollamaSettings.model,
                       Uri: connection.ollamaSettings.uri,
                       Endpoint: connection.ollamaSettings.uri,
-                      ApiKey: null,
+                      ApiKey: connection.ollamaSettings.apiKey,
                       Think: connection.modelType === "Chat" ? connection.ollamaSettings.think : null,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       Temperature: mapTemperatureToDto(connection),
+                      ReasoningEffort:
+                          connection.modelType === "Chat" ? connection.ollamaSettings.reasoningEffort : null,
+                      ChatApi: connection.ollamaSettings.chatApi,
+                      EnablePromptCache: connection.ollamaSettings.enablePromptCache,
                   }
                 : null,
         EmbeddedSettings:
@@ -331,6 +338,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): AiConnecti
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                       EnablePromptCache: connection.openAiSettings.enablePromptCache,
                       Temperature: mapTemperatureToDto(connection),
+                      ChatApi: connection.openAiSettings.chatApi,
                   }
                 : null,
         MistralAiSettings:

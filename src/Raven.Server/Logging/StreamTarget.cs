@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using JetBrains.Annotations;
 using NLog;
+using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Global;
 
@@ -21,6 +23,10 @@ public class StreamTarget : AbstractTarget
 
     private static readonly TargetCountGuardian RegisteredSockets = new();
 
+    private static readonly Lock WriteLocker = new();
+
+    private static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
+
     private StreamTarget()
     {
     }
@@ -35,7 +41,27 @@ public class StreamTarget : AbstractTarget
     {
         stream.Write(HeaderBytes.Span);
 
-        return RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, RegisteredSockets);
+        var registration = RegisterInternal(RavenLogManagerServerExtensions.PipeRule, stream, Streams, RegisteredSockets);
+
+        return new DisposableAction(() =>
+        {
+            FlushPendingEntries();
+
+            lock (WriteLocker)
+                Streams.TryRemove(stream);
+
+            registration.Dispose();
+        });
+    }
+
+    private static void FlushPendingEntries()
+    {
+        foreach (var target in RavenLogManagerServerExtensions.PipeRule.Targets)
+        {
+            var flushed = new ManualResetEventSlim();
+            target.Flush(_ => flushed.Set());
+            flushed.Wait(FlushTimeout);
+        }
     }
 
     protected override void Write(LogEventInfo logEvent)
@@ -46,20 +72,24 @@ public class StreamTarget : AbstractTarget
         using (var context = GetContext())
         {
             Layout.Render(logEvent, context.Buffer);
+            context.Buffer.Append(Environment.NewLine);
             CopyToStream(context.Buffer, context.Stream, Encoding.UTF8, context.TransformBuffer);
 
             var toWrite = new ReadOnlySpan<byte>(context.Stream.GetBuffer(), 0, (int)context.Stream.Length);
 
-            foreach (var stream in Streams)
+            lock (WriteLocker)
             {
-                try
+                foreach (var stream in Streams)
                 {
-                    stream.Write(toWrite);
-                    stream.Flush();
-                }
-                catch
-                {
-                    Streams.TryRemove(stream);
+                    try
+                    {
+                        stream.Write(toWrite);
+                        stream.Flush();
+                    }
+                    catch
+                    {
+                        Streams.TryRemove(stream);
+                    }
                 }
             }
         }

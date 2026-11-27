@@ -73,7 +73,7 @@ internal static class RavenLogManagerServerExtensions
     {
         RuleName = Constants.Logging.Names.PipeRuleName,
         LoggerNamePattern = "*",
-        Targets = { StreamTarget.Instance }
+        Targets = { new AsyncTargetWrapper(StreamTarget.Instance) { QueueLimit = 4096, OverflowAction = AsyncTargetWrapperOverflowAction.Discard } }
     };
 #endif
 
@@ -319,9 +319,7 @@ internal static class RavenLogManagerServerExtensions
         LogManager.ThrowConfigExceptions = configuration.Logs.ThrowConfigExceptions;
 
         ConsoleRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#if !RVN
-        PipeRule.DisableLoggingForLevels(LogLevel.Trace, LogLevel.Fatal);
-#endif
+
         if (TryConfigureLoggingFromFile(configuration))
             return;
 

@@ -6,6 +6,7 @@ import { Checkbox } from "components/common/Checkbox";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
@@ -79,12 +80,9 @@ function createColumns(
 
                 return (
                     <CellWithCopy value={id}>
-                        <a
-                            href={appUrl.forViewDocumentAtRevision(id, changeVector, databaseName)}
-                            className="cell-link"
-                        >
+                        <CellLink href={appUrl.forViewDocumentAtRevision(id, changeVector, databaseName)}>
                             {id}
-                        </a>
+                        </CellLink>
                     </CellWithCopy>
                 );
             },
@@ -97,9 +95,7 @@ function createColumns(
 
                 return (
                     <CellWithCopy value={collection}>
-                        <a href={appUrl.forDocuments(collection, databaseName)} className="cell-link">
-                            {collection}
-                        </a>
+                        <CellLink href={appUrl.forDocuments(collection, databaseName)}>{collection}</CellLink>
                     </CellWithCopy>
                 );
             },

@@ -1,0 +1,10 @@
+@use "Content/scss/sizes";
+
+.popover pre.cell-preview-code {
+    font-size: sizes.$font-size-sm;
+
+    pre,
+    code {
+        font-size: inherit;
+    }
+}

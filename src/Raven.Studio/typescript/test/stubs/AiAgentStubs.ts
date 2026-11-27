@@ -21,6 +21,7 @@ export class AiAgentStubs {
                             Query: "from Products where vector.search(embedding.text(Name), $query)",
                             ParametersSampleObject: '{"query": ["term or phrase to search in the catalog"]}',
                             ParametersSchema: null,
+                            Strict: false,
                             Options: {
                                 AddToInitialContext: null,
                                 AllowModelQueries: null,
@@ -32,6 +33,7 @@ export class AiAgentStubs {
                             Query: "from Categories",
                             ParametersSampleObject: "{}",
                             ParametersSchema: null,
+                            Strict: false,
                             Options: {
                                 AddToInitialContext: null,
                                 AllowModelQueries: null,
@@ -44,6 +46,7 @@ export class AiAgentStubs {
                             ParametersSampleObject:
                                 '{\n  "testLLMParam_string": "string",\n  "testLLMParam_stringArray": ["string1", "string2"],\n  "testLLMParam_number": 123,\n  "testLLMParam_numberArray": [1,2,3],\n  "testLLMParam_bool": true,\n  "testLLMParam_boolArray": [true, false]\n}',
                             ParametersSchema: null,
+                            Strict: false,
                             Options: {
                                 AllowModelQueries: null,
                                 AddToInitialContext: null,
@@ -56,12 +59,14 @@ export class AiAgentStubs {
                             Description: "semantic search the store product catalog",
                             ParametersSampleObject: '{"query": ["term or phrase to search in the catalog"]}',
                             ParametersSchema: null,
+                            Strict: false,
                         },
                         {
                             Name: "ActionRecentOrder",
                             Description: "Get the recent orders of the current user",
                             ParametersSampleObject: "{}",
                             ParametersSchema: null,
+                            Strict: false,
                         },
                     ],
                     SubAgents: [

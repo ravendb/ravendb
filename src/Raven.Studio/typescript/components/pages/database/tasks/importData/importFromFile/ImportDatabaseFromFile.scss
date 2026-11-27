@@ -72,6 +72,26 @@
 .import-collections-list {
     max-height: 450px;
     overflow-y: auto;
+
+    .import-list-item {
+        gap: sizes.$gutter-xs;
+
+        > .btn {
+            flex-shrink: 0;
+        }
+
+        .form-check {
+            min-width: 0;
+        }
+
+        .form-check-label {
+            display: block;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 }
 
 .import-list-header {

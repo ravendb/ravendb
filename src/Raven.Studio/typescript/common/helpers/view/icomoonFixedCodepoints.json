@@ -16,7 +16,6 @@
     "subscription": "f10E",
     "pull-replication-hub": "f10F",
     "pull-replication-agent": "f110",
-    "copy-to-clipboard": "f111",
     "unfold": "f112",
     "database": "f113",
     "arrow-down": "f114",
@@ -67,5 +66,6 @@
     "corax-sort-az": "f150",
     "corax-sort-za": "f151",
     "vector-search": "f154",
-    "close": "f162"
+    "close": "f162",
+    "copy": "f163"
 }

@@ -191,7 +191,7 @@ public static partial class CoraxQueryBuilder
             
             if (metadata.Query.Where is not null)
             {
-                coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
+                coraxQuery = ToCoraxQuery(builderParameters, metadata.WhereFor(builderParameters.Index), ref streamingOptimization);
                 coraxQuery = coraxQuery is CoraxWhenQuery 
                     ? builderParameters.AllEntries.Replay() 
                     : MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
@@ -317,32 +317,13 @@ public static partial class CoraxQueryBuilder
                         IQueryMatch left = null;
                         IQueryMatch right = null;
 
-                        // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
-                        if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
-                            @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
-                            lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                        // keep only the tighter of adjacent bounds on one field, whose values are known only here
+                        if (metadata.ScoresMayOrderResults(index) == false &&
+                            QueryBuilderHelper.TryMergeSameDirectionBounds(where, metadata.Query, metadata, queryParameters, index, new FieldProbe(builderParameters), out var tighterBound, out var remainder))
                         {
-                            BetweenExpression bq = null;
-                            if (lbe.IsGreaterThan && rbe.IsLessThan)
-                            {
-                                bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
-                                {
-                                    MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual,
-                                    MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
-                                };
-                            }
-
-                            if (lbe.IsLessThan && rbe.IsGreaterThan)
-                            {
-                                bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
-                                {
-                                    MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual,
-                                    MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
-                                };
-                            }
-
-                            if (bq != null)
-                                return TranslateBetweenQuery(builderParameters, bq, exact);
+                            var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
+                            builderParameters.BuildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
+                            return ToCoraxQuery(builderParameters, mergedExpression, ref leftOnlyOptimization, exact);
                         }
 
                         leftOnlyOptimization.BinaryMatchTraversed();
@@ -502,6 +483,13 @@ public static partial class CoraxQueryBuilder
 
         if (expression is BetweenExpression be)
         {
+            if (QueryBuilderHelper.TryTranslateAsComparisons(metadata.Query, metadata, queryParameters, be, new FieldProbe(builderParameters), out var lower, out var upper))
+            {
+                builderParameters.BuildSteps?.Add($"Between translated as the two comparisons it came from: {be}");
+
+                return ToCoraxQuery(builderParameters, new BinaryExpression(lower, upper, OperatorType.And), ref leftOnlyOptimization, exact);
+            }
+
             builderParameters.BuildSteps?.Add($"Between: {expression.Type} - {be}");
 
             return TranslateBetweenQuery(builderParameters, be, exact);
@@ -737,6 +725,30 @@ public static partial class CoraxQueryBuilder
         return true;
     }
 
+    private readonly struct FieldProbe : QueryBuilderHelper.IFieldProbe
+    {
+        private readonly Parameters _parameters;
+
+        public FieldProbe(Parameters parameters)
+        {
+            _parameters = parameters;
+        }
+
+        public bool HoldsSeveralValues(QueryExpression field)
+        {
+            if (_parameters.HasDynamics && IndexDefinitionBaseServerSide.IndexVersion.IsPerEntryMultipleTermsMarkerSupported(_parameters.Index.Definition.Version) == false)
+                return true;
+
+            var fieldName = QueryBuilderHelper.ExtractIndexFieldName(_parameters.Metadata.Query, _parameters.QueryParameters, field, _parameters.Metadata);
+            return _parameters.IndexSearcher.HasMultipleTermsInField(fieldName.Value);
+        }
+
+        public bool TranslatesPairAsBetween(ValueTokenType min, ValueTokenType max)
+        {
+            return min == max || QueryBuilderHelper.IsLongAndDouble(min, max);
+        }
+    }
+
     private static IQueryMatch HandleExact(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingConfiguration)
     {
         return ToCoraxQuery(builderParameters, expression.Arguments[0], ref streamingConfiguration, exact: true);
@@ -754,6 +766,12 @@ public static partial class CoraxQueryBuilder
         var fieldName = QueryBuilderHelper.ExtractIndexFieldName(metadata.Query, queryParameters, be.Source, metadata);
         var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Min);
         var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, queryParameters, be.Max);
+
+        // an exact string range on an auto index queries the exact field, as a single comparison does
+        exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
+        if (exact && metadata.IsDynamic && valueFirstType == ValueTokenType.String && valueSecondType == ValueTokenType.String)
+            fieldName = new QueryFieldName(AutoIndexField.GetExactAutoIndexFieldName(fieldName), fieldName.IsQuoted);
+
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(allocator, fieldName, index, indexFieldsMapping, fieldsToFetch, builderParameters.HasDynamics, builderParameters.DynamicFields, exact: exact, hasBoost: builderParameters.HasBoost);
         var leftSideOperation = be.MinInclusive ? UnaryMatchOperation.GreaterThanOrEqual : UnaryMatchOperation.GreaterThan;
         var rightSideOperation = be.MaxInclusive ? UnaryMatchOperation.LessThanOrEqual : UnaryMatchOperation.LessThan;
@@ -767,7 +785,6 @@ public static partial class CoraxQueryBuilder
 
         IQueryMatch HandleStringBetween()
         {
-            exact = QueryBuilderHelper.IsExact(index, exact, fieldName);
             var valueFirstAsString = QueryBuilderHelper.CoraxGetValueAsString(valueFirst);
             var valueSecondAsString = QueryBuilderHelper.CoraxGetValueAsString(valueSecond);
 

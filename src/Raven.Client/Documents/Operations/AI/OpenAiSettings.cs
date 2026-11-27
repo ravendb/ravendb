@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// Configuration for the OpenAI API client.
 /// </summary>
-public sealed class OpenAiSettings : OpenAiBaseSettings
+public sealed class OpenAiSettings : OpenAiChatApiSettings
 {
     public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, 
         string projectId = null, int? dimensions = null, double? temperature = null,
@@ -15,7 +15,9 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         OrganizationId = organizationId;
         ProjectId = projectId;
         ReasoningEffort = reasoningEffort;
+#pragma warning disable CS0618 // Seed is kept for Chat Completions
         Seed = seed;
+#pragma warning restore CS0618
     }
 
     public OpenAiSettings()
@@ -37,6 +39,19 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         return uriBuilder.Uri;
     }
 
+    internal override OpenAiChatApiType GetDefaultChatApi()
+    {
+        if (string.IsNullOrEmpty(Endpoint))
+            return OpenAiChatApiType.Responses;
+
+        // OpenAI's own API has /responses. Any other endpoint is a server that may not, and connection strings
+        // pointing at one used Chat Completions before ChatApi existed.
+        if (Uri.TryCreate(Endpoint, UriKind.Absolute, out var uri) && uri.Host.Equals(OpenAiBaseUri.Host, StringComparison.OrdinalIgnoreCase))
+            return OpenAiChatApiType.Responses;
+
+        return OpenAiChatApiType.ChatCompletions;
+    }
+
     /// <summary>
     /// The value to use for the <c>OpenAI-Organization</c> request header. Users who belong to multiple organizations
     /// can set this value to specify which organization is used for an API request. Usage from these API requests will
@@ -55,23 +70,6 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     public string ProjectId { get; set; }
 
     /// <summary>
-    /// The <c>reasoning_effort</c> to send to the provider, controlling the reasoning depth
-    /// of supported models (such as the GPT-5 family). Lower values reduce internal reasoning,
-    /// which may improve latency and reduce variability in responses.
-    ///
-    /// Typical values are <c>none</c>, <c>minimal</c>, <c>low</c>, <c>medium</c>, <c>high</c>,
-    /// <c>xhigh</c> and <c>max</c>. Model families accept different subsets, for example
-    /// <c>minimal</c> is rejected by <c>gpt-5.1</c> and later, which take <c>none</c> instead.
-    /// When not set the field is omitted and the model applies its own default.
-    ///
-    /// Sent as supplied apart from trimming, and not validated by RavenDB, so new provider values
-    /// can be used without waiting for a RavenDB release. Providers match it exactly: OpenAI accepts
-    /// lowercase values only. Legacy <see cref="OpenAiReasoningEffort"/> member names persisted by
-    /// older clients (e.g. <c>High</c>) are normalized to the provider form by the server.
-    /// </summary>
-    public string ReasoningEffort { get; set; }
-
-    /// <summary>
     /// Optional seed used to make the model's sampling more reproducible across requests.
     /// When provided, identical inputs and configuration may produce the same outputs
     /// more consistently across runs.
@@ -79,6 +77,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// This improves response stability (for example in automated tests),
     /// but does not guarantee fully deterministic results due to internal model behavior.
     /// </summary>
+    [Obsolete("Sent on the Chat Completions API only: the Responses API has no seed field, and OpenAI marks seed as deprecated.")]
     public int? Seed { get; set; }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -105,19 +104,30 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
             json[nameof(ProjectId)] = ProjectId;
 
-        if (string.IsNullOrWhiteSpace(ReasoningEffort) == false)
-            json[nameof(ReasoningEffort)] = ReasoningEffort;
-
+#pragma warning disable CS0618 // Seed is kept for Chat Completions
         if (Seed.HasValue)
             json[nameof(Seed)] = Seed.Value;
+#pragma warning restore CS0618
 
         return json;
     }
 }
 
 /// <summary>
+/// The API that chat requests are sent to, see <see cref="OpenAiChatApiSettings.ChatApi"/>.
+/// </summary>
+public enum OpenAiChatApiType
+{
+    /// <summary>The <c>/responses</c> API.</summary>
+    Responses,
+
+    /// <summary>The <c>/chat/completions</c> API.</summary>
+    ChatCompletions
+}
+
+/// <summary>
 /// Specifies the reasoning effort level used by supported models.
-/// Kept for migration only; use the string-based <see cref="OpenAiSettings.ReasoningEffort"/> instead.
+/// Kept for migration only; use the string-based <see cref="OpenAiChatApiSettings.ReasoningEffort"/> instead.
 /// </summary>
 [Obsolete("Use the string-based OpenAiSettings.ReasoningEffort instead, e.g. OpenAiReasoningEffort.High.ToReasoningEffort().")]
 public enum OpenAiReasoningEffort

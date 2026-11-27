@@ -10,6 +10,8 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public bool IsDistinct;
         public QueryExpression Where;
+        public QueryExpression WhereAsWritten;
+        public QueryExpression WhereForScoreOrder;
         public QueryExpression Filter;
         public FromClause From;
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;

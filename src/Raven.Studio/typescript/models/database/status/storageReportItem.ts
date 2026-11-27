@@ -25,6 +25,7 @@ class storageReportItem {
     
     recyclableJournal = false;
     physicalSizeHint?: string;
+    description: string = null;
 
     link: string = null;
     dataSize: number = null;

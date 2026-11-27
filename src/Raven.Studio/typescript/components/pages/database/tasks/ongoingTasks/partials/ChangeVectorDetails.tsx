@@ -55,7 +55,7 @@ export function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
                             size="sm"
                             title="Copy to clipboard"
                         >
-                            <Icon icon="copy-to-clipboard" margin="m-0" />
+                            <Icon icon="copy" margin="m-0" />
                         </Button>
                     </InputGroup>
                 </div>
@@ -84,7 +84,7 @@ export function ChangeVectorDetails(props: ChangeVectorDetailsProps) {
                             size="sm"
                             title="Copy to clipboard"
                         >
-                            <Icon icon="copy-to-clipboard" margin="m-0" />
+                            <Icon icon="copy" margin="m-0" />
                         </Button>
                     </InputGroup>
                 </div>

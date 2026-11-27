@@ -47,6 +47,9 @@ describe("Replication Hub", function () {
         expect(await container.findByTitle(/Collapse distribution details/)).toBeInTheDocument();
         expect(await container.findByText(/Last DB Etag/)).toBeInTheDocument();
         expect(await container.findByText(/Last Sent Etag/)).toBeInTheDocument();
+        expect(container.queryByText("Connection Status")).not.toBeInTheDocument();
+        expect(container.queryByText(/^\s*Status$/)).not.toBeInTheDocument();
+        expect(container.queryByText(/^\s*Error$/)).not.toBeInTheDocument();
     });
 
     it("can filter, sort and expand all sinks", async () => {
@@ -106,45 +109,28 @@ describe("Replication Hub", function () {
 
         const getSinkDatabases = () => container.getAllByText(/^Sink-/).map((x) => x.textContent);
 
-        const sortToggle = container.getByTitle("Sorted by Replication status, problems first");
+        const sortToggle = container.getByTitle("Sorted by Sink database name, ascending");
         const sortDropdown = within(sortToggle.parentElement);
 
-        expect(sortToggle).toHaveTextContent("Sort by:Replication status");
-        expect(getSinkDatabases().slice(0, 3)).toEqual([
-            "Sink-SanFrancisco-Regional-Warehouse",
-            "Sink-SaoPaulo",
-            "Sink-Singapore",
-        ]);
-        expect(getSinkDatabases().at(-1)).toBe("Sink-Sydney");
+        expect(sortToggle).toHaveTextContent("Sort by:Sink database name");
+        expect(getSinkDatabases()[0]).toBe("Sink-Berlin");
+        expect(getSinkDatabases().at(-1)).toBe("Sink-Warsaw");
 
         await fireClick(sortToggle);
         expect(sortDropdown.getByRole("button", { name: "Reset" })).toBeDisabled();
+        expect(sortDropdown.queryByText("Problems first")).not.toBeInTheDocument();
 
-        await user.click(sortDropdown.getByText("Problems first"));
-        await user.click(await sortDropdown.findByRole("option", { name: "Healthy first" }));
-
-        expect(sortToggle).toHaveAttribute("title", "Sorted by Replication status, healthy first");
-        expect(getSinkDatabases()[0]).toBe("Sink-Berlin");
-        expect(getSinkDatabases().at(-1)).toBe("Sink-Singapore");
-
-        await user.click(sortDropdown.getByLabelText("Sort by"));
-        await user.click(await sortDropdown.findByRole("option", { name: "Sink database name" }));
+        await user.click(sortDropdown.getByText("Ascending"));
+        await user.click(await sortDropdown.findByRole("option", { name: "Descending" }));
 
         expect(sortToggle).toHaveAttribute("title", "Sorted by Sink database name, descending");
         expect(getSinkDatabases()[0]).toBe("Sink-Warsaw");
         expect(getSinkDatabases().at(-1)).toBe("Sink-Berlin");
 
-        await user.click(sortDropdown.getByText("Descending"));
-        await user.click(await sortDropdown.findByRole("option", { name: "Ascending" }));
+        await user.click(sortDropdown.getByRole("button", { name: "Reset" }));
 
         expect(sortToggle).toHaveAttribute("title", "Sorted by Sink database name, ascending");
         expect(getSinkDatabases()[0]).toBe("Sink-Berlin");
-        expect(getSinkDatabases().at(-1)).toBe("Sink-Warsaw");
-
-        await user.click(sortDropdown.getByRole("button", { name: "Reset" }));
-
-        expect(sortToggle).toHaveAttribute("title", "Sorted by Replication status, problems first");
-        expect(getSinkDatabases()[0]).toBe("Sink-SanFrancisco-Regional-Warehouse");
         expect(sortDropdown.getByRole("button", { name: "Reset" })).toBeDisabled();
         expect(sortDropdown.getByLabelText("Sort by")).toHaveFocus();
 
@@ -297,17 +283,7 @@ describe("Replication Hub", function () {
 
         await user.keyboard("{Enter}{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}");
 
-        expect(filterDropdown.getByRole("button", { name: /Has errors/ })).toHaveFocus();
-
-        await user.keyboard("{Enter}");
-
-        expect(filterDropdown.getByRole("button", { name: "Yes" })).toHaveFocus();
-
-        await user.keyboard("{ArrowDown}{Enter}");
-
-        expect(filterToggle).toHaveFocus();
-        expect(filterDropdown.queryByRole("button", { name: "No" })).not.toBeInTheDocument();
-        expect(container.getByTitle(/Change "Has errors" filter/)).toHaveTextContent(/Has errors:\s*No/);
+        expect(filterDropdown.getByRole("button", { name: /Node processing the sink/ })).toHaveFocus();
     });
 
     it("moves between filter options with arrow keys", async () => {
@@ -342,7 +318,7 @@ describe("Replication Hub", function () {
         );
     });
 
-    it("picks one option for the has errors filter", async () => {
+    it("offers only filters that the hub can answer", async () => {
         const Story = composeStory(stories.ManySinks, stories.default);
 
         const { screen, fireClick } = rtlRender(<Story />);
@@ -353,25 +329,50 @@ describe("Replication Hub", function () {
         const filterToggle = container.getByTitle("Filter sinks");
         const filterDropdown = within(filterToggle.parentElement);
         await fireClick(filterToggle);
-        await fireClick(await filterDropdown.findByRole("button", { name: /Has errors/ }));
 
-        expect(filterDropdown.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
+        expect(await filterDropdown.findByRole("button", { name: /Sink database name/ })).toBeInTheDocument();
+        expect(filterDropdown.queryByRole("button", { name: /Has errors/ })).not.toBeInTheDocument();
+        expect(filterDropdown.queryByRole("button", { name: /Connection status/ })).not.toBeInTheDocument();
+    });
 
-        await fireClick(filterDropdown.getByRole("button", { name: "Yes" }));
+    it("explains that disconnected sinks are not listed", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
 
-        expect(filterDropdown.getByRole("button", { name: "Yes" })).toHaveAttribute("aria-pressed", "true");
-        expect(filterDropdown.getByRole("button", { name: "No" })).toHaveAttribute("aria-pressed", "false");
-        expect(container.getByTitle(/Change "Has errors" filter/)).toHaveTextContent(/Has errors:\s*Yes/);
-        expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(3);
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
 
-        await fireClick(filterDropdown.getByRole("button", { name: "Yes" }));
+        expect(container.queryByText(/with problems/)).not.toBeInTheDocument();
 
-        expect(filterDropdown.getByRole("button", { name: "Yes" })).toHaveAttribute("aria-pressed", "true");
+        await fireClick(await container.findByTitle(/Click for details/));
 
-        await fireClick(container.getByTitle('Clear "Has errors" filter'));
+        expect(container.queryByText(/Only sinks connected right now are listed/)).not.toBeInTheDocument();
 
-        expect(container.queryByTitle(/Change "Has errors" filter/)).not.toBeInTheDocument();
-        expect(container.getAllByTitle(/^Expand distribution details for /)).toHaveLength(15);
+        await user.hover(container.getByRole("button", { name: "About this list" }));
+
+        expect(await screen.findByRole("tooltip")).toHaveTextContent(/Only sinks connected right now are listed/);
+    });
+
+    it("explains that disconnected sinks are not listed to keyboard users", async () => {
+        const Story = composeStory(stories.ManySinks, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+        container.getByRole("button", { name: "About this list" }).focus();
+
+        expect(await screen.findByRole("tooltip")).toHaveTextContent(/Only sinks connected right now are listed/);
+    });
+
+    it("explains the empty sinks list", async () => {
+        const Story = composeStory(stories.NoConnections, stories.default);
+
+        const { screen, fireClick } = rtlRender(<Story />);
+        const container = within(await screen.findByTestId(containerTestId));
+
+        await fireClick(await container.findByTitle(/Click for details/));
+
+        expect(await container.findByText(/Only sinks connected right now are listed/)).toBeInTheDocument();
     });
 
     it("keeps focus inside the filter menu after clearing filters", async () => {
@@ -385,8 +386,8 @@ describe("Replication Hub", function () {
         const filterToggle = container.getByTitle("Filter sinks");
         const filterDropdown = within(filterToggle.parentElement);
         await fireClick(filterToggle);
-        await fireClick(await filterDropdown.findByRole("button", { name: /Has errors/ }));
-        await fireClick(filterDropdown.getByRole("button", { name: "Yes" }));
+        await fireClick(await filterDropdown.findByRole("button", { name: /Replication state/ }));
+        await fireClick(filterDropdown.getByLabelText("Running"));
         await fireClick(filterDropdown.getByTitle("Back to filters"));
         await fireClick(filterDropdown.getByRole("button", { name: "Clear" }));
 
@@ -430,38 +431,21 @@ describe("Replication Hub", function () {
 
         await fireClick(await container.findByTitle(/Click for details/));
 
-        const sortToggle = container.getByTitle("Sorted by Replication status, problems first");
+        const sortToggle = container.getByTitle("Sorted by Sink database name, ascending");
         const sortDropdown = within(sortToggle.parentElement);
         await fireClick(sortToggle);
         await user.click(sortDropdown.getByLabelText("Sort by"));
 
-        expect(await sortDropdown.findByRole("option", { name: "Sink database name" })).toBeInTheDocument();
+        expect(await sortDropdown.findByRole("option", { name: "Actual sink URL" })).toBeInTheDocument();
 
         await user.keyboard("{Escape}");
 
-        expect(sortDropdown.queryByRole("option", { name: "Sink database name" })).not.toBeInTheDocument();
+        expect(sortDropdown.queryByRole("option", { name: "Actual sink URL" })).not.toBeInTheDocument();
         expect(sortToggle).toHaveAttribute("aria-expanded", "true");
         expect(sortDropdown.getByLabelText("Sort by")).toBeInTheDocument();
 
         await user.keyboard("{Escape}");
 
         expect(sortToggle).toHaveAttribute("aria-expanded", "false");
-    });
-
-    it("opens and closes the sink error details", async () => {
-        const Story = composeStory(stories.ManySinks, stories.default);
-
-        const { screen, fireClick } = rtlRender(<Story />);
-        const container = within(await screen.findByTestId(containerTestId));
-
-        await fireClick(await container.findByTitle(/Click for details/));
-        await fireClick(container.getAllByRole("button", { name: "Error" })[0]);
-
-        const errorDialog = await screen.findByRole("dialog");
-        expect(errorDialog).toHaveTextContent("Unable to connect to the sink");
-
-        await fireClick(within(errorDialog).getByRole("button", { name: "Close" }));
-
-        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 });

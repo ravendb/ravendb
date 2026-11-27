@@ -5,6 +5,7 @@ import {
     useDocumentColumnsProvider,
 } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
 import CellDocumentId from "components/common/virtualTable/cells/CellDocumentId";
+import CellLink from "components/common/virtualTable/cells/CellLink";
 import CellValue from "components/common/virtualTable/cells/CellValue";
 import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import DateFormatterCell from "components/common/virtualTable/cells/CellDateFormatter";
@@ -30,6 +31,7 @@ interface UseDocumentsColumnsProps {
     collectionName: string | null;
     tableBodyWidthInPx: number;
     getPropertyPreviewResolver: FullDocumentProvider["getPropertyPreviewResolver"];
+    getDocumentPreviewSource?: FullDocumentProvider["getDocumentPreviewSource"];
 }
 
 const NO_COLUMNS: string[] = [];
@@ -60,6 +62,7 @@ export function useDocumentsColumns({
     collectionName,
     tableBodyWidthInPx,
     getPropertyPreviewResolver,
+    getDocumentPreviewSource,
 }: UseDocumentsColumnsProps) {
     const { appUrl } = useAppUrls();
     const isAllDocuments = collectionName === null;
@@ -93,6 +96,7 @@ export function useDocumentsColumns({
         columnsWithValues: isAllDocuments ? NO_COLUMNS : previewedColumns,
         databaseName,
         getPreviewValueResolver: getPropertyPreviewResolver,
+        getDocumentPreviewSource,
     });
 
     const defaultColumnVisibility = useSettledColumnVisibility(propertyColumns.initialColumnVisibility);
@@ -103,8 +107,8 @@ export function useDocumentsColumns({
     );
 
     const metadataColumnDefs = useMemo(
-        () => (isAllDocuments ? createMetadataColumns(databaseName, appUrl) : []),
-        [isAllDocuments, databaseName, appUrl]
+        () => (isAllDocuments ? createMetadataColumns(databaseName, appUrl, getDocumentPreviewSource) : []),
+        [isAllDocuments, databaseName, appUrl, getDocumentPreviewSource]
     );
 
     const columnDefs = useMemo(
@@ -257,7 +261,11 @@ function createCustomColumn(column: CustomColumnDefinition, databaseName: string
     };
 }
 
-function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<document>[] {
+function createMetadataColumns(
+    databaseName: string,
+    appUrl: AppUrl,
+    getDocumentPreviewSource: FullDocumentProvider["getDocumentPreviewSource"] | undefined
+): ColumnDef<document>[] {
     return [
         {
             id: ID_COLUMN_NAME,
@@ -269,6 +277,7 @@ function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<
                     collection={row.original.getCollection()}
                     databaseName={databaseName}
                     hasHyperlink
+                    previewSource={getDocumentPreviewSource?.(row.original)}
                 />
             ),
             enableHiding: false,
@@ -305,9 +314,7 @@ function createMetadataColumns(databaseName: string, appUrl: AppUrl): ColumnDef<
 
                 return (
                     <CellWithCopy value={collection}>
-                        <a href={appUrl.forDocuments(collection, databaseName)} className="cell-link">
-                            {collection}
-                        </a>
+                        <CellLink href={appUrl.forDocuments(collection, databaseName)}>{collection}</CellLink>
                     </CellWithCopy>
                 );
             },

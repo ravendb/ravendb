@@ -223,32 +223,14 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
-                            // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
-                            if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation &&
-                               @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) &&
-                               lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                            // keep only the tighter of adjacent bounds on one field, whose values are known only here
+                            if (metadata.ScoresMayOrderResults(index) == false &&
+                                QueryBuilderHelper.TryMergeSameDirectionBounds(where, query, metadata, parameters, index, new FieldProbe(index, query, metadata, parameters, factories), out var tighterBound, out var remainder))
                             {
-                                BetweenExpression bq = null;
-                                if (lbe.IsGreaterThan && rbe.IsLessThan)
-                                {
-                                    bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
-                                    {
-                                        MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual,
-                                        MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
-                                    };
-                                }
-
-                                if (lbe.IsLessThan && rbe.IsGreaterThan)
-                                {
-                                    bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
-                                    {
-                                        MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual,
-                                        MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
-                                    };
-                                }
-
-                                if (bq != null)
-                                    return TranslateBetweenQuery(query, metadata, index, parameters, exact, bq, secondary);
+                                var mergedExpression = remainder == null ? tighterBound : new BinaryExpression(remainder, tighterBound, OperatorType.And);
+                                buildSteps?.Add($"Kept the tighter of the same-direction bounds: {expression} -> {mergedExpression}");
+                                return ToLuceneQuery(serverContext, documentsContext, query, mergedExpression, metadata, index, parameters, analyzer,
+                                    factories, exact, secondary: secondary, buildSteps: buildSteps);
                             }
 
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
@@ -341,6 +323,14 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is BetweenExpression be)
             {
+                if (QueryBuilderHelper.TryTranslateAsComparisons(query, metadata, parameters, be, new FieldProbe(index, query, metadata, parameters, factories), out var lower, out var upper))
+                {
+                    buildSteps?.Add($"Between translated as the two comparisons it came from: {be}");
+
+                    return ToLuceneQuery(serverContext, documentsContext, query, new BinaryExpression(lower, upper, OperatorType.And), metadata, index, parameters,
+                        analyzer, factories, exact, secondary: secondary, buildSteps: buildSteps);
+                }
+
                 buildSteps?.Add($"Between: {expression.Type} - {be}");
 
                 return TranslateBetweenQuery(query, metadata, index, parameters, exact, be, secondary);
@@ -466,6 +456,53 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
+        private readonly struct FieldProbe : QueryBuilderHelper.IFieldProbe
+        {
+            private readonly Index _index;
+            private readonly Query _query;
+            private readonly QueryMetadata _metadata;
+            private readonly BlittableJsonReaderObject _parameters;
+            private readonly QueryBuilderFactories _factories;
+
+            public FieldProbe(Index index, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryBuilderFactories factories)
+            {
+                _index = index;
+                _query = query;
+                _metadata = metadata;
+                _parameters = parameters;
+                _factories = factories;
+            }
+
+            public bool HoldsSeveralValues(QueryExpression field)
+            {
+                if (_index == null || _factories?.FieldHoldsArrays == null || _index.Definition.HasDynamicFields)
+                    return true;
+
+                string fieldName = ExtractIndexFieldName(_query, _parameters, field, _metadata);
+                return IsTokenized(_index, fieldName) || _factories.FieldHoldsArrays(fieldName);
+            }
+
+            public bool TranslatesPairAsBetween(ValueTokenType min, ValueTokenType max)
+            {
+                return min == max || min == ValueTokenType.String || QueryBuilderHelper.IsLongAndDouble(min, max);
+            }
+
+            private static bool IsTokenized(Index index, string fieldName)
+            {
+                var analyzer = index.Configuration.DefaultAnalyzer;
+                if (index.Definition.IndexFields != null && index.Definition.IndexFields.TryGetValue(fieldName, out var options))
+                {
+                    if (string.IsNullOrWhiteSpace(options.Analyzer) == false || options.Indexing == FieldIndexing.Search)
+                        return true;
+
+                    if (options.Indexing == FieldIndexing.Exact)
+                        analyzer = index.Configuration.DefaultExactAnalyzer;
+                }
+
+                return analyzer != null && analyzer.EndsWith(nameof(KeywordAnalyzer), StringComparison.Ordinal) == false;
+            }
+        }
+
         private static Lucene.Net.Search.Query TranslateOperationOnLong(Index index, string luceneFieldName, long valueAsLong, OperatorType whereOperator)
         {
             return whereOperator switch
@@ -523,9 +560,10 @@ namespace Raven.Server.Documents.Queries
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
             var (valueFirst, valueFirstType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Min);
-            var (valueSecond, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
+            var (valueSecond, valueSecondType) = QueryBuilderHelper.GetValue(query, metadata, parameters, be.Max);
 
-            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
+            var valueType = valueFirstType == ValueTokenType.Long && valueSecondType == ValueTokenType.Double ? ValueTokenType.Double : valueFirstType;
+            var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
             Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)
@@ -542,6 +580,10 @@ namespace Raven.Server.Documents.Queries
                     }
                     else
                     {
+                        // an exact string range on an auto index queries the exact field, as a single comparison does
+                        if (exact && metadata.IsDynamic)
+                            luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
+
                         var valueFirstAsString = QueryBuilderHelper.GetValueAsString(valueFirst);
                         var valueSecondAsString = QueryBuilderHelper.GetValueAsString(valueSecond);
                         betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString,
@@ -555,8 +597,8 @@ namespace Raven.Server.Documents.Queries
                     betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
                     break;
                 case IndexFieldType.Double:
-                    var valueFirstAsDouble = (double)valueFirst;
-                    var valueSecondAsDouble = (double)valueSecond;
+                    var valueFirstAsDouble = Convert.ToDouble(valueFirst, CultureInfo.InvariantCulture);
+                    var valueSecondAsDouble = Convert.ToDouble(valueSecond, CultureInfo.InvariantCulture);
                     betweenQuery = LuceneQueryHelper.Between(index, luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
                     break;
                 default:
@@ -577,8 +619,11 @@ namespace Raven.Server.Documents.Queries
 
             var ticksFirstAligned = ticksFirst - (ticksFirst % TimeSpan.TicksPerDay);
             var ticksSecondAligned = ticksSecond - (ticksSecond % TimeSpan.TicksPerDay);
-            if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary 
-                ticksFirstAligned == ticksSecondAligned) // or belonging to the same day...
+            var nextDayAfterFirst = ticksFirstAligned + TimeSpan.TicksPerDay;
+
+            if (ticksFirstAligned == ticksFirst && ticksSecond == ticksSecondAligned || // already aligned on day boundary
+                ticksFirst >= ticksSecond || // empty or inverted
+                ticksSecond <= nextDayAfterFirst) // within the first day
             {
                 return LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksSecond, be.MaxInclusive);
             }
@@ -587,8 +632,9 @@ namespace Raven.Server.Documents.Queries
             var startInclusive = be.MinInclusive;
             if (ticksFirst != ticksFirstAligned)
             {
-                ticksFirstAligned += TimeSpan.TicksPerDay; // move to tne _next_ day boundary
-                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, true), Occur.SHOULD);
+                // the head ends before the next midnight, which the middle segment covers
+                ticksFirstAligned = nextDayAfterFirst;
+                bq.Add(LuceneQueryHelper.Between(index, luceneFieldName, ticksFirst, be.MinInclusive, ticksFirstAligned, false), Occur.SHOULD);
                 startInclusive = true;
             }
 

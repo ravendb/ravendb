@@ -124,6 +124,11 @@ const getSwitch = ({ screen }: Rendered, label: string | RegExp) =>
 
 const toggle = (rendered: Rendered, label: string | RegExp) => rendered.fireClick(getSwitch(rendered, label));
 
+async function addCollections({ screen, fillInput, fireClick }: Rendered, text: string) {
+    await fillInput(screen.getByRole("textbox", { name: "Collections to import" }), text);
+    await fireClick(screen.getByRole("button", { name: /^Add$/ }));
+}
+
 async function clickImport({ screen, fireClick }: Rendered) {
     const button = screen.getByRole("button", { name: selectors.importButton });
     await waitFor(() => expect(button).toBeEnabled());
@@ -551,16 +556,187 @@ describe("ImportDatabaseFromFile", () => {
 
         it("sends the hand-typed collection list when collections are customized", async () => {
             const rendered = rtlRender(<Default hasAllLicenseFeatures />);
-            const { screen, fireClick, fillInput } = rendered;
+            const { screen, fireClick } = rendered;
             await selectFile(rendered);
 
             await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
-            await fillInput(screen.getByPlaceholderText("Type a collection name from the imported file"), "Orders");
-            await fireClick(screen.getByRole("button", { name: /Add/ }));
+            await addCollections(rendered, "Orders");
             await waitFor(() => expect(getSwitch(rendered, "Orders")).toBeChecked());
 
             const dto = await importAndGetDto(rendered);
             expect(dto.Collections).toEqual(["Orders"]);
+        });
+
+        it("keeps a switched-off collection on the list but leaves it out of the import", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, "Orders, Employees");
+            await waitFor(() => expect(getSwitch(rendered, "Employees")).toBeChecked());
+
+            await toggle(rendered, "Orders");
+
+            expect(getSwitch(rendered, "Orders")).not.toBeChecked();
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Employees"]);
+        });
+
+        it("switches every listed collection off and back on with Select all", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, "Orders, Employees");
+            await waitFor(() => expect(getSwitch(rendered, "Employees")).toBeChecked());
+
+            const selectAll = document.getElementById("select-all-collections");
+            expect(selectAll).toBeChecked();
+
+            await fireClick(selectAll);
+            expect(getSwitch(rendered, "Orders")).not.toBeChecked();
+            expect(getSwitch(rendered, "Employees")).not.toBeChecked();
+
+            await fireClick(selectAll);
+            expect(getSwitch(rendered, "Orders")).toBeChecked();
+
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Orders", "Employees"]);
+        });
+
+        it("adds each comma-separated name once, ignoring blanks and repeats", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, " Orders, Employees,, orders ,");
+
+            expect(await screen.findByText("Orders")).toBeInTheDocument();
+            expect(screen.getByText("Employees")).toBeInTheDocument();
+
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Orders", "Employees"]);
+        });
+
+        it("asks for a name and keeps the list empty when only blanks and commas are added", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, " ,, ");
+
+            expect(await screen.findByText("Enter a collection name")).toBeInTheDocument();
+            expect(screen.getByText(/No collections added/)).toBeInTheDocument();
+        });
+
+        it("adds the new names and leaves names already on the list in the field with an error", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, "Orders, Employees");
+            expect(await screen.findByText("Orders")).toBeInTheDocument();
+
+            await addCollections(rendered, "orders, Products, EMPLOYEES");
+
+            expect(await screen.findByText('"orders", "EMPLOYEES" are already on the list')).toBeInTheDocument();
+            expect(screen.getByText("Products")).toBeInTheDocument();
+            expect(screen.getByRole("textbox", { name: "Collections to import" })).toHaveValue("orders, EMPLOYEES");
+            expect(screen.queryByText("orders")).not.toBeInTheDocument();
+
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Orders", "Employees", "Products"]);
+        });
+
+        it("adds nothing when every name is already on the list", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, "Orders");
+            expect(await screen.findByText("Orders")).toBeInTheDocument();
+
+            await addCollections(rendered, "orders");
+
+            expect(await screen.findByText('"orders" is already on the list')).toBeInTheDocument();
+            expect(screen.getByRole("textbox", { name: "Collections to import" })).toHaveValue("orders");
+        });
+
+        it("checks the current list when names are added with Enter more than once", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick, fillInput, user } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            const input = screen.getByRole("textbox", { name: "Collections to import" });
+
+            await fillInput(input, "Orders, Employees");
+            await user.keyboard("{Enter}");
+            await waitFor(() => expect(getSwitch(rendered, "Employees")).toBeChecked());
+
+            await fillInput(input, "orders, Products");
+            await user.keyboard("{Enter}");
+
+            expect(await screen.findByText('"orders" is already on the list')).toBeInTheDocument();
+            expect(getSwitch(rendered, "Orders")).toBeChecked();
+            expect(getSwitch(rendered, "Employees")).toBeChecked();
+            expect(getSwitch(rendered, "Products")).toBeChecked();
+
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toEqual(["Orders", "Employees", "Products"]);
+        });
+
+        it("ignores the listed names when switching back to importing all collections", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, "Orders");
+            expect(await screen.findByText("Orders")).toBeInTheDocument();
+
+            await fireClick(screen.getByRole("button", { name: /Import all collections/ }));
+
+            await waitFor(() =>
+                expect(screen.queryByRole("textbox", { name: "Collections to import" })).not.toBeInTheDocument()
+            );
+            const dto = await importAndGetDto(rendered);
+            expect(dto.Collections).toBeNull();
+        });
+
+        it("turns a pasted multi-line list into comma-separated names", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick, user } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            const input = screen.getByRole("textbox", { name: "Collections to import" });
+            await user.click(input);
+            await user.paste("Orders\r\nEmployees\n\nCompanies");
+
+            await waitFor(() => expect(input).toHaveValue("Orders, Employees, Companies"));
+        });
+
+        it("clears the error when a multi-line list is pasted", async () => {
+            const rendered = rtlRender(<Default hasAllLicenseFeatures />);
+            const { screen, fireClick, user } = rendered;
+            await selectFile(rendered);
+
+            await fireClick(screen.getByRole("button", { name: /Customize imported collections/ }));
+            await addCollections(rendered, ",");
+            expect(await screen.findByText("Enter a collection name")).toBeInTheDocument();
+
+            const input = screen.getByRole("textbox", { name: "Collections to import" });
+            await user.clear(input);
+            await user.paste("Orders\nEmployees");
+
+            await waitFor(() => expect(screen.queryByText("Enter a collection name")).not.toBeInTheDocument());
         });
     });
 

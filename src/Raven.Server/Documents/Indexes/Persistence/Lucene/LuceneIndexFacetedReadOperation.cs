@@ -51,6 +51,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = ((LuceneIndexPersistence)_index.IndexPersistence).GetSearcher(readTransaction, _state);
         }
 
+        protected override Func<string, bool> FieldHoldsArrays => name =>
+            _searcher.IndexReader.DocFreq(new Term(name + Documents.LuceneDocumentConverterBase.IsArrayFieldSuffix, Documents.LuceneDocumentConverterBase.TrueString), _state) > 0;
+
         public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(context, facetQuery, SearchEngineType.Lucene);
