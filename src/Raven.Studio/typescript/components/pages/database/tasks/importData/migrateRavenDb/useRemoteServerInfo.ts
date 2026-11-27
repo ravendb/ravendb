@@ -28,6 +28,7 @@ export interface RemoteServerInfo {
 }
 
 interface DetectionResult {
+    args: RemoteServerBuildInfoArgs;
     url: string;
     info: BuildInfoWithResourceNames | null;
     error: string | null;
@@ -117,14 +118,14 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
                 try {
                     const info = await tasksService.getRemoteServerBuildInfo(args);
                     if (isLatest()) {
-                        setResult({ url, info, error: null });
+                        setResult({ args, url, info, error: null });
                     }
                 } catch (e) {
                     if (isLatest()) {
                         const { message } = recentError.tryExtractMessageAndException(e.responseText);
                         const error = generalUtils.trimMessage(message, 1024);
                         // a failed credential refetch keeps the detected version, so the credential inputs stay
-                        setResult((prev) => ({ url, info: prev?.url === url ? prev.info : null, error }));
+                        setResult((prev) => ({ args, url, info: prev?.url === url ? prev.info : null, error }));
                     }
                 }
             }, DETECTION_DELAY_MS),
@@ -147,6 +148,6 @@ export function useRemoteServerInfo(control: Control<MigrateRavenDbFormData>, ca
         isAuthorized: info?.Authorized ?? true,
         hasUnsecuredBasicAuthOption: info?.IsLegacyOAuthToken ?? false,
         error: current?.error ?? null,
-        isLoading: isDetectable && !current,
+        isLoading: isDetectable && result?.args !== requestArgs,
     };
 }

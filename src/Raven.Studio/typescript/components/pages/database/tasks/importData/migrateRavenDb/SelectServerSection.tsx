@@ -3,8 +3,6 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { useAsync } from "react-async-hook";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
-import Spinner from "react-bootstrap/Spinner";
 import {
     FormGroup,
     FormInput,
@@ -14,6 +12,7 @@ import {
     FormSwitch,
 } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
+import { LoadingDots } from "components/common/LoadingDots";
 import SegmentedControl, { SegmentedControlItem } from "components/common/SegmentedControl";
 import { SelectOption } from "components/common/select/Select";
 import { RadioToggleWithIconInputItem } from "components/common/toggles/RadioToggle";
@@ -75,6 +74,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         aria-label="Server URL"
                         placeholder="e.g. https://a.ravendb.example:8080"
                         options={toOptions(asyncServerUrls.result?.List)}
+                        isLoading={asyncServerUrls.loading}
                     />
                 </FormGroup>
                 {lowerCaseUrl.startsWith("https://") && (
@@ -86,15 +86,16 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                 )}
                 <FormGroup>
                     <FormLabel>Server version</FormLabel>
-                    <InputGroup>
+                    <div className="position-relative">
                         <Form.Control readOnly value={isLoading ? "" : formatServerVersion(version)} />
                         {isLoading && (
-                            <InputGroup.Text>
-                                <Spinner size="sm" role="status" aria-label="Detecting server version" />
-                            </InputGroup.Text>
+                            <LoadingDots
+                                label="Detecting server version"
+                                className="position-absolute top-50 end-0 translate-middle-y"
+                            />
                         )}
-                    </InputGroup>
-                    {error && <div className="text-danger mt-1 text-break">{error}</div>}
+                    </div>
+                    {error && !isLoading && <div className="text-danger mt-1 text-break">{error}</div>}
                 </FormGroup>
                 {isLegacy && (
                     <FormGroup>
@@ -183,6 +184,7 @@ export default function SelectServerSection({ serverInfo, canDetect }: SelectSer
                         aria-label={resourceLabel}
                         placeholder={isRavenFsImport ? "e.g. FileSystem1" : "e.g. Northwind"}
                         options={toOptions(isRavenFsImport ? fileSystemNames : databaseNames)}
+                        isLoading={isLoading}
                     />
                     {isLegacy && !isAuthorized && (
                         <div className="text-warning mt-1">
