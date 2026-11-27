@@ -25,6 +25,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -227,6 +228,27 @@ namespace SlowTests.Blittable
 
                 //Assert
                 Assert.Equal(expected, actual, new CustomComparer<MergedPutCommand, DocumentsOperationContext, DocumentsTransaction>(context));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void SerializeAndDeserialize_MergedPutCommandKeepsNamedFloatingPointLiterals()
+        {
+            using (var database = CreateDocumentDatabase())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var document = context.Sync.ReadForMemory("""{ "Score": NaN, "Max": Infinity, "Min": -Infinity }""", "document");
+                var dto = new MergedPutCommand(document, "users/1", null, null).ToDto(context);
+
+                BlittableJsonReaderObject blitCommand = ReplayTxCommandHelper.Serialize(context, dto);
+                var actualDto = ReplayTxCommandHelper.Deserialize<MergedPutCommand.MergedPutCommandDto>(context, blitCommand);
+
+                Assert.True(actualDto.Document.TryGetMember("Score", out object score));
+                Assert.True(Assert.IsType<LazyNumberValue>(score).IsNaN());
+                Assert.True(actualDto.Document.TryGetMember("Max", out object max));
+                Assert.True(Assert.IsType<LazyNumberValue>(max).IsPositiveInfinity());
+                Assert.True(actualDto.Document.TryGetMember("Min", out object min));
+                Assert.True(Assert.IsType<LazyNumberValue>(min).IsNegativeInfinity());
             }
         }
 

@@ -33,7 +33,28 @@ namespace Sparrow.Json
         internal static readonly byte[] EscapedPositiveInfinityBuffer = Encoding.ASCII.GetBytes("\"" + UnicodeEscapePrefix + "49nfinity\"");
         internal static readonly byte[] EscapedNegativeInfinityBuffer = Encoding.ASCII.GetBytes("\"-" + UnicodeEscapePrefix + "49nfinity\"");
 
-        internal bool EscapeNamedFloatingPointLiterals { get; set; }
+        internal NamedFloatingPointLiteralFormat NamedFloatingPointLiteralFormat { get; set; }
+
+        private ReadOnlySpan<byte> NaNLiteral => NamedFloatingPointLiteralFormat switch
+        {
+            NamedFloatingPointLiteralFormat.Escaped => EscapedNaNBuffer,
+            NamedFloatingPointLiteralFormat.Bare => "NaN"u8,
+            _ => NaNBuffer
+        };
+
+        private ReadOnlySpan<byte> PositiveInfinityLiteral => NamedFloatingPointLiteralFormat switch
+        {
+            NamedFloatingPointLiteralFormat.Escaped => EscapedPositiveInfinityBuffer,
+            NamedFloatingPointLiteralFormat.Bare => "Infinity"u8,
+            _ => PositiveInfinityBuffer
+        };
+
+        private ReadOnlySpan<byte> NegativeInfinityLiteral => NamedFloatingPointLiteralFormat switch
+        {
+            NamedFloatingPointLiteralFormat.Escaped => EscapedNegativeInfinityBuffer,
+            NamedFloatingPointLiteralFormat.Bare => "-Infinity"u8,
+            _ => NegativeInfinityBuffer
+        };
 
         public static readonly byte[] NullBuffer = "null"u8.ToArray();
         public static readonly byte[] TrueBuffer = "true"u8.ToArray();
@@ -383,19 +404,19 @@ namespace Sparrow.Json
             var value = new ReadOnlySpan<byte>(number, size);
             if (value.SequenceEqual("NaN"u8))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
+                WriteBufferFor(NaNLiteral);
                 return;
             }
 
             if (value.SequenceEqual("Infinity"u8))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
+                WriteBufferFor(PositiveInfinityLiteral);
                 return;
             }
 
             if (value.SequenceEqual("-Infinity"u8))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
+                WriteBufferFor(NegativeInfinityLiteral);
                 return;
             }
 
@@ -965,19 +986,19 @@ namespace Sparrow.Json
         {
             if (val.IsNaN())
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
+                WriteBufferFor(NaNLiteral);
                 return;
             }
 
             if (val.IsPositiveInfinity())
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
+                WriteBufferFor(PositiveInfinityLiteral);
                 return;
             }
 
             if (val.IsNegativeInfinity())
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
+                WriteBufferFor(NegativeInfinityLiteral);
                 return;
             }
 
@@ -1000,19 +1021,19 @@ namespace Sparrow.Json
         {
             if (double.IsNaN(val))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNaNBuffer : NaNBuffer);
+                WriteBufferFor(NaNLiteral);
                 return;
             }
 
             if (double.IsPositiveInfinity(val))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedPositiveInfinityBuffer : PositiveInfinityBuffer);
+                WriteBufferFor(PositiveInfinityLiteral);
                 return;
             }
 
             if (double.IsNegativeInfinity(val))
             {
-                WriteBufferFor(EscapeNamedFloatingPointLiterals ? EscapedNegativeInfinityBuffer : NegativeInfinityBuffer);
+                WriteBufferFor(NegativeInfinityLiteral);
                 return;
             }
 

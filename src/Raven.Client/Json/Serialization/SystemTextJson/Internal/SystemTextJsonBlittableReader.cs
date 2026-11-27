@@ -38,7 +38,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 _buffer = new ContextMemoryBufferWriter(source._context, Math.Max(source.Size * 2, 512));
 
                 using (var stream = new BufferWriterStream(_buffer))
-                using (var writer = new BlittableJsonTextWriter(source._context, stream) { EscapeNamedFloatingPointLiterals = true })
+                using (var writer = new BlittableJsonTextWriter(source._context, stream) { NamedFloatingPointLiteralFormat = NamedFloatingPointLiteralFormat.Escaped })
                     source.WriteJsonTo(writer);
             }
         }

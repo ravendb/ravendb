@@ -92,7 +92,7 @@ namespace Raven.Server.Json.Converters
             using (materialized)
             using (var stream = new MemoryStream())
             {
-                using (var textWriter = new BlittableJsonTextWriter(context, stream) { EscapeNamedFloatingPointLiterals = true })
+                using (var textWriter = new BlittableJsonTextWriter(context, stream) { NamedFloatingPointLiteralFormat = NamedFloatingPointLiterals.BlittableFormat })
                     (materialized ?? blittable).WriteJsonTo(textWriter);
 
                 writer.WriteRawValue(stream.GetBuffer().AsSpan(0, (int)stream.Length), skipInputValidation: true);
@@ -103,7 +103,7 @@ namespace Raven.Server.Json.Converters
         {
             using (var stream = new MemoryStream())
             {
-                using (var textWriter = new BlittableJsonTextWriter(_context ?? vector._context, stream) { EscapeNamedFloatingPointLiterals = true })
+                using (var textWriter = new BlittableJsonTextWriter(_context ?? vector._context, stream) { NamedFloatingPointLiteralFormat = NamedFloatingPointLiterals.BlittableFormat })
                     textWriter.WriteValue(BlittableJsonToken.Vector, vector);
 
                 writer.WriteRawValue(stream.GetBuffer().AsSpan(0, (int)stream.Length), skipInputValidation: true);

@@ -171,6 +171,31 @@ public class ServerConventionsConstructorBindingTests(ITestOutputHelper output) 
         }
     }
 
+    [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Sharding)]
+    public void WritesNamedFloatingPointLiteralsOfBlittableMembersAsNumbers()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject includes = context.Sync.ReadForMemory("""{ "users/1": { "Score": NaN, "Max": Infinity, "Min": -Infinity } }""", "includes"))
+        {
+            var range = new TimeSeriesRangeResult { Entries = [], TotalResults = 0, Includes = includes };
+
+            using (BlittableJsonReaderObject json = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(range, context))
+            {
+                Assert.True(json.TryGet(nameof(TimeSeriesRangeResult.Includes), out BlittableJsonReaderObject writtenIncludes));
+                Assert.True(writtenIncludes.TryGet("users/1", out BlittableJsonReaderObject user));
+
+                Assert.True(user.TryGetMember("Score", out object score));
+                Assert.True(Assert.IsType<LazyNumberValue>(score).IsNaN());
+
+                Assert.True(user.TryGetMember("Max", out object max));
+                Assert.True(Assert.IsType<LazyNumberValue>(max).IsPositiveInfinity());
+
+                Assert.True(user.TryGetMember("Min", out object min));
+                Assert.True(Assert.IsType<LazyNumberValue>(min).IsNegativeInfinity());
+            }
+        }
+    }
+
     [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Sharding)]
     public void ReadsPatchByQueryTestResponseWithDocuments()
     {
