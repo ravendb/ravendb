@@ -16,7 +16,7 @@ namespace Raven.Server.Json.Converters
         private static JsonOperationContext _context;
 
         public static JsonOperationContext Context =>
-            _context ?? throw new SerializationException($"A {nameof(JsonOperationContext)} must be entered before reading recorded values");
+            _context ?? SystemTextJsonBlittableReader.Current ?? throw new SerializationException($"A {nameof(JsonOperationContext)} must be entered before reading recorded values");
 
         public static ContextScope EnterContext(JsonOperationContext context)
         {

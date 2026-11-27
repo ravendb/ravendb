@@ -272,6 +272,32 @@ public class ServerConventionsConstructorBindingTests(ITestOutputHelper output) 
         }
     }
 
+    private class WithBlittableMembers
+    {
+        public BlittableJsonReaderObject Document { get; set; }
+
+        public BlittableJsonReaderArray Items { get; set; }
+
+        public LazyStringValue Id { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void ReadsBlittableMembersWithoutAnEnteredContext()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("""{ "Document": { "Name": "a" }, "Items": [1, "b"], "Id": "users/1" }""", "json"))
+        {
+            var result = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<WithBlittableMembers>(json);
+
+            Assert.True(result.Document.TryGet("Name", out string name));
+            Assert.Equal("a", name);
+            Assert.Equal(2, result.Items.Length);
+            Assert.Equal("b", result.Items[1].ToString());
+            Assert.Equal("users/1", result.Id.ToString());
+            Assert.Null(Raven.Client.Json.Serialization.SystemTextJson.Internal.SystemTextJsonBlittableReader.Current);
+        }
+    }
+
     private static T Read<T>(string json)
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
