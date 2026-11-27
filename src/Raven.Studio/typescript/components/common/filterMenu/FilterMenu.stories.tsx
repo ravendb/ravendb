@@ -15,7 +15,8 @@ import {
 export default {
     title: "Bits/FilterMenu",
     decorators: [withStorybookContexts, withBootstrap5],
-} satisfies Meta;
+    render: (args) => <FilterMenuStory {...args} />,
+} satisfies Meta<FilterMenuStoryArgs>;
 
 type Region = "Europe" | "America" | "Asia";
 
@@ -43,7 +44,11 @@ const regionOptions: { value: Region; label: string }[] = [
     { value: "Asia", label: "Asia" },
 ];
 
-function FilterMenuStory() {
+interface FilterMenuStoryArgs {
+    label?: string;
+}
+
+function FilterMenuStory({ label }: FilterMenuStoryArgs) {
     const [name, setName] = useState("");
     const [regions, setRegions] = useState<Region[]>([]);
     const [isOnline, setIsOnline] = useState<boolean>(null);
@@ -104,7 +109,7 @@ function FilterMenuStory() {
             <div className="d-flex justify-content-between align-items-center">
                 <h4 className="mb-0">Servers</h4>
                 <ButtonGroup size="sm">
-                    <FilterMenu categories={categories} title="Filter servers" />
+                    <FilterMenu categories={categories} title="Filter servers" label={label} />
                 </ButtonGroup>
             </div>
             <FilterChips categories={categories}>
@@ -123,6 +128,8 @@ function FilterMenuStory() {
     );
 }
 
-export const Default: StoryObj = {
-    render: () => <FilterMenuStory />,
+export const Default: StoryObj<FilterMenuStoryArgs> = {};
+
+export const WithLabel: StoryObj<FilterMenuStoryArgs> = {
+    args: { label: "Filter" },
 };

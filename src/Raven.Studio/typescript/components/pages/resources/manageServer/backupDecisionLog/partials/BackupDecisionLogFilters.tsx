@@ -84,7 +84,7 @@ export default function BackupDecisionLogFilters({
                 count={matchCount}
                 right={
                     <ButtonGroup size="sm">
-                        <FilterMenu categories={categories} title="Filter decisions" />
+                        <FilterMenu categories={categories} title="Filter decisions" label="Filter" />
                     </ButtonGroup>
                 }
             >

@@ -115,9 +115,10 @@ const filterMenuPopperConfig = { modifiers: [{ name: "offset", options: { offset
 interface FilterMenuProps {
     categories: FilterCategory[];
     title: string;
+    label?: string;
 }
 
-export function FilterMenu({ categories, title }: FilterMenuProps) {
+export function FilterMenu({ categories, title, label }: FilterMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [openCategoryKey, setOpenCategoryKey] = useState<string>(null);
     const categoryItems = useRef(new Map<string, HTMLElement>());
@@ -155,7 +156,8 @@ export function FilterMenu({ categories, title }: FilterMenuProps) {
                 aria-label={activeFiltersCount > 0 ? `${title} (${activeFiltersCount} active)` : title}
                 className={classNames({ active: activeFiltersCount > 0 })}
             >
-                <Icon icon="filter" margin="m-0" />
+                <Icon icon="filter" margin={label ? undefined : "m-0"} />
+                {label}
                 {activeFiltersCount > 0 && (
                     <Badge pill bg="primary" className="filter-menu-count ms-1">
                         {activeFiltersCount}
