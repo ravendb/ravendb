@@ -21,6 +21,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanCreateGenAiTask(Options options, GenAiConfiguration config)
         {
+            options.ModifyDocumentStore = Options.UseNewtonsoftJson;
             using var store = GetDocumentStore(options);
             store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
