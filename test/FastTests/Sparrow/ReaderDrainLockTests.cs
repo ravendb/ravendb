@@ -138,6 +138,35 @@ namespace FastTests.Sparrow
         }
 
         [RavenFact(RavenTestCategory.Core)]
+        public void EnterWrite_HonorsCancellationWhileAnotherWriterHolds()
+        {
+            using ReaderDrainLock l = new ReaderDrainLock();
+
+            using (l.EnterWrite(CancellationToken.None))
+            {
+                Task secondWriter = Task.Run(() =>
+                {
+                    using CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                    using IDisposable _ = l.EnterWrite(cts.Token);
+                });
+
+                // The holder waits for the second writer, so only the second writer's token can break the cycle.
+                Assert.Equal(0, Task.WaitAny(new[] { secondWriter }, TimeSpan.FromSeconds(10)));
+                Assert.IsAssignableFrom<OperationCanceledException>(secondWriter.Exception?.InnerException);
+
+                // The cancelled writer must not release the holder's exclusion.
+                Assert.True(l.HasWriterPendingForTesting());
+                Assert.False(l.TryEnterRead(out ReaderDrainLock.ReadHandle blocked));
+            }
+
+            Assert.True(l.TryEnterRead(out ReaderDrainLock.ReadHandle after));
+            after.Dispose();
+
+            using CancellationTokenSource cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using IDisposable w = l.EnterWrite(cts2.Token);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
         public void EnterRead_HonorsCancellation()
         {
             using ReaderDrainLock l = new ReaderDrainLock();

@@ -65,8 +65,8 @@ namespace Sparrow.Server
         // only while the writer-pending bit is published.
         private TaskCompletionSource<bool> _asyncWriterCleared = CreateCompletedTaskCompletionSource();
 
-        // Serializes writers. Held from EnterWrite to WriteHandle.Dispose.
-        private readonly object _writerGate = new object();
+        // Serializes writers. Held from EnterWrite to WriteHandle.Dispose, using a sempahore to handle cancellation
+        private readonly SemaphoreSlim _writerGate = new SemaphoreSlim(initialCount: 1, maxCount: 1);
 
         private bool _disposed;
 
@@ -177,16 +177,10 @@ namespace Sparrow.Server
 
         public IDisposable EnterWrite(CancellationToken token)
         {
-            // Serialize writers. Held until WriteHandle.Dispose, or until we
-            // throw on timeout/cancel.
-            bool gateHeld = false;
+            // Kept outside the try: a cancelled Wait does not acquire _writerGate, so we cannot release it on the catch below
+            _writerGate.Wait(token);
             try
             {
-                // Acquire inside the try with the ref-bool overload so an
-                // async exception between Monitor.Enter returning and the
-                // try-block entry cannot leak the gate.
-                Monitor.Enter(_writerGate, ref gateHeld);
-
                 _drained.Reset();
                 ResetAsyncWriterCleared();
                 _writerCleared.Reset();
@@ -209,18 +203,15 @@ namespace Sparrow.Server
             }
             catch
             {
-                // Held the gate, so we may have published the writer-pending
+                // We hold the gate, so we may have published the writer-pending
                 // flag. Roll back unconditionally: clearing a bit that was
                 // never set and re-setting the cleared events are idempotent,
                 // so this is correct whether we threw before or after the Or.
-                if (gateHeld)
-                {
-                    Interlocked.And(ref _state, ~WriterPendingBit);
-                    _writerCleared.Set();
-                    SetAsyncWriterCleared();
-                    _drained.Set();
-                    Monitor.Exit(_writerGate);
-                }
+                Interlocked.And(ref _state, ~WriterPendingBit);
+                _writerCleared.Set();
+                SetAsyncWriterCleared();
+                _drained.Set();
+                _writerGate.Release();
                 throw;
             }
         }
@@ -231,7 +222,7 @@ namespace Sparrow.Server
             _writerCleared.Set();
             SetAsyncWriterCleared();
             _drained.Set();
-            Monitor.Exit(_writerGate);
+            _writerGate.Release();
         }
 
         private static TaskCompletionSource<bool> CreateTaskCompletionSource() =>
