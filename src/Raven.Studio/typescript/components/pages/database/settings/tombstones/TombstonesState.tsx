@@ -39,6 +39,10 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
 
     // Changing the database causes re-mount
     const asyncGetTombstonesState = useAsync(() => databasesService.getTombstonesState(databaseName, location), []);
+    const asyncCalculateExact = useAsyncCallback(async () => {
+        const result = await databasesService.getTombstonesState(databaseName, location, true);
+        asyncGetTombstonesState.merge({ result });
+    });
     const asyncForceTombstonesCleanup = useAsyncCallback(() =>
         databasesService.forceTombstonesCleanup(databaseName, location)
     );
@@ -71,6 +75,8 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
         getFilteredRowModel: getFilteredRowModel(),
     });
 
+    const isEstimated = tombstoneStatePerSubscriptionInfo.some((x) => x.Estimated);
+
     const confirm = useConfirm();
 
     const forceCleanup = async () => {
@@ -100,10 +106,22 @@ function TombstonesStateWithSize({ location, width }: TombstonesStateWithSizePro
                     onClick={asyncGetTombstonesState.execute}
                     variant="primary"
                     isSpinning={asyncGetTombstonesState.loading}
+                    disabled={asyncCalculateExact.loading}
                     icon="refresh"
                 >
                     Refresh
                 </ButtonWithSpinner>
+                {isEstimated && (
+                    <ButtonWithSpinner
+                        onClick={asyncCalculateExact.execute}
+                        variant="secondary"
+                        isSpinning={asyncCalculateExact.loading}
+                        disabled={asyncCalculateExact.loading || asyncGetTombstonesState.loading}
+                        icon="tombstones"
+                    >
+                        Calculate exact
+                    </ButtonWithSpinner>
+                )}
                 <ButtonWithSpinner
                     onClick={forceCleanup}
                     variant="warning"

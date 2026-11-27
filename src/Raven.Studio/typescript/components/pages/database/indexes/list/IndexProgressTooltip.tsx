@@ -18,7 +18,11 @@ import {
 import { NamedProgress, NamedProgressItem } from "components/common/NamedProgress";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
+import messagePublisher from "common/messagePublisher";
 import Button from "react-bootstrap/Button";
+import { useAsyncCallback } from "react-async-hook";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { EstimatedMarker } from "components/common/EstimatedMarker";
 
 interface IndexProgressTooltipProps {
     target: HTMLElement;
@@ -26,10 +30,21 @@ interface IndexProgressTooltipProps {
     index: IndexSharedInfo;
     globalIndexingStatus: IndexRunningStatus;
     showStaleReason: (location: databaseLocationSpecifier) => void;
+    exactProgress: boolean;
+    toggleExactProgress: () => Promise<void>;
 }
 
 export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
-    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason } = props;
+    const { target, nodeInfo, index, globalIndexingStatus, showStaleReason, exactProgress, toggleExactProgress } =
+        props;
+
+    const asyncToggleExactProgress = useAsyncCallback(async () => {
+        try {
+            await toggleExactProgress();
+        } catch (e) {
+            messagePublisher.reportError("Failed to get index progress", e.responseText);
+        }
+    });
 
     if (nodeInfo.status === "failure") {
         return (
@@ -115,8 +130,15 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
 
                 {nodeInfo.progress &&
                     nodeInfo.progress.collections.map((collection) => {
+                        const collectionName = collection.estimated ? (
+                            <>
+                                {collection.name} <EstimatedMarker />
+                            </>
+                        ) : (
+                            collection.name
+                        );
                         return (
-                            <NamedProgress name={collection.name} key={collection.name}>
+                            <NamedProgress name={collectionName} key={collection.name}>
                                 <NamedProgressItem progress={collection.documents}>documents</NamedProgressItem>
                                 <NamedProgressItem progress={collection.tombstones}>tombstones</NamedProgressItem>
                                 {index.sourceType === "TimeSeries" && (
@@ -127,6 +149,20 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
                             </NamedProgress>
                         );
                     })}
+                {nodeInfo.progress && (exactProgress || nodeInfo.progress.collections.some((x) => x.estimated)) && (
+                    <div className="full-row px-3 pb-2">
+                        <ButtonWithSpinner
+                            variant="link"
+                            size="xs"
+                            className="p-0"
+                            icon="refresh"
+                            isSpinning={asyncToggleExactProgress.loading}
+                            onClick={asyncToggleExactProgress.execute}
+                        >
+                            {exactProgress ? "show estimated counts" : "show exact counts"}
+                        </ButtonWithSpinner>
+                    </div>
+                )}
             </LocationSpecificDetails>
         </PopoverWithHover>
     );

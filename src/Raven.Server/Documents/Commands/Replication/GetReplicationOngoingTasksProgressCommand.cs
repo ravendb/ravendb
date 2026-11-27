@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Server.Documents.Replication.Stats;
@@ -10,10 +10,12 @@ namespace Raven.Server.Documents.Commands.Replication
     internal sealed class GetReplicationOngoingTasksProgressCommand : RavenCommand<IReplicationTaskProgress[]>
     {
         private readonly string[] _names;
+        private readonly bool _exact;
 
-        public GetReplicationOngoingTasksProgressCommand(string[] names, string nodeTag)
+        public GetReplicationOngoingTasksProgressCommand(string[] names, string nodeTag, bool exact = false)
         {
             _names = names;
+            _exact = exact;
             SelectedNodeTag = nodeTag;
         }
 
@@ -23,10 +25,20 @@ namespace Raven.Server.Documents.Commands.Replication
         {
             url = $"{node.Url}/databases/{node.Database}/replication/progress";
 
+            char separator = '?';
+
             if (_names is { Length: > 0 })
             {
                 for (var i = 0; i < _names.Length; i++)
-                    url += $"{(i == 0 ? "?" : "&")}name={Uri.EscapeDataString(_names[i])}";
+                {
+                    url += $"{separator}name={Uri.EscapeDataString(_names[i])}";
+                    separator = '&';
+                }
+            }
+
+            if (_exact)
+            {
+                url += $"{separator}exact=true";
             }
 
             return new HttpRequestMessage
