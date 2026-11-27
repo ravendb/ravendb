@@ -1,4 +1,8 @@
-import { connectionStringTokens, databaseSettingTokens, ongoingTaskTokens } from "./importFromFileUtils";
+import {
+    connectionStringTokens,
+    databaseSettingTokens,
+    ongoingTaskTokens,
+} from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 
 type ImportOptions = Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions;
 type DatabaseItemType = Raven.Client.Documents.Smuggler.DatabaseItemType;

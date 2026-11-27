@@ -27,7 +27,8 @@ import ShardNodeSmugglerResult = Raven.Client.Documents.Smuggler.ShardNodeSmuggl
 import ShardNodeBackupResult = Raven.Client.Documents.Operations.Backups.ShardNodeBackupResult;
 import BackupResult = Raven.Client.Documents.Operations.Backups.BackupResult;
 import timeAwareEWMA = require("viewmodels/common/timeAwareEWMA");
-import ImportResultModal = require("components/pages/database/tasks/importData/importFromFile/ImportResultModal");
+import ImportResultModal = require("components/pages/database/tasks/importData/shared/ImportResultModal");
+import i18nModule = require("common/i18n/i18n");
 import OperationExceptionResult = Raven.Client.Documents.Operations.OperationExceptionResult;
 
 type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
@@ -591,15 +592,22 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     static showDetailsFor(op: operation, center: notificationCenter) {
-        if (op.taskType() === "DatabaseImport") {
-            center.reactModalView(smugglerDatabaseDetails.importResultModalView(op, () => center.reactModalView(null)));
+        const resultModalContext = smugglerDatabaseDetails.resultModalContexts[op.taskType()];
+        if (resultModalContext) {
+            const title = i18nModule.createTranslator("importData")("resultModal.title", { context: resultModalContext });
+            center.reactModalView(smugglerDatabaseDetails.importResultModalView(op, () => center.reactModalView(null), title));
             return;
         }
 
         return app.showBootstrapDialog(new smugglerDatabaseDetails(op, center));
     }
 
-    static importResultModalView(op: operation, onClose: () => void): ReactInKnockout<typeof ImportResultModal.default> {
+    private static readonly resultModalContexts: Partial<Record<Raven.Server.Documents.Operations.OperationType, "import" | "migration">> = {
+        DatabaseImport: "import",
+        DatabaseMigrationRavenDb: "migration",
+    };
+
+    static importResultModalView(op: operation, onClose: () => void, title?: string): ReactInKnockout<typeof ImportResultModal.default> {
         return ko.pureComputed(() => {
             const status = op.status();
             const current = (status === "Completed" ? op.result() : op.lastProgress()) as SmugglerResult | ShardedSmugglerResult;
@@ -607,6 +615,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             return {
                 component: ImportResultModal.default,
                 props: {
+                    title,
                     progress: current ? smugglerDatabaseDetails.toImportProgress(current) : null,
                     error: status === "Faulted" ? op.result() as OperationExceptionResult : null,
                     status,

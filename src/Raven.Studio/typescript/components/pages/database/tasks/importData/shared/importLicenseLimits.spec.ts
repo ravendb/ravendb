@@ -1,4 +1,4 @@
-import { getLicenseLimitWarning } from "./importLicenseLimits";
+import { getLicenseLimitWarning } from "components/pages/database/tasks/importData/shared/importLicenseLimits";
 import { LicenseStubs } from "test/stubs/LicenseStubs";
 
 describe("getLicenseLimitWarning", () => {

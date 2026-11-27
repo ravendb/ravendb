@@ -1,32 +1,39 @@
-import "./ImportDatabaseFromFile.scss";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import { FieldErrors, FormProvider, useWatch } from "react-hook-form";
 import { useAsync } from "react-async-hook";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import classNames from "classnames";
-import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import { useScrollSpy } from "components/hooks/useScrollSpy";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
+import { createTranslator } from "common/i18n/i18n";
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import { useImportFromFileForm } from "./useImportFromFileForm";
 import { useImportOperation } from "./useImportOperation";
-import { ImportRestrictionsProvider, useImportRestrictions } from "./useImportRestrictions";
+import {
+    ImportRestrictionsProvider,
+    useImportRestrictions,
+} from "components/pages/database/tasks/importData/shared/useImportRestrictions";
 import { hasAnyInclude } from "./importFromFileUtils";
 import { ImportFromFileFormData } from "./importFromFileValidation";
-import { getFirstErrorPath, getSectionIdForErrorPath, sectionIds } from "./importFromFileNav";
-import ImportSideNav from "./ImportSideNav";
+import { errorFieldTargets, sectionNav } from "./importFromFileNav";
+import {
+    getFirstErrorPath,
+    getSectionIdForErrorPath,
+} from "components/pages/database/tasks/importData/shared/importNav";
+import ImportPageLayout from "components/pages/database/tasks/importData/shared/ImportPageLayout";
+import { useImportPageScroll } from "components/pages/database/tasks/importData/shared/useImportPageScroll";
 import SelectFileSection from "./sections/SelectFileSection";
 import DataToImportSection from "./sections/DataToImportSection";
-import ConfigurationToImportSection from "./sections/ConfigurationToImportSection";
+import ConfigurationToImportSection from "components/pages/database/tasks/importData/shared/ConfigurationToImportSection";
 import ImportProcessingSection from "./sections/ImportProcessingSection";
-import ImportResultModal from "./ImportResultModal";
+import ImportResultModal from "components/pages/database/tasks/importData/shared/ImportResultModal";
 import ImportCommandModal from "./ImportCommandModal";
 
 export default function ImportDatabaseFromFile() {
@@ -38,6 +45,7 @@ export default function ImportDatabaseFromFile() {
 }
 
 function ImportDatabaseFromFileContent() {
+    const t = useStudioTranslation("importData");
     const { forCurrentDatabase } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -55,13 +63,7 @@ function ImportDatabaseFromFileContent() {
 
     useDirtyFlag(isUploading, uploadInProgressDialog);
 
-    const contentRef = useRef<HTMLDivElement>(null);
-    const [scrollRoot, setScrollRoot] = useState<Element | null>(null);
-    useEffect(() => {
-        setScrollRoot(contentRef.current);
-    }, []);
-
-    const { activeId: activeSectionId, selectSection } = useScrollSpy(sectionIds, { root: scrollRoot });
+    const scroll = useImportPageScroll(sectionNav);
 
     const importOptionsUrl = forCurrentDatabase.importDataOptionsUrl();
 
@@ -79,12 +81,12 @@ function ImportDatabaseFromFileContent() {
             return;
         }
 
-        const sectionId = getSectionIdForErrorPath(firstErrorPath);
+        const sectionId = getSectionIdForErrorPath(firstErrorPath, errorFieldTargets);
         if (!sectionId) {
             return;
         }
 
-        selectSection(sectionId);
+        scroll.selectSection(sectionId);
     };
 
     const watchedDocuments = useWatch({ control, name: "documents" });
@@ -101,85 +103,88 @@ function ImportDatabaseFromFileContent() {
 
     return (
         <FormProvider {...form}>
-            <div className="import-page">
-                <AboutViewHeading
-                    title="Import data from a .ravendbdump file"
-                    icon="import-database"
-                    backUrl={importOptionsUrl}
-                    marginBottom={2}
+            <ImportPageLayout
+                title={t("importFile.title")}
+                icon="import-database"
+                backUrl={importOptionsUrl}
+                navItems={sectionNav}
+                scroll={scroll}
+                alert={
+                    hasExistingData && (
+                        <Alert variant="warning" className="w-50">
+                            <Icon icon="warning" color="warning" /> {t("importFile.overwriteNote")}
+                        </Alert>
+                    )
+                }
+                actions={
+                    <>
+                        <Button
+                            variant="primary"
+                            className="rounded-pill"
+                            disabled={!canImport}
+                            onClick={handleSubmit(startImport, onInvalidSubmit)}
+                        >
+                            <Icon icon="import-database" /> {t("importFile.importButton")}
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            className="rounded-pill"
+                            disabled={!file}
+                            onClick={() => setIsCommandModalOpen(true)}
+                        >
+                            <Icon icon="code" /> {t("importFile.commandButton")}
+                        </Button>
+                    </>
+                }
+                banner={
+                    <>
+                        {isUploading && (
+                            <ProgressBar
+                                now={uploadPercent}
+                                striped
+                                animated
+                                label={`${uploadPercent}%`}
+                                visuallyHidden
+                                className="mb-3"
+                            />
+                        )}
+                        {!hasInclude && (
+                            <Alert variant="warning" className="mb-2">
+                                {t("includeRequired")}
+                            </Alert>
+                        )}
+                    </>
+                }
+            >
+                <SelectFileSection />
+                <fieldset disabled={!file} className={classNames({ "item-disabled": !file })}>
+                    <DataToImportSection />
+                    <ConfigurationToImportSection />
+                    <ImportProcessingSection />
+                </fieldset>
+            </ImportPageLayout>
+            {isCommandModalOpen && <ImportCommandModal onClose={() => setIsCommandModalOpen(false)} />}
+            {isResultModalOpen && operationState && (
+                <ImportResultModal
+                    progress={operationState.progress}
+                    error={operationState.error}
+                    status={operationState.status}
+                    startTime={operationState.startTime}
+                    endTime={operationState.endTime}
+                    onClose={closeResultModal}
                 />
-                {hasExistingData && (
-                    <Alert variant="warning" className="w-50">
-                        <Icon icon="warning" color="warning" /> Note: Importing will overwrite any existing documents
-                        and indexes.
-                    </Alert>
-                )}
-                <div className="my-4 d-flex align-items-center gap-3">
-                    <Button
-                        variant="primary"
-                        className="rounded-pill"
-                        disabled={!canImport}
-                        onClick={handleSubmit(startImport, onInvalidSubmit)}
-                    >
-                        <Icon icon="import-database" /> Import database
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        className="rounded-pill"
-                        disabled={!file}
-                        onClick={() => setIsCommandModalOpen(true)}
-                    >
-                        <Icon icon="code" /> Use import command
-                    </Button>
-                </div>
-                {isUploading && (
-                    <ProgressBar
-                        now={uploadPercent}
-                        striped
-                        animated
-                        label={`${uploadPercent}%`}
-                        visuallyHidden
-                        className="mb-3"
-                    />
-                )}
-                {!hasInclude && (
-                    <Alert variant="warning" className="mb-2">
-                        Note: At least one &apos;include&apos; option must be checked.
-                    </Alert>
-                )}
-                <div className="d-flex gap-4 import-page-body">
-                    <ImportSideNav activeSectionId={activeSectionId} onSelectSection={selectSection} />
-                    <div className="flex-grow-1 import-page-content" ref={contentRef}>
-                        <SelectFileSection />
-                        <fieldset disabled={!file} className={classNames({ "item-disabled": !file })}>
-                            <DataToImportSection />
-                            <ConfigurationToImportSection />
-                            <ImportProcessingSection />
-                        </fieldset>
-                    </div>
-                </div>
-                {isCommandModalOpen && <ImportCommandModal onClose={() => setIsCommandModalOpen(false)} />}
-                {isResultModalOpen && operationState && (
-                    <ImportResultModal
-                        progress={operationState.progress}
-                        error={operationState.error}
-                        status={operationState.status}
-                        startTime={operationState.startTime}
-                        endTime={operationState.endTime}
-                        onClose={closeResultModal}
-                    />
-                )}
-            </div>
+            )}
         </FormProvider>
     );
 }
 
 function uploadInProgressDialog(): JQueryDeferred<confirmDialogResult> {
+    const t = createTranslator("importData");
     const result = $.Deferred<confirmDialogResult>();
 
     viewHelpers
-        .confirmationMessage("Upload is in progress", "Please wait until uploading is complete.", {
-            buttons: ["OK"],
+        .confirmationMessage(t("importFile.uploadInProgressTitle"), t("importFile.uploadInProgressMessage"), {
+            buttons: [t("importFile.ok")],
         })
         .always(() => result.resolve({ can: false }));
 

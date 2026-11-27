@@ -1,27 +1,24 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
+interface RemoteServerBuildInfoArgs {
+    serverUrl: string;
+    userName: string;
+    password: string;
+    domain: string;
+    apiKey: string;
+    enableBasicAuthenticationOverUnsecuredHttp: boolean;
+    skipServerCertificateValidation: boolean;
+}
+
 class getRemoteServerVersionWithDatabasesCommand extends commandBase {
 
-    constructor(private serverUrl: string,
-        private userName: string, private password: string, private domain: string,
-        private apiKey: string, private enableBasicAuthenticationOverUnsecuredHttp: boolean,
-        private skipServerCertificateValidation: boolean) {
+    constructor(private args: RemoteServerBuildInfoArgs) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames> {
-        const args = {
-            serverUrl: this.serverUrl,
-            userName: this.userName,
-            password: this.password,
-            domain: this.domain,
-            apiKey: this.apiKey,
-            enableBasicAuthenticationOverUnsecuredHttp: this.enableBasicAuthenticationOverUnsecuredHttp,
-            skipServerCertificateValidation: this.skipServerCertificateValidation
-        };
-        
-        const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);
+        const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(this.args);
         return this.query(url, null);
     }
 }

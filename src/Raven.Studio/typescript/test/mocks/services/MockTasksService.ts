@@ -16,6 +16,7 @@ import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
 import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
+import BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 
 function handlerIdForLocation(handlerId: string, location: databaseLocationSpecifier) {
     return [handlerId, location.nodeTag, location.shardNumber].filter((x) => x != null).join("-");
@@ -79,6 +80,25 @@ export default class MockTasksService extends AutoMockService<TasksService> {
                 return { OperationId: operationId };
             }
         );
+    }
+
+    withMigrateRavenDb(opts?: {
+        buildInfo?: Partial<BuildInfoWithResourceNames>;
+        buildInfoError?: string;
+        serverUrls?: string[];
+    }) {
+        this.mocks.getMigratedServerUrls.mockResolvedValue({
+            List: opts?.serverUrls ?? ["http://raven-old-1:8080", "https://raven-old-2:8080"],
+        });
+
+        this.mocks.getRemoteServerBuildInfo.mockImplementation(async () => {
+            if (opts?.buildInfoError) {
+                throw mockJQueryError(opts.buildInfoError);
+            }
+            return { ...TasksStubs.remoteServerBuildInfo(), ...opts?.buildInfo };
+        });
+
+        this.mocks.migrateRavenDbDatabase.mockResolvedValue({ OperationId: 1234 });
     }
 
     withGetTasksPerLocation(

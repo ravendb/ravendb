@@ -6,21 +6,22 @@ import {
     DocumentToggleKey,
     OngoingTaskKey,
     ongoingTaskKeys,
-} from "./importFromFileValidation";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
 import {
     connectionStringIcons,
-    connectionStringLabels,
     databaseSettingIcons,
-    databaseSettingLabels,
     ongoingTaskIcons,
-    ongoingTaskLabels,
-} from "./importFromFileLabels";
-import IconName from "../../../../../../../typings/server/icons";
+} from "components/pages/database/tasks/importData/shared/importLabels";
+import IconName from "typings/server/icons";
 import { mergeCapabilities, OngoingTaskTarget } from "components/pages/database/tasks/shared/ongoingTaskCapabilities";
+import { createTranslator } from "common/i18n/i18n";
+import { TranslationKey } from "common/i18n/resources";
+
+const t = createTranslator("importData");
 
 type LicenseStatusKey = keyof LicenseStatus;
 
-export type ImportRestrictionReason = "license" | "sharding" | "access";
+export type ImportRestrictionReason = "license" | "sharding" | "access" | "sourceVersion";
 
 export interface ImportRestriction {
     reason: ImportRestrictionReason;
@@ -30,8 +31,13 @@ export interface ImportRestriction {
     tooltip: string;
 }
 
+type ImportItemLabelKey = Extract<
+    TranslationKey<"importData">,
+    `${"databaseSettings" | "ongoingTasks" | "connectionStrings"}.${string}` | "documents.archivedDocuments"
+>;
+
 interface ImportRestrictionRule {
-    label: string;
+    labelKey: ImportItemLabelKey;
     icon: IconName;
     licenseFlags?: LicenseStatusKey[];
     licenseRequired?: LicenseBadgeText;
@@ -41,7 +47,7 @@ interface ImportRestrictionRule {
 
 export const documentToggleRules: Partial<Record<DocumentToggleKey, ImportRestrictionRule>> = {
     isIncludeArchivedDocuments: {
-        label: "Archived Documents",
+        labelKey: "documents.archivedDocuments",
         icon: "data-archival",
         licenseFlags: ["HasDataArchival"],
         licenseRequired: "Enterprise",
@@ -50,43 +56,43 @@ export const documentToggleRules: Partial<Record<DocumentToggleKey, ImportRestri
 
 export const databaseSettingRules: Partial<Record<DatabaseSettingKey, ImportRestrictionRule>> = {
     revisions: {
-        label: databaseSettingLabels.revisions,
+        labelKey: "databaseSettings.revisions",
         icon: databaseSettingIcons.revisions,
         licenseFlags: ["CanSetupDefaultRevisionsConfiguration"],
         licenseRequired: "Professional +",
     },
     documentsCompression: {
-        label: databaseSettingLabels.documentsCompression,
+        labelKey: "databaseSettings.documentsCompression",
         icon: databaseSettingIcons.documentsCompression,
         licenseFlags: ["HasDocumentsCompression"],
         licenseRequired: "Enterprise",
     },
     dataArchival: {
-        label: databaseSettingLabels.dataArchival,
+        labelKey: "databaseSettings.dataArchival",
         icon: databaseSettingIcons.dataArchival,
         licenseFlags: ["HasDataArchival"],
         licenseRequired: "Enterprise",
     },
     timeSeries: {
-        label: databaseSettingLabels.timeSeries,
+        labelKey: "databaseSettings.timeSeries",
         icon: databaseSettingIcons.timeSeries,
         licenseFlags: ["HasTimeSeriesRollupsAndRetention"],
         licenseRequired: "Professional +",
     },
     postgreSqlIntegration: {
-        label: databaseSettingLabels.postgreSqlIntegration,
+        labelKey: "databaseSettings.postgreSqlIntegration",
         icon: databaseSettingIcons.postgreSqlIntegration,
         licenseFlags: ["HasPostgreSqlIntegration"],
         licenseRequired: "Enterprise",
     },
     client: {
-        label: databaseSettingLabels.client,
+        labelKey: "databaseSettings.client",
         icon: databaseSettingIcons.client,
         licenseFlags: ["HasClientConfiguration"],
         licenseRequired: "Professional +",
     },
     schemaValidation: {
-        label: databaseSettingLabels.schemaValidation,
+        labelKey: "databaseSettings.schemaValidation",
         icon: databaseSettingIcons.schemaValidation,
         licenseFlags: ["HasSchemaValidation"],
         licenseRequired: "Professional +",
@@ -120,7 +126,7 @@ export const ongoingTaskRules: Partial<Record<OngoingTaskKey, ImportRestrictionR
         return [
             key,
             {
-                label: ongoingTaskLabels[key],
+                labelKey: `ongoingTasks.${key}`,
                 icon: ongoingTaskIcons[key],
                 licenseFlags,
                 licenseRequired: licenseBadge,
@@ -148,7 +154,7 @@ export const connectionStringRules: Partial<Record<ConnectionStringKey, ImportRe
         return [
             key,
             {
-                label: connectionStringLabels[key],
+                labelKey: `connectionStrings.${key}`,
                 icon: connectionStringIcons[key],
                 licenseFlags,
                 licenseRequired: licenseBadge,
@@ -157,18 +163,6 @@ export const connectionStringRules: Partial<Record<ConnectionStringKey, ImportRe
         ];
     })
 );
-
-export function getLicenseRestrictionTooltip(label: string) {
-    return `Data created with ${label} won't be imported - this feature isn't included in your license`;
-}
-
-export function getShardingRestrictionTooltip(label: string) {
-    return `${label} are not supported for sharded databases and won't be imported`;
-}
-
-export function getAccessRestrictionTooltip(label: string) {
-    return `Your certificate doesn't grant sufficient permissions to import ${label}`;
-}
 
 export function resolveRestriction(
     rule: ImportRestrictionRule | undefined,
@@ -184,6 +178,7 @@ export function resolveRestriction(
     }
 
     const { licenseStatus, isSharded, canHandleOperation, isShardingChecked = true } = context;
+    const label = t(rule.labelKey);
 
     const isLicenseRestricted =
         !!rule.licenseFlags?.length && rule.licenseFlags.every((flag) => !licenseStatus?.[flag]);
@@ -191,28 +186,28 @@ export function resolveRestriction(
     if (isLicenseRestricted) {
         return {
             reason: "license",
-            label: rule.label,
+            label,
             icon: rule.icon,
             licenseRequired: rule.licenseRequired,
-            tooltip: getLicenseRestrictionTooltip(rule.label),
+            tooltip: t("restrictions.tooltip", { context: "license", label }),
         };
     }
 
     if (isShardingChecked && isSharded && !rule.isShardingSupported) {
         return {
             reason: "sharding",
-            label: rule.label,
+            label,
             icon: rule.icon,
-            tooltip: getShardingRestrictionTooltip(rule.label),
+            tooltip: t("restrictions.tooltip", { context: "sharding", label }),
         };
     }
 
     if (rule.accessRequired && !canHandleOperation(rule.accessRequired)) {
         return {
             reason: "access",
-            label: rule.label,
+            label,
             icon: rule.icon,
-            tooltip: getAccessRestrictionTooltip(rule.label),
+            tooltip: t("restrictions.tooltip", { context: "access", label }),
         };
     }
 

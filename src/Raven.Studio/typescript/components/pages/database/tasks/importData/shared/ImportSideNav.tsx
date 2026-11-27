@@ -1,17 +1,19 @@
 import React from "react";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import { SectionNavItem, sectionNav } from "./importFromFileNav";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
+import { SectionNavItem } from "components/pages/database/tasks/importData/shared/importNav";
 
 interface ImportSideNavProps {
+    items: SectionNavItem[];
     activeSectionId: string | null;
     onSelectSection: (id: string) => void;
 }
 
-export default function ImportSideNav({ activeSectionId, onSelectSection }: ImportSideNavProps) {
+export default function ImportSideNav({ items, activeSectionId, onSelectSection }: ImportSideNavProps) {
     return (
         <nav className="import-side-nav align-self-start">
-            {sectionNav.map((item, index) => (
+            {items.map((item, index) => (
                 <React.Fragment key={item.id}>
                     {index > 0 && <hr />}
                     <ImportSideNavItem
@@ -32,6 +34,8 @@ interface ImportSideNavItemProps {
 }
 
 function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSideNavItemProps) {
+    const t = useStudioTranslation("importData");
+
     return (
         <>
             <button
@@ -41,7 +45,7 @@ function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSid
                 })}
                 onClick={() => onSelectSection(item.id)}
             >
-                <Icon icon={item.icon} margin="m-0" /> {item.label}
+                <Icon icon={item.icon} margin="m-0" /> {t(item.label)}
             </button>
             {item.children?.map((child) => (
                 <button
@@ -52,7 +56,7 @@ function ImportSideNavItem({ item, activeSectionId, onSelectSection }: ImportSid
                     })}
                     onClick={() => onSelectSection(child.id)}
                 >
-                    {child.label}
+                    {t(child.label)}
                 </button>
             ))}
         </>

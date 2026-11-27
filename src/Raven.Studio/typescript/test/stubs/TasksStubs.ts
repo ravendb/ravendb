@@ -31,8 +31,22 @@ import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import TaskErrors = Raven.Server.Documents.TasksErrors.TaskErrors;
 import CdcTestResult = Raven.Client.Documents.Operations.CdcSink.Test.CdcTestResult;
+import BuildInfoWithResourceNames = Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames;
 
 export class TasksStubs {
+    static remoteServerBuildInfo(): BuildInfoWithResourceNames {
+        return {
+            MajorVersion: "V7",
+            BuildVersion: 71013,
+            ProductVersion: "7.1",
+            FullVersion: "7.1.3",
+            DatabaseNames: ["Northwind", "Orders"],
+            FileSystemNames: [],
+            Authorized: true,
+            IsLegacyOAuthToken: false,
+        };
+    }
+
     static getTasksList(): OngoingTasksResult {
         const emptyPullReplicationDefinition = TasksStubs.getReplicationHubDefinition();
         emptyPullReplicationDefinition.TaskId++;

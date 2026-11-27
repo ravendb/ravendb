@@ -1,19 +1,15 @@
+import { getDefaultFormData, toImportDto, hasAnyInclude, buildImportCurlCommand } from "./importFromFileUtils";
 import {
     getDatabaseRecordTypes,
-    getDefaultFormData,
-    toImportDto,
-    hasAnyInclude,
     getItemsToWarnAbout,
     getTasksMissingConnectionStrings,
-    buildImportCurlCommand,
-} from "./importFromFileUtils";
+} from "components/pages/database/tasks/importData/shared/importOptionsUtils";
 import {
     connectionStringKeys,
     databaseSettingKeys,
-    ImportFromFileFormData,
-    importFromFileSchema,
     ongoingTaskKeys,
-} from "./importFromFileValidation";
+} from "components/pages/database/tasks/importData/shared/importOptionsValidation";
+import { ImportFromFileFormData, importFromFileSchema } from "./importFromFileValidation";
 import {
     adminDefaultDto,
     adminDefaultOperateOnTypes,

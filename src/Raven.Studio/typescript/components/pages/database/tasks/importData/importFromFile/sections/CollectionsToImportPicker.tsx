@@ -8,10 +8,12 @@ import { Icon } from "components/common/Icon";
 import { Switch } from "components/common/Checkbox";
 import { FormInput } from "components/common/Form";
 import InnerForm from "components/common/InnerForm";
-import pluralizeHelpers from "common/helpers/text/pluralizeHelpers";
+import { useStudioTranslation } from "components/hooks/useStudioTranslation";
+import { createTranslator } from "common/i18n/i18n";
 import { ImportFromFileFormData } from "../importFromFileValidation";
 
 export default function CollectionsToImportPicker() {
+    const t = useStudioTranslation("importData");
     const { control: importControl, setValue, getValues } = useFormContext<ImportFromFileFormData>();
 
     const includedCollections = useWatch({ control: importControl, name: "collections.includedCollections" }) ?? [];
@@ -52,7 +54,12 @@ export default function CollectionsToImportPicker() {
         clearErrors("collectionName");
 
         if (duplicates.length > 0) {
-            setError("collectionName", { message: getAlreadyOnListMessage(duplicates) });
+            setError("collectionName", {
+                message: t("importFile.collections.alreadyOnList", {
+                    names: duplicates.map((x) => `"${x}"`).join(", "),
+                    count: duplicates.length,
+                }),
+            });
         }
     };
 
@@ -111,19 +118,19 @@ export default function CollectionsToImportPicker() {
                         type="text"
                         control={addControl}
                         name="collectionName"
-                        placeholder="Type or paste collection names, separated by commas"
-                        aria-label="Collections to import"
+                        placeholder={t("importFile.collections.inputPlaceholder")}
+                        aria-label={t("importFile.collections.inputLabel")}
                         onPaste={pasteLinesAsCommaList}
                     />
                     <Button variant="secondary" className="text-nowrap" onClick={handleSubmit(addCollections)}>
-                        <Icon icon="plus" /> Add
+                        <Icon icon="plus" /> {t("importFile.collections.add")}
                     </Button>
                 </InputGroup>
             </InnerForm>
             <div className="import-list-header mb-2">
-                <span className="flex-grow-1 fw-semibold">Collection name</span>
+                <span className="flex-grow-1 fw-semibold">{t("importFile.collections.collectionName")}</span>
                 <div className="d-flex align-items-center gap-2">
-                    <span>Select all</span>
+                    <span>{t("selectAll")}</span>
                     <Switch
                         id="select-all-collections"
                         className="m-0"
@@ -136,10 +143,7 @@ export default function CollectionsToImportPicker() {
             </div>
             <div className="import-collections-list">
                 {manualCollections.length === 0 && (
-                    <div className="import-list-item text-muted">
-                        No collections added. Type or paste collection names from the imported file above, separated by
-                        commas, and click Add.
-                    </div>
+                    <div className="import-list-item text-muted">{t("importFile.collections.empty")}</div>
                 )}
                 {manualCollections.map((name) => (
                     <div key={name} className="import-list-item">
@@ -156,7 +160,7 @@ export default function CollectionsToImportPicker() {
                             variant="link"
                             size="sm"
                             className="p-0 text-danger"
-                            title="Remove collection"
+                            title={t("importFile.collections.remove")}
                             onClick={() => removeCollection(name)}
                         >
                             <Icon icon="trash" margin="m-0" />
@@ -186,13 +190,10 @@ const parseCollectionNames = (text: string) =>
         []
     );
 
-const getAlreadyOnListMessage = (duplicates: string[]) => {
-    const quoted = duplicates.map((x) => `"${x}"`).join(", ");
-    return `${quoted} ${pluralizeHelpers.pluralize(duplicates.length, "is", "are", true)} already on the list`;
-};
-
 const addCollectionSchema = yup.object({
-    collectionName: yup
-        .string()
-        .test("required", "Enter a collection name", (value) => parseCollectionNames(value ?? "").length > 0),
+    collectionName: yup.string().test(
+        "required",
+        () => createTranslator("importData")("importFile.collections.nameRequired"),
+        (value) => parseCollectionNames(value ?? "").length > 0
+    ),
 });
