@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 namespace Sparrow.Server.Platform.Posix.macOS
@@ -16,7 +16,7 @@ namespace Sparrow.Server.Platform.Posix.macOS
         public static extern int mach_host_self();
 
         [DllImport(LIBC_6, SetLastError = true)]
-        public static extern int host_page_size(int machHost, uint* pageSize);
+        public static extern int host_page_size(int machHost, nuint* pageSize); // vm_size_t
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int host_statistics64(int machHost, int flavor, void* hostInfoT, int* hostInfoCount);

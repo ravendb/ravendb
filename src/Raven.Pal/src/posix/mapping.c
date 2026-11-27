@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <libgen.h>
+#include <limits.h>
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -60,16 +60,16 @@ rvn_create_and_mmap64_file(
         rc = FAIL_CALLOC;
         goto error_cleanup;
     }
+    mfh->fd = -1;
 
-    char* dup_path = strdup(path);
-    if (dup_path == NULL)
+    char directory_buffer[PATH_MAX];
+    char *directory = _dirname_r(path, directory_buffer);
+    if (directory == NULL)
     {
-        rc = FAIL_NOMEM;
+        rc = FAIL_OPEN_FILE;
         goto error_cleanup;
     }
-    char *directory = dirname(dup_path);
     rc = _ensure_path_exists(directory, detailed_error_code);
-    free(dup_path);
     if (rc != SUCCESS) 
         goto error_clean_with_error;
 
@@ -80,7 +80,7 @@ rvn_create_and_mmap64_file(
         goto error_cleanup;
     }
     mfh->flags = flags;
-    mfh->fd = open(path, O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+    mfh->fd = open(path, O_RDWR | O_CREAT | O_CLOEXEC, S_IWUSR | S_IRUSR);
     if (mfh->fd == -1)
     {
         rc = FAIL_OPEN_FILE;

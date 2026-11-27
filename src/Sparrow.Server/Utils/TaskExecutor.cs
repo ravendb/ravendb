@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
@@ -79,7 +79,7 @@ namespace Sparrow.Server.Utils
                 {
                     IsBackground = true,
                     Name = TasksExecutorThreadName
-                }.Start();
+                }.UnsafeStart();
             }
         }
 
