@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Dynamic;
 using System.Globalization;
@@ -1400,7 +1401,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 if (constructedWithParameters && isCollection == false)
                     continue;
 
-                if (isCollection && IsConcreteWithoutAdder(property.PropertyType))
+                if (isCollection && CannotAddTo(property.PropertyType))
                     continue;
 
                 Func<object, object> get = property.Get;
@@ -1691,9 +1692,19 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             }
         }
 
-        private static bool IsConcreteWithoutAdder(Type type)
+        private static bool CannotAddTo(Type type)
         {
-            return type.IsInterface == false && type.IsAbstract == false && _collectionAdders.GetOrAdd(type, CreateCollectionAdder) == null;
+            if (type.IsArray)
+                return true;
+
+            if (type.IsInterface || type.IsAbstract)
+                return false;
+
+            Type definition = type.IsGenericType ? type.GetGenericTypeDefinition() : null;
+            if (definition == typeof(ReadOnlyCollection<>) || definition == typeof(ReadOnlyDictionary<,>) || definition == typeof(ReadOnlyObservableCollection<>))
+                return true;
+
+            return type.Namespace == "System.Collections.Immutable" || _collectionAdders.GetOrAdd(type, CreateCollectionAdder) == null;
         }
 
         private static void AddItems(object target, object items)

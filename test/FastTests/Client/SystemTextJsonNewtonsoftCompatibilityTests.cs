@@ -2663,6 +2663,37 @@ public class SystemTextJsonNewtonsoftCompatibilityTests(ITestOutputHelper output
         }
     }
 
+    private class ReadOnlyFixedSizeCollections
+    {
+        public readonly Exception[] Errors = [];
+
+        public ReadOnlyCollection<Exception> Failures { get; } = new(new List<Exception>());
+
+        public ImmutableList<Exception> Warnings { get; } = ImmutableList<Exception>.Empty;
+
+        public string Name { get; set; }
+    }
+
+    [RavenFact(RavenTestCategory.ClientApi)]
+    public void SystemTextJsonSkipsReadOnlyFixedSizeCollectionsLikeNewtonsoft()
+    {
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        using (BlittableJsonReaderObject json = context.Sync.ReadForMemory("""{ "Errors": ["System.Exception: a"], "Failures": ["System.Exception: b"], "Warnings": ["System.Exception: c"], "Name": "n" }""", "json"))
+        {
+            var expected = Newtonsoft.Serialization.DefaultConverter.FromBlittable<ReadOnlyFixedSizeCollections>(json);
+            var actual = SystemTextJson.Serialization.DefaultConverter.FromBlittable<ReadOnlyFixedSizeCollections>(json);
+
+            Assert.Empty(expected.Errors);
+            Assert.Empty(expected.Failures);
+            Assert.Empty(expected.Warnings);
+            Assert.Equal("n", expected.Name);
+            Assert.Empty(actual.Errors);
+            Assert.Empty(actual.Failures);
+            Assert.Empty(actual.Warnings);
+            Assert.Equal(expected.Name, actual.Name);
+        }
+    }
+
     private class UntypedNamedFloatingPointValues
     {
         public object NaN { get; set; }
