@@ -1,6 +1,8 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -31,7 +33,8 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        var revisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // document ID -> (change vector, token key) of its snapshot revision; the root goes first in the token
+        var revisions = new Dictionary<string, (string ChangeVector, string TokenKey)>(StringComparer.OrdinalIgnoreCase);
 
         using (var root = _database.DocumentsStorage.Get(context, _conversationId, DocumentFields.ChangeVector))
             RootChangeVectorBeforeSnapshot = root?.ChangeVector;
@@ -41,32 +44,41 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
         if (revisions.Count == 0)
             return 0;
 
-        if (revisions.TryGetValue(_conversationId, out var rootCv) == false)
+        if (revisions.Remove(_conversationId, out var rootRevisionEntry) == false)
             throw new InvalidOperationException($"Root conversation '{_conversationId}' was not found in collected revisions.");
 
-        using var rootRevision = _database.DocumentsStorage.RevisionsStorage.GetRevision(context, rootCv);
+        using var rootRevision = _database.DocumentsStorage.RevisionsStorage.GetRevision(context, rootRevisionEntry.ChangeVector);
         CreatedAt = rootRevision?.LastModified ?? _database.Time.GetUtcNow();
-        RootChangeVector = rootCv;
+        RootChangeVector = rootRevisionEntry.ChangeVector;
 
-        SnapshotToken = SnapshotTokenDto.Build(context, _conversationId, CreatedAt, revisions);
+        var keys = new List<string>(revisions.Count + 1) { rootRevisionEntry.TokenKey };
+        foreach (var entry in revisions.Values)
+            keys.Add(entry.TokenKey);
+
+        SnapshotToken = Agents.SnapshotToken.Build(_conversationId, keys);
         return 1;
     }
 
     /// <summary>
     /// Recursively force-creates a revision for the given document and all its sub-conversations.
     /// </summary>
-    private void CollectRevisionsRecursive(DocumentsOperationContext context, string documentId, Dictionary<string, string> revisions)
+    private void CollectRevisionsRecursive(DocumentsOperationContext context, string documentId, Dictionary<string, (string ChangeVector, string TokenKey)> revisions)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
         if (revisions.ContainsKey(documentId))
             return;
 
-        var cv = _database.DocumentsStorage.RevisionsStorage.ForceCreateRevision(context, documentId);
+        var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
+        var cv = revisionsStorage.ForceCreateRevision(context, documentId);
         if (cv == null)
             return;
 
-        revisions[documentId] = cv;
+        // a revision written before revisions were keyed by hash cannot be in a token
+        var tokenKey = revisionsStorage.GetRevisionTokenKey(context, cv) ??
+                       throw new NotSupportedException($"Cannot snapshot '{documentId}': its revision with change vector '{cv}' was written in the old revision format.");
+
+        revisions[documentId] = (cv, tokenKey);
 
         List<string> subConversationIds = null;
         using (var document = _database.DocumentsStorage.Get(context, documentId))
@@ -106,91 +118,55 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
     }
 }
 
-internal sealed class SnapshotTokenDto : IDynamicJson
+/// <summary>
+/// A snapshot token: "{conversation ID}.{revision keys}". Each revision key is the 24-byte primary key of a revision in
+/// base64url, 32 characters, the root conversation first. Base64url has no '.', so the token splits at its last '.'.
+/// </summary>
+internal readonly struct SnapshotToken
 {
-    public string ConversationId { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public List<SnapshotRevisionEntry> Revisions { get; set; }
+    public const int RevisionKeyLength = 32;
+    private const char Separator = '.';
 
-    public DynamicJsonValue ToJson()
+    private readonly string _token;
+    private readonly int _separator;
+
+    private SnapshotToken(string token, int separator)
     {
-        var revisionArray = new DynamicJsonArray();
-        foreach (var rev in Revisions)
-            revisionArray.Add(rev.ToJson());
-
-        return new DynamicJsonValue
-        {
-            [nameof(ConversationId)] = ConversationId,
-            [nameof(CreatedAt)] = CreatedAt,
-            [nameof(Revisions)] = revisionArray
-        };
+        _token = token;
+        _separator = separator;
     }
 
-    public static string Build(JsonOperationContext context, string conversationId, DateTime createdAt, Dictionary<string, string> revisions)
+    public ReadOnlySpan<char> ConversationId => _token.AsSpan(0, _separator);
+
+    public int RevisionCount => (_token.Length - _separator - 1) / RevisionKeyLength;
+
+    /// <summary>The revision key at <paramref name="index"/>; index 0 is the root conversation's revision</summary>
+    public ReadOnlySpan<char> GetRevisionKey(int index) => _token.AsSpan(_separator + 1 + index * RevisionKeyLength, RevisionKeyLength);
+
+    public override string ToString() => _token;
+
+    public static string Build(string conversationId, List<string> revisionKeys)
     {
-        var dto = new SnapshotTokenDto
-        {
-            ConversationId = conversationId,
-            CreatedAt = createdAt,
-            Revisions = new List<SnapshotRevisionEntry>(revisions.Count)
-        };
-
-        // Root conversation first, then sub-conversations
-        if (revisions.Remove(conversationId, out var rootCv))
-            dto.Revisions.Add(new SnapshotRevisionEntry { Id = conversationId, ChangeVector = rootCv });
-
-        foreach (var (id, cv) in revisions)
-            dto.Revisions.Add(new SnapshotRevisionEntry { Id = id, ChangeVector = cv });
-
-        using var blittable = context.ReadObject(dto.ToJson(), "snapshot-token");
-        return blittable.ToString();
+        var sb = new StringBuilder(conversationId.Length + 1 + revisionKeys.Count * RevisionKeyLength);
+        sb.Append(conversationId).Append(Separator);
+        foreach (var key in revisionKeys)
+            sb.Append(key);
+        return sb.ToString();
     }
 
-    public static SnapshotTokenDto Parse(JsonOperationContext context, string token)
+    public static SnapshotToken Parse(string token)
     {
         if (string.IsNullOrEmpty(token))
             throw new InvalidOperationException("Snapshot token is empty.");
 
-        string Truncated() => token.Length > 200 ? token[..200] + "..." : token;
+        ReadOnlySpan<char> span = token;
+        var separator = span.LastIndexOf(Separator);
+        var keys = span[(separator + 1)..];
 
-        SnapshotTokenDto dto;
-        try
-        {
-            using var obj = context.Sync.ReadForMemory(token, "snapshot-token");
-            dto = Raven.Server.Json.JsonDeserializationServer.SnapshotTokenDto(obj);
-        }
-        catch (Exception e)
-        {
-            throw new InvalidOperationException($"Invalid snapshot token format. Expected a valid JSON string, but got: '{Truncated()}'", e);
-        }
+        // every key is 24 bytes, a whole number of base64 groups, so the keys are valid if their concatenation is
+        if (separator <= 0 || keys.IsEmpty || keys.Length % RevisionKeyLength != 0 || Base64Url.IsValid(keys) == false)
+            throw new InvalidOperationException($"Invalid snapshot token format: '{(token.Length > 200 ? token[..200] + "..." : token)}'");
 
-        if (string.IsNullOrEmpty(dto.ConversationId))
-            throw new InvalidOperationException($"Invalid snapshot token: missing ConversationId. Token: '{Truncated()}'");
-
-        if (dto.Revisions == null || dto.Revisions.Count == 0)
-            throw new InvalidOperationException($"Invalid snapshot token: Revisions array is missing or empty. At least one revision (the main conversation) is required. Token: '{Truncated()}'");
-
-        foreach (var rev in dto.Revisions)
-        {
-            if (string.IsNullOrEmpty(rev.Id) || string.IsNullOrEmpty(rev.ChangeVector))
-                throw new InvalidOperationException($"Invalid snapshot token: each revision must have an Id and ChangeVector. Token: '{Truncated()}'");
-        }
-
-        return dto;
-    }
-}
-
-internal sealed class SnapshotRevisionEntry : IDynamicJson
-{
-    public string Id { get; set; }
-    public string ChangeVector { get; set; }
-
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(Id)] = Id,
-            [nameof(ChangeVector)] = ChangeVector
-        };
+        return new SnapshotToken(token, separator);
     }
 }

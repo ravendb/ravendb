@@ -18,12 +18,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            // Create a fake token with a change vector that doesn't exist
-            var fakeRevisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["chats/1"] = "FAKE:99-nonexistent"
-            };
-            var fakeToken = BuildFakeSnapshotToken(database, "chats/1", fakeRevisions);
+            // Create a fake token with a revision key that matches no revision
+            var fakeToken = BuildFakeSnapshotToken("chats/1");
 
             var ex = await Assert.ThrowsAnyAsync<Exception>(async () =>
                 await store.AI.ForkConversationAsync(fakeToken, "forked/1"));

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -2854,6 +2855,42 @@ namespace Raven.Server.Documents.Revisions
                     if (revision != null)
                         yield return revision;
                 }
+            }
+        }
+
+        /// <summary>
+        /// The 24-byte primary key of the revision in base64url (32 characters), or null when the revision is missing or is
+        /// still stored under its legacy key, which a snapshot token cannot reference.
+        /// </summary>
+        internal string GetRevisionTokenKey(DocumentsOperationContext context, string changeVector)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            using (BuildRevisionKey(context, changeVector, out RevisionKey key, strict: false))
+            {
+                if (key.PrefixedHash.Size != RevisionKeySize || table.VerifyKeyExists(key.PrefixedHash) == false)
+                    return null;
+
+                return Base64Url.EncodeToString(key.PrefixedHash.AsReadOnlySpan());
+            }
+        }
+
+        /// <summary>
+        /// The revision whose primary key is <paramref name="tokenKey"/> (see <see cref="GetRevisionTokenKey"/>), or null.
+        /// </summary>
+        internal unsafe Document GetRevisionByTokenKey(DocumentsOperationContext context, ReadOnlySpan<char> tokenKey)
+        {
+            Span<byte> bytes = stackalloc byte[RevisionKeySize];
+            if (Base64Url.TryDecodeFromChars(tokenKey, bytes, out var written) == false || written != RevisionKeySize)
+                return null;
+
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            fixed (byte* ptr = bytes)
+            using (Slice.External(context.Allocator, ptr, RevisionKeySize, out Slice key))
+            {
+                if (table.ReadByKey(key, out TableValueReader tvr) == false)
+                    return null;
+
+                return TableValueToRevision(context, ref tvr);
             }
         }
 

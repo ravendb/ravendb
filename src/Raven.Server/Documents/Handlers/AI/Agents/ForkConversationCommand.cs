@@ -30,7 +30,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
     private readonly DocumentDatabase _database;
     private readonly string _sourceConversationId;
     private readonly string _newConversationId;
-    private readonly List<SnapshotRevisionEntry> _revisions;
+    private readonly SnapshotToken _snapshot;
     private readonly string _expectedChangeVector;
 
     public string ResultConversationId { get; private set; }
@@ -38,15 +38,14 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
 
     public ForkConversationCommand(
         DocumentDatabase database,
-        string sourceConversationId,
+        SnapshotToken snapshot,
         string newConversationId,
-        List<SnapshotRevisionEntry> revisions,
         string expectedChangeVector = null)
     {
         _database = database;
-        _sourceConversationId = sourceConversationId;
+        _snapshot = snapshot;
+        _sourceConversationId = snapshot.ConversationId.ToString();
         _newConversationId = newConversationId;
-        _revisions = revisions;
         _expectedChangeVector = expectedChangeVector;
     }
 
@@ -64,29 +63,32 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
         // Note: we trust the token to an extent — there is no trust boundary between generating
         // and consuming it. The scope validation below is a defense against accidental misuse
         // or corruption, not a security boundary.
-        if (_revisions.Any(r => string.Equals(r.Id, _sourceConversationId, StringComparison.OrdinalIgnoreCase)) == false)
+        var revisionDocs = new List<(string OriginalId, string ChangeVector, BlittableJsonReaderObject Data)>(_snapshot.RevisionCount);
+        for (var i = 0; i < _snapshot.RevisionCount; i++)
         {
-            throw new InvalidOperationException(
-                $"The snapshot token does not contain a revision for the root conversation '{_sourceConversationId}'.");
-        }
-
-        var revisionDocs = new List<(string OriginalId, BlittableJsonReaderObject Data)>(_revisions.Count);
-        foreach (var rev in _revisions)
-        {
-            var revision = _database.DocumentsStorage.RevisionsStorage.GetRevision(context, rev.ChangeVector);
+            var revision = _database.DocumentsStorage.RevisionsStorage.GetRevisionByTokenKey(context, _snapshot.GetRevisionKey(i));
             if (revision == null)
             {
                 throw new InvalidOperationException(
-                    $"The snapshot token references a revision (document: '{rev.Id}', change vector: '{rev.ChangeVector}') that no longer exists. " +
+                    $"The snapshot token references a revision ('{_snapshot.GetRevisionKey(i)}') that no longer exists. " +
                     "The revision may have been purged by the revisions retention policy or by an explicit purge operation.");
             }
 
-            // Verify the revision ID is within the source conversation's scope
-            if (rev.Id.StartsWith(_sourceConversationId, StringComparison.OrdinalIgnoreCase) == false ||
-                (rev.Id.Length > _sourceConversationId.Length && rev.Id[_sourceConversationId.Length] != '/'))
+            var revisionId = revision.Id.ToString();
+
+            // the root conversation goes first in the token
+            if (revisionDocs.Count == 0 && string.Equals(revisionId, _sourceConversationId, StringComparison.OrdinalIgnoreCase) == false)
             {
                 throw new InvalidOperationException(
-                    $"The snapshot token contains a revision for document '{rev.Id}' which is outside " +
+                    $"The snapshot token does not start with a revision of the root conversation '{_sourceConversationId}', it starts with '{revisionId}'.");
+            }
+
+            // Verify the revision ID is within the source conversation's scope
+            if (revisionId.StartsWith(_sourceConversationId, StringComparison.OrdinalIgnoreCase) == false ||
+                (revisionId.Length > _sourceConversationId.Length && revisionId[_sourceConversationId.Length] != '/'))
+            {
+                throw new InvalidOperationException(
+                    $"The snapshot token contains a revision for document '{revisionId}' which is outside " +
                     $"the scope of conversation '{_sourceConversationId}'. Only the root conversation " +
                     "and its sub-conversations (prefixed with the root ID) are allowed.");
             }
@@ -99,12 +101,12 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
                     string.Equals(collection, Constants.Documents.Collections.AiAgentConversationCollection, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new InvalidOperationException(
-                        $"The snapshot token references a revision for document '{rev.Id}' which belongs to collection '{collection}', " +
+                        $"The snapshot token references a revision for document '{revisionId}' which belongs to collection '{collection}', " +
                         $"not the expected '{Constants.Documents.Collections.AiAgentConversationCollection}' collection.");
                 }
             }
 
-            revisionDocs.Add((rev.Id, revision.Data));
+            revisionDocs.Add((revisionId, revision.ChangeVector, revision.Data));
         }
 
         // Step 3: If the target already has a document, clean up all sub-conversation documents
@@ -114,7 +116,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
         // Step 4: Write the forked documents with adjusted IDs
         for (int i = 0; i < revisionDocs.Count; i++)
         {
-            var (originalId, data) = revisionDocs[i];
+            var (originalId, revisionChangeVector, data) = revisionDocs[i];
             var adjustedId = AdjustId(originalId, _sourceConversationId, targetId);
 
             // Adjust SubConversationIds within the document to reflect the new prefix
@@ -129,7 +131,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
             // Delete existing attachments on the target (relevant for rewind-in-place),
             // then copy attachments from the revision.
             DeleteExistingAttachments(context, adjustedId);
-            CopyAttachmentsFromRevision(context, originalId, _revisions[i].ChangeVector, adjustedId);
+            CopyAttachmentsFromRevision(context, originalId, revisionChangeVector, adjustedId);
 
             if (string.Equals(originalId, _sourceConversationId, StringComparison.OrdinalIgnoreCase))
             {
@@ -372,23 +374,21 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
     {
         return new ForkConversationCommandDto
         {
-            SourceConversationId = _sourceConversationId,
+            SnapshotToken = _snapshot.ToString(),
             NewConversationId = _newConversationId,
-            Revisions = _revisions,
             ExpectedChangeVector = _expectedChangeVector
         };
     }
 
     internal class ForkConversationCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, ForkConversationCommand>
     {
-        public string SourceConversationId;
+        public string SnapshotToken;
         public string NewConversationId;
-        public List<SnapshotRevisionEntry> Revisions;
         public string ExpectedChangeVector;
 
         public ForkConversationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new ForkConversationCommand(database, SourceConversationId, NewConversationId, Revisions, ExpectedChangeVector);
+            return new ForkConversationCommand(database, Agents.SnapshotToken.Parse(SnapshotToken), NewConversationId, ExpectedChangeVector);
         }
     }
 }

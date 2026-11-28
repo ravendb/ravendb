@@ -207,8 +207,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             // The token is well-formed and references this conversation.
             var parsed = ParseToken(snapshot.Token);
-            Assert.Equal(chat.Id, parsed.ConversationId);
-            Assert.NotEmpty(parsed.Revisions);
+            Assert.Equal(chat.Id, parsed.ConversationId.ToString());
+            Assert.True(parsed.RevisionCount > 0);
 
             // The token forks into an independent, non-empty conversation.
             var fork = await store.AI.ForkConversationAsync(snapshot.Token, "forked/1");

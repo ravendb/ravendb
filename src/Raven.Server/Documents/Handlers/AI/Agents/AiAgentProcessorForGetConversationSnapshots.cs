@@ -38,16 +38,18 @@ internal sealed class AiAgentProcessorForGetConversationSnapshots : AbstractData
             {
                 using (revision)
                 {
-                    var revisionEntries = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        [conversationId] = revision.ChangeVector
-                    };
+                    var rootKey = revisionsStorage.GetRevisionTokenKey(context, revision.ChangeVector);
+                    if (rootKey == null)
+                        continue;
+
+                    var revisionKeys = new List<string> { rootKey };
+                    var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { conversationId };
 
                     // Recursively collect sub-conversation revisions (handles nested sub-agents).
                     // Missing sub-conversation revisions are skipped, producing a partial token.
-                    CollectSubConversationRevisions(context, revisionsStorage, revision, revisionEntries);
+                    CollectSubConversationRevisions(context, revisionsStorage, revision, visited, revisionKeys);
 
-                    var token = SnapshotTokenDto.Build(context, conversationId, revision.LastModified, revisionEntries);
+                    var token = SnapshotToken.Build(conversationId, revisionKeys);
                     snapshots.Add((token, revision.LastModified));
                 }
             }
@@ -89,7 +91,8 @@ internal sealed class AiAgentProcessorForGetConversationSnapshots : AbstractData
         DocumentsOperationContext context,
         Raven.Server.Documents.Revisions.RevisionsStorage revisionsStorage,
         Document revision,
-        Dictionary<string, string> revisionEntries)
+        HashSet<string> visited,
+        List<string> revisionKeys)
     {
         System.Runtime.CompilerServices.RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -99,16 +102,20 @@ internal sealed class AiAgentProcessorForGetConversationSnapshots : AbstractData
         foreach (var subIdValue in subIds)
         {
             var subId = subIdValue.ToString();
-            if (revisionEntries.ContainsKey(subId))
+            if (visited.Add(subId) == false)
                 continue;
 
             using var subRevision = revisionsStorage.GetRevisionBefore(context, subId, revision.LastModified.AddTicks(1));
             if (subRevision == null)
                 continue; // skip this sub-conversation, collect the rest
 
-            revisionEntries[subId] = subRevision.ChangeVector;
+            var subKey = revisionsStorage.GetRevisionTokenKey(context, subRevision.ChangeVector);
+            if (subKey == null)
+                continue;
 
-            CollectSubConversationRevisions(context, revisionsStorage, subRevision, revisionEntries);
+            revisionKeys.Add(subKey);
+
+            CollectSubConversationRevisions(context, revisionsStorage, subRevision, visited, revisionKeys);
         }
     }
 }

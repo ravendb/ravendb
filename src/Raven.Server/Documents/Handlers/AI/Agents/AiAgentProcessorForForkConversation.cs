@@ -27,14 +27,13 @@ internal sealed class AiAgentProcessorForForkConversation : AbstractDatabaseHand
             if (string.IsNullOrEmpty(snapshotToken))
                 throw new ArgumentException("SnapshotToken is required.");
 
-            // Parse the token using the DTO
-            var dto = SnapshotTokenDto.Parse(context, snapshotToken);
+            var token = SnapshotToken.Parse(snapshotToken);
 
             newConversationId = await ConversationHandler.ResolveConversationIdAsync(RequestHandler.ServerStore, RequestHandler.Database,
                 newConversationId, RequestHandler.GetRaftRequestIdFromQuery());
 
             // Execute the fork
-            var cmd = new ForkConversationCommand(RequestHandler.Database, dto.ConversationId, newConversationId, dto.Revisions, expectedChangeVector);
+            var cmd = new ForkConversationCommand(RequestHandler.Database, token, newConversationId, expectedChangeVector);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))

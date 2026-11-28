@@ -416,6 +416,5 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, StartSchemaValidationOperation.Parameters> ValidateSchemaOperationParameters = GenerateJsonDeserializationRoutine<StartSchemaValidationOperation.Parameters>();
         }
 
-        internal static readonly Func<BlittableJsonReaderObject, Documents.Handlers.AI.Agents.SnapshotTokenDto> SnapshotTokenDto = GenerateJsonDeserializationRoutine<Documents.Handlers.AI.Agents.SnapshotTokenDto>();
     }
 }

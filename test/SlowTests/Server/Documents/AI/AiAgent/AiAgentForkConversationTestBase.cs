@@ -25,11 +25,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         {
         }
 
-        internal SnapshotTokenDto ParseToken(string token)
-        {
-            using var ctx = JsonOperationContext.ShortTermSingleUse();
-            return SnapshotTokenDto.Parse(ctx, token);
-        }
+        internal SnapshotToken ParseToken(string token) => SnapshotToken.Parse(token);
 
         protected void InjectOpenActionCallWithSubConversation(IDocumentStore store, string conversationId, string toolId, string toolName, string arguments, string subConversationId)
         {
@@ -265,12 +261,15 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             session.SaveChanges();
         }
 
-        protected string BuildFakeSnapshotToken(DocumentDatabase database, string conversationId, Dictionary<string, string> revisions)
+        // a token of well-formed revision keys that match no revision
+        protected static string BuildFakeSnapshotToken(string conversationId, int numberOfRevisions = 1)
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            {
-                return SnapshotTokenDto.Build(ctx, conversationId, DateTime.UtcNow, revisions);
-            }
+            var keys = new List<string>(numberOfRevisions);
+            for (var i = 0; i < numberOfRevisions; i++)
+                keys.Add(FakeRevisionKey());
+            return SnapshotToken.Build(conversationId, keys);
         }
+
+        protected static string FakeRevisionKey() => System.Buffers.Text.Base64Url.EncodeToString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
     }
 }
