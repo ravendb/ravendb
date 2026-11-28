@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -502,6 +502,8 @@ namespace Raven.Server.Documents.Queries
 
             public void Dispose()
             {
+                _inner?.Dispose();
+                _inner = null;
 
                 _releaseFilterScriptRunner.Dispose();
             }

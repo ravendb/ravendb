@@ -1,4 +1,4 @@
-﻿using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Context;
 using Voron;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
                 using (_storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    var table = new Table(_storage.DocsSchema, context.Transaction.InnerTransaction);
+                    var table = context.Transaction.GetGlobalTable(_storage.DocsSchema);
                     var index = _storage.DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice];
 
                     if (table.FindByIndex(index, etag, out var reader) == false) 

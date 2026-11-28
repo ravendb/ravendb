@@ -4,24 +4,18 @@ using Voron.Data.BTrees;
 
 namespace Voron.Impl
 {
-    internal sealed class TreeAndSliceComparer : IEqualityComparer<Tuple<Tree, Slice>>
+    internal sealed class TreeAndSliceComparer : IEqualityComparer<(Tree Parent, Slice Key)>
     {
-        public bool Equals(Tuple<Tree, Slice> x, Tuple<Tree, Slice> y)
+        public static readonly TreeAndSliceComparer Instance = new();
+
+        public bool Equals((Tree Parent, Slice Key) x, (Tree Parent, Slice Key) y)
         {
-            if (x == null && y == null)
-                return true;
-            if (x == null || y == null)
-                return false;
-
-            if (x.Item1 != y.Item1)
-                return false;
-
-            return SliceComparer.Equals(x.Item2, y.Item2);
+            return x.Parent == y.Parent && SliceComparer.Equals(x.Key, y.Key);
         }
 
-        public int GetHashCode(Tuple<Tree, Slice> obj)
+        public int GetHashCode((Tree Parent, Slice Key) obj)
         {
-            return obj.Item1.GetHashCode() ^ 397 * obj.Item2.GetHashCode();
+            return obj.Parent.GetHashCode() ^ 397 * (int)obj.Key.Content.GetContentHash();
         }
     }
 }

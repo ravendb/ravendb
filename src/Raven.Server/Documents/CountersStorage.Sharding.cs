@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
     {
         public IEnumerable<ReplicationBatchItem> GetCountersByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(CountersSchema);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CountersSchema.DynamicKeyIndexes[CountersBucketAndEtagSlice], bucket, etag))
             {
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterTombstoneDetail> GetCounterTombstonesByBucketFrom(DocumentsOperationContext context, int bucket, long etag)
         {
-            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(CounterTombstonesSchema);
 
             foreach (var result in ShardedDocumentsStorage.GetItemsByBucket(context.Allocator, table, CounterTombstonesSchema.DynamicKeyIndexes[CounterTombstonesBucketAndEtagSlice], bucket, etag))
             {

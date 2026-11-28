@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Revisions;
@@ -242,20 +242,21 @@ namespace SlowTests.Issues
             using (RevisionsStorage.GetKeyPrefix(allocator, idSlice, out Slice prefixSlice))
             using (RevisionsStorage.GetKeyWithEtag(allocator, idSlice, endEtag, out var compoundPrefix))
             {
-                var seekResults = table.SeekBackwardFrom(voronIndex, prefixSlice, compoundPrefix, 0).ToList();
+                // the reader of a result is valid until the next one is read, so only the first result is taken
+                var first = table.SeekBackwardFrom(voronIndex, prefixSlice, compoundPrefix, 0).FirstOrDefault();
 
                 if (empty)
                 {
-                    Assert.Empty(seekResults);
+                    Assert.Null(first.Result);
                     if (expectedEtag.HasValue)
                         throw new InvalidOperationException("Cannot pass `expectedEtag` when `empty` is true");
                 }
                 else
                 {
-                    Assert.NotEmpty(seekResults);
+                    Assert.NotNull(first.Result);
                     using var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None);
 
-                    var tvr = seekResults[0].Result.Reader;
+                    var tvr = first.Result.Reader;
 
                     var lastLocalEtag = DocumentsStorage.TableValueToEtag((int)TestTable.Etag, ref tvr);
 
@@ -283,20 +284,21 @@ namespace SlowTests.Issues
             using (Slice.From(allocator, id, out var idSlice))
             using (RevisionsStorage.GetKeyPrefix(allocator, idSlice, out Slice prefixSlice))
             {
-                var seekResults = table.SeekBackwardFrom(voronIndex, prefixSlice, Slices.AfterAllKeys, 0).ToList();
+                // the reader of a result is valid until the next one is read, so only the first result is taken
+                var first = table.SeekBackwardFrom(voronIndex, prefixSlice, Slices.AfterAllKeys, 0).FirstOrDefault();
 
                 if (empty)
                 {
-                    Assert.Empty(seekResults);
+                    Assert.Null(first.Result);
                     if (expectedEtag.HasValue)
                         throw new InvalidOperationException("Cannot pass `expectedEtag` when `empty` is true");
                 }
                 else
                 {
-                    Assert.NotEmpty(seekResults);
+                    Assert.NotNull(first.Result);
                     using var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None);
 
-                    var tvr = seekResults[0].Result.Reader;
+                    var tvr = first.Result.Reader;
 
                     if (expectedEtag.HasValue)
                     {

@@ -3362,12 +3362,10 @@ namespace Raven.Server.ServerWide
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
-                var tvh = table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice);
-
-                if (tvh == null)
+                if (table.SeekOneBackwardFrom(CompareExchangeSchema.Indexes[CompareExchangeIndex], prefix.Slice, last.Slice, out var reader) == false)
                     return 0;
 
-                return ReadCompareExchangeOrTombstoneIndex(tvh.Reader);
+                return ReadCompareExchangeOrTombstoneIndex(reader);
             }
         }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Sparrow.Extensions;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
@@ -517,6 +518,18 @@ namespace Sparrow.Json
             FinishWritingScalarValue(ref currentState);
             _continuationState.PushByRef() = currentState;
         }
+
+        public void WriteValue(DateTime value) => WriteValue(value.GetDefaultRavenFormat());
+
+        public void WriteValue(DateTimeOffset value) => WriteValue(value.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+
+        public void WriteValue(TimeSpan value) => WriteValue(value.ToString("c"));
+
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+        public void WriteValue(DateOnly value) => WriteValue(value.ToString(DefaultFormat.DateOnlyFormatToWrite));
+
+        public void WriteValue(TimeOnly value) => WriteValue(value.ToString(DefaultFormat.TimeOnlyFormatToWrite));
+#endif
 
         public void WriteValue(LazyStringValue value)
         {

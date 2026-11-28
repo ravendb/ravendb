@@ -1,123 +1,132 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using Sparrow;
-using Sparrow.Collections;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace Voron.Data.BTrees
 {
-    public sealed class TreeCursor : IDisposable
+    /// <summary>
+    /// The pages on the path from the root to the current page, the current page on top.
+    /// </summary>
+    public sealed class TreeCursor : ITreeDescentPath
     {
-        private sealed class TreeCursorState
-        {
-            public readonly Dictionary<long, TreePage> PageByNum;
-            public readonly FastStack<TreePage> Pages;
-            
-            public TreeCursorState(int pageCapacity, int stackCapacity)
-            {
-                PageByNum = new(pageCapacity);
-                Pages = new(stackCapacity);
-            }
-            
-            public void Clear()
-            {
-                PageByNum.Clear();
-                Pages.Clear();
-            }
-        }
-        
-        private static readonly ObjectPool<TreeCursorState> _pagesByNumPool = new ObjectPool<TreeCursorState>(() => new TreeCursorState(50, 16));
-        private bool _anyOverrides;
-        private readonly TreeCursorState _state;
-        public FastStack<TreePage> Pages => _state.Pages;
+        // trees with keys below 1KB are at most 8 levels deep, a deeper tree moves the path to _deepPath
+        private const int InlineDepth = 8;
 
-        public TreeCursor()
+        [InlineArray(InlineDepth)]
+        private struct InlinePath
         {
-            _state = _pagesByNumPool.Allocate();
+            private TreePage _element;
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+        private InlinePath _inlinePath;
+        private TreePage[] _deepPath;
+        private int _count;
 
-        // The bulk of the clean-up code is implemented in Dispose(bool)
-        private void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _state.Clear();
-                _pagesByNumPool.Free(_state);
-            }
-        }
+        // page instances kept for the branch pages of the next path started with StartPath, one per level, so a descent allocates none
+        private InlinePath _branchPagesCache;
+        private bool _reuseBranchPages;
 
-        public void Update(FastStack<TreePage> stack, TreePage newVal)
-        {
-            var oldNode = stack.Pop();
-            stack.Push(newVal);
-
-            var oldPageNumber = oldNode.PageNumber;
-            var newPageNumber = newVal.PageNumber;
-
-            if (oldPageNumber == newPageNumber)
-            {
-                _state.PageByNum[oldPageNumber] = newVal;
-                return;
-            }
-
-            _anyOverrides = true;
-            _state.PageByNum[oldPageNumber] = newVal;
-            _state.PageByNum.Add(newPageNumber, newVal);
-        }
-
-        public TreePage ParentPage
+        private Span<TreePage> Path
         {
             get
             {
-                TreePage result;
-                if (_state.Pages.TryPeek(2, out result))
-                    return result;
-
-                throw new InvalidOperationException("No parent page in cursor");
+                if (_deepPath != null)
+                    return _deepPath;
+                return _inlinePath;
             }
         }
 
-        public TreePage CurrentPage => _state.Pages.Peek();
+        public int PageCount => _count;
 
-        public int PageCount => _state.Pages.Count;
+        // on an empty cursor the index is negative, and the span throws
+        public TreePage CurrentPage => Path[_count - 1];
+
+        public TreePage ParentPage => Path[_count - 2];
+
+        internal void StartPath()
+        {
+            Clear();
+            _reuseBranchPages = true;
+        }
+
+        unsafe void ITreeDescentPath.PushBranch(TreePage branch)
+        {
+            // the caller points its instance at the next level, so the cursor keeps its own
+            TreePage page;
+            if (_reuseBranchPages && _count < InlineDepth)
+            {
+                ref var own = ref _branchPagesCache[_count];
+                page = own ??= new TreePage(null, branch.PageSize);
+                page.Base = branch.Base;
+                page.Dirty = false;
+#if VALIDATE
+                page.Freed = false;
+#endif
+            }
+            else
+            {
+                page = new TreePage(branch.Base, branch.PageSize);
+            }
+
+            page.LastSearchPosition = branch.LastSearchPosition;
+            page.LastMatch = branch.LastMatch;
+            Push(page);
+        }
 
         public void Push(TreePage p)
         {
-            _state.Pages.Push(p);
-            _state.PageByNum.Add(p.PageNumber, p);
+            if (_count == Path.Length)
+                Grow();
+
+            Path[_count++] = p;
         }
 
         public TreePage Pop()
         {
-            if (_state.Pages.Count == 0)
-                throw new InvalidOperationException("No page to pop");
+            var path = Path;
+            var p = path[_count - 1]; // throws before _count changes
+            path[--_count] = null;
+            return p;
+        }
 
-            var p = _state.Pages.Pop();
+        /// <summary>
+        /// Replaces the current page, e.g. with its writable copy.
+        /// </summary>
+        public void Update(TreePage page)
+        {
+            Path[_count - 1] = page;
+        }
 
-            var removedPrimary = _state.PageByNum.Remove(p.PageNumber);
-            var removedSecondary = false;
+        public void Clear()
+        {
+            Path[.._count].Clear();
+            _count = 0;
+            _reuseBranchPages = false;
+        }
 
-            if (_anyOverrides)
+        /// <summary>
+        /// Drops the page and the pages above it, false when the page is not on the cursor.
+        /// </summary>
+        public bool TruncateAt(long pageNumber)
+        {
+            var path = Path[.._count];
+            for (int i = 0; i < path.Length; i++)
             {
-                var pagesNumbersToRemove = new HashSet<long>();
+                if (path[i].PageNumber != pageNumber)
+                    continue;
 
-                foreach (var page in _state.PageByNum.Where(page => page.Value.PageNumber == p.PageNumber))
-                    pagesNumbersToRemove.Add(page.Key);
-
-                foreach (var pageToRemove in pagesNumbersToRemove)
-                    removedSecondary |= _state.PageByNum.Remove(pageToRemove);
+                path[i..].Clear();
+                _count = i;
+                return true;
             }
 
-            Debug.Assert(removedPrimary || removedSecondary);
+            return false;
+        }
 
-            return p;
+        private void Grow()
+        {
+            var deeper = new TreePage[Path.Length * 2];
+            Path.CopyTo(deeper);
+            _deepPath = deeper;
         }
     }
 }

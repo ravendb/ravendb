@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -9,10 +9,12 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema ConflictsSchemaBase = new TableSchema()
         {
+            GlobalTableIndex = (int)GlobalTable.Conflicts,
             TableType = (byte)TableType.Conflicts
         };
         internal static readonly TableSchema ShardingConflictsSchemaBase = new TableSchema()
         {
+            GlobalTableIndex = (int)GlobalTable.Conflicts,
             TableType = (byte)TableType.Conflicts
         };
 

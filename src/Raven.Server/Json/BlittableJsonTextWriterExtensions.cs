@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -2410,20 +2412,26 @@ namespace Raven.Server.Json
             Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
             writer.WriteStartObject();
-            document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-            WriteMetadata(writer, document, metadata, filterMetadataProperty);
+            var data = document.Data.GetView();
+            var metadataIndex = document.Data.GetPropertyIndex("@metadata"u8);
+            WriteMetadata(writer, document, metadataIndex == -1 ? default : data.GetObject(metadataIndex), filterMetadataProperty);
 
             writer.WriteEndObject();
         }
 
         public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
+            WriteMetadata(writer, document, metadata == null ? default : metadata.GetView(), filterMetadataProperty);
+        }
+
+        private static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, in BlittableJsonReaderObject.View metadata, Func<LazyStringValue, bool> filterMetadataProperty)
+        {
             writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
             bool first = true;
-            if (metadata != null)
+            if (metadata.IsNull == false)
             {
-                first = WriteObjectWithFilter(writer, metadata, filterMetadataProperty);
+                first = writer.WritePropertiesWithFilter(metadata, filterMetadataProperty) == false;
             }
 
             if (first == false)
@@ -2437,7 +2445,7 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
-                writer.WriteString(document.Flags.ToString());
+                writer.WriteDocumentFlags(document.Flags);
             }
             if (document.Id != null)
             {
@@ -2524,31 +2532,56 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static bool WriteObjectWithFilter(this AbstractBlittableJsonTextWriter writer, BlittableJsonReaderObject obj, Func<LazyStringValue, bool> filterProperty)
-        {
-            var size = obj.Count;
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            var first = true;
-            for (int i = 0; i < size; i++)
-            {
-                obj.GetPropertyByIndex(i, ref prop);
+        internal static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
 
-                if (filterProperty != null && filterProperty(prop.Name))
+        // the UTF-8 name of each flag, by its bit
+        private static readonly byte[][] DocumentFlagNames = GetDocumentFlagNames();
+        private static readonly DocumentFlags NamedDocumentFlags = Enum.GetValues<DocumentFlags>().Aggregate(DocumentFlags.None, (all, flag) => all | flag);
+
+        private static byte[][] GetDocumentFlagNames()
+        {
+            var names = new byte[32][];
+            foreach (var flag in Enum.GetValues<DocumentFlags>())
+            {
+                if (flag == DocumentFlags.None)
                     continue;
 
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-                writer.WritePropertyName(prop.Name);
-                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                Debug.Assert(BitOperations.IsPow2((uint)flag), "WriteDocumentFlags writes one name per bit, like Enum.ToString does when no name covers several bits");
+                names[BitOperations.TrailingZeroCount((uint)flag)] = Encodings.Utf8.GetBytes(flag.ToString());
             }
 
-            // true if everything was filtered out
-            return first;
+            return names;
         }
 
-        internal static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
+        /// <summary>
+        /// Writes the flags as a string, the same as flags.ToString() without creating it: the names in ascending order of
+        /// their bits separated by ", ", or the number when a bit has no name.
+        /// </summary>
+        internal static void WriteDocumentFlags(this AbstractBlittableJsonTextWriter writer, DocumentFlags flags)
+        {
+            writer.WriteBufferFor("\""u8);
+
+            if (flags == DocumentFlags.None)
+            {
+                writer.WriteBufferFor("None"u8);
+            }
+            else if ((flags & ~NamedDocumentFlags) != 0)
+            {
+                writer.WriteInteger((int)flags);
+            }
+            else
+            {
+                var bits = (uint)flags;
+                writer.WriteBufferFor(DocumentFlagNames[BitOperations.TrailingZeroCount(bits)]);
+                for (bits &= bits - 1; bits != 0; bits &= bits - 1)
+                {
+                    writer.WriteBufferFor(", "u8);
+                    writer.WriteBufferFor(DocumentFlagNames[BitOperations.TrailingZeroCount(bits)]);
+                }
+            }
+
+            writer.WriteBufferFor("\""u8);
+        }
 
         private static void WriteDocumentInternal(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
@@ -2557,64 +2590,19 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static unsafe void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
+        private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, Func<LazyStringValue, bool> filterMetadataProperty = null)
         {
-            var first = true;
-            BlittableJsonReaderObject metadata = null;
-            var metadataField = context.GetLazyStringForFieldWithCaching(MetadataKeySegment);
-
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            using (var buffers = document.Data.GetPropertiesByInsertionOrder())
-            {
-                for (var i = 0; i < buffers.Size; i++)
-                {
-                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                    if (metadataField.Equals(prop.Name))
-                    {
-                        metadata = (BlittableJsonReaderObject)prop.Value;
-                        continue;
-                    }
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-                    first = false;
-                    writer.WritePropertyName(prop.Name);
-                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
-            }
-
-            if (first == false)
+            var data = document.Data.GetView();
+            var metadataIndex = document.Data.GetPropertyIndex("@metadata"u8);
+            if (writer.WriteProperties(data, skipIndex: metadataIndex))
                 writer.WriteComma();
 
-            WriteMetadata(writer, document, metadata, filterMetadataProperty);
+            WriteMetadata(writer, document, metadataIndex == -1 ? default : data.GetObject(metadataIndex), filterMetadataProperty);
 
             if (document.TimeSeriesStream != null)
             {
                 writer.WriteComma();
                 writer.WriteArray(document.TimeSeriesStream.Key, document.TimeSeriesStream.TimeSeries, context);
-            }
-        }
-
-        public static unsafe void WriteDocumentPropertiesWithoutMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
-        {
-            var first = true;
-
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-            using (var buffers = document.Data.GetPropertiesByInsertionOrder())
-            {
-                for (var i = 0; i < buffers.Size; i++)
-                {
-                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-                    first = false;
-                    writer.WritePropertyName(prop.Name);
-                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
             }
         }
 

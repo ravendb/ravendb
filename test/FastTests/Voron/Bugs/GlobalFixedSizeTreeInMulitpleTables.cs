@@ -74,8 +74,8 @@ namespace FastTests.Voron.Bugs
 
                 using (Slice.From(tx.Allocator, new byte[8], out var empty))
                 {
-                    var userIndex = usersTbl.GetFixedSizeTree(usersTbl.GetTree(indexDef), empty, 0, true);
-                    var peopleIndex = peopleTbl.GetFixedSizeTree(usersTbl.GetTree(indexDef), empty, 0, true);
+                    var userIndex = usersTbl.GetFixedSizeTreeForValue(usersTbl.GetTree(indexDef), empty, true);
+                    var peopleIndex = peopleTbl.GetFixedSizeTreeForValue(usersTbl.GetTree(indexDef), empty, true);
 
                     Assert.Equal(userIndex.NumberOfEntries, peopleIndex.NumberOfEntries);
                     Assert.Equal(userIndex.Type, peopleIndex.Type);

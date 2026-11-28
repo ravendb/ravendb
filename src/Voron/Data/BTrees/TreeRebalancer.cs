@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -12,7 +12,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class TreeRebalancer
+    public unsafe struct TreeRebalancer
     {
         private readonly LowLevelTransaction _tx;
         private readonly Tree _tree;
@@ -29,11 +29,7 @@ namespace Voron.Data.BTrees
 
         private FreeSpaceHandlingDisabler DisableFreeSpaceUsageIfSplittingRootTree()
         {
-            if (_tree == _tx.RootObjects)
-            {
-                return _tx.Environment.FreeSpaceHandling.Disable();
-            }
-            return new FreeSpaceHandlingDisabler();
+            return _tree == _tx.RootObjects ? _tx.Environment.FreeSpaceHandling.Disable() : default;
         }
 
         public TreePage Execute(TreePage page)
@@ -63,7 +59,7 @@ namespace Voron.Data.BTrees
                 }
 
                 var parentPage = _tree.ModifyPage(_cursor.CurrentPage);
-                _cursor.Update(_cursor.Pages, parentPage);
+                _cursor.Update(parentPage);
 
                 int positionInParent = -1;
                 for (int i = 0; i < parentPage.NumberOfEntries; i++)
@@ -121,7 +117,8 @@ namespace Voron.Data.BTrees
 
                 Debug.Assert(parentPage.NumberOfEntries >= 2); // if we have less than 2 entries in the parent, the tree is invalid
 
-                var sibling = SetupMoveOrMerge(page, parentPage);
+                using var siblingRental = _tree.RentPage(out var siblingInstance);
+                var sibling = SetupMoveOrMerge(page, parentPage, siblingInstance);
                 Debug.Assert(sibling.PageNumber != page.PageNumber);
 
                 if (page.PageType != sibling.PageType || (page.IsBranch && page.CollapsedLevels != sibling.CollapsedLevels))
@@ -240,35 +237,22 @@ namespace Voron.Data.BTrees
         {
             using (GetActualKey(page, 0, out Slice key))
             {
-                _tree.FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
+                _cursor.Clear();
+                var leaf = _tree.DescendToLeaf(key, _cursor, out _, out _);
 
-                using (TreeCursor fresh = cursorConstructor.Build(key))
-                {
-                    var path = new List<TreePage>();
-                    while (fresh.PageCount > 0)
-                        path.Add(fresh.Pop()); // leaf .. root order
-
-                    int pageIndex = path.FindIndex(p => p.PageNumber == page.PageNumber);
-
-                    if (pageIndex == -1)
-                        VoronUnrecoverableErrorException.Raise(_tx,
-                            $"Could not rebuild the cursor for rebalanced page {page.PageNumber}: descending by its first key does not reach the page, tree: {_tree.Name}");
-
-                    while (_cursor.PageCount > 0)
-                        _cursor.Pop();
-
-                    for (int i = path.Count - 1; i > pageIndex; i--)
-                        _cursor.Push(path[i]);
-                }
+                // the descent pushes only the branches, so above a leaf the cursor is already complete
+                if (((TreePageHeader*)leaf)->PageNumber != page.PageNumber && _cursor.TruncateAt(page.PageNumber) == false)
+                    VoronUnrecoverableErrorException.Raise(_tx,
+                        $"Could not rebuild the cursor for rebalanced page {page.PageNumber}: descending by its first key does not reach the page, tree: {_tree.Name}");
             }
         }
 
-        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage)
+        private TreePage SetupMoveOrMerge(TreePage page, TreePage parentPage, TreePage siblingInstance)
         {
             TreePage sibling;
             if (parentPage.LastSearchPosition == 0) // we are the left most item
             {
-                sibling = _tree.ModifyPage(parentPage.GetNode(1)->PageNumber);
+                sibling = _tree.ModifyPage(parentPage.GetNode(1)->PageNumber, siblingInstance);
 
                 sibling.LastSearchPosition = 0;
                 page.LastSearchPosition = page.NumberOfEntries;
@@ -280,7 +264,7 @@ namespace Voron.Data.BTrees
                 if (beyondLast)
                     parentPage.LastSearchPosition--;
                 parentPage.LastSearchPosition--;
-                sibling = _tree.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber);
+                sibling = _tree.ModifyPage(parentPage.GetNode(parentPage.LastSearchPosition)->PageNumber, siblingInstance);
                 parentPage.LastSearchPosition++;
                 if (beyondLast)
                     parentPage.LastSearchPosition++;
@@ -536,7 +520,8 @@ namespace Voron.Data.BTrees
 
             ref var state = ref _tree.State.Modify();
             state.RootPageNumber = rootPage.PageNumber;
-            state.Depth--;
+            // if the root is a leaf, we ensure the depth is 1 (may be higher because of collapsed leafs)
+            state.Depth = rootPage.IsLeaf ? 1 : state.Depth - 1;
 
             Debug.Assert(rootPage.Dirty);
 

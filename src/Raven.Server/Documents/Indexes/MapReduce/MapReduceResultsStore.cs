@@ -1,5 +1,7 @@
-﻿using System;
+using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -13,8 +15,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public sealed unsafe class MapReduceResultsStore : IDisposable
     {
-        public const string ReduceTreePrefix = "__raven/map-reduce/#reduce-tree-";
-        public const string NestedValuesPrefix = "__raven/map-reduce/#nested-section-";
+        public static ReadOnlySpan<byte> ReduceTreePrefixBytes => "__raven/map-reduce/#reduce-tree-"u8;
+        public static ReadOnlySpan<byte> NestedValuesPrefixBytes => "__raven/map-reduce/#nested-section-"u8;
+
+        public static readonly string ReduceTreePrefix = Encoding.UTF8.GetString(ReduceTreePrefixBytes);
+        public static readonly string NestedValuesPrefix = Encoding.UTF8.GetString(NestedValuesPrefixBytes);
+        private const int MaxUInt64Digits = 20;
 
         private readonly ulong _reduceKeyHash;
         private readonly TransactionOperationContext _indexContext;
@@ -29,8 +35,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public MapResultsStorageType Type { get; private set; }
 
         public Tree Tree;
-        public readonly HashSet<long> ModifiedPages;
-        
+
+        public HashSet<long> ModifiedPages { get; private set; }
 
         public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
         {
@@ -40,29 +46,42 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             _mapReduceContext = mapReduceContext;
             _tx = indexContext.Transaction.InnerTransaction;
 
-            ModifiedPages = new HashSet<long>();
-
             switch (Type)
             {
                 case MapResultsStorageType.Tree:
                     InitializeTree(create);
                     break;
                 case MapResultsStorageType.Nested:
-                    _nestedValueKeyScope = Slice.From(indexContext.Allocator, NestedValuesPrefix + reduceKeyHash, ByteStringType.Immutable, out _nestedValueKey);
+                    _nestedValueKeyScope = CreateKey(indexContext.Allocator, NestedValuesPrefixBytes, reduceKeyHash, out _nestedValueKey);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(Type.ToString());
             }
         }
 
+        private static ByteStringContext.InternalScope CreateKey(ByteStringContext allocator, ReadOnlySpan<byte> prefix, ulong reduceKeyHash, out Slice key)
+        {
+            Span<byte> buffer = stackalloc byte[prefix.Length + MaxUInt64Digits];
+            prefix.CopyTo(buffer);
+            Utf8Formatter.TryFormat(reduceKeyHash, buffer[prefix.Length..], out int digits);
+
+            var scope = allocator.From(buffer, prefix.Length + digits, ByteStringType.Immutable, out ByteString str);
+            key = new Slice(str);
+            return scope;
+        }
+
         private void InitializeTree(bool create)
         {
-            var treeName = ReduceTreePrefix + _reduceKeyHash;
+            // not released, the transaction keeps the names of the trees it opened
+            CreateKey(_tx.Allocator, ReduceTreePrefixBytes, _reduceKeyHash, out Slice treeName);
+
             var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
             Tree = create ? _tx.CreateTree(treeName, flags: options) : _tx.ReadTree(treeName);
 
             if (_initializedTree == false)
             {
+                ModifiedPages = new HashSet<long>();
+
                 Tree.PageModified += (page, flags) =>
                 {
                     if ((flags & PageFlags.Overflow) == PageFlags.Overflow)
@@ -154,8 +173,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     {
                         if (Tree.IsLeafCompressionSupported)
                         {
-                            var read = Tree.ReadDecompressed(entrySlice);
-                            if (read == null)
+                            if (Tree.TryReadDecompressed(entrySlice, out var read) == false)
                                 throw new InvalidOperationException($"Could not find a map result with id '{id}' in '{Tree.Name}' tree");
                             return new ReadMapEntryScope(read);
                         }

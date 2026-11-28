@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Sharding;
+using Raven.Server.Documents.Sharding;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -7,8 +7,8 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class Tombstones
     {
-        internal static readonly TableSchema TombstonesSchemaBase = new TableSchema();
-        internal static readonly TableSchema ShardingTombstonesSchema = new TableSchema();
+        internal static readonly TableSchema TombstonesSchemaBase = new TableSchema { GlobalTableIndex = (int)GlobalTable.Tombstones };
+        internal static readonly TableSchema ShardingTombstonesSchema = new TableSchema { GlobalTableIndex = (int)GlobalTable.Tombstones };
 
         internal static readonly Slice TombstonesSlice;
         internal static readonly Slice AllTombstonesEtagsSlice;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -405,7 +405,8 @@ namespace Raven.Server.Documents.Indexes
                     if (index.MapReduceWorkContext.DocumentMapEntries.NumberOfEntries == 0)
                         continue;
 
-                    foreach (var mapEntry in MapReduceIndex.GetMapEntries(index.MapReduceWorkContext.DocumentMapEntries))
+                    MapReduceIndex.GetMapEntries(index.MapReduceWorkContext.DocumentMapEntries, index.MapReduceWorkContext.MapEntries);
+                    foreach (var mapEntry in index.MapReduceWorkContext.MapEntries)
                     {
                         var store = index.GetResultsStore(mapEntry.ReduceKeyHash, indexContext, create: false);
 

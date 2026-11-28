@@ -54,7 +54,7 @@ namespace Voron.Impl
             _cachedDecompressedBuffersByStorageId ??= new Dictionary<long, ByteString>();
 
         private LowLevelTransaction _lowLevelTransaction;
-        private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
+        private Dictionary<(Tree Parent, Slice Key), Tree> _multiValueTrees;
         private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
         
         private StreamBufferAllocator.Buffer _streamBuffer;
@@ -277,8 +277,8 @@ namespace Voron.Impl
             {
                 foreach (var multiValueTree in _multiValueTrees)
                 {
-                    var parentTree = multiValueTree.Key.Item1;
-                    var key = multiValueTree.Key.Item2;
+                    var parentTree = multiValueTree.Key.Parent;
+                    var key = multiValueTree.Key.Key;
                     var childTree = multiValueTree.Value;
 
                     using (parentTree.DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out byte* ptr))
@@ -336,30 +336,28 @@ namespace Voron.Impl
 
         internal void AddMultiValueTree(Tree tree, Slice key, Tree mvTree)
         {
-            _multiValueTrees ??= new Dictionary<Tuple<Tree, Slice>, Tree>(new TreeAndSliceComparer());
+            _multiValueTrees ??= new Dictionary<(Tree Parent, Slice Key), Tree>(TreeAndSliceComparer.Instance);
 
             var keyOwnedByTransaction = key.Clone(_lowLevelTransaction.Allocator, ByteStringType.Immutable);
 
             mvTree.IsMultiValueTree = true;
             mvTree.SetNameOwnedByTransaction(keyOwnedByTransaction);
 
-            _multiValueTrees.Add(Tuple.Create(tree, keyOwnedByTransaction), mvTree);
+            _multiValueTrees.Add((tree, keyOwnedByTransaction), mvTree);
         }
 
         internal bool TryGetMultiValueTree(Tree tree, Slice key, out Tree mvTree)
         {
             mvTree = null;
-            return _multiValueTrees != null && _multiValueTrees.TryGetValue(Tuple.Create(tree, key), out mvTree);
+            return _multiValueTrees != null && _multiValueTrees.TryGetValue((tree, key), out mvTree);
         }
 
         internal bool TryRemoveMultiValueTree(Tree parentTree, Slice key)
         {
-            var keyToRemove = Tuple.Create(parentTree, key);
-            
             if (_multiValueTrees == null)
                 return false;
             
-            return _multiValueTrees.Remove(keyToRemove);
+            return _multiValueTrees.Remove((parentTree, key));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -427,11 +425,11 @@ namespace Voron.Impl
 
             if (_multiValueTrees != null)
             {
-                var toRemove = new List<Tuple<Tree, Slice>>();
+                var toRemove = new List<(Tree Parent, Slice Key)>();
 
                 foreach (var valueTree in _multiValueTrees)
                 {
-                    var multiTree = valueTree.Key.Item1;
+                    var multiTree = valueTree.Key.Parent;
 
                     if (SliceComparer.Equals(multiTree.Name, name))
                     {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -327,7 +327,7 @@ namespace Voron.Data.BTrees
 
         public Stream ReadStream(Slice key)
         {
-            if (IsInlineStream(key, out var inlineData, out _, out _))
+            if (IsInlineStream(key, out var inlineData, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 var tagSize = header->Info.TagSize;
@@ -343,19 +343,32 @@ namespace Voron.Data.BTrees
             return new VoronStream(pieces, _llt);
         }
 
-        public bool IsInlineStream(string key, out byte* data, out int dataSize, out TreePage treePage)
+        public bool IsInlineStream(string key, out byte* data, out int dataSize)
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
-                return IsInlineStream(str, out data, out dataSize, out treePage);
+                return IsInlineStream(str, out data, out dataSize);
         }
 
+        public bool IsInlineStream(Slice key, out byte* data, out int dataSize)
+        {
+            using var rental = RentPage(out var leafInstance);
+            return IsInlineStream(key, leafInstance, out data, out dataSize, out _);
+        }
+
+        // the caller keeps the page, so it gets an instance of its own
         public bool IsInlineStream(Slice key, out byte* data, out int dataSize, out TreePage treePage)
+        {
+            return IsInlineStream(key, leafInstance: null, out data, out dataSize, out treePage);
+        }
+
+        // the page is leafInstance when one is given, so the caller may use it only while it holds the rental
+        private bool IsInlineStream(Slice key, TreePage leafInstance, out byte* data, out int dataSize, out TreePage treePage)
         {
             data = null;
             dataSize = 0;
             treePage = default;
 
-            var p = FindPageFor(key, out TreeNodeHeader* node);
+            var p = FindPageFor(key, out TreeNodeHeader* node, leafInstance: leafInstance);
             if (p.LastMatch != 0 || node == null)
                 return false;
 
@@ -384,7 +397,7 @@ namespace Voron.Data.BTrees
 
         public ChunkDetails[] ReadTreeChunks(Slice key, out FixedSizeTree tree)
         {
-            if (IsInlineStream(key, out _, out _, out _))
+            if (IsInlineStream(key, out _, out _))
             {
                 tree = null;
                 return null;
@@ -426,7 +439,8 @@ namespace Voron.Data.BTrees
 
         public int TouchStream(Slice key)
         {
-            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
+            using var rental = RentPage(out var leafInstance);
+            if (IsInlineStream(key, leafInstance, out var inlineData, out _, out var inlinePage))
             {
                 // The page from IsInlineStream may be read-only, so call ModifyPage to get
                 // a writable copy (preserving search position).
@@ -449,7 +463,7 @@ namespace Voron.Data.BTrees
         {
             tag = null;
 
-            if (IsInlineStream(key, out var inlineData, out _, out _))
+            if (IsInlineStream(key, out var inlineData, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 var infoPtr = &header->Info;
@@ -546,7 +560,8 @@ namespace Voron.Data.BTrees
 
         public StreamInfo* GetStreamInfo(Slice key, bool writable)
         {
-            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
+            using var rental = RentPage(out var leafInstance);
+            if (IsInlineStream(key, leafInstance, out var inlineData, out _, out var inlinePage))
             {
                 if (writable)
                 {
@@ -610,7 +625,7 @@ namespace Voron.Data.BTrees
         {
             int version = 0;
             long size = 0;
-            if (IsInlineStream(key, out var inlineData, out _, out _))
+            if (IsInlineStream(key, out var inlineData, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 version = header->Info.Version;

@@ -18,6 +18,19 @@ public static unsafe partial class StringUtils
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CountEscapeChars(ReadOnlySpan<char> str) => CountEscapeCharsLinearSearch(str);
+
+    /// <returns>The index of the first byte that JSON escapes, or -1</returns>
+    public static int IndexOfEscapeCharacter(ReadOnlySpan<byte> str)
+    {
+        for (int i = 0; i < str.Length; i++)
+        {
+            // 34 => '"', 92 => '\\'
+            if (str[i] is 92 or 34 or < 32)
+                return i;
+        }
+
+        return -1;
+    }
 #endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

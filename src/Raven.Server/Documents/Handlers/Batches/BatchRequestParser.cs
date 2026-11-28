@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
@@ -159,6 +160,18 @@ namespace Raven.Server.Documents.Handlers.Batches
                    "TransactionMode"u8.IsEqualConstant(state.StringBuffer, state.StringSize);
         }
 
+        public Task<CommandData> ReadSingleCommand(
+            JsonOperationContext ctx,
+            Stream stream,
+            JsonParserState state,
+            UnmanagedJsonParser parser,
+            JsonOperationContext.MemoryBuffer buffer,
+            BlittableMetadataModifier modifier,
+            CancellationToken token)
+        {
+            return ReadSingleCommand(ctx, stream, state, parser, buffer, modifier, builders: null, token);
+        }
+
         public async Task<CommandData> ReadSingleCommand(
             JsonOperationContext ctx,
             Stream stream,
@@ -166,6 +179,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             UnmanagedJsonParser parser,
             JsonOperationContext.MemoryBuffer buffer,
             BlittableMetadataModifier modifier,
+            DocumentBuilderCache builders,
             CancellationToken token)
         {
             var commandData = new CommandData();
@@ -368,7 +382,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
 
-                        using (var remoteParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
+                        using (var remoteParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token).ConfigureAwait(false))
                         {
                             if (remoteParameters == null)
                                 break;
@@ -409,7 +423,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.SeenAttachments = modifier.SeenAttachments;
                         commandData.SeenCounters = modifier.SeenCounters;
                         commandData.SeenTimeSeries = modifier.SeenTimeSeries;
@@ -419,21 +433,21 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.Patch:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
 
                     case CommandPropertyName.JsonPatch:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.JsonPatchCommands = JsonPatchCommand.Parse(jsonPatch);
                         break;
 
                     case CommandPropertyName.TrackedEntities:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        using (var trackedEntities = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        using (var trackedEntities = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token))
                         {
                             commandData.TrackedEntities = BatchTrackChangesCommand.Parse(trackedEntities);
                         }
@@ -443,7 +457,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
-                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token))
                         {
                             commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert ?
                                 TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations) :
@@ -455,13 +469,13 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.CreateIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.CreateIfMissing = createIfMissing;
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
 
@@ -542,7 +556,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
-                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
 
@@ -593,7 +607,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         if (state.CurrentTokenType == JsonParserToken.StartObject ||
                             state.CurrentTokenType == JsonParserToken.StartArray)
                         {
-                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
+                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, builders, token);
                         }
                         break;
 
@@ -732,16 +746,15 @@ namespace Raven.Server.Documents.Handlers.Batches
             return reader;
         }
 
-        private async Task<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string id, UnmanagedJsonParser parser,
-            JsonParserState state, JsonOperationContext.MemoryBuffer buffer, IBlittableDocumentModifier modifier, CancellationToken token)
+        private async ValueTask<BlittableJsonReaderObject> ReadJsonObject(JsonOperationContext ctx, Stream stream, string id, UnmanagedJsonParser parser,
+            JsonParserState state, JsonOperationContext.MemoryBuffer buffer, IBlittableDocumentModifier modifier, DocumentBuilderCache builders, CancellationToken token)
         {
             if (state.CurrentTokenType == JsonParserToken.Null)
                 return null;
 
-            BlittableJsonReaderObject reader;
-            using (var builder = new BlittableJsonDocumentBuilder(ctx,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk,
-                id, parser, state, modifier: modifier))
+            var builder = builders?.Rent(ctx, id, parser, state, modifier) ??
+                          new BlittableJsonDocumentBuilder(ctx, BlittableJsonDocumentBuilder.UsageMode.ToDisk, id, parser, state, modifier: modifier);
+            try
             {
                 ctx.CachedProperties.NewDocument();
                 builder.ReadNestedObject();
@@ -752,10 +765,54 @@ namespace Raven.Server.Documents.Handlers.Batches
                     await RefillParserBuffer(stream, buffer, parser, token);
                 }
                 builder.FinalizeDocument();
-                reader = builder.CreateReader();
+                var reader = builder.CreateReader();
                 reader.NoCache = true;
+                return reader;
             }
-            return reader;
+            finally
+            {
+                if (builders == null)
+                    builder.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// One document builder for all the commands a reader parses with one parser, state and modifier.
+        /// The reader calls <see cref="EnsureContext"/> before each command, so a builder of an earlier context is
+        /// disposed while that context is still alive (the bulk insert keeps the previous batch context until the
+        /// batch after it).
+        /// </summary>
+        public sealed class DocumentBuilderCache : IDisposable
+        {
+            private BlittableJsonDocumentBuilder _builder;
+
+            public void EnsureContext(JsonOperationContext context)
+            {
+                if (_builder != null && ReferenceEquals(_builder.Context, context) == false)
+                    Dispose();
+            }
+
+            internal BlittableJsonDocumentBuilder Rent(JsonOperationContext context, string id, UnmanagedJsonParser parser, JsonParserState state, IBlittableDocumentModifier modifier)
+            {
+                if (_builder == null)
+                {
+                    _builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.ToDisk, id, parser, state, modifier: modifier);
+                    return _builder;
+                }
+
+                Debug.Assert(ReferenceEquals(_builder.Context, context), "The reader must call EnsureContext when its context changes");
+                Debug.Assert(ReferenceEquals(_builder.Reader, parser) && ReferenceEquals(_builder.State, state) && ReferenceEquals(_builder._modifier, modifier),
+                    "A reader parses all its commands with one parser, state and modifier");
+
+                _builder.Renew(id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                return _builder;
+            }
+
+            public void Dispose()
+            {
+                _builder?.Dispose();
+                _builder = null;
+            }
         }
 
         private static unsafe string GetStringPropertyValue(JsonParserState state)

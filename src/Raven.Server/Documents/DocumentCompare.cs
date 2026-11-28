@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -62,10 +62,33 @@ namespace Raven.Server.Documents
             if (result == DocumentCompareResult.NotEqual)
                 return DocumentCompareResult.NotEqual;
 
-            if (ComparePropertiesExceptStartingWithAt(original, modified, false, options) == DocumentCompareResult.NotEqual)
+            if (AreBodiesEqual(original, modified) == false)
                 return DocumentCompareResult.NotEqual;
 
             return result;
+        }
+
+        private static bool AreBodiesEqual(BlittableJsonReaderObject current, BlittableJsonReaderObject modified)
+        {
+            for (int i = 0; i < current.Count; i++)
+            {
+                var name = current.GetRawPropertyNameByIndex(i);
+                if (name.SequenceEqual("@metadata"u8))
+                    continue;
+
+                int modifiedIndex = modified.GetPropertyIndex(name);
+                if (modifiedIndex == -1 || Equals(current.GetValueByIndex(i), modified.GetValueByIndex(modifiedIndex)) == false)
+                    return false;
+            }
+
+            for (int i = 0; i < modified.Count; i++)
+            {
+                var name = modified.GetRawPropertyNameByIndex(i);
+                if (name.SequenceEqual("@metadata"u8) == false && current.GetPropertyIndex(name) == -1)
+                    return false;
+            }
+
+            return true;
         }
 
         private static DocumentCompareResult IsMetadataEqualTo(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
@@ -111,7 +134,7 @@ namespace Raven.Server.Documents
                 return DocumentCompareResult.NotEqual;
             }
 
-            return ComparePropertiesExceptStartingWithAt(currentMetadata, objMetadata, true, options);
+            return CompareMetadataProperties(currentMetadata, objMetadata, options);
         }
 
         [DoesNotReturn]
@@ -120,54 +143,45 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
         
-        private static bool IsSignificantMetadataProperty(string property, in DocumentCompareOptions options)
-        {
-            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) ||
-                property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) ||
-                property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            // Archival properties are significant only when the option is enabled
-            if (options.CompareDataArchivalMetadata &&
-                (property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase) ||
-                 property.Equals(Constants.Documents.Metadata.Archived, StringComparison.OrdinalIgnoreCase)))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(
-            BlittableJsonReaderObject current,
-            BlittableJsonReaderObject modified,
-            bool isMetadata,
-            in DocumentCompareOptions options)
+        private static DocumentCompareResult CompareMetadataProperties(BlittableJsonReaderObject current, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
         {
             var resolvedAttachmentConflict = false;
             var resolvedCountersConflict = false;
             var resolvedTimeSeriesConflict = false;
 
-            var properties = new HashSet<string>(current.GetPropertyNames());
-            foreach (var propertyName in modified.GetPropertyNames())
+            // the properties of the current metadata, then the ones only the modified metadata has
+            for (int pass = 0; pass < 2; pass++)
             {
-                properties.Add(propertyName);
-            }
+                var source = pass == 0 ? current : modified;
 
-            foreach (var property in properties)
-            {
-                if (property[0] == '@')
+                for (int index = 0; index < source.Count; index++)
                 {
-                    if (isMetadata)
+                    var name = source.GetRawPropertyNameByIndex(index);
+
+                    int currentIndex = -1, modifiedIndex = -1;
+                    if (pass == 0)
                     {
-                        if (property.Equals(Constants.Documents.Metadata.Attachments, StringComparison.OrdinalIgnoreCase))
+                        currentIndex = index;
+                        modifiedIndex = modified.GetPropertyIndex(name);
+                    }
+                    else if (current.GetPropertyIndex(name) == -1)
+                    {
+                        modifiedIndex = index;
+                    }
+                    else
+                    {
+                        continue; // visited in the first pass
+                    }
+
+                    var inBoth = currentIndex != -1 && modifiedIndex != -1;
+
+                    if (name.Length > 0 && name[0] == '@')
+                    {
+                        if (name.SequenceEqual("@attachments"u8))
                         {
                             if (options.TryMergeMetadataConflicts)
                             {
-                                if (current.TryGetMember(property, out object _) == false ||
-                                    modified.TryGetMember(property, out object _) == false)
+                                if (inBoth == false)
                                 {
                                     // Resolve when just 1 document have attachments
                                     resolvedAttachmentConflict = true;
@@ -185,12 +199,11 @@ namespace Raven.Server.Documents
                                 return DocumentCompareResult.NotEqual;
                             }
                         }
-                        else if (property.Equals(Constants.Documents.Metadata.Counters, StringComparison.OrdinalIgnoreCase))
+                        else if (name.SequenceEqual("@counters"u8))
                         {
                             if (options.TryMergeMetadataConflicts)
                             {
-                                if (current.TryGetMember(property, out object _) == false ||
-                                    modified.TryGetMember(property, out object _) == false)
+                                if (inBoth == false)
                                 {
                                     // Resolve when just 1 document have counters
                                     resolvedCountersConflict = true;
@@ -201,12 +214,11 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (property.Equals(Constants.Documents.Metadata.TimeSeries, StringComparison.OrdinalIgnoreCase))
+                        else if (name.SequenceEqual("@timeseries"u8))
                         {
                             if (options.TryMergeMetadataConflicts)
                             {
-                                if (current.TryGetMember(property, out object _) == false ||
-                                    modified.TryGetMember(property, out object _) == false)
+                                if (inBoth == false)
                                 {
                                     // Resolve when just 1 document have time-series
                                     resolvedTimeSeriesConflict = true;
@@ -217,24 +229,15 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (IsSignificantMetadataProperty(property, options) == false)
+                        else if (IsSignificantMetadataProperty(name, options) == false)
                             continue;
                     }
-                    else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-                }
 
-                if (current.TryGetMember(property, out object currentProperty) == false ||
-                    modified.TryGetMember(property, out object modifiedProperty) == false)
-                {
-                    return DocumentCompareResult.NotEqual;
-                }
+                    if (inBoth == false)
+                        return DocumentCompareResult.NotEqual;
 
-                if (Equals(currentProperty, modifiedProperty) == false)
-                {
-                    return DocumentCompareResult.NotEqual;
+                    if (Equals(current.GetValueByIndex(currentIndex), modified.GetValueByIndex(modifiedIndex)) == false)
+                        return DocumentCompareResult.NotEqual;
                 }
             }
 
@@ -243,6 +246,26 @@ namespace Raven.Server.Documents
             var shouldRecreateTimeSeries = resolvedTimeSeriesConflict ? DocumentCompareResult.TimeSeriesNotEqual : DocumentCompareResult.None;
 
             return DocumentCompareResult.Equal | shouldRecreateAttachment | shouldRecreateCounters | shouldRecreateTimeSeries;
+        }
+
+        private static bool IsSignificantMetadataProperty(ReadOnlySpan<byte> name, in DocumentCompareOptions options)
+        {
+            if (name.SequenceEqual("@collection"u8) ||
+                name.SequenceEqual("@expires"u8) ||
+                name.SequenceEqual("@refresh"u8))
+            {
+                return true;
+            }
+
+            // Archival properties are significant only when the option is enabled
+            if (options.CompareDataArchivalMetadata &&
+                (name.SequenceEqual("@archive-at"u8) ||
+                 name.SequenceEqual("@archived"u8)))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static bool ShouldResolveAttachmentsConflict(BlittableJsonReaderObject currentMetadata, BlittableJsonReaderObject modifiedMetadata, in DocumentCompareOptions options)
@@ -285,7 +308,7 @@ namespace Raven.Server.Documents
             {
                 if (modifiedAttachmentNames.TryGetValue(attachment.Key, out var modifiedAttachment))
                 {
-                    if (ComparePropertiesExceptStartingWithAt(attachment.Value, modifiedAttachment, false, options) == DocumentCompareResult.NotEqual)
+                    if (AreBodiesEqual(attachment.Value, modifiedAttachment) == false)
                         return false;
 
                     modifiedAttachmentNames.Remove(attachment.Key);

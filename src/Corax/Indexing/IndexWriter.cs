@@ -723,7 +723,7 @@ namespace Corax.Indexing
         public Dictionary<long, string> GetIndexedFieldNamesByRootPage()
         {
             var pageToField = new Dictionary<long, string>();
-            var it = _fieldsTree.Iterate(prefetch: false);
+            using var it = _fieldsTree.Iterate(prefetch: false);
             if (it.Seek(Slices.BeforeAllKeys))
             {
                 do
@@ -782,7 +782,7 @@ namespace Corax.Indexing
         {
             var pageToField = new Dictionary<long, IndexedField>();
 
-            var it = fieldsTree.Iterate(prefetch: false);
+            using var it = fieldsTree.Iterate(prefetch: false);
             if (it.Seek(Slices.BeforeAllKeys))
             {
                 do

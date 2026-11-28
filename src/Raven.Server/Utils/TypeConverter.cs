@@ -734,7 +734,7 @@ namespace Raven.Server.Utils
             if (value is Dictionary<string, object>) // don't use cache when using dictionaries
                 return PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields);
 
-            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, x => PropertyAccessor.CreateMapReduceOutputAccessor(type, value, groupByFields));
+            return PropertyAccessorForMapReduceOutputCache.GetOrAdd(type, static (t, state) => PropertyAccessor.CreateMapReduceOutputAccessor(t, state.Value, state.GroupByFields), (Value: value, GroupByFields: groupByFields));
         }
 
 

@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.Revisions;
+using Raven.Server.Documents.Revisions;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Schemas
     {
         internal static readonly TableSchema RevisionsSchemaBase = new TableSchema()
         {
+            GlobalTableIndex = (int)GlobalTable.Revisions,
             TableType = (byte)TableType.Revisions,
         };
 
@@ -19,6 +20,7 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema ShardingRevisionsSchemaBase = new TableSchema()
         {
+            GlobalTableIndex = (int)GlobalTable.Revisions,
             TableType = (byte)TableType.Revisions,
         };
 

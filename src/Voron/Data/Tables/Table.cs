@@ -25,7 +25,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.Tables
 {
-    public sealed unsafe class Table
+    public sealed unsafe partial class Table
     {
         private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
@@ -39,7 +39,8 @@ namespace Voron.Data.Tables
         private FixedSizeTree _activeCandidateSection;
 
         private Dictionary<Slice, Tree> _treesBySliceCache;
-        private Dictionary<Slice, Dictionary<Slice, FixedSizeTree>> _fixedSizeTreeCache;
+        private Dictionary<Slice, FixedSizeTree> _fixedSizeTreeCache;
+        private Dictionary<Tree, FixedSizeTree> _fixedSizeTreesForValues;
 
         public readonly Slice Name;
         private readonly byte _tableType;
@@ -71,9 +72,9 @@ namespace Voron.Data.Tables
             }
         }
 
-        public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0, isGlobal: false, isIndexTree: true);
+        public FixedSizeTree InactiveSections => _inactiveSections ??= GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0);
 
-        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0, isGlobal: false, isIndexTree: true);
+        public FixedSizeTree ActiveCandidateSection => _activeCandidateSection ??= GetFixedSizeTree(_tableTree, TableSchema.ActiveCandidateSectionSlice, 0);
 
         internal int CurrentCompressionDictionaryId
         {
@@ -574,11 +575,11 @@ namespace Voron.Data.Tables
             if (largeValue)
                 return;
 
-            var rawDataSection = ActiveDataSmallSection.Free(id);
+            var sectionHeader = ActiveDataSmallSection.Free(id);
             if (ActiveDataSmallSection.Contains(id))
                 return;
 
-            var density = rawDataSection.Density;
+            var density = RawDataSection.GetDensity(sectionHeader);
             if (density > 0.5)
                 return;
 
@@ -673,7 +674,7 @@ namespace Voron.Data.Tables
                 var indexTree = GetTree(indexDef);
                 using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                 {
-                    var fst = GetFixedSizeTree(indexTree, val.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
+                    var fst = GetFixedSizeTreeForValue(indexTree, val, indexDef.IsGlobal);
                     if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                     {
                         ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, indexDef.Name);
@@ -956,10 +957,8 @@ namespace Voron.Data.Tables
                             forceUpdate)
                         {
                             var indexTree = GetTree(indexDef);
-                            var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
-                            fst.Delete(id);
-                            fst = GetFixedSizeTree(indexTree, newVal.Clone(_tx.Allocator), 0, indexDef.IsGlobal);
-                            fst.Add(id);
+                            GetFixedSizeTreeForValue(indexTree, oldVal, indexDef.IsGlobal).Delete(id);
+                            GetFixedSizeTreeForValue(indexTree, newVal, indexDef.IsGlobal).Add(id);
                         }
                     }
                 }
@@ -1009,7 +1008,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var index = GetFixedSizeTree(indexTree, newVal, 0, dynamicKeyIndexDef.IsGlobal);
+                var index = GetFixedSizeTreeForValue(indexTree, newVal, dynamicKeyIndexDef.IsGlobal);
                 index.Add(id);
             }
         }
@@ -1022,7 +1021,7 @@ namespace Voron.Data.Tables
             }
             else
             {
-                var fst = GetFixedSizeTree(tree, val.Clone(_tx.Allocator), 0, dynamicKeyIndexDef.IsGlobal);
+                var fst = GetFixedSizeTreeForValue(tree, val, dynamicKeyIndexDef.IsGlobal);
                 if (fst.Delete(id).NumberOfEntriesDeleted == 0)
                 {
                     ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(id, dynamicKeyIndexDef.Name);
@@ -1121,7 +1120,7 @@ namespace Voron.Data.Tables
                     using (indexDef.GetValue(_tx.Allocator, ref value, out Slice val))
                     {
                         var indexTree = GetTree(indexDef);
-                        var index = GetFixedSizeTree(indexTree, val, 0, indexDef.IsGlobal);
+                        var index = GetFixedSizeTreeForValue(indexTree, val, indexDef.IsGlobal);
                         index.Add(id);
                     }
                 }
@@ -1161,27 +1160,32 @@ namespace Voron.Data.Tables
             }
 
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isGlobal: false, isIndexTree: true);
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
         }
 
-        internal FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isGlobal, bool isIndexTree = false)
+        private FixedSizeTree GetFixedSizeTree(Tree tableTree, Slice name, ushort valSize)
         {
-            if (_fixedSizeTreeCache == null || _fixedSizeTreeCache.TryGetValue(parent.Name, out Dictionary<Slice, FixedSizeTree> cache) == false)
+            _fixedSizeTreeCache ??= new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
+            if (_fixedSizeTreeCache.TryGetValue(name, out var tree))
+                return tree;
+
+            tree = new FixedSizeTree(_tx.LowLevelTransaction, tableTree, name, valSize, isIndexTree: true, newPageAllocator: TablePageAllocator);
+            return _fixedSizeTreeCache[tree.Name] = tree;
+        }
+
+        internal FixedSizeTree GetFixedSizeTreeForValue(Tree indexTree, Slice value, bool isGlobal)
+        {
+            _fixedSizeTreesForValues ??= new Dictionary<Tree, FixedSizeTree>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+            if (_fixedSizeTreesForValues.TryGetValue(indexTree, out var fixedSizeTree))
             {
-                cache = new Dictionary<Slice, FixedSizeTree>(SliceStructComparer.Instance);
-                
-                _fixedSizeTreeCache ??= new Dictionary<Slice, Dictionary<Slice, FixedSizeTree>>(SliceStructComparer.Instance);
-                _fixedSizeTreeCache[parent.Name] = cache;
+                fixedSizeTree.RepurposeInstance(value, clone: false);
+                return fixedSizeTree;
             }
 
-            if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
-            {
-                NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: allocator);
-                return cache[fixedSizeTree.Name] = fixedSizeTree;
-            }
-
-            return tree;
+            NewPageAllocator allocator = isGlobal ? GlobalPageAllocator : TablePageAllocator;
+            fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, indexTree, value, 0, clone: false, isIndexTree: indexTree.IsIndexTree, newPageAllocator: allocator);
+            _fixedSizeTreesForValues[indexTree] = fixedSizeTree;
+            return fixedSizeTree;
         }
 
         private void CreateNewActiveSection()
@@ -1285,59 +1289,6 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool pullTvr = true)
-        {
-            try
-            {
-                var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
-                var result = new TableValueHolder();
-                using (var it = fstIndex.Iterate())
-                {
-                    if (it.Seek(long.MinValue) == false)
-                        yield break;
-
-                    do
-                    {
-                        if (pullTvr)
-                        {
-                            ReadById(it.CurrentKey, out result.Reader);
-                        }
-
-                        yield return result;
-
-                    } while (it.MoveNext());
-                }
-            }
-            finally
-            {
-                value.Release(_tx.Allocator);
-            }
-        }
-
-        private IEnumerable<TableValueHolder> GetBackwardSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index)
-        {
-            try
-            {
-                var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
-                using (var it = fstIndex.Iterate(_prefetch))
-                {
-                    if (it.SeekToLast() == false)
-                        yield break;
-
-                    var result = new TableValueHolder();
-                    do
-                    {
-                        ReadById(it.CurrentKey, out result.Reader);
-                        yield return result;
-                    } while (it.MovePrev());
-                }
-            }
-            finally
-            {
-                value.Release(_tx.Allocator);
-            }
-        }
-
         private void ReadById(long id, out TableValueReader reader)
         {
             var ptr = DirectRead(id, out int size, out _);
@@ -1358,375 +1309,128 @@ namespace Voron.Data.Tables
             return fst.NumberOfEntries;
         }
 
-        public IEnumerable<SeekResult> SeekForwardFrom(TableSchema.AbstractTreeIndexDef index, Slice value, long skip, bool startsWith = false)
+        public IndexSeek SeekForwardFrom(TableSchema.AbstractTreeIndexDef index, Slice value, long skip, bool startsWith = false) =>
+            new IndexSeek(this, index, value, startsWith ? value : default, skip, backward: false);
+
+        public IndexSeek SeekForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice start, Slice prefix, long skip) =>
+            new IndexSeek(this, index, start, prefix, skip, backward: false);
+
+        public bool SeekOneForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice value, out TableValueReader reader)
         {
+            reader = default;
+
             var tree = GetTree(index);
             if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(_prefetch))
-            {
-                if (startsWith)
-                    it.SetRequiredPrefix(value);
-
-                if (it.Seek(value) == false)
-                    yield break;
-
-                do
-                {
-                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        if (skip > 0)
-                        {
-                            skip--;
-                            continue;
-                        }
-
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MoveNext());
-            }
-        }
-
-        public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice start, Slice prefix, long skip)
-        {
-            var tree = GetTree(index);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(_prefetch))
-            {
-                it.SetRequiredPrefix(prefix);
-
-                if (it.Seek(start) == false)
-                    yield break;
-
-                do
-                {
-                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        if (skip > 0)
-                        {
-                            skip--;
-                            continue;
-                        }
-
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MoveNext());
-            }
-        }
-
-        public TableValueHolder SeekOneForwardFromPrefix(TableSchema.AbstractTreeIndexDef index, Slice value)
-        {
-            var tree = GetTree(index);
-            if (tree == null)
-                return null;
+                return false;
 
             using (var it = tree.Iterate(_prefetch))
             {
                 it.SetRequiredPrefix(value);
 
                 if (it.Seek(value) == false)
-                    return null;
+                    return false;
 
                 do
                 {
-                    foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        return result;
-                    }
+                    if (TryReadEdgeOfValue(tree, it.CurrentKey, index, last: false, out reader))
+                        return true;
                 } while (it.MoveNext());
             }
 
-            return null;
+            return false;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip)
+        // the first (or last) entry of an index value, without iterating the fixed size tree of the value
+        private bool TryReadEdgeOfValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool last, out TableValueReader reader)
         {
-            var tree = GetTree(index);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(_prefetch))
+            var fstIndex = GetFixedSizeTreeForValue(tree, value, index.IsGlobal);
+            if ((last ? fstIndex.TryGetLastKey(out long id) : fstIndex.TryGetFirstKey(out id)) == false)
             {
-                if (it.SeekBackward(last) == false)
-                    yield break;
-
-                if (prefix != null)
-                {
-                    it.SetRequiredPrefix(prefix.Value);
-
-                    if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
-                    {
-                        if (it.MovePrev() == false)
-                            yield break;
-                    }
-                }
-
-                do
-                {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        if (skip > 0)
-                        {
-                            skip--;
-                            continue;
-                        }
-
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MovePrev());
+                reader = default;
+                return false;
             }
+
+            ReadById(id, out reader);
+            return true;
         }
 
-        public IEnumerable<SeekResult> SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last)
+        public IndexSeek SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice? prefix, Slice last, long skip) =>
+            new IndexSeek(this, index, last, prefix ?? default, skip, backward: true);
+
+        public IndexSeek SeekBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last) =>
+            new IndexSeek(this, index, last, prefix, skip: 0, backward: true);
+
+        public bool SeekOneBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last, out TableValueReader reader)
         {
+            reader = default;
+
             var tree = GetTree(index);
             if (tree == null)
-                yield break;
+                return false;
 
             using (var it = tree.Iterate(_prefetch))
             {
                 if (it.SeekBackward(last) == false)
-                    yield break;
+                    return false;
 
                 it.SetRequiredPrefix(prefix);
                 if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
                 {
                     if (it.MovePrev() == false)
-                        yield break;
+                        return false;
                 }
 
                 do
                 {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        yield return new SeekResult
-                        {
-                            Key = it.CurrentKey,
-                            Result = result
-                        };
-                    }
-                } while (it.MovePrev());
-            }
-        }
-
-        public TableValueHolder SeekOneBackwardFrom(TableSchema.AbstractTreeIndexDef index, Slice prefix, Slice last)
-        {
-            var tree = GetTree(index);
-            if (tree == null)
-                return null;
-
-            using (var it = tree.Iterate(_prefetch))
-            {
-                if (it.SeekBackward(last) == false)
-                    return null;
-
-                it.SetRequiredPrefix(prefix);
-                if (SliceComparer.StartWith(it.CurrentKey, it.RequiredPrefix) == false)
-                {
-                    if (it.MovePrev() == false)
-                        return null;
-                }
-
-                do
-                {
-                    foreach (var result in GetBackwardSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
-                    {
-                        return result;
-                    }
+                    if (TryReadEdgeOfValue(tree, it.CurrentKey, index, last: true, out reader))
+                        return true;
                 } while (it.MovePrev());
             }
 
-            return null;
+            return false;
         }
 
         public long GetCountOfMatchesFor(TableSchema.AbstractTreeIndexDef index, Slice value)
         {
             var tree = GetTree(index);
+            if (tree == null)
+                return 0;
 
-            var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
-
-            return fstIndex.NumberOfEntries;
+            return GetFixedSizeTreeForValue(tree, value, index.IsGlobal).NumberOfEntries;
         }
 
         public long GetCountOfMatchesForPrefix(DynamicKeyIndexDef index, Slice prefix)
         {
-            return SeekByPrefix(index, prefix, Slices.Empty, 0, pullTvr: false).Count();
-        }
-
-        public IEnumerable<SeekResult> SeekByPrefix(DynamicKeyIndexDef def, Slice requiredPrefix, Slice startAfter, long skip, bool pullTvr = true)
-        {
-            var isStartAfter = startAfter.Equals(Slices.Empty) == false;
-
-            var tree = GetTree(def);
+            var tree = GetTree(index);
             if (tree == null)
-                yield break;
+                return 0;
 
-            if (def.SupportDuplicateKeys == false)
+            using var it = tree.Iterate(prefetch: false);
+            it.SetRequiredPrefix(prefix);
+            if (it.Seek(prefix) == false)
+                return 0;
+
+            if (index.SupportDuplicateKeys == false)
+                return it.CountToEndOfRequiredPrefix();
+
+            long count = 0;
+            do
             {
-                var result = new TableValueHolder();
-                using (var it = tree.Iterate(_prefetch))
-                {
-                    it.SetRequiredPrefix(requiredPrefix);
+                count += GetFixedSizeTreeForValue(tree, it.CurrentKey, index.IsGlobal).NumberOfEntries;
+            } while (it.MoveNext());
 
-                    var seekValue = isStartAfter ? startAfter : requiredPrefix;
-                    if (it.Seek(seekValue) == false)
-                        yield break;
-
-                    if (it.Skip(skip) == false)
-                        yield break;
-
-                    do
-                    {
-                        if (pullTvr)
-                        {
-                            GetTableValueReader(it, out result.Reader);
-
-                            yield return new SeekResult
-                            {
-                                Key = it.CurrentKey,
-                                Result = result
-                            };
-                        }
-                        else
-                        {
-                            yield return default;
-                        }
-                    }
-                    while (it.MoveNext());
-                }
-            }
-            else
-            {
-                using (var it = tree.Iterate(true))
-                {
-                    it.SetRequiredPrefix(requiredPrefix);
-
-                    var seekValue = isStartAfter ? startAfter : requiredPrefix;
-                    if (it.Seek(seekValue) == false)
-                        yield break;
-
-                    if (it.Skip(skip) == false)
-                        yield break;
-
-                    do
-                    {
-                        foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), def, pullTvr))
-                        {
-                            if (skip > 0)
-                            {
-                                skip--;
-                                continue;
-                            }
-
-                            if (pullTvr)
-                            {
-                                yield return new SeekResult
-                                {
-                                    Key = it.CurrentKey,
-                                    Result = result
-                                };
-                            }
-                            else
-                            {
-                                yield return default;
-                            }
-                        }
-                    } while (it.MoveNext());
-                }
-            }
+            return count;
         }
 
-        public IEnumerable<(Slice Key, TableValueHolder Value)> SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip)
-        {
-            var isStartAfter = startAfter.Equals(Slices.Empty) == false;
+        // start is included, Slices.Empty starts from the beginning of the prefix
+        public IndexSeek SeekByPrefix(DynamicKeyIndexDef def, Slice requiredPrefix, Slice start, long skip) =>
+            new IndexSeek(this, def, IsEmptyMarker(start) ? requiredPrefix : start, requiredPrefix, skip, backward: false);
 
-            var pk = _schema.Key;
-            var tree = GetTree(pk);
-            using (var it = tree.Iterate(_prefetch))
-            {
-                it.SetRequiredPrefix(requiredPrefix);
+        public PrimaryKeyPrefixSeek SeekByPrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, long skip) => new PrimaryKeyPrefixSeek(this, requiredPrefix, startAfter, skip);
 
-                var seekValue = isStartAfter ? startAfter : requiredPrefix;
-                if (it.Seek(seekValue) == false)
-                    yield break;
+        public PrimaryKeySeek SeekByPrimaryKey(Slice value, long skip) => new PrimaryKeySeek(this, value, skip, backward: false);
 
-                if (isStartAfter && SliceComparer.Equals(it.CurrentKey, startAfter) && it.MoveNext() == false)
-                    yield break;
-
-                if (it.Skip(skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return (it.CurrentKey, result);
-                }
-                while (it.MoveNext());
-            }
-        }
-
-        public IEnumerable<TableValueHolder> SeekByPrimaryKey(Slice value, long skip)
-        {
-            var pk = _schema.Key;
-            var tree = GetTree(pk);
-            if (tree == null)
-                yield break;
-
-            using (var it = tree.Iterate(_prefetch))
-            {
-                if (it.Seek(value) == false)
-                    yield break;
-
-                if (it.Skip(skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                }
-                while (it.MoveNext());
-            }
-        }
-
-        public IEnumerable<TableValueHolder> SeekBackwardByPrimaryKey(Slice value, long skip)
-        {
-            var pk = _schema.Key;
-            var tree = GetTree(pk);
-            using (var it = tree.Iterate(_prefetch))
-            {
-                if (it.Seek(value) == false)
-                    yield break;
-
-                if (it.Skip(-skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                }
-                while (it.MovePrev());
-            }
-        }
+        public PrimaryKeySeek SeekBackwardByPrimaryKey(Slice value, long skip) => new PrimaryKeySeek(this, value, skip, backward: true);
 
         public bool SeekOneBackwardByPrimaryKeyPrefix(Slice prefix, Slice value, out TableValueReader reader, bool excludeValueFromSeek = false)
         {
@@ -1829,6 +1533,30 @@ namespace Voron.Data.Tables
                 if (it.Seek(slice) == false)
                 {
                     reader = default(TableValueReader);
+                    return false;
+                }
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// The first result of SeekByPrimaryKeyPrefix(requiredPrefix, startAfter, skip: 0), without an enumerator.
+        /// </summary>
+        public bool SeekOnePrimaryKeyPrefix(Slice requiredPrefix, Slice startAfter, out TableValueReader reader)
+        {
+            var isStartAfter = IsEmptyMarker(startAfter) == false;
+
+            var tree = GetTree(_schema.Key);
+            using (var it = tree.Iterate(_prefetch))
+            {
+                it.SetRequiredPrefix(requiredPrefix);
+
+                if (it.Seek(isStartAfter ? startAfter : requiredPrefix) == false ||
+                    isStartAfter && SliceComparer.Equals(it.CurrentKey, startAfter) && it.MoveNext() == false)
+                {
+                    reader = default;
                     return false;
                 }
 
@@ -2025,49 +1753,7 @@ namespace Voron.Data.Tables
         }
 
 
-        public IEnumerable<TableValueHolder> SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip)
-        {
-            var fst = GetFixedSizeTree(index);
-
-            using (var it = fst.Iterate(_prefetch))
-            {
-                if (it.Seek(key) == false)
-                    yield break;
-
-                if (it.Skip(skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                if (_onCorruptedDataHandler == null)
-                {
-                    do
-                    {
-                        GetTableValueReader(it, out result.Reader);
-                        yield return result;
-                    } while (it.MoveNext());
-                }
-                else
-                {
-                    do
-                    {
-                        bool successfully = true;
-                        try
-                        {
-                            GetTableValueReader(it, out result.Reader);
-                        }
-                        catch (InvalidOperationException e)
-                        {
-                            _onCorruptedDataHandler.Invoke(this, e);
-                            successfully = false;
-                        }
-
-                        if (successfully)
-                            yield return result;
-
-                    } while (it.MoveNext());
-                }
-            }
-        }
+        public FixedSizeIndexSeek SeekForwardFrom(FixedSizeKeyIndexDef index, long key, long skip) => new FixedSizeIndexSeek(this, index, key, skip, backward: false);
 
         public TableValueHolder ReadLast(TableSchema.FixedSizeKeyIndexDef index)
         {
@@ -2084,46 +1770,10 @@ namespace Voron.Data.Tables
             }
         }
         
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate(_prefetch))
-            {
-                if (it.SeekToLast() == false)
-                    yield break;
+        public FixedSizeIndexSeek SeekBackwardFromLast(TableSchema.FixedSizeKeyIndexDef index, long skip = 0) =>
+            new FixedSizeIndexSeek(this, index, long.MaxValue, skip, backward: true);
 
-                if (it.Skip(-skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } while (it.MovePrev());
-            }
-        }
-
-        public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate(_prefetch))
-            {
-                if (it.SeekBackward(key) == false)
-                    yield break;
-
-                if (it.Skip(-skip) == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } while (it.MovePrev());
-            }
-        }
+        public FixedSizeIndexSeek SeekBackwardFrom(TableSchema.FixedSizeKeyIndexDef index, long key, long skip = 0) => new FixedSizeIndexSeek(this, index, key, skip, backward: true);
 
         public bool HasEntriesGreaterThanStartAndLowerThanOrEqualToEnd(TableSchema.FixedSizeKeyIndexDef index, long start, long end)
         {
@@ -2323,32 +1973,28 @@ namespace Voron.Data.Tables
                     if (it.Seek(value) == false)
                         return deleted;
 
-                    var fst = GetFixedSizeTree(tree, it.CurrentKey.Clone(_tx.Allocator), 0, index.IsGlobal);
-                    using (var fstIt = fst.Iterate())
+                    if (GetFixedSizeTreeForValue(tree, it.CurrentKey, index.IsGlobal).TryGetFirstKey(out long id) == false)
+                        break;
+
+                    if (beforeDelete != null || shouldAbort != null)
                     {
-                        if (fstIt.Seek(long.MinValue) == false)
-                            break;
-
-                        if (beforeDelete != null || shouldAbort != null)
+                        var ptr = DirectRead(id, out int size, out bool compressed);
+                        if (tableValueHolder == null)
+                            tableValueHolder = new TableValueHolder();
+                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                        if (shouldAbort?.Invoke(tableValueHolder) == true)
                         {
-                            var ptr = DirectRead(fstIt.CurrentKey, out int size, out bool compressed);
-                            if (tableValueHolder == null)
-                                tableValueHolder = new TableValueHolder();
-                            tableValueHolder.Reader = new TableValueReader(fstIt.CurrentKey, ptr, size);
-                            if (shouldAbort?.Invoke(tableValueHolder) == true)
-                            {
-                                return deleted;
-                            }
-                            beforeDelete?.Invoke(tableValueHolder);
-                            Delete(fstIt.CurrentKey, ptr, size, compressed);
+                            return deleted;
                         }
-                        else
-                        {
-                            Delete(fstIt.CurrentKey);
-                        }
-
-                        deleted++;
+                        beforeDelete?.Invoke(tableValueHolder);
+                        Delete(id, ptr, size, compressed);
                     }
+                    else
+                    {
+                        Delete(id);
+                    }
+
+                    deleted++;
                 }
             }
             return deleted;
@@ -2573,6 +2219,12 @@ namespace Voron.Data.Tables
         {
             public Slice Key;
             public TableValueHolder Result;
+        }
+
+        // Slices.Empty passed as "no start after"; avoid Slice.Equals(object) boxing
+        private static bool IsEmptyMarker(Slice slice)
+        {
+            return slice.HasValue && slice.Content.Ptr == Slices.Empty.Content.Ptr;
         }
 
         public sealed class TableValueHolder

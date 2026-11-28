@@ -1,4 +1,4 @@
-﻿using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
@@ -10,11 +10,13 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema TimeSeriesSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.TimeSeries,
             TableType = (byte)TableType.TimeSeries
         };
 
         internal static readonly TableSchema ShardingTimeSeriesSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.TimeSeries,
             TableType = (byte)TableType.TimeSeries
         };
 

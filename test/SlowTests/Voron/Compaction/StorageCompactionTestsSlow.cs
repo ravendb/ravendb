@@ -179,7 +179,7 @@ namespace SlowTests.Voron.Compaction
 
                         for (int i = 0; i < multiValueRecordsCount; i++)
                         {
-                            var multiRead = tree.MultiRead("record/" + i);
+                            using var multiRead = tree.MultiRead("record/" + i);
 
                             Assert.True(multiRead.Seek(Slices.BeforeAllKeys));
 

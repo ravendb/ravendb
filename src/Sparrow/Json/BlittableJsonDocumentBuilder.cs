@@ -19,15 +19,21 @@ namespace Sparrow.Json
         private readonly IJsonParser _reader;
         public IBlittableDocumentModifier _modifier;
 
+        internal JsonOperationContext Context => _context;
+        internal IJsonParser Reader => _reader;
+        internal JsonParserState State => _state;
+
         // We introduced a delegate that encapsulates the reading logic.
         // This avoids branching on every 'Read()' call to figure out which path to take
         // (WriteNone vs. WriteFull, ObjectJsonParser vs. UnmanagedJsonParser).
         // Instead, we decide once in the constructor or Renew(...) and store that strategy here.
         private Func<bool> _readInternalFunc;
+        private UsageMode _readInternalFuncMode;
 
         private readonly BlittableWriter<UnmanagedWriteBuffer> _writer;
         private readonly JsonParserState _state;
         private LazyStringValue _fakeFieldName;
+        private LazyStringValue _propertyName;
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
 
@@ -46,9 +52,6 @@ namespace Sparrow.Json
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
 
-            // Here we bind the specialized read function once, based on the current parser and mode.
-            // This helps eliminate per-call conditionals in Read().
-            _readInternalFunc = GetReadInternalFunction(_reader, _mode);
         }
 
         public BlittableJsonDocumentBuilder(
@@ -117,9 +120,12 @@ namespace Sparrow.Json
             _mode = mode;
 
             // Renew is now also responsible for re-binding the read function
-            // if the UsageMode changes. This resets parsing state and ensures
-            // we're using the correct specialized read routine going forward.
-            _readInternalFunc = GetReadInternalFunction(_reader, mode);
+            // if the UsageMode changes. 
+            if (_readInternalFunc == null || _readInternalFuncMode != mode)
+            {
+                _readInternalFunc = GetReadInternalFunction(_reader, mode);
+                _readInternalFuncMode = mode;
+            }
 
             ClearState();
 
@@ -227,7 +233,7 @@ namespace Sparrow.Json
                             {
                                 if (state.CurrentTokenType == JsonParserToken.String)
                                 {
-                                    var property = CreateLazyStringValueFromParserState();
+                                    var property = GetPropertyNameFromParserState();
 
                                     if(typeof(TStreamBehavior) == typeof(WithStreaming) && property.Equals(PropertyToWatchForStreaming.Name))
                                     {
@@ -742,12 +748,16 @@ namespace Sparrow.Json
             public BlittableJsonToken WrittenToken = token;
         }
 
+        // The property name is only compared and looked up, CachedProperties copies a name it has not seen before,
+        // so one instance serves every property of every document the builder reads.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe LazyStringValue CreateLazyStringValueFromParserState()
+        private unsafe LazyStringValue GetPropertyNameFromParserState()
         {
-            var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
-            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.Count > 0 ? _state.EscapePositions.ToArray() : [];
-            return lazyStringValueFromParserState;
+            _propertyName ??= new LazyStringValue(null, null, 0, _context);
+            _propertyName.Renew(null, _state.StringBuffer, _state.StringSize, _context);
+            // explicitly not setting escape positions, all current callers does not read them, so no point
+            _propertyName.EscapePositions = null;
+            return _propertyName;
         }
 
         public void FinalizeDocument()

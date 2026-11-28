@@ -105,7 +105,7 @@ namespace Voron
         private readonly CountdownEvent _envDispose = new CountdownEvent(1);
 
         private long _transactionsCounter;
-        private readonly IFreeSpaceHandling _freeSpaceHandling;
+        private readonly FreeSpaceHandling _freeSpaceHandling;
         private readonly HeaderAccessor _headerAccessor;
         private readonly DecompressionBuffersPool _decompressionBuffers;
 
@@ -482,7 +482,7 @@ namespace Voron
             Options.AfterDatabaseCreation?.Invoke(this);
         }
 
-        public IFreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
+        public FreeSpaceHandling FreeSpaceHandling => _freeSpaceHandling;
 
         public HeaderAccessor HeaderAccessor => _headerAccessor;
 
@@ -1159,7 +1159,7 @@ namespace Voron
                                 if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
                                     tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
                                 {
-                                    var it = tree.Iterate(false);
+                                    using var it = tree.Iterate(false);
                                     if (it.Seek(Slices.BeforeAllKeys))
                                     {
                                         do

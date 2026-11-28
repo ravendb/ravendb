@@ -145,7 +145,7 @@ namespace Voron.Impl
         public event Action<IPagerLevelTransactionState> OnRollBack;
         public event Action<LowLevelTransaction> AfterCommitWhenNewTransactionsPrevented;
 
-        private readonly IFreeSpaceHandling _freeSpaceHandling;
+        private readonly FreeSpaceHandling _freeSpaceHandling;
         internal FixedSizeTree _freeSpaceTree;
 
         private TransactionHeader _txHeader;
@@ -355,7 +355,7 @@ namespace Voron.Impl
             }
         }
 
-        public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, IFreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
+        public LowLevelTransaction(StorageEnvironment env, long id, TransactionPersistentContext transactionPersistentContext, TransactionFlags flags, FreeSpaceHandling freeSpaceHandling, ByteStringContext context = null)
         {
             TxStartTime = DateTime.UtcNow;
 

@@ -352,6 +352,7 @@ public unsafe class RavenDB_27533_Tree(ITestOutputHelper output) : StorageTest(o
             var root = tree.GetReadOnlyTreePage(markedPage);
             Assert.True(root.IsLeaf);
             Assert.True(root.CollapsedLevels == 0, $"the root is owing {root.CollapsedLevels} levels, but it has no siblings to be shallower than");
+            Assert.True(tree.State.Header.Depth == 1, $"the root is a leaf, but the tree depth is {tree.State.Header.Depth}");
         }
     }
 

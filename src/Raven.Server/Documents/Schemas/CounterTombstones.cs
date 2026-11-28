@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -6,8 +6,8 @@ namespace Raven.Server.Documents.Schemas
 {
     public static class CounterTombstones
     {
-        internal static readonly TableSchema CounterTombstonesSchemaBase = new TableSchema();
-        internal static readonly TableSchema ShardingCounterTombstonesSchemaBase = new TableSchema();
+        internal static readonly TableSchema CounterTombstonesSchemaBase = new TableSchema { GlobalTableIndex = (int)GlobalTable.CounterTombstones };
+        internal static readonly TableSchema ShardingCounterTombstonesSchemaBase = new TableSchema { GlobalTableIndex = (int)GlobalTable.CounterTombstones };
 
         internal static readonly Slice CounterTombstoneKey;
         internal static readonly Slice AllCounterTombstonesEtagSlice;

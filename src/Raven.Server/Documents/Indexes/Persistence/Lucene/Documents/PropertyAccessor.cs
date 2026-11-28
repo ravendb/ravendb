@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -24,48 +24,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder = new();
 
 
-        public struct PropertiesEnumerator : IEnumerator<PropertyItem>
-        {
-            private readonly List<KeyValuePair<string, Accessor>> _propertiesInOrder;
-            private readonly object _target;
-            private int _currentIdx;
-
-            public PropertiesEnumerator(List<KeyValuePair<string, Accessor>> properties, object target)
-            {
-                _propertiesInOrder = properties;
-                _target = target;
-                _currentIdx = -1;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool MoveNext()
-            {
-                _currentIdx++;
-                return _currentIdx < _propertiesInOrder.Count;
-            }
-
-            public void Reset()
-            {
-                _currentIdx = -1;
-            }
-
-            object IEnumerator.Current => Current;
-
-            public PropertyItem Current
-            {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                get
-                {
-                    var (key, value) = _propertiesInOrder[_currentIdx];
-                    return new PropertyItem(key, value.GetValue(_target), value.GroupByField, value.IsGroupByField);
-                }
-            }
-
-            public void Dispose() {}
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public IEnumerator<PropertyItem> GetProperties(object target)
+        public PropertiesEnumerator GetProperties(object target)
         {
             return new PropertiesEnumerator(_propertiesInOrder, target);
         }
@@ -211,55 +171,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             _groupByFields = groupByFields;
         }
 
-        internal struct JintPropertiesEnumerator : IEnumerator<PropertyItem>
+        internal static PropertyItem GetPropertyItem(KeyValuePair<JsValue, PropertyDescriptor> property, Dictionary<string, CompiledIndexField> groupByFields)
         {
-            private readonly ObjectInstance _objectInstance;
-            private readonly Dictionary<string, CompiledIndexField> _groupByFields;
-            private IEnumerator<KeyValuePair<JsValue, PropertyDescriptor>> _enumerable;
+            var propertyAsString = property.Key.AsString();
 
-            internal JintPropertiesEnumerator(ObjectInstance oi, Dictionary<string, CompiledIndexField> groupByFields)
-            {
-                _objectInstance = oi;
-                _groupByFields = groupByFields;
-                _enumerable = oi.GetOwnProperties().GetEnumerator();
-            }
+            CompiledIndexField f = null;
+            var isGroupByField = groupByFields?.TryGetValue(propertyAsString, out f) ?? false;
 
-            public bool MoveNext()
-            {
-                return _enumerable.MoveNext();
-            }
-
-            public void Reset()
-            {
-                _enumerable = _objectInstance.GetOwnProperties().GetEnumerator();
-            }
-
-            object IEnumerator.Current => Current;
-
-            public PropertyItem Current
-            {
-                get
-                {
-                    var property = _enumerable.Current;
-                    var propertyAsString = property.Key.AsString();
-
-                    CompiledIndexField f = null;
-                    var isGroupByField = _groupByFields?.TryGetValue(propertyAsString, out f) ?? false;
-
-                    return new PropertyItem(propertyAsString, GetValue(property.Value.Value), f, isGroupByField);
-                }
-            }
-
-            public void Dispose() { }
+            return new PropertyItem(propertyAsString, GetValue(property.Value.Value), f, isGroupByField);
         }
 
-
-        public IEnumerator<PropertyItem> GetProperties(object target)
+        public PropertiesEnumerator GetProperties(object target)
         {
             if (!(target is ObjectInstance oi))
                 throw new ArgumentException($"JintPropertyAccessor.GetPropertiesInOrder is expecting a target of type ObjectInstance but got one of type {target.GetType().Name}.");
 
-            return new JintPropertiesEnumerator(oi, _groupByFields);
+            return new PropertiesEnumerator(oi, _groupByFields);
         }
 
         public object GetValue(string name, object target)

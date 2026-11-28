@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -858,13 +858,18 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
+            ReleaseAllocations();
+
+            _disposed = true;
+        }
+
+        public void ReleaseAllocations()
+        {
             for (int i = _allocations.Count - 1; i >= 0; i--)
             {
                 _ctx.ReturnMemory(_allocations[i]);
             }
             _allocations.Clear();
-
-            _disposed = true;
         }
 
         public void Reset(JsonOperationContext ctx)

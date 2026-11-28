@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
-using Sparrow.Collections;
 using Sparrow.Server;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
@@ -40,21 +39,40 @@ namespace Voron.Data.Fixed
         private readonly int _maxEmbeddedEntries;
 
         private NewPageAllocator _newPageAllocator;
-        private FastStack<FixedSizeTreePage<TVal>> _cursor;
+
+        private PagesByLevel _descentPages;
+        private int _descentDepth; // the path of the last write is _descentPages[0.._descentDepth), the leaf is at _descentDepth
+
+        // A branch page holds 512 entries and is rebalanced at 128 or fewer, 9th level means the tree is corrupted.
+        private const int MaxDepth = 8;
+
+        [InlineArray(MaxDepth)]
+        private struct PagesByLevel
+        {
+            private FixedSizeTreePage<TVal> _element;
+        }
+
+        // Iterate hands them out again once they are disposed: a tree has one open iterator at a time
+        private EmbeddedIterator _embeddedIterator;
+        private LargeIterator _largeIterator;
         private int _changes;
 
         public LowLevelTransaction Llt => _tx;
 
-        internal RootObjectType? Type
-        {
-            get
-            {
-                var header = _parent.DirectRead(_treeName);
-                if (header == null)
-                    return null;
+        internal RootObjectType? Type => ReadHeader(out _);
 
-                return ((FixedSizeTreeHeader.Embedded*)header)->RootObjectType;
-            }
+        private RootObjectType? ReadHeader(out byte* header)
+        {
+            header = _parent.DirectRead(_treeName);
+            if (header == null)
+                return null;
+
+            return ((FixedSizeTreeHeader.Embedded*)header)->RootObjectType;
+        }
+
+        private long ReadRootPageNumber()
+        {
+            return ((FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName))->RootPageNumber;
         }
 
         public bool HasNewPageAllocator => _newPageAllocator != null;
@@ -265,7 +283,7 @@ namespace Voron.Data.Fixed
 
             _changes++;
             byte* pos;
-            switch (Type)
+            switch (ReadHeader(out var header))
             {
                 case null:
                     pos = AddNewEntry(key);
@@ -275,7 +293,7 @@ namespace Voron.Data.Fixed
                     pos = AddEmbeddedEntry(key, out isNew);
                     break;
                 case RootObjectType.FixedSizeTree:
-                    pos = AddLargeEntry(key, out isNew);
+                    pos = AddLargeEntry(key, ((FixedSizeTreeHeader.Large*)header)->RootPageNumber, out isNew);
                     break;
                 default:
                     ThrowInvalidFixedSizeTreeType();
@@ -293,9 +311,9 @@ namespace Voron.Data.Fixed
             throw new InvalidFixedSizeTree(Type?.ToString());
         }
 
-        private byte* AddLargeEntry(TVal key, out bool isNew)
+        private byte* AddLargeEntry(TVal key, long rootPageNumber, out bool isNew)
         {
-            var page = FindPageFor(key);
+            var page = FindPageFor(key, rootPageNumber, ref _descentPages, out _descentDepth);
 
             page = ModifyPage(page);
 
@@ -314,7 +332,7 @@ namespace Voron.Data.Fixed
                 PageSplit(page, key);
 
                 // now we know we have enough space, or we need to split the parent pageNum
-                var addLargeEntry = AddLargeEntry(key, out isNew);
+                var addLargeEntry = AddLargeEntry(key, ReadRootPageNumber(), out isNew);
                 isNew = true;
                 ValidateTree();
                 return addLargeEntry;
@@ -405,34 +423,59 @@ namespace Voron.Data.Fixed
             return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
         }
 
-        private FixedSizeTreePage<TVal> FindPageFor(TVal key)
+        private FixedSizeTreePage<TVal> FindPageFor(TVal key, ref PagesByLevel pages, out int depth)
         {
-            var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-            var page = GetReadOnlyPage(header->RootPageNumber);
-            if (_cursor == null)
-                _cursor = new FastStack<FixedSizeTreePage<TVal>>();
-            else
-                _cursor.WeakClear();
+            return FindPageFor(key, ReadRootPageNumber(), ref pages, out depth);
+        }
 
+        private FixedSizeTreePage<TVal> FindPageFor(TVal key, long rootPageNumber, ref PagesByLevel pages, out int depth)
+        {
+            var page = DescendToLeaf(rootPageNumber, key, ref pages, out depth);
+            BinarySearch(page, key);
+            return page;
+        }
+
+        private FixedSizeTreePage<TVal> DescendToLeaf(long rootPageNumber, TVal key, ref PagesByLevel pages, out int depth)
+        {
+            depth = 0;
+            var page = PageAtLevel(ref pages, rootPageNumber, depth);
             while (page.IsLeaf == false)
             {
-                _cursor.Push(page);
                 BinarySearch(page, key);
                 if (page.LastMatch < 0 && page.LastSearchPosition > 0)
                     page.LastSearchPosition--;
                 var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                page = GetReadOnlyPage(childPageNumber);
+                page = PageAtLevel(ref pages, childPageNumber, ++depth);
             }
 
-            BinarySearch(page, key);
             return page;
+        }
+
+        private FixedSizeTreePage<TVal> PageAtLevel(ref PagesByLevel pages, long pageNumber, int level)
+        {
+            if (level >= MaxDepth)
+                ThrowTooDeep();
+
+            var pointer = _tx.GetPage(pageNumber).Pointer;
+            ref var page = ref pages[level];
+            if (page == null)
+                return page = new FixedSizeTreePage<TVal>(pointer, _entrySize, Constants.Storage.PageSize);
+
+            page.Reuse(pointer, _entrySize);
+            return page;
+        }
+
+        [DoesNotReturn]
+        private void ThrowTooDeep()
+        {
+            throw new InvalidFixedSizeTree($"Fixed size tree {Name} is deeper than {MaxDepth} levels, so it is corrupted");
         }
 
         private FixedSizeTreePage<TVal> NewPage(FixedSizeTreePageFlags flags, long nearbyPage)
         {
             FixedSizeTreePage<TVal> allocatePage;
 
-            using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : null)
+            using (FreeSpaceTree ? _tx.Environment.FreeSpaceHandling.Disable() : default)
             {
                 // we cannot recursively call free space handling to ensure that we won't modify a section
                 // relevant for a page which is currently being changed allocated
@@ -487,14 +530,9 @@ namespace Voron.Data.Fixed
             if (page.Dirty)
                 return page;
 
-            var writablePage = _tx.ModifyPage(page.PageNumber);
-            var newPage = new FixedSizeTreePage<TVal>(writablePage.Pointer, _entrySize, Constants.Storage.PageSize)
-            {
-                LastSearchPosition = page.LastSearchPosition,
-                LastMatch = page.LastMatch
-            };
-
-            return newPage;
+            // page instances are never shared between callers, so the caller's instance can move to the writable copy
+            page.MakeWritable(_tx.ModifyPage(page.PageNumber).Pointer);
+            return page;
         }
 
         private bool ShouldPromotePage(FixedSizeTreePage<TVal> page, FixedSizeTreePage<TVal> parentPage)
@@ -551,7 +589,7 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> PageSplit(FixedSizeTreePage<TVal>page, TVal key)
         {
-            FixedSizeTreePage<TVal> parentPage = _cursor.Count > 0 ? _cursor.Pop() : null;
+            FixedSizeTreePage<TVal> parentPage = _descentDepth > 0 ? _descentPages[--_descentDepth] : null;
             if (parentPage == null) // root split
             {
                 parentPage = NewPage(FixedSizeTreePageFlags.Branch, page.PageNumber);
@@ -896,28 +934,17 @@ namespace Voron.Data.Fixed
         public bool Contains(TVal key)
         {
             byte* dataStart;
-            switch (Type)
+            switch (ReadHeader(out var headerPtr))
             {
                 case null:
                     return false;
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    var embeddedPtr = _parent.DirectRead(_treeName);
-                    var header = (FixedSizeTreeHeader.Embedded*)embeddedPtr;
-                    dataStart = embeddedPtr + sizeof(FixedSizeTreeHeader.Embedded);
+                    var header = (FixedSizeTreeHeader.Embedded*)headerPtr;
+                    dataStart = headerPtr + sizeof(FixedSizeTreeHeader.Embedded);
                     BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
                     return _lastMatch == 0;
                 case RootObjectType.FixedSizeTree:
-                    var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
-
-                    while (page.IsLeaf == false)
-                    {
-                        BinarySearch(page, key);
-                        if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                            page.LastSearchPosition--;
-                        var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                        page = GetReadOnlyPage(childPageNumber);
-                    }
+                    var page = DescendToLeaf(((FixedSizeTreeHeader.Large*)headerPtr)->RootPageNumber, key, ref _descentPages, out _);
                     dataStart = page.Pointer + page.StartPosition;
 
                     BinarySearch(dataStart, page.NumberOfEntries, key, _entrySize);
@@ -933,7 +960,7 @@ namespace Voron.Data.Fixed
                 throw new InvalidOperationException("Cannot delete a value in a read only transaction");
 
             _changes++;
-            switch (Type)
+            switch (ReadHeader(out var header))
             {
                 case null:
                     // nothing to do
@@ -941,7 +968,7 @@ namespace Voron.Data.Fixed
                 case RootObjectType.EmbeddedFixedSizeTree:
                     return RemoveEmbeddedEntry(key);
                 case RootObjectType.FixedSizeTree:
-                    return RemoveLargeEntry(key);
+                    return RemoveLargeEntry(key, ((FixedSizeTreeHeader.Large*)header)->RootPageNumber);
                 default:
                     throw new ArgumentOutOfRangeException(Type?.ToString());
             }
@@ -954,9 +981,9 @@ namespace Voron.Data.Fixed
             public bool TreeRemoved;
         }
 
-        private DeletionResult RemoveLargeEntry(TVal key)
+        private DeletionResult RemoveLargeEntry(TVal key, long rootPageNumber)
         {
-            var page = FindPageFor(key);
+            var page = FindPageFor(key, rootPageNumber, ref _descentPages, out _descentDepth);
             if (page.LastMatch != 0)
                 return new DeletionResult();
 
@@ -982,7 +1009,7 @@ namespace Voron.Data.Fixed
 
         private FixedSizeTreePage<TVal> RebalancePage(FixedSizeTreePage<TVal> page)
         {
-            if (_cursor.Count == 0)
+            if (_descentDepth == 0)
             {
                 return RebalanceRootPage(page);
             }
@@ -998,7 +1025,7 @@ namespace Voron.Data.Fixed
 
             // we determined that we require rebalancing...
 
-            var parentPage = _cursor.Pop();
+            var parentPage = _descentPages[--_descentDepth];
             parentPage = ModifyPage(parentPage);
 
             if (page.NumberOfEntries == 0)// empty page, delete it and fixup the parent
@@ -1303,15 +1330,13 @@ namespace Voron.Data.Fixed
 
         public byte* ReadPtr(TVal key, out int size)
         {
-            byte* ptr;
-            switch (Type)
+            switch (ReadHeader(out var ptr))
             {
                 case null:
                     size = 0;
                     return null;
 
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    ptr = _parent.DirectRead(_treeName);
                     var header = (FixedSizeTreeHeader.Embedded*)ptr;
                     var dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
                     var pos = BinarySearch(dataStart, header->NumberOfEntries, key, _entrySize);
@@ -1322,20 +1347,9 @@ namespace Voron.Data.Fixed
                     break;
 
                 case RootObjectType.FixedSizeTree:
-                    var largePtr = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
-
-                    var page = GetReadOnlyPage(largePtr->RootPageNumber);
-                    while (page.IsLeaf == false)
-                    {
-                        BinarySearch(page, key);
-                        if (page.LastMatch < 0 && page.LastSearchPosition > 0)
-                            page.LastSearchPosition--;
-                        var childPageNumber = page.GetEntry(page.LastSearchPosition)->PageNumber;
-                        page = GetReadOnlyPage(childPageNumber);
-                    }
+                    var page = FindPageFor(key, ((FixedSizeTreeHeader.Large*)ptr)->RootPageNumber, ref _descentPages, out _);
                     dataStart = page.Pointer + page.StartPosition;
 
-                    BinarySearch(page, key);
                     if (_lastMatch != 0)
                         goto case null;
 
@@ -1348,6 +1362,41 @@ namespace Voron.Data.Fixed
 
             size = _valSize;
             return ptr;
+        }
+
+        /// <summary>
+        /// The smallest key in the tree, without creating an iterator.
+        /// </summary>
+        public bool TryGetFirstKey(out TVal key) => TryGetEdgeKey(last: false, out key);
+
+        /// <summary>
+        /// The largest key in the tree, without creating an iterator.
+        /// </summary>
+        public bool TryGetLastKey(out TVal key) => TryGetEdgeKey(last: true, out key);
+
+        private bool TryGetEdgeKey(bool last, out TVal key)
+        {
+            switch (ReadHeader(out var header))
+            {
+                case RootObjectType.EmbeddedFixedSizeTree:
+                    var numberOfEntries = ((FixedSizeTreeHeader.Embedded*)header)->NumberOfEntries;
+                    if (numberOfEntries == 0)
+                        break;
+
+                    var dataStart = header + sizeof(FixedSizeTreeHeader.Embedded);
+                    key = FixedSizeTreePage<TVal>.GetEntry(dataStart, last ? numberOfEntries - 1 : 0, _entrySize)->GetKey<TVal>();
+                    return true;
+
+                case RootObjectType.FixedSizeTree:
+                    var page = DescendToLeaf(((FixedSizeTreeHeader.Large*)header)->RootPageNumber, last ? TVal.MaxValue : TVal.MinValue, ref _descentPages, out _);
+                    System.Diagnostics.Debug.Assert(page.NumberOfEntries > 0, $"Leaf {page.PageNumber} of fixed size tree {Name} has no entries");
+
+                    key = page.GetKey(last ? page.NumberOfEntries - 1 : 0);
+                    return true;
+            }
+
+            key = default;
+            return false;
         }
 
         public ByteStringContext.ExternalScope Read(TVal key, out Slice slice)
@@ -1364,17 +1413,46 @@ namespace Voron.Data.Fixed
 
         public IFixedSizeIterator Iterate(bool prefetch = false)
         {
-            switch (Type)
+            var type = ReadHeader(out var header);
+            switch (type)
             {
                 case null:
                     return NullIterator.Instance;
                 case RootObjectType.EmbeddedFixedSizeTree:
-                    return new EmbeddedIterator(this);
+                    var embedded = _embeddedIterator;
+                    if (embedded == null)
+                        return _embeddedIterator = new EmbeddedIterator(this);
+
+                    if (embedded.IsDisposed == false)
+                    {
+                        ThrowAnotherIteratorIsOpen();
+                        return new EmbeddedIterator(this);
+                    }
+
+                    embedded.Reuse(header);
+                    return embedded;
                 case RootObjectType.FixedSizeTree:
-                    return new LargeIterator(this, prefetch);
+                    var large = _largeIterator;
+                    if (large == null)
+                        return _largeIterator = new LargeIterator(this, prefetch);
+
+                    if (large.IsDisposed == false)
+                    {
+                        ThrowAnotherIteratorIsOpen();
+                        return new LargeIterator(this, prefetch);
+                    }
+
+                    large.Reuse(prefetch);
+                    return large;
                 default:
-                    throw new ArgumentOutOfRangeException(Type?.ToString());
+                    throw new ArgumentOutOfRangeException(type.ToString());
             }
+        }
+
+        [Conditional("DEBUG")]
+        private void ThrowAnotherIteratorIsOpen()
+        {
+            throw new InvalidOperationException($"Fixed size tree {Name} already has an open iterator. No code path opens two at once, if one does it gets an iterator that is not reused");
         }
 
         public long NumberOfEntries
@@ -1485,23 +1563,23 @@ namespace Voron.Data.Fixed
                 }
             }
 
-            var page = FindPageFor(value);
+            var page = FindPageFor(value, ref _descentPages, out var depth);
             if (page.LastMatch >= 0)
                 page.LastSearchPosition++;
 
             var state = new RemainingNumberOfEntriesState { Start = overallDuration, EstimationAccuracy = accuracy };
-            var maxDepth = _cursor.Count + 1;
+            var maxDepth = depth + 1;
             var count = GetRemainingNumberOfEntriesFor(page, maxDepth, maxDepth, ref state);
-            while (_cursor.TryPop(out page))
+            while (depth > 0)
             {
+                page = _descentPages[--depth];
                 System.Diagnostics.Debug.Assert(page.IsBranch);
                 page.LastSearchPosition++;
 
                 if (page.LastSearchPosition == page.NumberOfEntries)
                     continue;
 
-                var depth = _cursor.Count + 1;
-                long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth, maxDepth, ref state);
+                long recursivePageCount = GetRemainingNumberOfEntriesFor(page, depth + 1, maxDepth, ref state);
                 count += recursivePageCount;
             }
 

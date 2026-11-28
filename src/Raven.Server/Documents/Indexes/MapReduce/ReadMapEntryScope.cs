@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Voron.Data.Compression;
 using Voron.Util;
 
@@ -6,25 +6,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 {
     public unsafe struct ReadMapEntryScope : IDisposable
     {
-        public ReadMapEntryScope(DecompressedReadResult read)
+        public ReadMapEntryScope(in DecompressedValue read)
         {
-            _read = read;
+            _decompressedPage = read.Page;
             Data = PtrSize.Create(read.Reader.Base, read.Reader.Length);
         }
 
         public ReadMapEntryScope(PtrSize data)
         {
             Data = data;
-            _read = null;
+            _decompressedPage = null;
         }
 
         public readonly PtrSize Data;
 
-        private readonly DecompressedReadResult _read;
+        private readonly DecompressedLeafPage _decompressedPage;
 
         public void Dispose()
         {
-            _read?.Dispose();
+            _decompressedPage?.Dispose();
         }
     }
 }

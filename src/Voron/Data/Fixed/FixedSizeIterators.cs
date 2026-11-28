@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Sparrow;
@@ -88,22 +88,30 @@ namespace Voron.Data.Fixed
             private readonly FixedSizeTree<TVal> _fst;
             private readonly ByteStringContext _allocator;
             private long _pos;
-            private readonly FixedSizeTreeHeader.Embedded* _header;
-            private readonly byte* _dataStart;
-            private readonly int _changesAtStart;
+            private FixedSizeTreeHeader.Embedded* _header;
+            private byte* _dataStart;
+            private int _changesAtStart;
+            private bool _disposed;
 
             public EmbeddedIterator(FixedSizeTree<TVal> fst)
             {
                 _fst = fst;
                 _allocator = fst._tx.Allocator;
+                Reuse(_fst._parent.DirectRead(_fst._treeName));
+            }
+
+            internal void Reuse(byte* header)
+            {
+                _disposed = false;
                 _changesAtStart = _fst._changes;
-                var ptr = _fst._parent.DirectRead(_fst._treeName);
-                _header = (FixedSizeTreeHeader.Embedded*)ptr;
-                _dataStart = ptr + sizeof(FixedSizeTreeHeader.Embedded);
+                _pos = 0;
+                _header = (FixedSizeTreeHeader.Embedded*)header;
+                _dataStart = header + sizeof(FixedSizeTreeHeader.Embedded);
             }
 
             public bool SeekToLast()
             {
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
                 if (_header == null)
                     return false;
                 _pos = _header->NumberOfEntries - 1;
@@ -112,6 +120,7 @@ namespace Voron.Data.Fixed
 
             public bool Seek(TVal key)
             {
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
                 if (_header == null)
                     return false;
                 _pos = _fst.BinarySearch(_dataStart, _header->NumberOfEntries, key, _fst._entrySize);
@@ -183,6 +192,7 @@ namespace Voron.Data.Fixed
 
             public bool MoveNext()
             {
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
                 AssertNoChanges();
                 return ++_pos < _header->NumberOfEntries;
             }
@@ -203,8 +213,11 @@ namespace Voron.Data.Fixed
                 return _pos < _header->NumberOfEntries;
             }
 
+            internal bool IsDisposed => _disposed;
+
             public void Dispose()
             {
+                _disposed = true;
             }
         }
 
@@ -212,16 +225,28 @@ namespace Voron.Data.Fixed
         {
             private readonly FixedSizeTree<TVal> _parent;
             private readonly ByteStringContext _allocator;
-            private readonly bool _prefetch;
+            private bool _prefetch;
             private FixedSizeTreePage<TVal> _currentPage;
             private int _changesAtStart;
+            private bool _disposed;
+
+            private PagesByLevel _pagesByLevel;
+            private int _depth;
 
             public LargeIterator(FixedSizeTree<TVal> parent, bool prefetch = false)
             {
                 _parent = parent;
-                _allocator = parent._tx.Allocator;               
+                _allocator = parent._tx.Allocator;
+                Reuse(prefetch);
+            }
+
+            internal void Reuse(bool prefetch)
+            {
+                _disposed = false;
                 _changesAtStart = _parent._changes;
                 _prefetch = prefetch;
+                _currentPage = null;
+                _depth = 0;
             }
 
             private void AssertNoChanges()
@@ -230,26 +255,32 @@ namespace Voron.Data.Fixed
                     throw new InvalidOperationException("You cannot perform modifications to tree when iterator is opened.");
             }
 
+            internal bool IsDisposed => _disposed;
+
             public void Dispose()
             {
-
+                _disposed = true;
+                _currentPage = null;
             }
 
             public bool Seek(TVal key)
             {
-                _currentPage = _parent.FindPageFor(key);
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
+                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel, out _depth);
                 return _currentPage.LastMatch <= 0 || MoveNext();
             }
 
             public bool SeekBackward(TVal key)
             {
-                _currentPage = _parent.FindPageFor(key);
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
+                _currentPage = _parent.FindPageFor(key, ref _pagesByLevel, out _depth);
                 return _currentPage.LastMatch >= 0 || MovePrev();
             }
 
             public bool SeekToLast()
             {
-                _currentPage = _parent.FindPageFor(TVal.MaxValue);
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
+                _currentPage = _parent.FindPageFor(TVal.MaxValue, ref _pagesByLevel, out _depth);
                 return true;
             }
 
@@ -284,7 +315,6 @@ namespace Voron.Data.Fixed
                 return _currentPage.Pointer + _currentPage.StartPosition + (_parent._entrySize * _currentPage.LastSearchPosition) + sizeof(long);
             }
 
-
             private struct TreePagePrefetcher : IEnumerator<long>
             {
                 private readonly FixedSizeTreePage<TVal> _page;
@@ -318,6 +348,7 @@ namespace Voron.Data.Fixed
 
             public bool MoveNext()
             {
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
                 AssertNoChanges();
 
                 while (_currentPage != null)
@@ -328,8 +359,6 @@ namespace Voron.Data.Fixed
                         // run out of entries, need to select the next page...
                         while (_currentPage.IsBranch)
                         {
-                            _parent._cursor.Push(_currentPage);
-
                             if (_prefetch)
                             {
                                 var pager = _parent._tx.DataPager;
@@ -337,15 +366,15 @@ namespace Voron.Data.Fixed
                             }
 
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
-                            _currentPage = _parent.GetReadOnlyPage(childParentNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, ++_depth);
 
                             _currentPage.LastSearchPosition = 0;
                         }
                         return true;// there is another entry in this page
                     }
-                    if (_parent._cursor.Count == 0)
+                    if (_depth == 0)
                         break;
-                    _currentPage = _parent._cursor.Pop();
+                    _currentPage = _pagesByLevel[--_depth];
                 }
                 _currentPage = null;
 
@@ -374,7 +403,7 @@ namespace Voron.Data.Fixed
                         // 2. Update its LastSearchPosition to point to the correct entry
 
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
-                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, currentPageHeader.PageNumber, _depth);
 
                         _currentPage.LastSearchPosition = lastSearchPosition;
 
@@ -383,14 +412,15 @@ namespace Voron.Data.Fixed
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_depth == 0)
                             return false;
-                        
+
+                        var parent = _pagesByLevel[_depth - 1];
                         parent.LastSearchPosition--;
                         
                         if (parent.LastSearchPosition < 0)
                         {
-                            _parent._cursor.Pop();
+                            _depth--;
                             continue;
                         }
                         
@@ -398,13 +428,11 @@ namespace Voron.Data.Fixed
                         var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
                         if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
-                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+                            var childPage = _parent.PageAtLevel(ref _pagesByLevel, nextChildPageNumber, _depth++);
 
                             // we move one beyond the end of elements because in both cases
                             // (branch and leaf) we first decrement and then run it
                             childPage.LastSearchPosition = childPage.NumberOfEntries;
-
-                            _parent._cursor.Push(childPage);
                             continue;
                         }
 
@@ -442,7 +470,7 @@ namespace Voron.Data.Fixed
                         // 3. Check if we've reached the end of the current page, and if so, move to the next page
 
                         if (_currentPage.PageNumber != currentPageHeader.PageNumber)
-                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, currentPageHeader.PageNumber, _depth);
 
                         _currentPage.LastSearchPosition = lastSearchPosition;
 
@@ -453,14 +481,15 @@ namespace Voron.Data.Fixed
                     
                     while (true)
                     {
-                        if (_parent._cursor.TryPeek(out var parent) == false)
+                        if (_depth == 0)
                             return false;
-                        
+
+                        var parent = _pagesByLevel[_depth - 1];
                         parent.LastSearchPosition++;
                         
                         if (parent.LastSearchPosition >= parent.NumberOfEntries)
                         {
-                            _parent._cursor.Pop();
+                            _depth--;
                             continue;
                         }
                         
@@ -468,12 +497,11 @@ namespace Voron.Data.Fixed
                         var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
                         if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
-                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+                            var childPage = _parent.PageAtLevel(ref _pagesByLevel, nextChildPageNumber, _depth++);
 
                             // we set it to negative one so the first
                             // call will increment that to zero
                             childPage.LastSearchPosition = -1;
-                            _parent._cursor.Push(childPage);
                             continue;
                         }
 
@@ -489,6 +517,7 @@ namespace Voron.Data.Fixed
 
             public bool MovePrev()
             {
+                System.Diagnostics.Debug.Assert(_disposed == false, "The iterator was disposed");
                 AssertNoChanges();
 
                 if (_currentPage == null)
@@ -502,23 +531,21 @@ namespace Voron.Data.Fixed
                         // run out of entries, need to select the next page...
                         while (_currentPage.IsBranch)
                         {
-                            _parent._cursor.Push(_currentPage);
                             var childParentNumber = _currentPage.GetEntry(_currentPage.LastSearchPosition)->PageNumber;
-                            _currentPage = _parent.GetReadOnlyPage(childParentNumber);
+                            _currentPage = _parent.PageAtLevel(ref _pagesByLevel, childParentNumber, ++_depth);
 
                             _currentPage.LastSearchPosition = _currentPage.NumberOfEntries - 1;
                         }
                         return true;// there is another entry in this page
                     }
-                    if (_parent._cursor.Count == 0)
+                    if (_depth == 0)
                         break;
-                    _currentPage = _parent._cursor.Pop();
+                    _currentPage = _pagesByLevel[--_depth];
                 }
                 _currentPage = null;
 
                 return false;
             }
-
 
             public ValueReader CreateReaderForCurrent()
             {

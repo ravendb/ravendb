@@ -90,7 +90,8 @@ namespace Voron.Data.BTrees
                 state.Flags |= TreeFlags.MultiValueTrees;
             }
 
-            var page = FindPageFor(key, out _);
+            using var rental = RentPage(out var leafInstance);
+            var page = FindPageFor(key, out _, leafInstance: leafInstance);
             if (page is not { LastMatch: 0 }) // Key is not in the tree. Use an optimized path for this scenario.
             {
                 MultiBulkAddOnNewValue(key, values, maxNodeSize);
@@ -234,7 +235,8 @@ namespace Voron.Data.BTrees
                 state.Flags |= TreeFlags.MultiValueTrees;
             }
 
-            var page = FindPageFor(key, out _);
+            using var rental = RentPage(out var leafInstance);
+            var page = FindPageFor(key, out _, leafInstance: leafInstance);
             if (page == null || page.LastMatch != 0)
             {
                 MultiAddOnNewValue(key, value, maxNodeSize);
@@ -442,7 +444,8 @@ namespace Voron.Data.BTrees
 
         public void MultiDelete(Slice key, Slice value)
         {
-            var page = FindPageFor(key, out TreeNodeHeader* _);
+            using var rental = RentPage(out var leafInstance);
+            var page = FindPageFor(key, out TreeNodeHeader* _, leafInstance: leafInstance);
             if (page == null || page.LastMatch != 0)
             {
                 return; //nothing to delete - key not found
@@ -508,7 +511,8 @@ namespace Voron.Data.BTrees
 
         public long MultiCount(Slice key)
         {
-            var page = FindPageFor(key, out TreeNodeHeader* node);
+            using var rental = RentPage(out var leafInstance);
+            var page = FindPageFor(key, out TreeNodeHeader* node, leafInstance: leafInstance);
             if (page == null || page.LastMatch != 0)
                 return 0;
 
@@ -536,7 +540,8 @@ namespace Voron.Data.BTrees
 
         public IIterator MultiRead(Slice key)
         {
-            var page = FindPageFor(key, out TreeNodeHeader* node);
+            using var rental = RentPage(out var leafInstance);
+            var page = FindPageFor(key, out TreeNodeHeader* node, leafInstance: leafInstance);
             if (page == null || page.LastMatch != 0)
                 return new EmptyIterator();
 

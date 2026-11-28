@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -140,41 +140,6 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public sealed class MetadataFieldCache
-        {
-            public readonly LazyStringValue Id;
-            public readonly LazyStringValue Key;
-            public readonly LazyStringValue Collection;
-
-            public MetadataFieldCache(LazyStringValue id, LazyStringValue key, LazyStringValue collection)
-            {
-                Id = id;
-                Key = key;
-                Collection = collection;
-            }
-        }
-
-        private MetadataFieldCache _metadataFields;
-
-        public MetadataFieldCache MetadataFields
-        {
-            get
-            {
-                if (_metadataFields == null)
-                {
-                    var context = this.IndexContext;
-                    _metadataFields = new MetadataFieldCache(
-                        id: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Id),
-                        key: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key),
-                        collection: context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Collection)
-                    );
-                }
-
-                return _metadataFields;
-            }
-        }
-
-
         public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
         {
             if (document == null)
@@ -253,9 +218,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 // and will be disposed there.
 
                 var idSlice = GetIdSlice(id);
-                var references = GetReferencesForItem(idSlice);
-
-                references.Add(keySlice);
+                GetReferences().Add(idSlice, keySlice);
 
                 LoadedItemsCount++;
 
@@ -359,9 +322,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 // and will be disposed there.
 
                 var idSlice = GetIdSlice(id);
-                var references = GetCompareExchangeReferencesForItem(idSlice);
-
-                references.Add(keySlice);
+                GetCompareExchangeReferences().Add(idSlice, keySlice);
 
                 LoadedItemsCount++;
 
@@ -476,20 +437,18 @@ namespace Raven.Server.Documents.Indexes.Static
             Current = null;
         }
 
-        private List<Slice> GetReferencesForItem(Slice key)
+        private ReferenceContainer GetReferences()
         {
             ReferencesByCollection ??= new(StringComparer.OrdinalIgnoreCase);
             ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(ReferencesByCollection, SourceCollection, out _);
-            container ??= new ReferenceContainer();
-            return container.GetOrCreateValuesContainer(key);
+            return container ??= new ReferenceContainer();
         }
 
-        private List<Slice> GetCompareExchangeReferencesForItem(Slice key)
+        private ReferenceContainer GetCompareExchangeReferences()
         {
             ReferencesByCollectionForCompareExchange ??= new(StringComparer.OrdinalIgnoreCase);
             ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(ReferencesByCollectionForCompareExchange, SourceCollection, out _);
-            container ??= new ReferenceContainer();
-            return container.GetOrCreateValuesContainer(key);
+            return container ??= new ReferenceContainer();
         }
         
          public bool TryGetLoadVectorField(string fieldName, out IndexField vectorField)

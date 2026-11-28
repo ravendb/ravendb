@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Sparrow;
@@ -9,8 +9,8 @@ namespace Voron.Data.Fixed
     public sealed unsafe class FixedSizeTreePage<TVal>
         where TVal : unmanaged, IBinaryNumber<TVal>, IMinMaxValue<TVal>
     {
-        private readonly byte* _ptr;
-        private readonly int _entrySize;
+        private byte* _ptr;
+        private int _entrySize;
         private readonly int _pageSize;
 
         public int LastMatch;
@@ -26,6 +26,21 @@ namespace Voron.Data.Fixed
                 _entrySize = FixedSizeTree<TVal>.BranchEntrySize;
             else
                 _entrySize = entrySize;
+        }
+
+        internal void Reuse(byte* b, int entrySize)
+        {
+            _ptr = b;
+            _entrySize = IsBranch ? FixedSizeTree<TVal>.BranchEntrySize : entrySize;
+            LastMatch = 0;
+            LastSearchPosition = 0;
+            Dirty = false;
+        }
+
+        internal void MakeWritable(byte* writableCopy)
+        {
+            _ptr = writableCopy;
+            Dirty = true;
         }
 
         private FixedSizeTreePageHeader* Header

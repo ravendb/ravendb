@@ -1,4 +1,4 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 
@@ -9,11 +9,13 @@ namespace Raven.Server.Documents.Schemas
 
         internal static readonly TableSchema CountersSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.Counters,
             TableType = (byte)TableType.Counters
         };
 
         internal static readonly TableSchema ShardingCountersSchemaBase = new TableSchema
         {
+            GlobalTableIndex = (int)GlobalTable.Counters,
             TableType = (byte)TableType.Counters
         };
 

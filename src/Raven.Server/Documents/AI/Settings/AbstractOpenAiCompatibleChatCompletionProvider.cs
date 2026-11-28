@@ -151,7 +151,7 @@ internal abstract partial class AbstractOpenAiCompatibleChatCompletionProvider :
         writer.WriteArray(ctx, ChatCompletionClient.Constants.RequestFields.Messages, NormalizeMessages(ctx, request).Messages, (w, context, message) =>
         {
             w.WriteStartObject();
-            w.WriteObjectWithFilter((BlittableJsonReaderObject)message, filterProperties.Contains);
+            w.WritePropertiesWithFilter(((BlittableJsonReaderObject)message).GetView(), filterProperties.Contains);
             w.WriteEndObject();
         });
 

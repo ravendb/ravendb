@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Buffers.Text;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -6,7 +7,9 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Sparrow.Compression;
 using Sparrow.Extensions;
+using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -88,6 +91,9 @@ namespace Sparrow.Json
         private protected int _pos;
         private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
 
+        // the name given to a property filter, valid only during the call (the filters only compare it)
+        private LazyStringValue _filterPropertyName;
+
         protected AbstractBlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
@@ -112,46 +118,208 @@ namespace Sparrow.Json
                 return;
             }
 
-            WriteStartObject();
-
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            using (var buffer = obj.GetPropertiesByInsertionOrder())
-            {
-                for (int i = 0; i < buffer.Size; i++)
-                {
-                    if (i != 0)
-                    {
-                        WriteComma();
-                    }
-
-                    obj.GetPropertyByIndex(buffer.Properties[i], ref prop);
-                    WritePropertyName(prop.Name);
-
-                    WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
-            }
-
-            WriteEndObject();
+            WriteObject(obj.GetView());
         }
 
         private void WriteArrayToStream(BlittableJsonReaderArray blittableArray)
         {
-            WriteStartArray();
-            var length = blittableArray.Length;
-            for (var i = 0; i < length; i++)
-            {
-                var propertyValueAndType = blittableArray.GetValueTokenTupleByIndex(i);
+            var root = blittableArray.GetView(out var offsetSize);
+            WriteArray(root, blittableArray.DataStart, offsetSize);
+        }
 
-                if (i != 0)
+        /// <summary>
+        /// Writes the properties of obj in the order of their names, without the braces, skipping the ones the filter matches.
+        /// </summary>
+        /// <returns>true if a property was written</returns>
+        internal bool WritePropertiesWithFilter(in BlittableJsonReaderObject.View obj, Func<LazyStringValue, bool> filter)
+        {
+            var properties = obj.GetProperties(out var count);
+            var propertyEntrySize = obj.PropertyEntrySize;
+            var first = true;
+            for (int i = 0; i < count; i++)
+            {
+                var entry = properties + i * propertyEntrySize;
+                if (filter != null)
                 {
-                    WriteComma();
+                    obj.GetProperty(entry, out _, out var propertyId);
+                    var name = obj.GetPropertyName(propertyId, out var nameSize);
+                    _filterPropertyName ??= new LazyStringValue(null, null, 0, _context);
+                    _filterPropertyName.Renew(null, name, nameSize, _context);
+                    if (filter(_filterPropertyName))
+                        continue;
                 }
 
-                // write field value
-                WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1);
+                if (first == false)
+                    WriteComma();
+                first = false;
+
+                WriteProperty(obj, entry);
+            }
+
+            return first == false;
+        }
+
+        private void WriteObject(in BlittableJsonReaderObject.View obj)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            WriteStartObject();
+            WriteProperties(obj, skipIndex: -1);
+            WriteEndObject();
+        }
+
+        private const int MaxPropertiesOnStack = 64;
+
+        /// <summary>
+        /// Writes the properties of obj in insertion order, without the braces, skipping the property at skipIndex.
+        /// </summary>
+        /// <returns>true if a property was written</returns>
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
+        internal bool WriteProperties(in BlittableJsonReaderObject.View obj, int skipIndex)
+        {
+            var properties = obj.GetProperties(out var count);
+            if (count == 0)
+                return false;
+
+            // the order and the offsets it is sorted by; every nesting level has its own
+            int[] rented = null;
+            Span<int> buffer = count <= MaxPropertiesOnStack
+                ? stackalloc int[2 * MaxPropertiesOnStack]
+                : rented = ArrayPool<int>.Shared.Rent(2 * count);
+            try
+            {
+                var order = buffer.Slice(0, count);
+                obj.GetPropertiesByInsertionOrder(order, buffer.Slice(count, count));
+
+                var propertyEntrySize = obj.PropertyEntrySize;
+                var first = true;
+                foreach (var index in order)
+                {
+                    if (index == skipIndex)
+                        continue;
+
+                    if (first == false)
+                        WriteComma();
+                    first = false;
+
+                    WriteProperty(obj, properties + index * propertyEntrySize);
+                }
+
+                return first == false;
+            }
+            finally
+            {
+                if (rented != null)
+                    ArrayPool<int>.Shared.Return(rented);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteProperty(in BlittableJsonReaderObject.View obj, byte* entry)
+        {
+            var type = obj.GetProperty(entry, out var position, out var propertyId);
+
+            var name = obj.GetPropertyName(propertyId, out var nameSize);
+            WriteString(name, nameSize, skipEscaping: false);
+            EnsureBuffer(1);
+            _buffer[_pos++] = Colon;
+
+            WriteValue(obj, type, position);
+        }
+
+        private void WriteArray(in BlittableJsonReaderObject.View root, byte* dataStart, int offsetSize)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
+            var count = VariableSizeEncoding.Read<int>(dataStart, out var countSize);
+            var items = dataStart + countSize;
+            var dataStartPosition = (int)(dataStart - root.Mem);
+
+            WriteStartArray();
+            for (int i = 0; i < count; i++)
+            {
+                if (i != 0)
+                    WriteComma();
+
+                var entry = items + i * (offsetSize + 1);
+                var type = (BlittableJsonToken)entry[offsetSize];
+                WriteValue(root, type, dataStartPosition - BlittableJsonReaderBase.ReadNumber(entry, offsetSize));
             }
 
             WriteEndArray();
+        }
+
+        private void WriteValue(in BlittableJsonReaderObject.View root, BlittableJsonToken type, int position)
+        {
+            var value = root.Mem + position;
+            int size, offset;
+            switch (type & BlittableJsonReaderBase.TypesMask)
+            {
+                case BlittableJsonToken.String:
+                    size = VariableSizeEncoding.Read<int>(value, out offset);
+                    WriteString(value + offset, size, skipEscaping: false);
+                    break;
+
+                case BlittableJsonToken.Integer:
+                    WriteInteger(ZigZagEncoding.Decode<long>(value, out _));
+                    break;
+
+                case BlittableJsonToken.LazyNumber:
+                    size = VariableSizeEncoding.Read<int>(value, out offset);
+                    WriteLazyNumber(value + offset, size);
+                    break;
+
+                case BlittableJsonToken.StartObject:
+                    WriteObject(root.Nested(position, type));
+                    break;
+
+                case BlittableJsonToken.EmbeddedBlittable:
+                    size = VariableSizeEncoding.Read<int>(value, out offset);
+                    WriteObject(BlittableJsonReaderObject.View.ForRoot(value + offset, size));
+                    break;
+
+                case BlittableJsonToken.StartArray:
+                    WriteArray(root, value, BlittableJsonReaderBase.ProcessTokenOffsetFlags(type));
+                    break;
+
+                case BlittableJsonToken.CompressedString:
+                    var uncompressedSize = VariableSizeEncoding.Read<int>(value, out offset);
+                    value += offset;
+                    var compressedSize = VariableSizeEncoding.Read<int>(value, out offset);
+                    WriteCompressedString(value + offset, uncompressedSize, compressedSize);
+                    break;
+
+                case BlittableJsonToken.Boolean:
+                    WriteBool(*value == 1);
+                    break;
+
+                case BlittableJsonToken.Null:
+                    WriteNull();
+                    break;
+
+                case BlittableJsonToken.RawBlob:
+                    size = VariableSizeEncoding.Read<int>(value, out offset);
+                    WriteRawString(value + offset, size);
+                    break;
+
+                case BlittableJsonToken.Vector:
+                    WriteVectorToStream(new BlittableJsonReaderVector(value, root.Size - position, _context));
+                    break;
+
+                default:
+                    ThrowUnidentifiedType(type);
+                    break;
+            }
+        }
+
+#if NET6_0_OR_GREATER
+        [DoesNotReturn]
+#endif
+        private static void ThrowUnidentifiedType(BlittableJsonToken type)
+        {
+            throw new DataMisalignedException($"Unidentified Type {type}");
         }
 
         public void WriteValue(BlittableJsonToken token, object val)
@@ -340,13 +508,88 @@ namespace Sparrow.Json
             return size;
         }
 
+#if NET6_0_OR_GREATER
+        [SkipLocalsInit]
+#endif
         public void WriteString(string str, bool skipEscaping = false)
         {
-            using (var lazyStr = _context.GetLazyString(str))
+            if (str == null)
             {
-                WriteString(lazyStr, skipEscaping);
+                WriteNull();
+                return;
+            }
+
+            const int stackBufferSize = 768;
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(str.Length);
+            if (maxByteCount <= stackBufferSize)
+            {
+                var stackBuffer = stackalloc byte[stackBufferSize];
+                WriteString(str, stackBuffer, stackBufferSize, skipEscaping);
+                return;
+            }
+
+            var buffer = ArrayPool<byte>.Shared.Rent(maxByteCount);
+            try
+            {
+                fixed (byte* pBuffer = buffer)
+                    WriteString(str, pBuffer, buffer.Length, skipEscaping);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
             }
         }
+
+        private void WriteString(string str, byte* buffer, int bufferSize, bool skipEscaping)
+        {
+            int size;
+            fixed (char* chars = str)
+                size = Encodings.Utf8.GetBytes(chars, str.Length, buffer, bufferSize);
+
+            if (size == 1 && IsControlCodeCharacter(*buffer))
+            {
+                WriteControlCodeCharacter(*buffer);
+                return;
+            }
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+
+            var remaining = new ReadOnlySpan<byte>(buffer, size);
+            if (skipEscaping == false)
+            {
+                int index;
+                while ((index = StringUtils.IndexOfEscapeCharacter(remaining)) != -1)
+                {
+                    WriteRawString(remaining.Slice(0, index));
+                    WriteEscapeCharacter(_buffer, remaining[index]);
+                    remaining = remaining.Slice(index + 1);
+                }
+            }
+
+            WriteRawString(remaining);
+
+            EnsureBuffer(1);
+            _buffer[_pos++] = Quote;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsControlCodeCharacter(byte b) => b < 32 || b is >= 127 and <= 159;
+
+        private void WriteControlCodeCharacter(byte b)
+        {
+            EnsureBuffer(8);
+            _buffer[_pos++] = Quote;
+            _buffer[_pos++] = (byte)'\\';
+            _buffer[_pos++] = (byte)'u';
+            _buffer[_pos++] = (byte)'0';
+            _buffer[_pos++] = (byte)'0';
+            _buffer[_pos++] = HexDigits[b >> 4];
+            _buffer[_pos++] = HexDigits[b & 0xF];
+            _buffer[_pos++] = Quote;
+        }
+
+        private static ReadOnlySpan<byte> HexDigits => "0123456789ABCDEF"u8;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(LazyStringValue str, bool skipEscaping = false)
@@ -357,17 +600,23 @@ namespace Sparrow.Json
                 return;
             }
 
-            var size = str.Size;
+            WriteString(str.Buffer, str.Size, skipEscaping);
+        }
 
-            if (size == 1 && str.IsControlCodeCharacter(out var b))
+        /// <summary>
+        /// Writes a string whose escape positions are stored after it, as in a blittable.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteString(byte* strBuffer, int size, bool skipEscaping)
+        {
+            if (size == 1 && IsControlCodeCharacter(*strBuffer))
             {
-                WriteString($@"\u{b:X4}", skipEscaping: true);
+                WriteControlCodeCharacter(*strBuffer);
                 return;
             }
 
-            var strBuffer = str.Buffer;
             var escapeSequencePos = size;
-            var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(strBuffer, ref escapeSequencePos);
 
             // We ensure our buffer will have enough space to deal with the whole string.
 
@@ -489,55 +738,58 @@ namespace Sparrow.Json
             throw new InvalidOperationException("Invalid escape char '" + (char)b + "' numeric value is: " + b);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteString(LazyCompressedStringValue str)
         {
-            var strBuffer = str.DecompressToTempBuffer(out AllocatedMemoryData allocated, _context);
+            WriteCompressedString(str.Buffer, str.UncompressedSize, str.CompressedSize);
+        }
 
+        private void WriteCompressedString(byte* strSrcBuffer, int size, int compressedSize)
+        {
+            var decompressed = ArrayPool<byte>.Shared.Rent(size);
             try
             {
-                var strSrcBuffer = str.Buffer;
-
-                var size = str.UncompressedSize;
-                var escapeSequencePos = str.CompressedSize;
-                var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
-
-                // We ensure our buffer will have enough space to deal with the whole string.
-                int bufferSize = 2 * numberOfEscapeSequences + size + 2;
-                if (bufferSize >= JsonOperationContext.MemoryBuffer.DefaultSize)
-                    goto WriteLargeCompressedString; // OK, do it the slow way instead.
-
-                EnsureBuffer(bufferSize);
-
-                _buffer[_pos++] = Quote;
-                while (numberOfEscapeSequences > 0)
+                fixed (byte* decompressedBuffer = decompressed)
                 {
-                    numberOfEscapeSequences--;
-                    var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+                    var strBuffer = decompressedBuffer;
+                    LazyCompressedStringValue.Decompress(strSrcBuffer, compressedSize, strBuffer, size);
 
-                    WriteRawString(strBuffer, bytesToSkip);
+                    var escapeSequencePos = compressedSize;
+                    var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
 
-                    strBuffer += bytesToSkip;
-                    size -= bytesToSkip + 1 /*for the escaped char we skip*/;
-                    var b = *(strBuffer++);
+                    // We ensure our buffer will have enough space to deal with the whole string.
+                    int bufferSize = 2 * numberOfEscapeSequences + size + 2;
+                    if (bufferSize >= JsonOperationContext.MemoryBuffer.DefaultSize)
+                    {
+                        UnlikelyWriteLargeString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size); // OK, do it the slow way instead.
+                        return;
+                    }
 
-                    WriteEscapeCharacter(_buffer, b);
+                    EnsureBuffer(bufferSize);
+
+                    _buffer[_pos++] = Quote;
+                    while (numberOfEscapeSequences > 0)
+                    {
+                        numberOfEscapeSequences--;
+                        var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
+
+                        WriteRawString(strBuffer, bytesToSkip);
+
+                        strBuffer += bytesToSkip;
+                        size -= bytesToSkip + 1 /*for the escaped char we skip*/;
+                        var b = *(strBuffer++);
+
+                        WriteEscapeCharacter(_buffer, b);
+                    }
+
+                    // write remaining (or full string) to the buffer in one shot
+                    WriteRawString(strBuffer, size);
+
+                    _buffer[_pos++] = Quote;
                 }
-
-                // write remaining (or full string) to the buffer in one shot
-                WriteRawString(strBuffer, size);
-
-                _buffer[_pos++] = Quote;
-
-                return;
-
-            WriteLargeCompressedString:
-                UnlikelyWriteLargeString(numberOfEscapeSequences, strSrcBuffer, escapeSequencePos, strBuffer, size);
             }
             finally
             {
-                if (allocated != null) //precaution
-                    _context.ReturnMemory(allocated);
+                ArrayPool<byte>.Shared.Return(decompressed);
             }
         }
 
@@ -935,6 +1187,40 @@ namespace Sparrow.Json
             var lazyStringValue = val.Inner;
             EnsureBuffer(lazyStringValue.Size);
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteLazyNumber(byte* number, int size)
+        {
+            // only NaN and the infinities, or an exponent after the first digit, have a byte above '9' in the first two
+            if (size >= 3 && (number[0] > '9' || number[1] > '9') && TryWriteNonFiniteNumber(new ReadOnlySpan<byte>(number, size)))
+                return;
+
+            EnsureBuffer(size);
+            WriteRawString(number, size);
+        }
+
+        private bool TryWriteNonFiniteNumber(ReadOnlySpan<byte> number)
+        {
+            if (number.SequenceEqual("NaN"u8))
+            {
+                WriteBufferFor(NaNBuffer);
+                return true;
+            }
+
+            if (number.SequenceEqual("Infinity"u8))
+            {
+                WriteBufferFor(PositiveInfinityBuffer);
+                return true;
+            }
+
+            if (number.SequenceEqual("-Infinity"u8))
+            {
+                WriteBufferFor(NegativeInfinityBuffer);
+                return true;
+            }
+
+            return false;
         }
 
         public void WriteBufferFor(ReadOnlySpan<byte> buffer)

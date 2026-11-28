@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -56,7 +56,7 @@ public class CountersRepairTask
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var table = new Table(_database.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
+                    var table = context.Transaction.GetGlobalTable(_database.DocumentsStorage.CountersStorage.CountersSchema);
 
                     while (true)
                     {
@@ -231,7 +231,7 @@ public class CountersRepairTask
         List<IDisposable> memoryScopes = new();
         try
         {
-            var table = new Table(_database.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
+            var table = context.Transaction.GetGlobalTable(_database.DocumentsStorage.CountersStorage.CountersSchema);
 
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
             {

@@ -34,6 +34,8 @@ namespace Voron.Data.Tables
 
         public byte TableType { get; set; }
 
+        public int GlobalTableIndex { get; set; } = -1;
+
         static TableSchema()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))

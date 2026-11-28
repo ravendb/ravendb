@@ -1,4 +1,4 @@
-﻿#if VALIDATE
+#if VALIDATE
 using System.Diagnostics;
 using System.Linq;
 #endif
@@ -8,7 +8,7 @@ using Voron.Impl;
 
 namespace Voron.Data.BTrees
 {
-    public sealed unsafe class ParentPageAction
+    public unsafe struct ParentPageAction
     {
         private readonly TreePage _currentPage;
         private readonly TreePage _parentPage;

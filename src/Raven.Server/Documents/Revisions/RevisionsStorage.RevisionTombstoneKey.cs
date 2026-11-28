@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -65,6 +66,8 @@ namespace Raven.Server.Documents.Revisions
             _scope = DocumentIdWorker.Compatibility.GetLowerIdSliceAndStorageKey(allocator, docId, out LowerId, out Id);
         }
 
+        internal ByteStringContext<ByteStringMemoryCache>.InternalScope Scope => _scope;
+
         public void Dispose() => _scope.Dispose();
     }
 
@@ -90,10 +93,38 @@ namespace Raven.Server.Documents.Revisions
     // Each factory disposes the partially-built scope if building throws, so a throwing build never leaves
     // a half-constructed object behind. LIVE and RECEIVE share `BuildHashedKey`; RECEIVE and EMIT share
     // `ParseAndSliceComposite`.
-    internal sealed unsafe class RevisionTombstoneKeyScope : IDisposable
+    internal unsafe struct RevisionTombstoneKeyScope : IDisposable
     {
         private ByteStringContext _allocator;
-        private List<IDisposable> _scopes;
+
+        // The scopes, kept without boxing and released in the reverse order of registration, so the allocator moves its
+        // pointer back instead of pooling the buffers.
+        private const int MaxInlineRegistrations = 8;
+
+        // one registered scope: its external view (if any) is released before the memory it may point into
+        private struct Registration
+        {
+            public ByteStringContext<ByteStringMemoryCache>.InternalScope Internal;
+            public ByteStringContext<ByteStringMemoryCache>.ExternalScope External;
+            public IDisposable Other;
+
+            public void Dispose()
+            {
+                External.Dispose();
+                Internal.Dispose();
+                Other?.Dispose();
+            }
+        }
+
+        [InlineArray(MaxInlineRegistrations)]
+        private struct Registrations
+        {
+            private Registration _element;
+        }
+
+        private Registrations _registrations;
+        private int _registrationCount;
+        private List<Registration> _overflow;
 
         private Slice _docIdSlice;
         private Slice _trailingSlice;
@@ -282,18 +313,40 @@ namespace Raven.Server.Documents.Revisions
             TombstoneKey = new RevisionTombstoneKey(default, default, rawComposite, _trailingSlice, _docIdSlice);
         }
 
-        internal void Register(IDisposable scope)
+        internal void Register(ByteStringContext<ByteStringMemoryCache>.InternalScope scope) => Add(new Registration { Internal = scope });
+
+        internal void Register(ByteStringContext<ByteStringMemoryCache>.ExternalScope scope) => Add(new Registration { External = scope });
+
+        internal void Register(RevisionKeyHashScope scope) => Add(new Registration { Internal = scope.BufferScope, External = scope.PrefixedHashScope });
+
+        internal void Register(DocIdSlices scope) => Add(new Registration { Internal = scope.Scope });
+
+        internal void Register(IDisposable scope) => Add(new Registration { Other = scope });
+
+        private void Add(in Registration registration)
         {
-            _scopes ??= new List<IDisposable>(capacity: 4);
-            _scopes.Add(scope);
+            if (_registrationCount < MaxInlineRegistrations)
+            {
+                _registrations[_registrationCount++] = registration;
+                return;
+            }
+
+            _overflow ??= new List<Registration>();
+            _overflow.Add(registration);
         }
 
         public void Dispose()
         {
-            if (_scopes == null) return;
-            for (int i = _scopes.Count - 1; i >= 0; i--)
-                _scopes[i].Dispose();
-            _scopes = null;
+            if (_overflow != null)
+            {
+                for (int i = _overflow.Count - 1; i >= 0; i--)
+                    _overflow[i].Dispose();
+                _overflow = null;
+            }
+
+            for (int i = _registrationCount - 1; i >= 0; i--)
+                _registrations[i].Dispose();
+            _registrationCount = 0;
         }
 
         // build the slice [lowerDocId][RS][revCv-or-hash]

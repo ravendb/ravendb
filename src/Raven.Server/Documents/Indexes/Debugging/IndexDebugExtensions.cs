@@ -252,13 +252,17 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             var reduceKeys = new HashSet<ulong>();
             var idToDocIdHash = new Dictionary<long, string>();
+            var entries = new List<MapEntry>();
 
             foreach (var tree in mapEntries)
-                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.GetMapEntries(tree))
+            {
+                MapReduceIndexBase<MapReduceIndexDefinition, IndexField>.GetMapEntries(tree, entries);
+                foreach (var mapEntry in entries)
                 {
                     reduceKeys.Add(mapEntry.ReduceKeyHash);
                     idToDocIdHash[mapEntry.Id] = tree.Name.ToString();
                 }
+            }
 
             foreach (var reduceKeyHash in reduceKeys)
             {

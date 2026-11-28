@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -97,6 +97,7 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                         streamWithTimeout.ReadTimeout = ForTestingPurposes.BulkInsert_StreamReadTimeout;
                     }
                     using (var reader = GetCommandsReader(context, requestBodyStream, buffer, CancellationToken))
+                    using (var modifier = new BlittableMetadataModifier(docsCtx))
                     {
                         await reader.InitAsync();
 
@@ -105,10 +106,13 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                         long totalSize = 0;
                         int operationsCount = 0;
 
+                        // one modifier for all the commands, its memory is released after each one
                         while (true)
                         {
-                            using (var modifier = new BlittableMetadataModifier(docsCtx))
+                            try
                             {
+                                modifier.Reset(docsCtx);  // docsCtx changes for every batch
+
                                 var task = reader.GetCommandAsync(docsCtx, modifier);
                                 if (task == null || task.IsCompleted && task.Result == null)
                                     break;
@@ -179,6 +183,10 @@ internal abstract class AbstractBulkInsertHandlerProcessor<TCommandData, TReques
                                         _progress.TimeSeriesProcessed++;
                                         break;
                                 }
+                            }
+                            finally
+                            {
+                                modifier.ReleaseAllocations();
                             }
                         }
 

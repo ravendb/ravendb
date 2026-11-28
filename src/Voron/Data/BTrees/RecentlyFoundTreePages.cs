@@ -4,112 +4,103 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
-using Sparrow;
 
 namespace Voron.Data.BTrees
 {
+    // Lives in memory of the transaction's allocator, aligned to 64 bytes, see Tree.AllocateRecentlyFoundPages, so it starts
+    // with Initialize. The page numbers are one vector, the small fields of all slots share two cache lines and the keys of each
+    // slot start on a cache line. 1,792 bytes, so with the alignment it fits the allocator's 2 KB blocks.
     [SkipLocalsInit]
-    [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct FoundTreePageDescriptor
-    {
-        public const int MaxCursorPath = 8;
-        public const int MaxKeyStorage = 256;
-
-        public TreePage Page;
-        public long Number;
-
-        // We are setting ourselves to not allow pages whose path sequences are longer than MaxCursorPath, this makes sense
-        // because if we are in such a long sequence, it is highly unlikely this cache would be useful anyway. 
-        public fixed long PathSequence[MaxCursorPath];
-
-        public fixed byte KeyStorage[MaxKeyStorage];
-
-        public SliceOptions FirstKeyOptions;
-        public SliceOptions LastKeyOptions;
-
-        public int PathLength;
-        public int FirstKeyLength;
-        public int LastKeyLength;
-
-        public Span<byte> FirstKey => MemoryMarshal.CreateSpan(ref KeyStorage[0], FirstKeyLength);
-        public Span<byte> LastKey => MemoryMarshal.CreateSpan(ref KeyStorage[FirstKeyLength], LastKeyLength);
-
-        public ReadOnlySpan<long> Cursor => MemoryMarshal.CreateReadOnlySpan(ref PathSequence[0], PathLength);
-    }
-
-    [SkipLocalsInit]
-    public unsafe class RecentlyFoundTreePages()
+    [StructLayout(LayoutKind.Explicit, Size = Size)]
+    public unsafe struct RecentlyFoundTreePages
     {
         // PERF: We are using a cache size that we can access directly from a 512 bits instruction when supported
         // or two 256 instructions.
         public const int CacheSize = 8;
 
-        private Vector512<long> _pageNumberCache = Vector512<long>.AllBitsSet;
-        private Vector256<uint> _pageGenerationCache = Vector256<uint>.Zero;
+        // the first and last key of a page together, a page whose keys are longer is not cached
+        public const int MaxKeyStorage = 192;
 
+        private const int KeysOffset = 256;
+        private const int Size = KeysOffset + CacheSize * MaxKeyStorage;
+
+        // the page number in each slot, -1 for an empty slot
+        [FieldOffset(0)]
+        private Vector512<long> _pageNumbers;
+
+        [FieldOffset(64)]
         private uint _current;
-        private uint _currentGeneration = 1;
 
-        private readonly FoundTreePageDescriptor[] _pageDescriptors = new FoundTreePageDescriptor[CacheSize];
+        [FieldOffset(72)]
+        private Slots _slots;
 
-        private int Compare(ReadOnlySpan<byte> x1, ReadOnlySpan<byte> y1)
+        [FieldOffset(KeysOffset)]
+        private fixed byte _keys[CacheSize * MaxKeyStorage];
+
+        private struct Slot
         {
-            int x1Length = x1.Length;
-            int y1Length = y1.Length;
-            var keyDiff = x1Length - y1Length;
-
-            var r = Memory.CompareInline(x1, y1, Math.Min(x1Length, y1Length));
-            return r != 0 ? r : keyDiff;
+            public byte* PagePointer;
+            public ushort FirstKeyLength;
+            public ushort LastKeyLength;
+            public SliceOptions FirstKeyOptions;
+            public SliceOptions LastKeyOptions;
         }
 
-        public bool TryFind(Slice key, out FoundTreePageDescriptor foundPage)
+        [InlineArray(CacheSize)]
+        private struct Slots
         {
-            return TryFind(key.Options, key.AsReadOnlySpan(), out foundPage);
+            private Slot _element;
         }
 
-        public bool TryFind(SliceOptions keyOption, ReadOnlySpan<byte> key, out FoundTreePageDescriptor foundPage)
+        public void Initialize()
         {
-            Debug.Assert(_currentGeneration > 0);
-            Debug.Assert(_pageDescriptors.Length == CacheSize);
+            Debug.Assert(sizeof(RecentlyFoundTreePages) == Size && sizeof(Slot) == 16);
 
-            var descriptors = _pageDescriptors;
+            _pageNumbers = Vector512<long>.AllBitsSet;
+            _current = 0;
+        }
 
-            uint location = FindMatchingByGeneration(_currentGeneration);
+        private Span<byte> FirstKey(int slot) => MemoryMarshal.CreateSpan(ref _keys[slot * MaxKeyStorage], _slots[slot].FirstKeyLength);
 
-            int i = -1;
+        private Span<byte> LastKey(int slot) =>
+            MemoryMarshal.CreateSpan(ref _keys[slot * MaxKeyStorage + _slots[slot].FirstKeyLength], _slots[slot].LastKeyLength);
+
+        public bool TryFind(Slice key, out byte* pagePointer)
+        {
+            return TryFind(key.Options, key.AsReadOnlySpan(), out pagePointer);
+        }
+
+        public bool TryFind(SliceOptions keyOption, ReadOnlySpan<byte> key, out byte* pagePointer)
+        {
+            uint location = FindUsedSlots();
             while (location != 0)
             {
-                // We will find the next matching item in the cache and advance the pointer to its rightful place.
-                int advance = BitOperations.TrailingZeroCount(location) + 1;
-                i += advance;
+                int i = BitOperations.TrailingZeroCount(location);
+                location &= location - 1;
 
-                // We will advance the bitmask to the location. If there are no more, it will be zero and fail
-                // the re-entry check on the while loop. 
-                location >>= advance;
-
-                ref var current = ref descriptors[i];
+                ref var current = ref _slots[i];
 
                 switch (keyOption)
                 {
                     case SliceOptions.Key:
-                        if ((current.FirstKeyOptions != SliceOptions.BeforeAllKeys && Compare(key, current.FirstKey) < 0))
+                        if (current.FirstKeyOptions != SliceOptions.BeforeAllKeys && key.SequenceCompareTo(FirstKey(i)) < 0)
                             break;
-                        if (current.LastKeyOptions != SliceOptions.AfterAllKeys && Compare(key, current.LastKey) > 0)
+                        if (current.LastKeyOptions != SliceOptions.AfterAllKeys && key.SequenceCompareTo(LastKey(i)) > 0)
                             break;
 
-                        foundPage = current;
+                        pagePointer = current.PagePointer;
                         return true;
                     case SliceOptions.BeforeAllKeys:
                         if (current.FirstKeyOptions == SliceOptions.BeforeAllKeys)
                         {
-                            foundPage = current;
+                            pagePointer = current.PagePointer;
                             return true;
                         }
                         break;
                     case SliceOptions.AfterAllKeys:
                         if (current.LastKeyOptions == SliceOptions.AfterAllKeys)
                         {
-                            foundPage = current;
+                            pagePointer = current.PagePointer;
                             return true;
                         }
 
@@ -119,21 +110,17 @@ namespace Voron.Data.BTrees
                 }
             }
 
-            Unsafe.SkipInit(out foundPage);
+            pagePointer = null;
             return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private uint FindMatchingByGeneration(uint generation)
+        private uint FindUsedSlots()
         {
-            // PERF: We will check the entire small cache for current generation matches all at the same time
-            // by comparing element-wise each item against a constant. Then since we will extract the most 
-            // significant bit which will be set by the result of the .Equals() instruction and with that
-            // we create a bitmask we will use during the search procedure.
-            return Vector256.Equals(
-                _pageGenerationCache,
-                Vector256.Create(generation)
-            ).ExtractMostSignificantBits();
+            // PERF: We check all the slots of the cache at the same time by comparing element-wise each page number
+            // against -1, the value of an empty slot. The most significant bit of each element of the result gives
+            // one bit per slot, and inverting them gives the bitmask of the used slots that the search goes through.
+            return (uint)~Vector512.Equals(_pageNumbers, Vector512<long>.AllBitsSet).ExtractMostSignificantBits() & 0xFF;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -146,107 +133,72 @@ namespace Voron.Data.BTrees
             // to uint because we know there are no more than 8 elements in the cache.
 
             return (uint)Vector512.Equals(
-                        _pageNumberCache,
+                        _pageNumbers,
                         Vector512.Create(pageNumber)
                     ).ExtractMostSignificantBits();
         }
 
+        /// <summary>
+        /// Points the entry of a page that was just modified to its writable copy. Only valid when the modification
+        /// keeps the page's keys inside the range the entry was created for (no split, merge or compression).
+        /// </summary>
+        public void Refresh(long num, byte* pagePointer)
+        {
+            int slot = FindSlot(num);
+            if (slot != -1)
+                _slots[slot].PagePointer = pagePointer;
+        }
+
         public void Reset(long num)
         {
-            Debug.Assert(_currentGeneration > 0);
-            Debug.Assert(_pageDescriptors.Length == CacheSize);
+            int slot = FindSlot(num);
+            if (slot != -1)
+                _pageNumbers = _pageNumbers.WithElement(slot, -1L);
+        }
 
-            var matchesByGeneration = FindMatchingByGeneration(_currentGeneration);
-            var matchesByPageNumber = FindMatchingByPageNumber(num);
+        // The slot of the page, or -1. Add reuses the slot of a page that is already in the cache, so a page is in at most one slot.
+        private int FindSlot(long num)
+        {
+            Debug.Assert(num >= 0);
 
-            var matches = matchesByPageNumber & matchesByGeneration;
+            var matches = FindMatchingByPageNumber(num);
+            Debug.Assert(BitOperations.PopCount(matches) <= 1, $"page {num} is in more than one slot of the cache");
 
-            int i = -1;
-            while (matches != 0)
-            {
-                // We will find the next matching item in the cache and advance the pointer to its rightful place.
-                int advance = BitOperations.TrailingZeroCount(matches) + 1;
-                i += advance;
-
-                Debug.Assert(_pageNumberCache[i] == num);
-
-                // We will advance the bitmask to the location. If there are no more, it will be zero and fail
-                // the re-entry check on the while loop. 
-                matches >>= advance;
-
-                // This just reset the cached page instance. 
-                _pageGenerationCache = _pageGenerationCache.WithElement(i, (uint)0);
-                _pageNumberCache = _pageNumberCache.WithElement(i, -1L);
-            }
-
-            Debug.Assert((FindMatchingByPageNumber(num) & FindMatchingByGeneration(_currentGeneration)) == 0);
+            return matches == 0 ? -1 : BitOperations.TrailingZeroCount(matches);
         }
 
         public void Clear()
         {
-            _pageNumberCache = Vector512<long>.AllBitsSet;
-            _pageGenerationCache = Vector256<uint>.Zero;
-
-            _currentGeneration++;
-            if (_currentGeneration == int.MaxValue)
-                _currentGeneration = 1;
-
-            Debug.Assert(FindMatchingByGeneration(_currentGeneration) == 0);
+            _pageNumbers = Vector512<long>.AllBitsSet;
         }
 
-        public void Add(TreePage page, SliceOptions firstKeyOption, ReadOnlySpan<byte> firstKey, SliceOptions lastKeyOption, ReadOnlySpan<byte> lastKey, ReadOnlySpan<long> cursorPath)
+        public void Add(TreePage page, SliceOptions firstKeyOption, ReadOnlySpan<byte> firstKey, SliceOptions lastKeyOption, ReadOnlySpan<byte> lastKey)
         {
-            // PERF: The idea behind this check is that IF the page has a bigger cursor path than what we support
-            // on the struct, and this been a performance improvement we are going to reject it outright. We will
-            // not try to accomodate variability in this regard in order to avoid allocations.
-            if (cursorPath.Length > FoundTreePageDescriptor.MaxCursorPath ||
-                firstKey.Length + lastKey.Length > FoundTreePageDescriptor.MaxKeyStorage)
+            // PERF: Pages whose boundary keys don't fit in the struct are rejected outright, to avoid allocations.
+            if (firstKey.Length + lastKey.Length > MaxKeyStorage)
                 return;
 
-            Debug.Assert(_currentGeneration > 0);
-            Debug.Assert(_pageDescriptors.Length == CacheSize);
+            var pageNumber = page.PageNumber;
 
-            var currentPage = page.PageNumber;
+            // A page that is in the cache already keeps its slot, so a page is in at most one slot.
+            var match = FindMatchingByPageNumber(pageNumber);
+            var position = match == 0 ? (int)(_current % CacheSize) : BitOperations.TrailingZeroCount(match);
 
-            // If we already have the page in the cache (regardless of generation), we will overwrite it.
-            // This would also ensure that every page whenever it was added to this cache, will have its
-            // bucket assigned until it is removed completely.
-            var match = FindMatchingByPageNumber(currentPage);
-
-            // We will find the next matching item in the cache or get a new location.
-            var position = match == 0 ? _current % CacheSize : (uint)BitOperations.TrailingZeroCount(match);
-
-            ref var current = ref _pageDescriptors[(int)position];
-            current.Page = page;
-            current.Number = page.PageNumber;
-            current.PathLength = cursorPath.Length;
-            if (cursorPath.Length > 0)
-                cursorPath.CopyTo(MemoryMarshal.CreateSpan(ref current.PathSequence[0], cursorPath.Length));
-
-            // We update the information regarding the keys to ensure we can get the Span<byte> representing it.
-            current.FirstKeyLength = firstKey.Length;
+            ref var current = ref _slots[position];
+            current.PagePointer = page.Base;
             current.FirstKeyOptions = firstKeyOption;
-            current.LastKeyLength = lastKey.Length;
+            current.FirstKeyLength = (ushort)firstKey.Length;
             current.LastKeyOptions = lastKeyOption;
+            current.LastKeyLength = (ushort)lastKey.Length;
 
-            if (firstKey.Length > 0)
-            {
-                Debug.Assert(current.FirstKey.Length == firstKey.Length);
-                firstKey.CopyTo(current.FirstKey);
-            }
+            firstKey.CopyTo(FirstKey(position));
+            lastKey.CopyTo(LastKey(position));
 
-            if (lastKey.Length > 0)
-            {
-                Debug.Assert(current.LastKey.Length == lastKey.Length);
-                lastKey.CopyTo(current.LastKey);
-            }
-
-            _pageGenerationCache = _pageGenerationCache.WithElement((int)position, _currentGeneration);
-            _pageNumberCache = _pageNumberCache.WithElement((int)position, page.PageNumber);
+            _pageNumbers = _pageNumbers.WithElement(position, pageNumber);
 
             _current++;
 
-            Debug.Assert(FindMatchingByPageNumber(currentPage) != 0);
+            Debug.Assert(FindMatchingByPageNumber(pageNumber) != 0);
         }
     }
 }

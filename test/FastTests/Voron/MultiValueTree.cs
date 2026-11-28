@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -160,7 +160,7 @@ namespace FastTests.Voron
 
             using (var tx = Env.ReadTransaction())
             {
-                var iterator = tx.ReadTree("foo").MultiRead(CHILDTREE_KEY);
+                using var iterator = tx.ReadTree("foo").MultiRead(CHILDTREE_KEY);
                 iterator.Seek(Slices.BeforeAllKeys);
                 Assert.False(iterator.MoveNext());
             }

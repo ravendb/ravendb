@@ -170,10 +170,10 @@ namespace Raven.Server.Rachis
                 table.Set(tvb);
             }
 
-            if (table.NumberOfEntries > _logHistoryMaxEntries)
+            if (table.NumberOfEntries > _logHistoryMaxEntries &&
+                table.SeekOneForwardFromPrefix(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.BeforeAllKeys, out var oldest))
             {
-                var reader = table.SeekOneForwardFromPrefix(LogHistoryTable.Indexes[LogHistoryIndexSlice], Slices.BeforeAllKeys);
-                table.Delete(reader.Reader.Id);
+                table.Delete(oldest.Id);
             }
         }
 
