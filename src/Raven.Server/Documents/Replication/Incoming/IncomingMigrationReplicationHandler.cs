@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using Raven.Client;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TcpHandlers;
@@ -15,7 +16,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         private readonly long _currentMigrationIndex;
         private ShardedDocumentDatabase _shardedDatabase;
 
-        public const string MigrationTag = "MOVE";
+        public const string MigrationTag = Constants.ChangeVector.MoveTag;
 
         public IncomingMigrationReplicationHandler(TcpConnectionOptions options, ReplicationLatestEtagRequest replicatedLastEtag, ShardReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy, ReplicationLatestEtagRequest.ReplicationType replicationType, long migrationIndex) : base(options, replicatedLastEtag, parent, bufferToCopy, replicationType)
