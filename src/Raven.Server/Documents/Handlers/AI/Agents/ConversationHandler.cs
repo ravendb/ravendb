@@ -1082,12 +1082,16 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return cmd.PutResult.Id;
     }
 
-    private async Task<string> GetDocumentIdAsync()
+    private Task<string> GetDocumentIdAsync() => ResolveConversationIdAsync(server, database, _conversationId, _raftId);
+
+    /// <summary>
+    /// Turns a requested conversation ID into a document ID: a cluster identity ("|"), a server-side ID ("/") or a new GUID (empty).
+    /// </summary>
+    internal static async Task<string> ResolveConversationIdAsync(ServerStore server, DocumentDatabase database, string id, string raftId)
     {
-        var id = _conversationId;
-        if (id[^1] == '|')
+        if (string.IsNullOrEmpty(id) == false && id[^1] == '|')
         {
-            var r = await server.GenerateClusterIdentityAsync(id, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
+            var r = await server.GenerateClusterIdentityAsync(id, database.IdentityPartsSeparator, database.Name, raftId ?? Guid.NewGuid().ToString());
             id = r.ClusterId;
         }
 

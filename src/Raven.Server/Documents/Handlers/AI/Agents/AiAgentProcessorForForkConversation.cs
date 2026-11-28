@@ -30,16 +30,8 @@ internal sealed class AiAgentProcessorForForkConversation : AbstractDatabaseHand
             // Parse the token using the DTO
             var dto = SnapshotTokenDto.Parse(context, snapshotToken);
 
-            // Resolve cluster identity before entering the transaction
-            if (newConversationId?.EndsWith("|") == true)
-            {
-                var r = await RequestHandler.ServerStore.GenerateClusterIdentityAsync(
-                    newConversationId,
-                    RequestHandler.Database.IdentityPartsSeparator,
-                    RequestHandler.Database.Name,
-                    RequestHandler.GetRaftRequestIdFromQuery());
-                newConversationId = r.ClusterId;
-            }
+            newConversationId = await ConversationHandler.ResolveConversationIdAsync(RequestHandler.ServerStore, RequestHandler.Database,
+                newConversationId, RequestHandler.GetRaftRequestIdFromQuery());
 
             // Execute the fork
             var cmd = new ForkConversationCommand(RequestHandler.Database, dto.ConversationId, newConversationId, dto.Revisions, expectedChangeVector);

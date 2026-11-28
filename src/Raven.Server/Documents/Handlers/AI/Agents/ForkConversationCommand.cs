@@ -52,18 +52,10 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        // Step 1: Determine the target conversation ID
+        // Step 1: the processor resolved the target ID with ConversationHandler.ResolveConversationIdAsync
         var targetId = _newConversationId;
-        if (string.IsNullOrEmpty(targetId))
-        {
-            targetId = Guid.NewGuid().ToString();
-        }
-        else if (targetId.EndsWith("/"))
-        {
-            targetId = _database.DocumentsStorage.DocumentPut.BuildDocumentId(targetId, _database.DocumentsStorage.GenerateNextEtag(), out _);
-        }
-        // Cluster identity ("|") must be resolved before reaching this command by the processor
-        Debug.Assert(targetId.EndsWith("|") == false, $"Cluster identity must be resolved before ForkConversationCommand. Got: {targetId}");
+        Debug.Assert(string.IsNullOrEmpty(targetId) == false && targetId[^1] != '|' && targetId[^1] != _database.IdentityPartsSeparator,
+            $"The target conversation ID must be resolved before ForkConversationCommand. Got: '{targetId}'");
 
         if (_expectedChangeVector != null)
             VerifyExpectedChangeVector(context, targetId);
