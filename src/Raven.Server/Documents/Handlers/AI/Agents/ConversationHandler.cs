@@ -58,6 +58,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private bool _cancelPendingActionTools;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
+    private string _snapshotToken;
+    private bool _isNewConversation;
+    private bool _requireSnapshot;
     private string _schema;
     public string Schema => _schema;
     public required RavenServer.AuthenticateConnection Authentication;
@@ -122,6 +125,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }
 
             ValidateParameterValues(_request.Parameters);
+            _isNewConversation = true;
             _document = new ConversationDocument(agentId, _request.Parameters);
             _document.Id = await GetDocumentIdAsync();
 
@@ -160,6 +164,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 _document.ChangeVector = conversation.ChangeVector;
             }
+
+            // Determine whether we need a snapshot, but defer creation until after
+            // TryHandleActionResponses validates the request (so invalid requests
+            // such as ActionResponses + user prompt don't create revisions).
+            _requireSnapshot = ShouldSnapshotBeforeRunning();
         }
 
         if (_debugOverride.HasValue)
@@ -544,6 +553,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 {
                     AddMessageWithAttachmentsName(context, isFirstIteration);
                 }
+
                 isFirstIteration = false;
 
                 bool isNoSchema = r.Type is AiResponseType.Result && _schema == null;
@@ -619,6 +629,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             Response = r.Result,
             Usage = talker.AiUsage,
             ToolsIterations = toolsIterations,
+            SnapshotToken = _snapshotToken
         };
     }
 
@@ -1028,6 +1039,38 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     }
 
 
+    internal static async Task<CreateConversationSnapshotCommand> CreateSnapshotForConversationAsync(DocumentDatabase db, string conversationId)
+    {
+        var cmd = new CreateConversationSnapshotCommand(db, conversationId);
+        await db.TxMerger.Enqueue(cmd);
+        return cmd;
+    }
+
+    private bool ShouldSnapshotBeforeRunning()
+    {
+        if (_request.CreationOptions?.SnapshotBeforeRunning != true || _isNewConversation)
+            return false;
+
+        return RequestBody.HasUserPrompt(_request.Content) ||
+               _request.Attachments is { Count: > 0 } ||
+               _request.AttachmentCommands?.ParsedCommands is { Count: > 0 } ||
+               _request.ArtificialActions is { Length: > 0 };
+    }
+
+    private async Task CreateSnapshotIfRequiredAsync()
+    {
+        if (_requireSnapshot == false)
+            return;
+
+        var snapshot = await CreateSnapshotForConversationAsync(database, _document.Id);
+        _snapshotToken = snapshot.SnapshotToken;
+
+        // The snapshot may put the conversation to add HasRevisions, which changes its change vector. Adopt the new one only
+        // when the snapshot started from the version this run loaded; otherwise the persist reports the concurrent change.
+        if (snapshot.RootChangeVector != null && snapshot.RootChangeVectorBeforeSnapshot == _document.ChangeVector)
+            _document.ChangeVector = snapshot.RootChangeVector;
+    }
+
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
@@ -1040,12 +1083,16 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return cmd.PutResult.Id;
     }
 
-    private async Task<string> GetDocumentIdAsync()
+    private Task<string> GetDocumentIdAsync() => ResolveConversationIdAsync(server, database, _conversationId, _raftId);
+
+    /// <summary>
+    /// Turns a requested conversation ID into a document ID: a cluster identity ("|"), a server-side ID ("/") or a new GUID (empty).
+    /// </summary>
+    internal static async Task<string> ResolveConversationIdAsync(ServerStore server, DocumentDatabase database, string id, string raftId)
     {
-        var id = _conversationId;
-        if (id[^1] == '|')
+        if (string.IsNullOrEmpty(id) == false && id[^1] == '|')
         {
-            var r = await server.GenerateClusterIdentityAsync(id, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
+            var r = await server.GenerateClusterIdentityAsync(id, database.IdentityPartsSeparator, database.Name, raftId ?? Guid.NewGuid().ToString());
             id = r.ClusterId;
         }
 
@@ -1440,6 +1487,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
 
+        await CreateSnapshotIfRequiredAsync();
+
         return await TalkAsync(context, token: token);
     }
 
@@ -1453,7 +1502,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         if (await TryHandleActionResponsesAsync(context, token) is false)
             return AiInternalConversationResult.Default;
-        
+
+        await CreateSnapshotIfRequiredAsync();
+
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
         {
@@ -1493,7 +1544,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
     public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, object response, int toolsIterations)
     {
-        return new DynamicJsonValue
+        var result = new DynamicJsonValue
         {
             [nameof(ConversationResult<object>.ConversationId)] = _conversationId,
             [nameof(ConversationResult<object>.ChangeVector)] = _document.ChangeVector,
@@ -1504,6 +1555,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             [nameof(ConversationResult<object>.Elapsed)] = _elapsed,
             [nameof(ConversationResult<object>.ToolsIterations)] = toolsIterations
         };
+
+        if (_snapshotToken != null)
+            result[nameof(ConversationResult<object>.SnapshotToken)] = _snapshotToken;
+
+        return result;
     }
 
     private IEnumerable<DynamicJsonValue> GetUserActions()

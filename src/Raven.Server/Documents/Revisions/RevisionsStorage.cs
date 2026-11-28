@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -2795,6 +2796,147 @@ namespace Raven.Server.Documents.Revisions
                 var count = CountOfRevisions(context, prefixSlice);
                 return (revisions, count);
             }
+        }
+
+        /// <summary>
+        /// Returns revisions for a document ordered by LastModified descending (newest first).
+        /// When <paramref name="before"/> is specified, only returns revisions with LastModified &lt; before.
+        ///
+        /// Because revisions from multiple cluster nodes may arrive out of order, the local etag
+        /// order can differ from the LastModified order. To provide correct date-based paging,
+        /// this method scans all revisions for the document (reading only LastModified from each
+        /// table entry without materializing full Documents), uses a PriorityQueue to collect the
+        /// top <paramref name="take"/> entries by newest date, then materializes only those.
+        /// </summary>
+        public IEnumerable<Document> GetRevisionsByDate(DocumentsOperationContext context, string id, int take = int.MaxValue, DateTime? before = null)
+        {
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
+            using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
+            using (GetLastKey(context, lowerId, out Slice lastKey))
+            {
+                var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+
+                // Collect the top 'take' revisions by LastModified (newest first).
+                // We use a min-heap (PriorityQueue) so the smallest (oldest) date is always
+                // at the top. When the queue exceeds 'take', we dequeue the oldest, keeping
+                // only the newest 'take' entries. We store the change vector string to
+                // re-fetch the full Document only for the entries that made it through.
+                var heap = new PriorityQueue<string, DateTime>();
+
+                foreach (var tvr in table.SeekBackwardFrom(RevisionsSchema.Indexes[IdAndEtagSlice], prefixSlice, lastKey, 0))
+                {
+                    var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr.Result.Reader);
+
+                    if (before.HasValue && lastModified >= before.Value)
+                        continue;
+
+                    var cv = ReadChangeVectorFromTvr(context, ref tvr.Result.Reader);
+
+                    if (heap.Count < take)
+                    {
+                        heap.Enqueue(cv, lastModified);
+                    }
+                    else
+                    {
+                        heap.EnqueueDequeue(cv, lastModified);
+                    }
+                }
+
+                // Dequeue min-first into an array, filling from the end for newest-first order
+                var results = new string[heap.Count];
+                var idx = results.Length - 1;
+                while (heap.TryDequeue(out var cv, out _))
+                    results[idx--] = cv;
+
+                // Materialize only the selected revisions
+                foreach (var cv in results)
+                {
+                    var revision = GetRevision(context, cv);
+                    if (revision != null)
+                        yield return revision;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The 24-byte primary key of the revision in base64url (32 characters), or null when the revision is missing or is
+        /// still stored under its legacy key, which a snapshot token cannot reference.
+        /// </summary>
+        internal string GetRevisionTokenKey(DocumentsOperationContext context, string changeVector)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            using (BuildRevisionKey(context, changeVector, out RevisionKey key, strict: false))
+            {
+                if (key.PrefixedHash.Size != RevisionKeySize || table.VerifyKeyExists(key.PrefixedHash) == false)
+                    return null;
+
+                return Base64Url.EncodeToString(key.PrefixedHash.AsReadOnlySpan());
+            }
+        }
+
+        /// <summary>
+        /// The revision whose primary key is <paramref name="tokenKey"/> (see <see cref="GetRevisionTokenKey"/>), or null.
+        /// </summary>
+        internal unsafe Document GetRevisionByTokenKey(DocumentsOperationContext context, ReadOnlySpan<char> tokenKey)
+        {
+            Span<byte> bytes = stackalloc byte[RevisionKeySize];
+            if (Base64Url.TryDecodeFromChars(tokenKey, bytes, out var written) == false || written != RevisionKeySize)
+                return null;
+
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            fixed (byte* ptr = bytes)
+            using (Slice.External(context.Allocator, ptr, RevisionKeySize, out Slice key))
+            {
+                if (table.ReadByKey(key, out TableValueReader tvr) == false)
+                    return null;
+
+                return TableValueToRevision(context, ref tvr);
+            }
+        }
+
+        /// <summary>
+        /// Force-creates a revision of the document and returns its change vector, or <c>null</c> if the document does not exist.
+        /// </summary>
+        public string ForceCreateRevision(DocumentsOperationContext context, string documentId)
+        {
+            var document = _documentsStorage.Get(context, documentId);
+            if (document == null)
+                return null;
+
+            ForceCreateRevision(context, document);
+            return document.ChangeVector;
+        }
+
+        /// <summary>
+        /// Creates a revision of the document even when its collection has no revisions configuration. A document without
+        /// <see cref="DocumentFlags.HasRevisions"/> gets the flag first, with a put that creates no revision, and
+        /// <paramref name="document"/> gets its new change vector and last modified. Returns false when a revision with the
+        /// same content already exists.
+        /// </summary>
+        public bool ForceCreateRevision(DocumentsOperationContext context, Document document)
+        {
+            var clonedData = document.Data.Clone(context);
+
+            if (document.Flags.Contain(DocumentFlags.HasRevisions) == false)
+            {
+                document.Flags |= DocumentFlags.HasRevisions;
+
+                var putResult = _documentsStorage.Put(context, document.Id,
+                    document.ChangeVector,
+                    clonedData,
+                    flags: document.Flags,
+                    nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
+
+                document.ChangeVector = putResult.ChangeVector;
+                document.LastModified = putResult.LastModified;
+            }
+
+            return Put(context, document.Id,
+                clonedData,
+                document.Flags,
+                nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
+                context.GetChangeVector(document.ChangeVector),
+                document.LastModified.Ticks);
         }
 
         private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, long start, long take)
