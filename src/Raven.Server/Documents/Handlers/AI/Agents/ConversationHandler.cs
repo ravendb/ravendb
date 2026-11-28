@@ -1039,11 +1039,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     }
 
 
-    internal static async Task<(string Token, DateTime CreatedAt, string RootChangeVector)> CreateSnapshotForConversationAsync(DocumentDatabase db, string conversationId)
+    internal static async Task<CreateConversationSnapshotCommand> CreateSnapshotForConversationAsync(DocumentDatabase db, string conversationId)
     {
         var cmd = new CreateConversationSnapshotCommand(db, conversationId);
         await db.TxMerger.Enqueue(cmd);
-        return (cmd.SnapshotToken, cmd.CreatedAt, cmd.RootChangeVector);
+        return cmd;
     }
 
     private bool ShouldSnapshotBeforeRunning()
@@ -1062,12 +1062,13 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (_requireSnapshot == false)
             return;
 
-        var (token, _, rootCv) = await CreateSnapshotForConversationAsync(database, _document.Id);
-        _snapshotToken = token;
+        var snapshot = await CreateSnapshotForConversationAsync(database, _document.Id);
+        _snapshotToken = snapshot.SnapshotToken;
 
-        // Snapshot creation advances the document CV; use the resulting CV as the new baseline to avoid a false concurrency conflict.
-        if (rootCv != null)
-            _document.ChangeVector = rootCv;
+        // The snapshot may put the conversation to add HasRevisions, which changes its change vector. Adopt the new one only
+        // when the snapshot started from the version this run loaded; otherwise the persist reports the concurrent change.
+        if (snapshot.RootChangeVector != null && snapshot.RootChangeVectorBeforeSnapshot == _document.ChangeVector)
+            _document.ChangeVector = snapshot.RootChangeVector;
     }
 
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)

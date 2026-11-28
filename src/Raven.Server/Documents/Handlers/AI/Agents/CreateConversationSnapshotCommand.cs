@@ -21,6 +21,7 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
     public string SnapshotToken { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public string RootChangeVector { get; private set; }
+    public string RootChangeVectorBeforeSnapshot { get; private set; }
 
     public CreateConversationSnapshotCommand(DocumentDatabase database, string conversationId)
     {
@@ -31,6 +32,9 @@ internal sealed class CreateConversationSnapshotCommand : MergedTransactionComma
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
         var revisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        using (var root = _database.DocumentsStorage.Get(context, _conversationId, DocumentFields.ChangeVector))
+            RootChangeVectorBeforeSnapshot = root?.ChangeVector;
 
         CollectRevisionsRecursive(context, _conversationId, revisions);
 

@@ -20,7 +20,8 @@ internal sealed class AiAgentProcessorForCreateConversationSnapshot : AbstractDa
     {
         var conversationId = RequestHandler.GetStringQueryString("conversationId");
 
-        var (snapshotToken, createdAt, changeVector) = await ConversationHandler.CreateSnapshotForConversationAsync(RequestHandler.Database, conversationId);
+        var snapshot = await ConversationHandler.CreateSnapshotForConversationAsync(RequestHandler.Database, conversationId);
+        var (snapshotToken, createdAt, changeVector) = (snapshot.SnapshotToken, snapshot.CreatedAt, snapshot.RootChangeVector);
 
         if (snapshotToken == null)
         {
