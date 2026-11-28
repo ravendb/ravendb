@@ -95,8 +95,10 @@ namespace SlowTests.Core.Commands
                     Indexes.WaitForIndexing(store);
                 }
 
+                // longer than a URL allows, but not too deep: the Lucene query builder recurses once per clause,
+                // and a Debug build on Windows runs out of stack at about 480 clauses
                 var stringBuilder = new StringBuilder("FROM INDEX 'Test' WHERE");
-                while (stringBuilder.Length < 16 * 1024)
+                while (stringBuilder.Length < 10 * 1024)
                 {
                     stringBuilder.Append(@" (Name = 'Async Company #1') OR");
                 }
