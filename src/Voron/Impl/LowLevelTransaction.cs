@@ -738,8 +738,9 @@ namespace Voron.Impl
         internal bool DirtyPageStillBelongsTo(byte* dirtyPagePointer, long pageNumber)
         {
             return _scratchPagesInUse.TryGetValue(pageNumber, out var scratchPage) &&
+                    (_env.Options.RunningOn32Bits ||
                     // encrypted environment hands writers the transaction's decrypted buffer instead
-                    scratchPage.ReadWritable(ref PagerTransactionState) == dirtyPagePointer;
+                    scratchPage.ReadWritable(ref PagerTransactionState) == dirtyPagePointer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
