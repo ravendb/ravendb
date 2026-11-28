@@ -20,9 +20,9 @@ internal sealed class AiAgentProcessorForForkConversation : AbstractDatabaseHand
         {
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "fork-conversation");
 
-            body.TryGet("SnapshotToken", out string snapshotToken);
-            body.TryGet("NewConversationId", out string newConversationId);
-            body.TryGet("ExpectedChangeVector", out string expectedChangeVector);
+            body.TryGet(nameof(ForkConversationRequest.SnapshotToken), out string snapshotToken);
+            body.TryGet(nameof(ForkConversationRequest.NewConversationId), out string newConversationId);
+            body.TryGet(nameof(ForkConversationRequest.ExpectedChangeVector), out string expectedChangeVector);
 
             if (string.IsNullOrEmpty(snapshotToken))
                 throw new ArgumentException("SnapshotToken is required.");

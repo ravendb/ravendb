@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
@@ -322,7 +323,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
             foreach (var callId in openCalls.GetPropertyNames())
             {
                 if (openCalls[callId] is BlittableJsonReaderObject callObj &&
-                    callObj.TryGet("SubConversationId", out string subConvId) &&
+                    callObj.TryGet(nameof(AiAgentActionRequest.SubConversationId), out string subConvId) &&
                     string.IsNullOrEmpty(subConvId) == false)
                 {
                     var adjustedSubConvId = AdjustId(subConvId, sourcePrefix, targetPrefix);
@@ -331,7 +332,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
                         // Modify the child blittable in place and store it in the parent, since nesting a source-backed DynamicJsonValue is invalid.
                         callObj.Modifications = new DynamicJsonValue(callObj)
                         {
-                            ["SubConversationId"] = adjustedSubConvId
+                            [nameof(AiAgentActionRequest.SubConversationId)] = adjustedSubConvId
                         };
                         openCalls.Modifications ??= new DynamicJsonValue(openCalls);
                         openCalls.Modifications[callId] = callObj;

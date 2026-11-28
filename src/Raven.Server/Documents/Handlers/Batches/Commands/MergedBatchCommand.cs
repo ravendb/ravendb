@@ -429,31 +429,8 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
 
                     // Note: here there is no point checking 'Before' or 'After' because if there were any changes then the forced revision is done from the PUT command....
 
-                    var clonedDocData = existingDoc.Data.Clone(context);
-
-                    if (existingDoc.Flags.Contain(DocumentFlags.HasRevisions) == false)
-                    {
-                        // When forcing a revision for a document that doesn't have revisions yet,
-                        // we must add HasRevisions flag to the document and save (put)
-                        existingDoc.Flags = existingDoc.Flags |= DocumentFlags.HasRevisions;
-
-                        putResult = Database.DocumentsStorage.Put(context, existingDoc.Id,
-                                                                 existingDoc.ChangeVector,
-                                                                  clonedDocData,
-                                                                  flags: existingDoc.Flags,
-                                                                  nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
-
-                        existingDoc.ChangeVector = putResult.ChangeVector;
-                        existingDoc.LastModified = putResult.LastModified;
-                    }
-
-                    // Create the revision. Revision will be created only if there isn't a revision with identical content for this document
-                    bool revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
-                                                                                 clonedDocData,
-                                                                                 existingDoc.Flags,
-                                                                                 nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
-                                                                                 context.GetChangeVector(existingDoc.ChangeVector),
-                                                                                 existingDoc.LastModified.Ticks);
+                    // Revision will be created only if there isn't a revision with identical content for this document
+                    bool revisionCreated = Database.DocumentsStorage.RevisionsStorage.ForceCreateRevision(context, existingDoc);
 
                     if (revisionCreated)
                     {

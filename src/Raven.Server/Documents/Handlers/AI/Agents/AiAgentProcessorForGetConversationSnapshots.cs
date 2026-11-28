@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.AI;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
@@ -54,7 +55,7 @@ internal sealed class AiAgentProcessorForGetConversationSnapshots : AbstractData
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("Snapshots");
+                writer.WritePropertyName(nameof(ConversationSnapshotsResult.Snapshots));
                 writer.WriteStartArray();
 
                 bool first = true;

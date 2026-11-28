@@ -81,9 +81,9 @@ public class ForkConversationOperation : IMaintenanceOperation<AiForkConversatio
 
             var body = new DynamicJsonValue
             {
-                ["SnapshotToken"] = _snapshotToken,
-                ["NewConversationId"] = _newConversationId,
-                ["ExpectedChangeVector"] = _expectedChangeVector
+                [nameof(ForkConversationRequest.SnapshotToken)] = _snapshotToken,
+                [nameof(ForkConversationRequest.NewConversationId)] = _newConversationId,
+                [nameof(ForkConversationRequest.ExpectedChangeVector)] = _expectedChangeVector
             };
 
             var request = new HttpRequestMessage
@@ -109,4 +109,12 @@ public class ForkConversationOperation : IMaintenanceOperation<AiForkConversatio
         private string _raftId = string.Empty;
         public string RaftUniqueRequestId => _raftId;
     }
+}
+
+/// <summary>The body of the fork request, the names of its fields</summary>
+internal sealed class ForkConversationRequest
+{
+    public string SnapshotToken;
+    public string NewConversationId;
+    public string ExpectedChangeVector;
 }

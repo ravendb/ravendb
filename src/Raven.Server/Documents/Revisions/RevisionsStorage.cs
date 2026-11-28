@@ -2858,10 +2858,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         /// <summary>
-        /// Force-creates a revision for the given document. If the document does not have
-        /// the <see cref="DocumentFlags.HasRevisions"/> flag, it is added first (with a put
-        /// that skips revision creation). Returns the document's change vector, or <c>null</c>
-        /// if the document does not exist.
+        /// Force-creates a revision of the document and returns its change vector, or <c>null</c> if the document does not exist.
         /// </summary>
         public string ForceCreateRevision(DocumentsOperationContext context, string documentId)
         {
@@ -2869,6 +2866,18 @@ namespace Raven.Server.Documents.Revisions
             if (document == null)
                 return null;
 
+            ForceCreateRevision(context, document);
+            return document.ChangeVector;
+        }
+
+        /// <summary>
+        /// Creates a revision of the document even when its collection has no revisions configuration. A document without
+        /// <see cref="DocumentFlags.HasRevisions"/> gets the flag first, with a put that creates no revision, and
+        /// <paramref name="document"/> gets its new change vector and last modified. Returns false when a revision with the
+        /// same content already exists.
+        /// </summary>
+        public bool ForceCreateRevision(DocumentsOperationContext context, Document document)
+        {
             var clonedData = document.Data.Clone(context);
 
             if (document.Flags.Contain(DocumentFlags.HasRevisions) == false)
@@ -2883,18 +2892,14 @@ namespace Raven.Server.Documents.Revisions
 
                 document.ChangeVector = putResult.ChangeVector;
                 document.LastModified = putResult.LastModified;
-
-                clonedData = document.Data.Clone(context);
             }
 
-            Put(context, document.Id,
+            return Put(context, document.Id,
                 clonedData,
                 document.Flags,
                 nonPersistentFlags: NonPersistentDocumentFlags.ForceRevisionCreation,
                 context.GetChangeVector(document.ChangeVector),
                 document.LastModified.Ticks);
-
-            return document.ChangeVector;
         }
 
         private IEnumerable<Document> GetRevisions(DocumentsOperationContext context, Slice prefixSlice, Slice lastKey, long start, long take)

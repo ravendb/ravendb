@@ -68,7 +68,7 @@ public class GetConversationSnapshotsOperation : IMaintenanceOperation<List<AiCo
             if (response == null)
                 return;
 
-            if (response.TryGet("Snapshots", out BlittableJsonReaderArray snapshots) == false || snapshots == null)
+            if (response.TryGet(nameof(ConversationSnapshotsResult.Snapshots), out BlittableJsonReaderArray snapshots) == false || snapshots == null)
                 return;
 
             foreach (BlittableJsonReaderObject item in snapshots)
@@ -84,4 +84,10 @@ public class GetConversationSnapshotsOperation : IMaintenanceOperation<List<AiCo
             }
         }
     }
+}
+
+/// <summary>The response of the snapshots request, the names of its fields</summary>
+internal sealed class ConversationSnapshotsResult
+{
+    public List<AiConversationSnapshot> Snapshots;
 }

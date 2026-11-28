@@ -168,14 +168,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             // Determine whether we need a snapshot, but defer creation until after
             // TryHandleActionResponses validates the request (so invalid requests
             // such as ActionResponses + user prompt don't create revisions).
-            bool hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
-                                 _request.Attachments is { Count: > 0 } ||
-                                 _request.AttachmentCommands?.ParsedCommands is { Count: > 0 } ||
-                                 _request.ArtificialActions is { Length: > 0 };
-
-            _requireSnapshot = _request.CreationOptions?.SnapshotBeforeRunning == true &&
-                               _isNewConversation == false &&
-                               hasUserPrompt;
+            _requireSnapshot = ShouldSnapshotBeforeRunning();
         }
 
         if (_debugOverride.HasValue)
@@ -1051,6 +1044,17 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var cmd = new CreateConversationSnapshotCommand(db, conversationId);
         await db.TxMerger.Enqueue(cmd);
         return (cmd.SnapshotToken, cmd.CreatedAt, cmd.RootChangeVector);
+    }
+
+    private bool ShouldSnapshotBeforeRunning()
+    {
+        if (_request.CreationOptions?.SnapshotBeforeRunning != true || _isNewConversation)
+            return false;
+
+        return RequestBody.HasUserPrompt(_request.Content) ||
+               _request.Attachments is { Count: > 0 } ||
+               _request.AttachmentCommands?.ParsedCommands is { Count: > 0 } ||
+               _request.ArtificialActions is { Length: > 0 };
     }
 
     private async Task CreateSnapshotIfRequiredAsync()
