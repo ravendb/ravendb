@@ -66,6 +66,29 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenFact(RavenTestCategory.Ai)]
+        public async Task F9_GetConversationMessages_WithSnapshotToken_ReturnsTheSnapshotState()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
+            var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true); // snapshot after turn 1
+
+            var current = await store.AI.GetConversationMessagesAsync("chats/1");
+            Assert.Contains(current.Messages, m => m.Content?.Contains("turn 2") == true);
+
+            // the conversation ID may be omitted: the token's conversation
+            var snapshot = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions { SnapshotToken = r2.SnapshotToken });
+            Assert.Equal("chats/1", snapshot.ConversationId);
+            Assert.Contains(snapshot.Messages, m => m.Content?.Contains("turn 1") == true);
+            Assert.DoesNotContain(snapshot.Messages, m => m.Content?.Contains("turn 2") == true);
+            Assert.True(snapshot.Messages.Count < current.Messages.Count);
+
+            // a conversation that is not in the snapshot is not found
+            Assert.Null(await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions { ConversationId = "chats/2", SnapshotToken = r2.SnapshotToken }));
+        }
+
+        [RavenFact(RavenTestCategory.Ai)]
         public async Task F7_Fork_WithTokenFromDifferentDatabase_Throws()
         {
             using var storeA = GetDocumentStore();

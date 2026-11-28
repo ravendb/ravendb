@@ -47,9 +47,16 @@ public sealed class GetConversationMessagesOptions
     /// </summary>
     public AiConversationDetailLevel DetailLevel { get; set; } = AiConversationDetailLevel.Simple;
 
+    /// <summary>
+    /// Read the conversation as it was in this snapshot (from a snapshot, a fork point or <c>CreateSnapshotAsync</c>)
+    /// instead of its current state. <see cref="ConversationId"/> may then be omitted (the snapshot's conversation) or
+    /// be one of its sub-conversations.
+    /// </summary>
+    public string SnapshotToken { get; set; }
+
     internal void Validate()
     {
-        if (string.IsNullOrEmpty(ConversationId))
+        if (string.IsNullOrEmpty(ConversationId) && string.IsNullOrEmpty(SnapshotToken))
             throw new ArgumentNullException(nameof(ConversationId));
 
         if (Before.HasValue && After.HasValue)
@@ -96,8 +103,12 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/ai/agent/conversation/messages")
-                .Append($"?conversationId={Uri.EscapeDataString(_params.ConversationId)}");
+            var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/ai/agent/conversation/messages?");
+
+            if (string.IsNullOrEmpty(_params.ConversationId) == false)
+                sb.Append("&conversationId=").Append(Uri.EscapeDataString(_params.ConversationId));
+            if (string.IsNullOrEmpty(_params.SnapshotToken) == false)
+                sb.Append("&snapshotToken=").Append(Uri.EscapeDataString(_params.SnapshotToken));
 
             if (_params.Before.HasValue)
                 sb.Append("&before=").Append(Uri.EscapeDataString(_params.Before.Value.EnsureUtc().GetDefaultRavenFormat()));
